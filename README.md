@@ -61,6 +61,23 @@ Minecraft Bedrock Server
 
 The manager uses one Gunicorn worker with multiple threads so the in-process refresh lock and background refresh state remain consistent. On startup, it creates the SQLite database if necessary and asynchronously queries the Bedrock container to populate the interface.
 
+The Python application follows a layered package structure:
+
+```text
+minecraft_manager/
+├── __init__.py      # Flask application factory
+├── routes.py        # HTTP endpoints and response mapping
+├── services.py      # Use-case orchestration and refresh lifecycle
+├── bedrock.py       # Bedrock console adapter and log parsers
+├── docker_ops.py    # Allowlisted container lifecycle operations
+├── files.py         # Atomic .env and server.properties access
+├── repository.py    # SQLite state repository
+├── schema.py        # Editable fields, gamerules, and validation
+└── config.py        # Environment-backed runtime configuration
+```
+
+`wsgi.py` is the production entry point used by Gunicorn. The top-level `app.py` remains only as a compatibility entry point for Flask tooling. HTTP routes contain no direct Docker, filesystem, or SQLite implementation logic, which keeps infrastructure replaceable and the core behavior testable.
+
 ## Requirements
 
 - Docker Engine with the Compose plugin
@@ -110,6 +127,8 @@ The manager's own configuration is stored in `.env`:
 | `MANAGER_PORT` | `8082` | Host TCP port used by the web interface |
 | `MINECRAFT_CONTAINER` | `minecraft-bedrock` | Name of the managed Bedrock container |
 | `MINECRAFT_PROJECT` | `/minecraft-project` | Bedrock project path inside the manager container |
+| `DATABASE_PATH` | `/data/manager.db` | SQLite cache location inside the container |
+| `CONSOLE_WAIT_SECONDS` | `1` | Delay before reading Bedrock console responses |
 | `TZ` | `America/Sao_Paulo` | Container timezone |
 
 The host-side Bedrock project mount is defined in `docker-compose.yml`:
@@ -179,7 +198,7 @@ git pull --ff-only
 docker compose up -d --build
 ```
 
-If development and deployment use separate directories, copy the updated source files into the deployment directory and rebuild the service. The current Compose file bind-mounts `app.py`, `static/`, and `templates/`, but rebuilding is still recommended when dependencies or the Dockerfile change.
+If development and deployment use separate directories, copy the updated source files into the deployment directory and rebuild the service. The current Compose file bind-mounts `app.py`, `wsgi.py`, `minecraft_manager/`, `static/`, and `templates/`, but rebuilding is still recommended when dependencies or the Dockerfile change.
 
 ## Data and backups
 
@@ -260,7 +279,7 @@ Persistent settings require the Bedrock container to be recreated. Use **Save ch
 
 ## Development
 
-The application is intentionally small and uses:
+The application uses:
 
 - Python 3.12
 - Flask
@@ -272,7 +291,8 @@ The application is intentionally small and uses:
 Run syntax checks before committing changes:
 
 ```bash
-python -m py_compile app.py
+python -m unittest discover -s tests -v
+python -m compileall -q minecraft_manager app.py wsgi.py
 node --check static/app.js
 docker compose config --quiet
 ```

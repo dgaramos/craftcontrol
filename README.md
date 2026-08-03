@@ -10,6 +10,9 @@ The manager provides a focused graphical interface for common server settings, l
 ## Highlights
 
 - Responsive, touch-friendly interface with a Minecraft-inspired visual design
+- Portuguese and English interface with a browser-persisted language preference
+- Contextual help text for every server setting and gamerule
+- Touch-friendly toggles and segmented option controls instead of ambiguous boolean dropdowns
 - Persistent server settings managed through the Bedrock project's `.env` file
 - Live gamerule updates without editing files or opening a console
 - Current container status and cached online-player list

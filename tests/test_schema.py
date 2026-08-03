@@ -1,6 +1,6 @@
 import unittest
 
-from minecraft_manager.schema import SETTINGS, validate_value
+from minecraft_manager.schema import GAMERULES, SETTINGS, validate_value
 
 
 class ValidateValueTest(unittest.TestCase):
@@ -19,3 +19,10 @@ class ValidateValueTest(unittest.TestCase):
     def test_rejects_multiline_text(self) -> None:
         with self.assertRaisesRegex(ValueError, "texto inválido"):
             validate_value(SETTINGS["SERVER_NAME"], "server\nINJECTED=true")
+
+    def test_every_field_has_bilingual_help_text(self) -> None:
+        for definition in [*SETTINGS.values(), *GAMERULES.values()]:
+            self.assertTrue(definition.get("label"))
+            self.assertTrue(definition.get("description"))
+            self.assertTrue(definition.get("label_en"))
+            self.assertTrue(definition.get("description_en"))

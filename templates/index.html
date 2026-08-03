@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#101311">
     <title>MalavaziRamos · Gerenciador</title>
-    <link rel="stylesheet" href="/static/app.css?v=4">
-    <link rel="stylesheet" href="/static/players.css?v=4">
+    <link rel="stylesheet" href="/static/app.css?v=5">
+    <link rel="stylesheet" href="/static/players.css?v=5">
   </head>
   <body>
     <header class="topbar">
@@ -14,7 +14,10 @@
         <div class="block-logo" aria-hidden="true"><span>M</span></div>
         <div><span class="eyebrow">BEDROCK SERVER</span><h1>MalavaziRamos</h1><span id="status" class="status">Verificando…</span></div>
       </div>
-      <button id="refresh" class="icon-button" title="Atualizar estado"><b aria-hidden="true">↻</b><span>Atualizar</span></button>
+      <div class="top-actions">
+        <button id="language" class="language-button" type="button" aria-label="Switch language">EN</button>
+        <button id="refresh" class="icon-button" title="Atualizar estado"><b aria-hidden="true">↻</b><span data-i18n="refresh">Atualizar</span></button>
+      </div>
     </header>
 
     <nav id="tabs" aria-label="Configurações"></nav>
@@ -24,7 +27,7 @@
         <div class="grass-edge" aria-hidden="true"></div>
         <div class="hero-heading">
           <div class="shield" aria-hidden="true">✓</div>
-          <div><span class="eyebrow">ESTADO DO MUNDO</span><h2 id="server-state-title">Consultando servidor</h2></div>
+          <div><span class="eyebrow" data-i18n="worldState">ESTADO DO MUNDO</span><h2 id="server-state-title">Consultando servidor</h2></div>
         </div>
 
         <div class="players-card">
@@ -34,11 +37,11 @@
         </div>
 
         <div class="quick-section">
-          <h3>Ações rápidas</h3>
+          <h3 data-i18n="quickActions">Ações rápidas</h3>
           <div class="quick-actions">
-            <button data-world="day" class="day"><span aria-hidden="true">☀</span>Dia</button>
-            <button data-world="night" class="night"><span aria-hidden="true">☾</span>Noite</button>
-            <button data-world="clear-weather" class="weather"><span aria-hidden="true">☁</span>Clima limpo</button>
+            <button data-world="day" class="day"><span aria-hidden="true">☀</span><b data-i18n="day">Dia</b></button>
+            <button data-world="night" class="night"><span aria-hidden="true">☾</span><b data-i18n="night">Noite</b></button>
+            <button data-world="clear-weather" class="weather"><span aria-hidden="true">☁</span><b data-i18n="clearWeather">Clima limpo</b></button>
           </div>
         </div>
       </section>
@@ -48,16 +51,16 @@
 
     <div id="toast" role="status"></div>
     <footer>
-      <button id="server-menu" class="secondary"><span aria-hidden="true">⚙</span>Servidor</button>
-      <button id="save" class="primary"><span aria-hidden="true">▣</span>Salvar alterações</button>
+      <button id="server-menu" class="secondary"><span aria-hidden="true">⚙</span><b data-i18n="server">Servidor</b></button>
+      <button id="save" class="primary"><span aria-hidden="true">▣</span><b id="save-label" data-i18n="saveChanges">Salvar alterações</b></button>
     </footer>
 
     <dialog id="server-dialog">
-      <div class="dialog-title"><span aria-hidden="true">⚙</span><div><span class="eyebrow">CONTROLE</span><h2>Operação do servidor</h2></div></div>
-      <p>Alterações persistentes entram em vigor ao aplicar e reiniciar.</p>
-      <div class="dialog-actions"><button data-server="start">Iniciar</button><button data-server="restart">Reiniciar</button><button data-server="stop" class="danger">Parar</button></div>
-      <button id="close-dialog" class="secondary wide">Fechar</button>
+      <div class="dialog-title"><span aria-hidden="true">⚙</span><div><span class="eyebrow" data-i18n="control">CONTROLE</span><h2 data-i18n="serverOperation">Operação do servidor</h2></div></div>
+      <p data-i18n="restartNotice">Alterações persistentes entram em vigor ao aplicar e reiniciar.</p>
+      <div class="dialog-actions"><button data-server="start" data-i18n="start">Iniciar</button><button data-server="restart" data-i18n="restart">Reiniciar</button><button data-server="stop" class="danger" data-i18n="stop">Parar</button></div>
+      <button id="close-dialog" class="secondary wide" data-i18n="close">Fechar</button>
     </dialog>
-    <script src="/static/app.js?v=4"></script>
+    <script src="/static/app.js?v=5"></script>
   </body>
 </html>

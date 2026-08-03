@@ -155,6 +155,7 @@ def query_console_state() -> tuple[dict[str, str], list[str], int, int]:
         channel.close()
     time.sleep(1.0)
     logs = container.logs(since=since, tail=250).decode("utf-8", errors="replace")
+    history = container.logs(tail=5000).decode("utf-8", errors="replace")
     client.close()
     values: dict[str, str] = {}
     for rule in GAMERULES:
@@ -175,6 +176,22 @@ def query_console_state() -> tuple[dict[str, str], list[str], int, int]:
             players.extend(name.strip() for name in clean.split(",") if name.strip())
             if len(players) >= online:
                 break
+    if not players:
+        connected: dict[str, str] = {}
+        for line in history.splitlines():
+            joined = re.search(r"Player connected:\s*([^,]+),\s*xuid:", line, re.IGNORECASE)
+            left = re.search(r"Player disconnected:\s*([^,]+),\s*xuid:", line, re.IGNORECASE)
+            if joined:
+                name = joined.group(1).strip()
+                connected[name.casefold()] = name
+            elif left:
+                connected.pop(left.group(1).strip().casefold(), None)
+        players = list(connected.values())
+        online = len(players)
+        if maximum == 0:
+            _, env_values = read_env()
+            properties = read_properties()
+            maximum = int(env_values.get("MAX_PLAYERS") or properties.get("max-players") or 0)
     return values, players[:online], online, maximum
 
 

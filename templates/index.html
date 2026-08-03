@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#111713">
+    <title>MalavaziRamos · Gerenciador</title>
+    <link rel="stylesheet" href="/static/app.css">
+    <link rel="stylesheet" href="/static/players.css?v=3">
+  </head>
+  <body>
+    <header>
+      <div><span class="eyebrow">MINECRAFT BEDROCK</span><h1>MalavaziRamos</h1></div>
+      <div class="header-actions"><button id="refresh" title="Atualizar estado">↻ <span>Atualizar</span></button><span id="status" class="status">Verificando…</span></div>
+    </header>
+    <nav id="tabs"></nav>
+    <main>
+      <section id="hero" class="hero">
+        <div><span class="eyebrow">CONTROLE RÁPIDO</span><h2>Seu mundo, sem console.</h2></div>
+        <div class="players-card"><strong id="players-summary">0 jogadores online</strong><div id="players-list">Ninguém conectado</div><small id="updated-at">Aguardando atualização</small></div>
+        <div class="quick-actions">
+          <button data-world="day">☀ Dia</button><button data-world="night">☾ Noite</button><button data-world="clear-weather">☁ Limpar clima</button>
+        </div>
+      </section>
+      <section id="content"></section>
+    </main>
+    <div id="toast" role="status"></div>
+    <footer>
+      <button id="server-menu" class="secondary">Servidor</button>
+      <button id="save" class="primary">Salvar alterações</button>
+    </footer>
+    <dialog id="server-dialog">
+      <h2>Operação do servidor</h2><p>Alterações persistentes entram em vigor ao aplicar e reiniciar.</p>
+      <div class="dialog-actions"><button data-server="start">Iniciar</button><button data-server="restart">Reiniciar</button><button data-server="stop" class="danger">Parar</button></div>
+      <button id="close-dialog" class="secondary wide">Fechar</button>
+    </dialog>
+    <script src="/static/app.js?v=3"></script>
+  </body>
+</html>

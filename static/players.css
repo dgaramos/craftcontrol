@@ -1,0 +1,9 @@
+.header-actions { display: flex; align-items: center; gap: 8px; }
+.header-actions button { padding: 8px 10px; font-size: .78rem; }
+.players-card { margin-top: 18px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: #0d120f88; }
+.players-card strong, .players-card div, .players-card small { display: block; }
+.players-card div { margin: 6px 0; color: var(--lime); font-weight: 700; }
+.players-card small { color: var(--muted); }
+.spinning { animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (max-width: 520px) { .header-actions button span { display: none; } }

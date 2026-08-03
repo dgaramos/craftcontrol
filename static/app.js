@@ -62,6 +62,8 @@ function setStatus(status) {
   const element = $("#status");
   element.textContent = status.online ? "● Online" : "○ Parado";
   element.classList.toggle("online", status.online);
+  $("#server-state-title").textContent = status.online ? "Servidor online" : "Servidor parado";
+  $("#hero").classList.toggle("offline", !status.online);
 }
 
 async function loadState() {

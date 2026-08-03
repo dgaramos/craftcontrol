@@ -3,37 +3,61 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#111713">
+    <meta name="theme-color" content="#101311">
     <title>MalavaziRamos · Gerenciador</title>
-    <link rel="stylesheet" href="/static/app.css">
-    <link rel="stylesheet" href="/static/players.css?v=3">
+    <link rel="stylesheet" href="/static/app.css?v=4">
+    <link rel="stylesheet" href="/static/players.css?v=4">
   </head>
   <body>
-    <header>
-      <div><span class="eyebrow">MINECRAFT BEDROCK</span><h1>MalavaziRamos</h1></div>
-      <div class="header-actions"><button id="refresh" title="Atualizar estado">↻ <span>Atualizar</span></button><span id="status" class="status">Verificando…</span></div>
+    <header class="topbar">
+      <div class="brand">
+        <div class="block-logo" aria-hidden="true"><span>M</span></div>
+        <div><span class="eyebrow">BEDROCK SERVER</span><h1>MalavaziRamos</h1><span id="status" class="status">Verificando…</span></div>
+      </div>
+      <button id="refresh" class="icon-button" title="Atualizar estado"><b aria-hidden="true">↻</b><span>Atualizar</span></button>
     </header>
-    <nav id="tabs"></nav>
+
+    <nav id="tabs" aria-label="Configurações"></nav>
+
     <main>
-      <section id="hero" class="hero">
-        <div><span class="eyebrow">CONTROLE RÁPIDO</span><h2>Seu mundo, sem console.</h2></div>
-        <div class="players-card"><strong id="players-summary">0 jogadores online</strong><div id="players-list">Ninguém conectado</div><small id="updated-at">Aguardando atualização</small></div>
-        <div class="quick-actions">
-          <button data-world="day">☀ Dia</button><button data-world="night">☾ Noite</button><button data-world="clear-weather">☁ Limpar clima</button>
+      <section id="hero" class="hero block-panel">
+        <div class="grass-edge" aria-hidden="true"></div>
+        <div class="hero-heading">
+          <div class="shield" aria-hidden="true">✓</div>
+          <div><span class="eyebrow">ESTADO DO MUNDO</span><h2 id="server-state-title">Consultando servidor</h2></div>
+        </div>
+
+        <div class="players-card">
+          <div class="player-count"><span class="pixel-icon" aria-hidden="true">♟</span><strong id="players-summary">0 jogadores online</strong></div>
+          <div id="players-list">Ninguém conectado</div>
+          <small id="updated-at">Aguardando atualização</small>
+        </div>
+
+        <div class="quick-section">
+          <h3>Ações rápidas</h3>
+          <div class="quick-actions">
+            <button data-world="day" class="day"><span aria-hidden="true">☀</span>Dia</button>
+            <button data-world="night" class="night"><span aria-hidden="true">☾</span>Noite</button>
+            <button data-world="clear-weather" class="weather"><span aria-hidden="true">☁</span>Clima limpo</button>
+          </div>
         </div>
       </section>
+
       <section id="content"></section>
     </main>
+
     <div id="toast" role="status"></div>
     <footer>
-      <button id="server-menu" class="secondary">Servidor</button>
-      <button id="save" class="primary">Salvar alterações</button>
+      <button id="server-menu" class="secondary"><span aria-hidden="true">⚙</span>Servidor</button>
+      <button id="save" class="primary"><span aria-hidden="true">▣</span>Salvar alterações</button>
     </footer>
+
     <dialog id="server-dialog">
-      <h2>Operação do servidor</h2><p>Alterações persistentes entram em vigor ao aplicar e reiniciar.</p>
+      <div class="dialog-title"><span aria-hidden="true">⚙</span><div><span class="eyebrow">CONTROLE</span><h2>Operação do servidor</h2></div></div>
+      <p>Alterações persistentes entram em vigor ao aplicar e reiniciar.</p>
       <div class="dialog-actions"><button data-server="start">Iniciar</button><button data-server="restart">Reiniciar</button><button data-server="stop" class="danger">Parar</button></div>
       <button id="close-dialog" class="secondary wide">Fechar</button>
     </dialog>
-    <script src="/static/app.js?v=3"></script>
+    <script src="/static/app.js?v=4"></script>
   </body>
 </html>

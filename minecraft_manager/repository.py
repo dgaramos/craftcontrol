@@ -155,6 +155,7 @@ class StateRepository:
                     connection.execute("UPDATE player_aliases SET identity=? WHERE identity=?", (identity, temporary))
                     connection.execute("UPDATE player_sessions SET identity=? WHERE identity=?", (identity, temporary))
                     connection.execute("UPDATE player_history SET identity=? WHERE identity=?", (identity, temporary))
+                    connection.execute("UPDATE player_telemetry SET identity=? WHERE identity=?", (identity, temporary))
             return identity
         row = connection.execute(
             "SELECT p.identity FROM player_profiles p LEFT JOIN player_aliases a ON a.identity=p.identity "

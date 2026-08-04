@@ -30,3 +30,14 @@ class TelemetryTest(unittest.TestCase):
             self.assertEqual(profile["deaths_count"], 3)
             self.assertEqual(profile["deaths_source"], "behavior-pack")
             self.assertEqual(profile["telemetry"]["blocksBroken"], 42)
+
+    def test_telemetry_follows_profile_when_xuid_becomes_known(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = StateRepository(Path(directory) / "state.db")
+            repository.initialize()
+            event = {"schema": 1, "sequence": 2, "type": "snapshot.player", "timestamp": 1, "player": {"name": "Nicole"}, "data": {"mobKills": 9}}
+            repository.ingest_telemetry(event)
+            repository.observe_player("Nicole", True, "123")
+            profiles = repository.player_profiles()
+            self.assertEqual(len(profiles), 1)
+            self.assertEqual(profiles[0]["telemetry"]["mobKills"], 9)

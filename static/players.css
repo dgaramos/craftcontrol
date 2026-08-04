@@ -61,7 +61,15 @@
 .profile-facts small, .profile-facts b { display: block; }
 .profile-facts small { margin: 0 0 4px; color: var(--muted); font-size: .56rem; text-transform: uppercase; }
 .profile-facts b { overflow-wrap: anywhere; color: var(--text); font-size: .7rem; }
-.session-history ol, .event-history ol { margin: 0; padding: 0; list-style: none; }
+.session-history ol, .event-history ol, .death-history ol { margin: 0; padding: 0; list-style: none; }
+.death-history { margin: 12px 0; padding: 9px; background: #1a0e0e; border: 2px solid #6f2929; }
+.death-history h4 { color: #ff8d82; }
+.death-history li > div { align-items: center; }
+.death-history li > div > small { color: #7ed7ff; }
+.death-history dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin: 8px 0 0; }
+.death-history dl div { display: block; min-width: 0; padding: 6px; background: #100909; }
+.death-history dt { color: var(--muted); font-size: .54rem; font-weight: 900; text-transform: uppercase; }
+.death-history dd { overflow-wrap: anywhere; margin: 3px 0 0; color: var(--text); font-size: .68rem; }
 .telemetry-profile { margin: 8px 0 14px; padding: 10px; background: #0d171a; border: 2px solid #24505c; }
 .telemetry-profile > small { color: #7ed7ff; }
 .telemetry-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 9px; }
@@ -74,4 +82,5 @@
   .player-overview { grid-template-columns: repeat(2, 1fr); }
   .profile-facts { grid-template-columns: 1fr; }
   .telemetry-grid { grid-template-columns: repeat(2, 1fr); }
+  .death-history dl { grid-template-columns: 1fr; }
 }

@@ -419,6 +419,8 @@ The manager requests a full telemetry snapshot when its Bedrock log stream conne
 
 Confirm that the `showdeathmessages` gamerule is enabled and inspect the Bedrock log wording. Death statistics are derived from recognized messages and are not authoritative. Keep the original line when reporting a parser issue so a sanitized regression fixture can be added. Replayed identical lines are deduplicated in a short time window.
 
+When the behavior pack is active, new player deaths are also stored as structured history entries. The player profile presents them in a dedicated death-history section with the recorded cause, killer entity or player, and projectile when Bedrock supplies those fields. Aggregate snapshots can recover counters, but they cannot reconstruct the details of deaths that happened before structured event persistence was enabled.
+
 ### Player history must be backed up
 
 Stop or quiesce writes to the manager database, then copy `./data/manager.db` together with its `-wal` and `-shm` companions when present. A future release will provide a coordinated backup/export operation; copying only the world does not preserve manager-side player history.

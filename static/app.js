@@ -6,6 +6,9 @@ const state = {
 const $ = (selector) => document.querySelector(selector);
 const content = $("#content");
 
+if ("scrollRestoration" in window.history) window.history.scrollRestoration = "manual";
+window.addEventListener("pageshow", () => requestAnimationFrame(() => window.scrollTo(0, 0)));
+
 const messages = {
   pt: {
     refresh: "Atualizar", worldState: "ESTADO DO MUNDO", quickActions: "Ações rápidas",
@@ -45,6 +48,7 @@ const messages = {
     recentSessions: "Sessões recentes", activeSession: "Em andamento", normalExit: "Saída normal", inferredExit: "Encerramento inferido",
     derivedDeaths: "Contagem derivada das mensagens do servidor", noPlayersFound: "Nenhum jogador corresponde aos filtros.",
     telemetryStats: "Estatísticas do mundo", authoritative: "Dados estruturados pelo behavior pack", playerKills: "Jogadores eliminados", mobKills: "Criaturas eliminadas", blocksBroken: "Blocos quebrados", blocksPlaced: "Blocos colocados", damageDealt: "Dano causado", damageTaken: "Dano recebido", distanceTraveled: "Distância percorrida", dimensionsVisited: "Dimensões visitadas",
+    deathHistory: "Histórico de mortes", noDeaths: "Nenhuma morte detalhada registrada.", deathCause: "Causa", killedBy: "Responsável", projectile: "Projétil", telemetrySource: "Behavior pack",
     home: "Início", world: "Mundo", players: "Jogadores", rules: "Regras", settings: "Servidor",
     worldIntro: "Configuração do mundo", rulesIntro: "Comportamento do jogo", serverIntro: "Infraestrutura do servidor",
     pendingChanges: "ALTERAÇÕES PENDENTES", reviewChanges: "Revisar alterações",
@@ -91,6 +95,7 @@ const messages = {
     recentSessions: "Recent sessions", activeSession: "In progress", normalExit: "Normal exit", inferredExit: "Inferred closure",
     derivedDeaths: "Count derived from server messages", noPlayersFound: "No players match the filters.",
     telemetryStats: "World statistics", authoritative: "Structured by the behavior pack", playerKills: "Player kills", mobKills: "Mob kills", blocksBroken: "Blocks broken", blocksPlaced: "Blocks placed", damageDealt: "Damage dealt", damageTaken: "Damage taken", distanceTraveled: "Distance traveled", dimensionsVisited: "Dimensions visited",
+    deathHistory: "Death history", noDeaths: "No detailed deaths recorded.", deathCause: "Cause", killedBy: "Killed by", projectile: "Projectile", telemetrySource: "Behavior pack",
     home: "Home", world: "World", players: "Players", rules: "Rules", settings: "Server",
     worldIntro: "World configuration", rulesIntro: "Game behavior", serverIntro: "Server infrastructure",
     pendingChanges: "PENDING CHANGES", reviewChanges: "Review changes",
@@ -425,7 +430,18 @@ function historyMarkup(events) {
 function profileMarkup(profile) {
   const aliases = (profile.aliases || []).filter((name) => name !== profile.name);
   const sessions = Array.isArray(profile.sessions) ? profile.sessions : [];
-  return `<div class="profile-facts"><span><small>${t("permission")}</small><b>${escapeHtml(optionLabel(profile.permission || "member"))}</b></span><span><small>${t("lastDeath")}</small><b>${formatDate(profile.last_death_at)}</b></span><span><small>${t("aliases")}</small><b>${aliases.length ? aliases.map(escapeHtml).join(" · ") : "—"}</b></span></div><section class="session-history"><h4>${t("recentSessions")}</h4>${sessions.length ? `<ol>${sessions.map((session) => `<li><div><b>${formatDate(session.connected_at)}</b><time>${session.active ? t("activeSession") : formatDuration(session.duration_seconds)}</time></div><small>${session.active ? t("connectedSince") : session.inferred ? t("inferredExit") : t("normalExit")}${session.close_reason ? ` · ${escapeHtml(session.close_reason)}` : ""}</small></li>`).join("")}</ol>` : `<p>${t("noHistory")}</p>`}</section><section class="event-history"><h4>${state.locale === "pt" ? "Linha do tempo" : "Timeline"}</h4>${historyMarkup(profile.history || [])}</section>`;
+  return `<div class="profile-facts"><span><small>${t("permission")}</small><b>${escapeHtml(optionLabel(profile.permission || "member"))}</b></span><span><small>${t("lastDeath")}</small><b>${formatDate(profile.last_death_at)}</b></span><span><small>${t("aliases")}</small><b>${aliases.length ? aliases.map(escapeHtml).join(" · ") : "—"}</b></span></div>${deathHistoryMarkup(profile.history || [])}<section class="session-history"><h4>${t("recentSessions")}</h4>${sessions.length ? `<ol>${sessions.map((session) => `<li><div><b>${formatDate(session.connected_at)}</b><time>${session.active ? t("activeSession") : formatDuration(session.duration_seconds)}</time></div><small>${session.active ? t("connectedSince") : session.inferred ? t("inferredExit") : t("normalExit")}${session.close_reason ? ` · ${escapeHtml(session.close_reason)}` : ""}</small></li>`).join("")}</ol>` : `<p>${t("noHistory")}</p>`}</section><section class="event-history"><h4>${state.locale === "pt" ? "Linha do tempo" : "Timeline"}</h4>${historyMarkup(profile.history || [])}</section>`;
+}
+
+function deathHistoryMarkup(events) {
+  const deaths = events.filter((event) => event?.topic === "player.death");
+  if (!deaths.length) return `<section class="death-history"><h4>${t("deathHistory")}</h4><p>${t("noDeaths")}</p></section>`;
+  return `<section class="death-history"><h4>${t("deathHistory")}</h4><ol>${deaths.map((event) => {
+    const data = event.payload || {};
+    const killer = data.killer || data.killerType || "—";
+    const details = [[t("deathCause"), data.cause], [t("killedBy"), killer], [t("projectile"), data.projectileType]].filter(([, value]) => value);
+    return `<li><div><b>☠ ${formatDate(event.timestamp)}</b><small>${event.source === "behavior-pack" ? t("telemetrySource") : escapeHtml(event.source || "")}</small></div><dl>${details.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(String(value).replace(/^minecraft:/, ""))}</dd></div>`).join("")}</dl></li>`;
+  }).join("")}</ol></section>`;
 }
 
 function telemetryMarkup(profile) {

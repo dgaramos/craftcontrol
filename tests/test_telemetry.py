@@ -41,3 +41,18 @@ class TelemetryTest(unittest.TestCase):
             profiles = repository.player_profiles()
             self.assertEqual(len(profiles), 1)
             self.assertEqual(profiles[0]["telemetry"]["mobKills"], 9)
+
+    def test_behavior_pack_death_is_saved_in_player_history(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = StateRepository(Path(directory) / "state.db")
+            repository.initialize()
+            repository.observe_player("VonCrush", True, "99")
+            repository.ingest_telemetry({"schema": 1, "sequence": 8, "type": "snapshot.player", "timestamp": 1, "player": {"name": "VonCrush"}, "data": {"deaths": 0}})
+            death = {"schema": 1, "sequence": 9, "type": "entity.died", "timestamp": 2, "player": {"name": "VonCrush"}, "data": {"victim": "VonCrush", "victimType": "minecraft:player", "killer": None, "killerType": "minecraft:zombie", "projectileType": None, "cause": "entityAttack"}}
+            self.assertEqual(repository.ingest_telemetry(death), (True, ["VonCrush"]))
+            profile = repository.player_profile(repository.player_profiles()[0]["id"])
+            deaths = [event for event in profile["history"] if event["topic"] == "player.death"]
+            self.assertEqual(len(deaths), 1)
+            self.assertEqual(deaths[0]["source"], "behavior-pack")
+            self.assertEqual(deaths[0]["payload"]["killerType"], "minecraft:zombie")
+            self.assertIsNotNone(profile["last_death_at"])

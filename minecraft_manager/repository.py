@@ -341,16 +341,26 @@ class StateRepository:
         for name in dict.fromkeys(names):
             identity = self._player_identity(connection, name)
             row = connection.execute("SELECT stats FROM player_telemetry WHERE identity=?", (identity,)).fetchone()
-            if not row:
-                continue
-            stats = json.loads(row[0])
-            if topic == "block.broken" and name == names[0]: stats["blocksBroken"] = int(stats.get("blocksBroken", 0)) + 1
-            if topic == "block.placed" and name == names[0]: stats["blocksPlaced"] = int(stats.get("blocksPlaced", 0)) + 1
-            if topic == "entity.died" and name == data.get("victim"): stats["deaths"] = int(stats.get("deaths", 0)) + 1
-            if topic == "entity.died" and name == data.get("killer"):
-                key = "playerKills" if data.get("victim") else "mobKills"
-                stats[key] = int(stats.get(key, 0)) + 1
-            connection.execute("UPDATE player_telemetry SET stats=?,sequence=?,updated_at=? WHERE identity=?", (json.dumps(stats), envelope["sequence"], now, identity))
+            if row:
+                stats = json.loads(row[0])
+                if topic == "block.broken" and name == names[0]: stats["blocksBroken"] = int(stats.get("blocksBroken", 0)) + 1
+                if topic == "block.placed" and name == names[0]: stats["blocksPlaced"] = int(stats.get("blocksPlaced", 0)) + 1
+                if topic == "entity.died" and name == data.get("victim"): stats["deaths"] = int(stats.get("deaths", 0)) + 1
+                if topic == "entity.died" and name == data.get("killer"):
+                    key = "playerKills" if data.get("victim") else "mobKills"
+                    stats[key] = int(stats.get(key, 0)) + 1
+                connection.execute("UPDATE player_telemetry SET stats=?,sequence=?,updated_at=? WHERE identity=?", (json.dumps(stats), envelope["sequence"], now, identity))
+            if topic == "entity.died" and name == data.get("victim"):
+                if not connection.execute("SELECT 1 FROM player_profiles WHERE identity=?", (identity,)).fetchone():
+                    connection.execute(
+                        "INSERT INTO player_profiles(identity,current_name,first_seen_at,last_seen_at) VALUES(?,?,?,?)",
+                        (identity, name, now, now),
+                    )
+                connection.execute("UPDATE player_profiles SET last_death_at=?,last_seen_at=? WHERE identity=?", (now, now, identity))
+                self._record_player_history(
+                    connection, identity, "player.death", "behavior-pack", data, now,
+                    f"telemetry:{envelope['sequence']}:death:{identity}",
+                )
         return list(dict.fromkeys(names))
 
     def player_profile(self, public_id: str, history_limit: int = 100, session_limit: int = 50) -> dict[str, Any] | None:

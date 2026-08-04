@@ -35,6 +35,7 @@ Before planning, reviewing, or changing this project, read `README.md` and every
 - Validate all commands and values with explicit allowlists.
 - Assume trusted-LAN deployment only until authentication, CSRF, TLS, and restricted Docker access are implemented.
 - Never overwrite `.env`, `data/manager.db`, or Minecraft world data during deployment.
+- Keep the embedded telemetry pack under `packs/telemetry/` synchronized from its standalone repository with Git subtree. Pack installation must use the shared installer, persistent Bedrock data, backups, atomic association updates, and explicit restart decisions.
 
 ## Quality gate
 

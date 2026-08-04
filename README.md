@@ -151,7 +151,14 @@ Current structured metrics include:
 - sampled horizontal distance;
 - dimensions visited.
 
-The manager remains fully usable when the pack is absent or temporarily unavailable. The future **CraftControl Telemetry Pack** integration will provide native status, installation, upgrade, disable, removal, backup, and rollback commands.
+The manager remains fully usable when the pack is absent or temporarily unavailable. The embedded **CraftControl Telemetry Pack** integration provides native status, installation, upgrade, disable, removal, backup, and rollback commands:
+
+```bash
+docker compose exec minecraft-bedrock-manager craftcontrol telemetry status
+docker compose exec minecraft-bedrock-manager craftcontrol telemetry install
+```
+
+Installation is idempotent, writes only to persistent Bedrock data, creates a recoverable backup, and never restarts Bedrock automatically. See [Telemetry Pack integration](docs/telemetry-pack.md) for the complete command and recovery guide.
 
 ## Data and backups
 
@@ -255,7 +262,7 @@ minecraft_manager/
 The immediate direction is:
 
 1. complete the CraftControl visual and compatibility rebrand;
-2. integrate the independently versioned CraftControl Telemetry Pack;
+2. expose the integrated CraftControl Telemetry Pack in the responsive web interface;
 3. add player-backed local accounts, roles, sessions, and CSRF protection;
 4. expand deaths, rankings, mining, building, combat, exploration, and activity analytics;
 5. add coordinated backup, export, retention, and operational diagnostics.

@@ -28,5 +28,6 @@ services:
       - ./minecraft_manager:/app/minecraft_manager:ro
       - ./static:/app/static:ro
       - ./templates:/app/templates:ro
+      - ./packs:/app/packs:ro
     security_opt:
       - no-new-privileges:true

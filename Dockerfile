@@ -11,6 +11,9 @@ COPY app.py wsgi.py ./
 COPY minecraft_manager ./minecraft_manager
 COPY static ./static
 COPY templates ./templates
+COPY packs ./packs
+COPY bin/craftcontrol /usr/local/bin/craftcontrol
+RUN chmod 755 /usr/local/bin/craftcontrol
 
 # O grupo do socket varia por host; o Compose executa com o GID informado.
 EXPOSE 8082

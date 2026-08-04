@@ -99,7 +99,7 @@ class TimeActionsTest(unittest.TestCase):
         self.service.request_telemetry_snapshot_async("test")
         import time
         deadline = time.time() + 2
-        while time.time() < deadline and not self.service.state().get("telemetry"):
+        while time.time() < deadline and self.service.state().get("telemetry", {}).get("status") != "healthy":
             time.sleep(0.01)
         telemetry = self.service.state()["telemetry"]
         self.assertEqual(telemetry["status"], "healthy")

@@ -157,6 +157,11 @@ function t(key, ...args) {
   return typeof value === "function" ? value(...args) : value;
 }
 
+function can(capability) {
+  const capabilities = state.user?.capabilities || [];
+  return capabilities.includes("*") || capabilities.includes(capability);
+}
+
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>'"]/g, (character) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;",
@@ -201,6 +206,9 @@ function booleanControl(id, value) {
   const known = normalized === "true" || normalized === "false";
   const checked = normalized === "true";
   const text = known ? (checked ? t("enabled") : t("disabled")) : t("unknown");
+  if (id === "detail-operator" && !can("players.manage_permissions")) {
+    return `<span class="read-only-badge">${state.locale === "pt" ? "Somente leitura" : "Read only"}</span>`;
+  }
   return `<div class="toggle-control"><span class="toggle-value ${known ? "" : "unknown"}">${text}</span><label class="switch"><input id="${id}" type="checkbox" ${checked ? "checked" : ""}><span></span></label></div>`;
 }
 
@@ -346,6 +354,12 @@ function settingsMarkup(groupNames) {
   }).join("");
 }
 
+function playerSettingsMarkup() {
+  const persistent = Object.entries(state.schema.settings).filter(([, definition]) => definition.group === "Jogadores");
+  const live = Object.entries(state.schema.gamerules).filter(([, definition]) => definition.group === "Jogadores");
+  return `<section class="player-server-settings block-panel"><div class="section-heading"><div><span class="eyebrow">${state.locale === "pt" ? "REGRAS GERAIS" : "GENERAL RULES"}</span><h3>${state.locale === "pt" ? "Configurações para todos os jogadores" : "Settings for every player"}</h3><p>${state.locale === "pt" ? "Limites e regras do servidor. Alterações instantâneas são identificadas pelo raio." : "Server-wide limits and rules. Instant changes are marked with a lightning bolt."}</p></div></div><div class="card">${persistent.map(([key, definition]) => inputFor(key, definition, Object.hasOwn(state.changes, key) ? state.changes[key] : state.config[key])).join("")}${live.map(([key, definition]) => inputFor(key, definition, state.gamerules[key], true)).join("")}</div></section>`;
+}
+
 function renderSettingsGroups(groupNames, prefix = "") {
   const titleKey = state.tab === "world" ? "worldIntro" : state.tab === "rules" ? "rulesIntro" : state.tab === "server" ? "serverIntro" : "onlinePlayers";
   content.innerHTML = `<div class="section-heading"><h2>${t(titleKey)}</h2></div>${prefix}<div class="accordion-list">${settingsMarkup(groupNames)}</div>`;
@@ -386,7 +400,7 @@ function bindSettingFields(groupNames) {
 }
 
 async function renderPlayersPanel() {
-  content.innerHTML = `<div class="players-screen block-panel"><h3>${t("allPlayers")}</h3><p>${t("playerHistoryHelp")}</p><div id="player-overview" class="player-overview" hidden></div><div class="player-toolbar" hidden><input id="player-search" type="search" placeholder="${t("searchPlayers")}" autocomplete="off"><div class="player-filters"><button class="active" data-player-filter="all">${t("filterAll")}</button><button data-player-filter="online">${t("filterOnline")}</button><button data-player-filter="offline">${t("filterOffline")}</button><button data-player-filter="operator">${t("filterOperators")}</button></div></div><div class="loading-players">${t("checking")}</div></div><div class="accordion-list">${settingsMarkup(["Jogadores"])}</div>`;
+  content.innerHTML = `<div class="players-screen block-panel"><div class="section-heading"><div><span class="eyebrow">${state.locale === "pt" ? "JOGADORES" : "PLAYERS"}</span><h3>${t("allPlayers")}</h3><p>${state.locale === "pt" ? "Selecione uma pessoa para abrir sua ficha, histórico e permissões." : "Select a person to open their profile, history, and permissions."}</p></div></div><div id="player-overview" class="player-overview" hidden></div><div class="player-toolbar" hidden><input id="player-search" type="search" placeholder="${t("searchPlayers")}" autocomplete="off"><div class="player-filters"><button class="active" data-player-filter="all">${t("filterAll")}</button><button data-player-filter="online">${t("filterOnline")}</button><button data-player-filter="offline">${t("filterOffline")}</button><button data-player-filter="operator">${t("filterOperators")}</button></div></div><div class="loading-players">${t("checking")}</div></div>${playerSettingsMarkup()}`;
   bindSegmentedControls();
   bindSettingFields(["Jogadores"]);
   try {
@@ -433,62 +447,65 @@ function renderPlayerOverview(list) {
 
 function renderPlayerCards(container, list, access = {}) {
   if (!list.length) { container.innerHTML = `<p class="no-player-results">${t("noPlayersFound")}</p>`; return; }
-  container.innerHTML = list.map((player, index) => `<article class="player-management-card ${player.online ? "is-online" : "is-offline"}"><div class="player-avatar" aria-hidden="true">${escapeHtml(player.name.slice(0, 1).toUpperCase())}</div><div class="player-identity"><strong>${escapeHtml(player.name)}</strong><small>${player.online ? "● " + t("online") : "○ " + t("offline")}</small></div><div class="player-role"><span>${escapeHtml(optionLabel(player.permission || "member"))}</span>${booleanControl(`operator-${index}`, player.operator)}</div><div class="player-stats"><span><b>${player.sessions_count}</b>${t("sessions")}</span><span><b>${formatDuration(player.total_play_seconds)}</b>${t("playTime")}</span><span title="${t("derivedDeaths")}"><b>${player.deaths_count}*</b>${t("deaths")}</span></div><div class="player-dates"><span>${t("firstSeen")}: <b>${formatDate(player.first_seen_at)}</b></span><span>${player.online ? t("connectedSince") : t("lastSeen")}: <b>${formatDate(player.online ? player.connected_at : player.last_seen_at)}</b></span>${player.last_death_at ? `<span>${t("lastDeath")}: <b>${formatDate(player.last_death_at)}</b></span>` : ""}</div>${accessMarkup(player, index, access[player.name.toLocaleLowerCase()])}<button class="secondary player-history-button" data-player-index="${index}">${t("viewHistory")}</button><div class="player-history" id="player-history-${index}" hidden></div></article>`).join("");
-  container.querySelectorAll(".player-management-card").forEach((card, index) => {
-    const player = list[index];
-    if (!player.telemetry_updated_at) return;
-    card.classList.add("has-telemetry");
-    card.querySelector(".player-identity small").insertAdjacentHTML("afterend", `<small class="telemetry-badge">◆ ${t("authoritative")}</small>`);
-  });
-  list.forEach((player, index) => {
-      const id = `operator-${index}`;
-      $(`#${id}`).onchange = async (event) => {
-        updateToggleLabel(event.target);
-        try {
-          await api(`/api/players/${encodeURIComponent(player.name)}/operator`, { method: "PUT", body: JSON.stringify({ enabled: event.target.checked }) });
-          toast(t("permissionUpdated"));
-        } catch (error) { toast(error.message, true); renderPlayersPanel(); }
-      };
-      const invite = container.querySelector(`[data-access-invite="${index}"]`);
-      if (invite) invite.onclick = async () => {
-        const role = container.querySelector(`[data-access-role="${index}"]`).value;
-        try {
-          const result = await api("/api/auth/access/invite", { method: "POST", body: JSON.stringify({ player: player.name, role }) });
-          const output = container.querySelector(`[data-access-code="${index}"]`);
-          output.hidden = false;
-          output.querySelector("code").textContent = result.token;
-          output.querySelector("button").onclick = async () => { await navigator.clipboard.writeText(result.token); toast(state.locale === "pt" ? "Código copiado" : "Code copied"); };
-        } catch (error) { toast(error.message, true); }
-      };
-      const suspend = container.querySelector(`[data-access-suspend="${index}"]`);
-      if (suspend) suspend.onclick = async () => {
-        if (!confirm(state.locale === "pt" ? `Suspender o acesso de ${player.name}?` : `Suspend ${player.name}'s access?`)) return;
-        try { await api(`/api/auth/access/${encodeURIComponent(player.name)}/suspend`, { method: "PUT" }); toast(state.locale === "pt" ? "Acesso suspenso" : "Access suspended"); renderPlayersPanel(); }
-        catch (error) { toast(error.message, true); }
-      };
-      container.querySelector(`[data-player-index="${index}"]`).onclick = async (event) => {
-        const button = event.currentTarget;
-        const history = $(`#player-history-${index}`);
-        if (!history.hidden) { history.hidden = true; button.textContent = t("viewHistory"); return; }
-        try {
-          const result = await api(`/api/players/profile/${encodeURIComponent(player.id)}`);
-          const profile = result?.profile || result;
-          if (!profile || !Array.isArray(profile.history)) throw new Error(t("historyUnavailable"));
-          history.innerHTML = profileMarkup(profile);
-          history.insertAdjacentHTML("afterbegin", telemetryMarkup(profile));
-          history.hidden = false;
-          button.textContent = t("hideHistory");
-        } catch (error) { toast(error.message, true); }
-      };
+  container.innerHTML = list.map((player, index) => {
+    const account = access[player.name.toLocaleLowerCase()];
+    const gameRole = player.operator ? (state.locale === "pt" ? "Operador Minecraft" : "Minecraft operator") : (state.locale === "pt" ? "Membro Minecraft" : "Minecraft member");
+    const panelRole = account?.status === "active" ? `CraftControl · ${account.role}` : (state.locale === "pt" ? "Sem acesso ao painel" : "No panel access");
+    return `<article class="player-roster-row ${player.online ? "is-online" : "is-offline"}"><button class="player-roster-open" data-player-index="${index}" type="button"><span class="player-avatar" aria-hidden="true">${escapeHtml(player.name.slice(0, 1).toUpperCase())}</span><span class="player-roster-identity"><strong>${escapeHtml(player.name)}</strong><small>${player.online ? "● " + t("online") : "○ " + t("offline")} · ${player.online ? formatDuration(Date.now() / 1000 - player.connected_at) : formatDate(player.last_seen_at)}</small></span><span class="player-roster-badges"><b class="game-role-badge">${escapeHtml(gameRole)}</b><b class="panel-role-badge ${account?.status === "active" ? "has-access" : ""}">${escapeHtml(panelRole)}</b></span><span class="player-roster-summary"><small>${t("playTime")}</small><b>${formatDuration(player.total_play_seconds)}</b></span><span class="player-roster-arrow" aria-hidden="true">›</span></button></article>`;
+  }).join("");
+  container.querySelectorAll("[data-player-index]").forEach((button) => {
+    button.onclick = () => {
+      const player = list[Number(button.dataset.playerIndex)];
+      renderPlayerDetail(player, access[player.name.toLocaleLowerCase()]);
+    };
   });
 }
 
-function accessMarkup(player, index, account) {
-  if (state.user?.role !== "owner") return "";
-  const label = state.locale === "pt" ? "Acesso ao painel" : "Panel access";
-  const invite = account?.status === "active" ? (state.locale === "pt" ? "Gerar código de recuperação" : "Generate recovery code") : (state.locale === "pt" ? "Gerar código de acesso" : "Generate access code");
-  const status = account?.status && account.status !== "none" ? `${account.role} · ${account.status}` : (state.locale === "pt" ? "Sem acesso" : "No access");
-  return `<section class="panel-access"><div><strong>${label}</strong><small>${escapeHtml(status)}</small></div><div class="panel-access-actions"><select data-access-role="${index}" aria-label="Role"><option value="viewer" ${account?.role === "viewer" ? "selected" : ""}>Viewer</option><option value="operator" ${account?.role === "operator" ? "selected" : ""}>Operator</option><option value="owner" ${account?.role === "owner" ? "selected" : ""}>Owner</option></select><button class="secondary" data-access-invite="${index}" type="button">${invite}</button>${account?.status === "active" ? `<button class="danger" data-access-suspend="${index}" type="button">${state.locale === "pt" ? "Suspender" : "Suspend"}</button>` : ""}</div><div class="access-code" data-access-code="${index}" hidden><code></code><button type="button">${state.locale === "pt" ? "Copiar" : "Copy"}</button><small>${state.locale === "pt" ? "Este código aparece apenas uma vez e expira em 15 minutos." : "This code is shown once and expires in 15 minutes."}</small></div></section>`;
+async function renderPlayerDetail(player, account) {
+  content.innerHTML = `<div class="player-detail-loading">${t("checking")}</div>`;
+  try {
+    const result = await api(`/api/players/profile/${encodeURIComponent(player.id)}`);
+    const profile = result?.profile || result;
+    if (!profile || !Array.isArray(profile.history)) throw new Error(t("historyUnavailable"));
+    const gameTitle = state.locale === "pt" ? "Permissão no Minecraft" : "Minecraft permission";
+    const panelTitle = state.locale === "pt" ? "Acesso ao CraftControl" : "CraftControl access";
+    content.innerHTML = `<div class="player-detail-screen"><button id="back-to-players" class="secondary player-back" type="button">← ${state.locale === "pt" ? "Todos os jogadores" : "All players"}</button><header class="player-detail-hero block-panel"><div class="player-avatar large" aria-hidden="true">${escapeHtml(profile.name.slice(0, 1).toUpperCase())}</div><div><span class="eyebrow">${profile.online ? t("online") : t("offline")}</span><h2>${escapeHtml(profile.name)}</h2><p>${profile.online ? `${t("connectedSince")} ${formatDate(profile.connected_at)}` : `${t("lastSeen")} ${formatDate(profile.last_seen_at)}`}</p></div></header><div class="player-detail-stats">${[[t("playTime"), formatDuration(profile.total_play_seconds)], [t("sessions"), profile.sessions_count], [t("deaths"), profile.deaths_count], [t("firstSeen"), formatDate(profile.first_seen_at)]].map(([label, value]) => `<span><small>${label}</small><b>${value}</b></span>`).join("")}</div><div class="player-admin-grid"><section class="player-admin-card block-panel"><span class="admin-scope game-scope">MINECRAFT</span><h3>${gameTitle}</h3><p>${state.locale === "pt" ? "Controla comandos administrativos dentro do jogo. Não concede acesso ao painel." : "Controls administrative commands in-game. It does not grant panel access."}</p><div class="permission-choice"><div><strong>${profile.operator ? (state.locale === "pt" ? "Operador" : "Operator") : (state.locale === "pt" ? "Membro" : "Member")}</strong><small>${profile.operator ? t("operatorHelp") : (state.locale === "pt" ? "Joga normalmente, sem comandos administrativos." : "Regular play without administrative commands.")}</small></div>${booleanControl("detail-operator", profile.operator)}</div></section>${panelAccessDetailMarkup(profile, account, panelTitle)}</div>${telemetryMarkup(profile)}<div class="player-history-grid">${profileMarkup(profile)}</div></div>`;
+    $("#back-to-players").onclick = renderPlayersPanel;
+    const operator = $("#detail-operator");
+    if (operator) operator.onchange = async (event) => {
+      updateToggleLabel(event.target);
+      try { await api(`/api/players/${encodeURIComponent(profile.name)}/operator`, { method: "PUT", body: JSON.stringify({ enabled: event.target.checked }) }); toast(t("permissionUpdated")); }
+      catch (error) { toast(error.message, true); renderPlayerDetail(player, account); }
+    };
+    bindPlayerAccess(profile, account);
+  } catch (error) { content.innerHTML = `<p class="no-player-results">${escapeHtml(error.message)}</p>`; }
+}
+
+function panelAccessDetailMarkup(profile, account, title) {
+  if (state.user?.role !== "owner") return `<section class="player-admin-card block-panel"><span class="admin-scope panel-scope">CRAFTCONTROL</span><h3>${title}</h3><p>${state.locale === "pt" ? "Somente owners podem gerenciar acesso ao painel." : "Only owners can manage panel access."}</p><b>${escapeHtml(account?.status === "active" ? account.role : (state.locale === "pt" ? "Sem acesso" : "No access"))}</b></section>`;
+  const action = account?.status === "active" ? (state.locale === "pt" ? "Gerar recuperação" : "Generate recovery") : (state.locale === "pt" ? "Gerar acesso" : "Generate access");
+  return `<section class="player-admin-card block-panel"><span class="admin-scope panel-scope">CRAFTCONTROL</span><h3>${title}</h3><p>${state.locale === "pt" ? "Define o que esta pessoa pode fazer no painel. Não altera permissões dentro do Minecraft." : "Defines what this person can do in the panel. It does not change Minecraft permissions."}</p><div class="panel-account-status"><strong>${account?.status === "active" ? account.role : (state.locale === "pt" ? "Sem acesso ativo" : "No active access")}</strong><small>${account?.active_sessions || 0} ${state.locale === "pt" ? "sessões ativas" : "active sessions"}</small></div><label class="panel-role-field"><span>${state.locale === "pt" ? "Papel no painel" : "Panel role"}</span><select id="detail-access-role"><option value="viewer" ${account?.role === "viewer" ? "selected" : ""}>Viewer · ${state.locale === "pt" ? "somente leitura" : "read only"}</option><option value="operator" ${account?.role === "operator" ? "selected" : ""}>Operator · ${state.locale === "pt" ? "gerencia o servidor" : "manages server"}</option><option value="owner" ${account?.role === "owner" ? "selected" : ""}>Owner · ${state.locale === "pt" ? "controle completo" : "full control"}</option></select></label><div class="panel-access-actions"><button id="detail-access-invite" class="primary" type="button">${action}</button>${account?.status === "active" ? `<button id="detail-access-suspend" class="danger" type="button">${state.locale === "pt" ? "Suspender acesso" : "Suspend access"}</button>` : ""}</div><div id="detail-access-code" class="access-code" hidden><code></code><button type="button">${state.locale === "pt" ? "Copiar código" : "Copy code"}</button><small>${state.locale === "pt" ? "Mostrado uma única vez. Expira em 15 minutos." : "Shown once. Expires in 15 minutes."}</small></div></section>`;
+}
+
+function bindPlayerAccess(profile, account) {
+  const invite = $("#detail-access-invite");
+  if (!invite) return;
+  invite.onclick = async () => {
+    try {
+      const role = $("#detail-access-role").value;
+      const result = await api("/api/auth/access/invite", { method: "POST", body: JSON.stringify({ player: profile.name, role }) });
+      const output = $("#detail-access-code");
+      output.hidden = false;
+      output.querySelector("code").textContent = result.token;
+      output.querySelector("button").onclick = async () => { await navigator.clipboard.writeText(result.token); toast(state.locale === "pt" ? "Código copiado" : "Code copied"); };
+    } catch (error) { toast(error.message, true); }
+  };
+  const suspend = $("#detail-access-suspend");
+  if (suspend) suspend.onclick = async () => {
+    if (!confirm(state.locale === "pt" ? `Suspender o acesso de ${profile.name}?` : `Suspend ${profile.name}'s access?`)) return;
+    try { await api(`/api/auth/access/${encodeURIComponent(profile.name)}/suspend`, { method: "PUT" }); toast(state.locale === "pt" ? "Acesso suspenso" : "Access suspended"); renderPlayersPanel(); }
+    catch (error) { toast(error.message, true); }
+  };
 }
 
 function formatDate(timestamp) {

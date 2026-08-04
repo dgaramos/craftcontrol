@@ -33,3 +33,12 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn("  craftcontrol:\n", compose)
         self.assertIn("container_name: craftcontrol", compose)
         self.assertNotIn("minecraft-bedrock-manager", compose)
+
+    def test_player_workspace_separates_roster_profile_and_permission_scopes(self) -> None:
+        script = (ROOT / "static" / "app.js").read_text()
+        self.assertIn('class="player-roster-row', script)
+        self.assertIn('class="player-detail-screen"', script)
+        self.assertIn("Minecraft permission", script)
+        self.assertIn("CraftControl access", script)
+        self.assertIn('class="player-server-settings', script)
+        self.assertIn("Somente leitura", script)

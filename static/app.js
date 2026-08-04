@@ -1,6 +1,6 @@
 const state = {
   schema: null, config: {}, gamerules: {}, players: [], online: 0, maxPlayers: 0,
-  changes: {}, tab: "Geral", tabs: [], status: null, updatedAt: 0,
+  changes: {}, tab: "home", tabs: ["home", "world", "players", "rules", "server"], status: null, updatedAt: 0,
   locale: localStorage.getItem("manager-locale") === "en" ? "en" : "pt",
 };
 const $ = (selector) => document.querySelector(selector);
@@ -35,6 +35,8 @@ const messages = {
     queryUnavailable: "O servidor não retornou um valor legível.",
     onlinePlayers: "Jogadores online", operatorAccess: "Operador", operatorHelp: "Pode usar comandos administrativos dentro do jogo.",
     noOnlinePlayers: "Nenhum jogador online no momento.", permissionUpdated: "Permissão atualizada",
+    home: "Início", world: "Mundo", players: "Jogadores", rules: "Regras", settings: "Servidor",
+    worldIntro: "Configuração do mundo", rulesIntro: "Comportamento do jogo", serverIntro: "Infraestrutura do servidor",
   },
   en: {
     refresh: "Refresh", worldState: "WORLD STATE", quickActions: "Quick actions",
@@ -64,6 +66,8 @@ const messages = {
     queryUnavailable: "The server did not return a readable value.",
     onlinePlayers: "Online players", operatorAccess: "Operator", operatorHelp: "Can use administrative commands in the game.",
     noOnlinePlayers: "No players are online right now.", permissionUpdated: "Permission updated",
+    home: "Home", world: "World", players: "Players", rules: "Rules", settings: "Server",
+    worldIntro: "World configuration", rulesIntro: "Game behavior", serverIntro: "Server infrastructure",
   },
 };
 
@@ -104,6 +108,13 @@ function groupLabel(group) {
   if (group === "__players__") return t("onlinePlayers");
   return state.locale === "en" ? (groups[group] || group) : group;
 }
+
+const destinationGroups = {
+  world: ["Geral", "Mundo"],
+  players: ["Jogadores"],
+  rules: ["Interface", "Jogabilidade", "Tempo e clima", "Criaturas", "Drops", "Comandos"],
+  server: ["Packs", "Rede", "Avançado"],
+};
 
 function optionLabel(option) {
   return optionNames[option]?.[state.locale] || option;
@@ -180,6 +191,7 @@ function updateToggleLabel(element) {
 
 function render() {
   if (!state.schema) return;
+  $("#hero").hidden = state.tab !== "home";
   if (state.tab === "__time__") {
     renderTimePanel();
     return;
@@ -188,10 +200,34 @@ function render() {
     renderPlayersPanel();
     return;
   }
-  const persistent = Object.entries(state.schema.settings).filter(([, definition]) => definition.group === state.tab);
-  const live = Object.entries(state.schema.gamerules).filter(([, definition]) => definition.group === state.tab);
-  content.innerHTML = `<div class="group"><div class="group-title">${escapeHtml(groupLabel(state.tab))}</div><div class="card">${persistent.map(([key, definition]) => inputFor(key, definition, Object.hasOwn(state.changes, key) ? state.changes[key] : state.config[key])).join("")}${live.map(([key, definition]) => inputFor(key, definition, state.gamerules[key], true)).join("")}</div></div>`;
+  if (state.tab === "home") {
+    content.innerHTML = "";
+    return;
+  }
+  const prefix = state.tab === "world" ? `<button class="section-feature" id="open-time"><span>☀</span><div><strong>${t("timeControls")}</strong><small>${t("timeControlsHint")}</small></div><b>›</b></button>` : "";
+  renderSettingsGroups(destinationGroups[state.tab] || [], prefix);
+  if (state.tab === "world") $("#open-time").onclick = openTimeControls;
+}
+
+function settingsMarkup(groupNames) {
+  return groupNames.map((group, index) => {
+    const persistent = Object.entries(state.schema.settings).filter(([, definition]) => definition.group === group);
+    const live = Object.entries(state.schema.gamerules).filter(([, definition]) => definition.group === group);
+    if (!persistent.length && !live.length) return "";
+    return `<details class="settings-accordion" ${index === 0 ? "open" : ""}><summary><span>${escapeHtml(groupLabel(group))}</span><b>${persistent.length + live.length}</b></summary><div class="card">${persistent.map(([key, definition]) => inputFor(key, definition, Object.hasOwn(state.changes, key) ? state.changes[key] : state.config[key])).join("")}${live.map(([key, definition]) => inputFor(key, definition, state.gamerules[key], true)).join("")}</div></details>`;
+  }).join("");
+}
+
+function renderSettingsGroups(groupNames, prefix = "") {
+  const titleKey = state.tab === "world" ? "worldIntro" : state.tab === "rules" ? "rulesIntro" : state.tab === "server" ? "serverIntro" : "onlinePlayers";
+  content.innerHTML = `<div class="section-heading"><h2>${t(titleKey)}</h2></div>${prefix}<div class="accordion-list">${settingsMarkup(groupNames)}</div>`;
   bindSegmentedControls();
+  bindSettingFields(groupNames);
+}
+
+function bindSettingFields(groupNames) {
+  const persistent = Object.entries(state.schema.settings).filter(([, definition]) => groupNames.includes(definition.group));
+  const live = Object.entries(state.schema.gamerules).filter(([, definition]) => groupNames.includes(definition.group));
   persistent.forEach(([key, definition]) => {
     const element = $(`#field-${key}`);
     element.addEventListener("change", () => {
@@ -220,7 +256,9 @@ function render() {
 }
 
 async function renderPlayersPanel() {
-  content.innerHTML = `<div class="players-screen block-panel"><h3>${t("onlinePlayers")}</h3><p>${t("operatorHelp")}</p><div class="loading-players">${t("checking")}</div></div>`;
+  content.innerHTML = `<div class="players-screen block-panel"><h3>${t("onlinePlayers")}</h3><p>${t("operatorHelp")}</p><div class="loading-players">${t("checking")}</div></div><div class="accordion-list">${settingsMarkup(["Jogadores"])}</div>`;
+  bindSegmentedControls();
+  bindSettingFields(["Jogadores"]);
   try {
     const result = await api("/api/players");
     const list = result.players || [];
@@ -303,9 +341,11 @@ function bindTimePanel() {
 }
 
 function renderTabs() {
-  $("#tabs").innerHTML = state.tabs.map((tab) => `<button class="${tab === state.tab ? "active" : ""}" data-tab="${escapeHtml(tab)}">${escapeHtml(groupLabel(tab))}</button>`).join("");
+  const icons = { home: "⌂", world: "◆", players: "♟", rules: "☷", server: "⚙" };
+  const activeDestination = state.tab === "__time__" ? "world" : state.tab === "__players__" ? "players" : state.tab;
+  $("#tabs").innerHTML = state.tabs.map((tab) => `<button class="${tab === activeDestination ? "active" : ""}" data-tab="${tab}"><i>${icons[tab]}</i><span>${t(tab === "server" ? "settings" : tab)}</span></button>`).join("");
   $("#tabs").querySelectorAll("button").forEach((button) => button.onclick = () => {
-    state.tab = button.dataset.tab;
+    state.tab = button.dataset.tab === "players" ? "__players__" : button.dataset.tab;
     renderTabs();
     render();
   });
@@ -355,11 +395,6 @@ async function boot() {
   state.schema = schema;
   state.config = snapshot.settings || {};
   state.gamerules = snapshot.gamerules || {};
-  const regularTabs = [...new Set([...Object.values(schema.settings), ...Object.values(schema.gamerules)].map((item) => item.group))];
-  regularTabs.unshift("__players__");
-  const worldIndex = regularTabs.indexOf("Mundo") + 1;
-  regularTabs.splice(worldIndex, 0, "__time__");
-  state.tabs = regularTabs;
   showPlayers(snapshot);
   setStatus(status);
   applyLocale();
@@ -371,12 +406,14 @@ $("#language").onclick = () => {
   applyLocale();
 };
 
-$("#time-controls").onclick = () => {
+function openTimeControls() {
   state.tab = "__time__";
   renderTabs();
   render();
   window.scrollTo({ top: 0, behavior: "smooth" });
-};
+}
+
+$("#time-controls").onclick = openTimeControls;
 
 $("#refresh").onclick = async () => {
   try {

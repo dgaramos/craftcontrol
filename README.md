@@ -164,7 +164,7 @@ The **Server → Telemetry Pack** panel exposes the same installer service on mo
 
 Telemetry reconciliation is sequence-aware. Missing ranges and pack resets automatically degrade health and request a coalesced authoritative snapshot; stale deltas are rejected, and health becomes healthy again only after a complete snapshot. The panel surfaces the current sequence, completed-snapshot time, gap count, missing-event count, and recovery errors.
 
-Telemetry Pack storage has its own migration version, separate from the log protocol. Pack `0.2.1` validates and backs up legacy world state before migrating it to storage version `1`; invalid or future-version state blocks persistence instead of overwriting counters. CraftControl surfaces that condition as degraded health even if log delivery itself remains available.
+Telemetry Pack storage has its own migration version, separate from the log protocol. Pack `0.2.2` validates and backs up monolithic world state before migrating it to sharded storage version `2`: metadata remains in `bedrock_telemetry:state`, while every player receives an independent bounded property. Invalid, oversized, or future-version state blocks persistence instead of overwriting counters. CraftControl surfaces that condition as degraded health even if log delivery itself remains available.
 
 ## Data and backups
 

@@ -202,6 +202,8 @@ class ManagerService:
                 )
                 if storage.get("migratedFrom") is not None:
                     updates["storage_migrated_from"] = str(storage["migratedFrom"])
+                else:
+                    updates["storage_migrated_from"] = ""
             if capabilities:
                 supported = sum(1 for value in capabilities.values() if isinstance(value, dict) and value.get("supported") is True)
                 updates.update(

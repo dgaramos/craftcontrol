@@ -47,6 +47,8 @@ The behavior pack is not another Docker service. Its source is maintained indepe
 - Per-block-type maps retain the 128 most frequent values to bound state growth.
 - A movement jump greater than 128 blocks per sample is treated as teleportation and is not added to traveled distance.
 - State writes stop before the serialized dynamic-property value exceeds 30 KB; an explicit error is logged instead of corrupting persisted state.
+- Persisted storage and log protocol have independent versions. Legacy storage is validated and migrated before event subscriptions begin.
+- The original legacy JSON is retained at `bedrock_telemetry:state_backup_v0`; failed, corrupt, oversized, or future-version state blocks writes instead of being replaced with empty counters.
 
 See [docs/protocol.md](docs/protocol.md) for the wire contract.
 
@@ -57,6 +59,7 @@ behavior_pack/
 ├── manifest.json
 └── scripts/
     ├── main.js       # Stable Bedrock event subscriptions
+    ├── migrations.js # Validated persisted-state migration pipeline
     ├── model.js      # Pure statistics model and bounded counters
     ├── store.js      # World dynamic-property persistence
     └── transport.js  # Structured log protocol and snapshots
@@ -91,7 +94,7 @@ The runtime integration test loads the production `main.js` through a determinis
 The package command creates:
 
 ```text
-dist/craftcontrol-telemetry-0.2.0.mcpack
+dist/craftcontrol-telemetry-0.2.1.mcpack
 ```
 
 Packaging uses sorted paths, normalized timestamps, and stripped ZIP metadata so the standalone repository and CraftControl subtree produce byte-equivalent artifacts from the same commit.
@@ -134,6 +137,12 @@ Stop Bedrock, back up the world, update the repository, run tests, rerun the ins
 Stop Bedrock, back up `world_behavior_packs.json`, remove the entry with pack ID `8c916948-76c6-4aa5-91e0-97671dfd3830`, and start the server again. The pack directory may then be archived or removed. Existing dynamic-property telemetry remains embedded in the world so reinstalling the same pack can recover it.
 
 The CraftControl rebrand preserves the original pack UUIDs, `bedrock_telemetry` dynamic-property key, log prefix, and script-event namespace specifically to retain existing world state and consumer compatibility.
+
+## Persisted-state migrations
+
+Release `0.2.1` introduces storage schema version `1`, independently from telemetry protocol schema `1`. On first load of the legacy `{ "schema": 1, ... }` format, the pack fills missing aggregate fields without resetting existing counters, validates the complete candidate, checks the 30 KB safety limit, saves the untouched source JSON as `bedrock_telemetry:state_backup_v0`, and only then writes the migrated state.
+
+Migration failures never fall back to writable empty state. Persistence is blocked for that runtime, the original dynamic property remains untouched, and startup/snapshot envelopes report the blocked storage status for the manager. Unknown future storage versions are treated the same way, preventing an older pack from downgrading a newer world's data.
 
 ## Performance and limitations
 

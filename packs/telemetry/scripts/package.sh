@@ -8,7 +8,7 @@ trap 'rm -rf "${staging_dir}"' EXIT
 mkdir -p "${output_dir}"
 cp -a "${project_dir}/behavior_pack/." "${staging_dir}/"
 find "${staging_dir}" -exec touch -t 198001010000 {} +
-archive="${output_dir}/craftcontrol-telemetry-0.2.0.mcpack"
+archive="${output_dir}/craftcontrol-telemetry-0.2.1.mcpack"
 rm -f "${archive}"
 (
   cd "${staging_dir}"

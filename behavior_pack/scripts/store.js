@@ -1,8 +1,18 @@
 import { world } from "@minecraft/server";
-import { STATE_KEY, emptyState } from "./model.js";
+import { STATE_BACKUP_KEY, STATE_KEY, emptyState } from "./model.js";
+import { migrateState } from "./migrations.js";
+import { STORAGE_VERSION } from "./versions.js";
 
 let state;
 let dirty = false;
+let blocked = false;
+let migration = { status: "not-required", storageVersion: STORAGE_VERSION, migratedFrom: null };
+
+function serialize(candidate) {
+  const value = JSON.stringify(candidate);
+  if (value.length > 30000) throw new Error(`state is ${value.length} bytes; refusing unsafe write`);
+  return value;
+}
 
 export function loadState() {
   if (state) return state;
@@ -10,12 +20,27 @@ export function loadState() {
   if (typeof raw !== "string") return (state = emptyState());
   try {
     const parsed = JSON.parse(raw);
-    state = parsed?.schema === 1 && parsed.players ? parsed : emptyState();
+    const result = migrateState(parsed);
+    state = result.state;
+    if (result.migratedFrom !== null) {
+      const serialized = serialize(state);
+      if (typeof world.getDynamicProperty(STATE_BACKUP_KEY) !== "string") world.setDynamicProperty(STATE_BACKUP_KEY, raw);
+      world.setDynamicProperty(STATE_KEY, serialized);
+      migration = { status: "migrated", storageVersion: STORAGE_VERSION, migratedFrom: result.migratedFrom };
+      console.warn(`[BEDROCK_TELEMETRY_MIGRATION] storage ${result.migratedFrom} -> ${STORAGE_VERSION} complete`);
+    }
   } catch (error) {
     console.error(`[BEDROCK_TELEMETRY_ERROR] invalid persisted state: ${error}`);
+    blocked = true;
+    migration = { status: "blocked", storageVersion: STORAGE_VERSION, migratedFrom: null, error: String(error) };
     state = emptyState();
   }
   return state;
+}
+
+export function storageStatus() {
+  loadState();
+  return { ...migration, persistenceBlocked: blocked };
 }
 
 export function mutate(callback) {
@@ -30,11 +55,14 @@ export function nextSequence() {
 
 export function flush(force = false) {
   if (!dirty && !force) return;
-  const serialized = JSON.stringify(loadState());
-  if (serialized.length > 30000) {
-    console.error(`[BEDROCK_TELEMETRY_ERROR] state is ${serialized.length} bytes; refusing unsafe write`);
+  if (blocked) {
+    console.error("[BEDROCK_TELEMETRY_ERROR] persistence blocked; preserving original state");
     return;
   }
-  world.setDynamicProperty(STATE_KEY, serialized);
-  dirty = false;
+  try {
+    world.setDynamicProperty(STATE_KEY, serialize(loadState()));
+    dirty = false;
+  } catch (error) {
+    console.error(`[BEDROCK_TELEMETRY_ERROR] ${error}`);
+  }
 }

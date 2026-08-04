@@ -19,6 +19,10 @@ Consumers must ignore lines without the exact prefix, reject unsupported schema 
 | `player` | Player name or `null`; no XUID is emitted |
 | `data` | Topic-specific payload |
 
+`telemetry.started` and `snapshot.started` include a `storage` object with the independently versioned persisted-state status. Consumers must treat `persistenceBlocked: true` as degraded even when a snapshot reaches `snapshot.finished`.
+
+Protocol `schema` and pack `storageVersion` are intentionally independent. A storage migration does not require a wire-protocol version change when the emitted envelope contract remains compatible.
+
 ## Topics
 
 - `telemetry.started`

@@ -1,10 +1,13 @@
-export const SCHEMA_VERSION = 1;
+import { PROTOCOL_SCHEMA_VERSION, STORAGE_VERSION } from "./versions.js";
+
+export const SCHEMA_VERSION = PROTOCOL_SCHEMA_VERSION;
 export const STATE_KEY = "bedrock_telemetry:state";
+export const STATE_BACKUP_KEY = "bedrock_telemetry:state_backup_v0";
 export const LOG_PREFIX = "[BEDROCK_TELEMETRY]";
 export const MAX_BLOCK_TYPES = 128;
 
 export function emptyState() {
-  return { schema: SCHEMA_VERSION, sequence: 0, players: {} };
+  return { storageVersion: STORAGE_VERSION, sequence: 0, players: {} };
 }
 
 export function playerKey(name) {

@@ -1,6 +1,6 @@
 import { system, world } from "@minecraft/server";
 import { ensurePlayer, horizontalDistance, incrementMap, round } from "./model.js";
-import { flush, loadState, mutate } from "./store.js";
+import { flush, loadState, mutate, storageStatus } from "./store.js";
 import { publish, publishSnapshot } from "./transport.js";
 
 const positions = new Map();
@@ -100,6 +100,6 @@ system.runInterval(() => {
 
 system.runTimeout(() => {
   loadState();
-  publish("telemetry.started", null, { version: "0.2.0", product: "CraftControl Telemetry Pack" });
+  publish("telemetry.started", null, { version: "0.2.1", product: "CraftControl Telemetry Pack", storage: storageStatus() });
   publishSnapshot();
 }, 1);

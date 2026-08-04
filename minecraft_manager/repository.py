@@ -2,12 +2,15 @@ from __future__ import annotations
 
 from pathlib import Path
 from contextlib import contextmanager
+from datetime import datetime, timedelta
 import sqlite3
 import time
 from typing import Any
 import json
 import hashlib
 import logging
+import os
+from zoneinfo import ZoneInfo
 
 from .migrations import LATEST_SCHEMA_VERSION, run_migrations, schema_version
 
@@ -147,6 +150,48 @@ class StateRepository:
     def _public_player_id(identity: str) -> str:
         return hashlib.sha256(identity.encode("utf-8")).hexdigest()[:24]
 
+    @staticmethod
+    def _calendar_timezone() -> ZoneInfo:
+        try:
+            return ZoneInfo(os.environ.get("TZ", "America/Sao_Paulo"))
+        except Exception:
+            return ZoneInfo("UTC")
+
+    @classmethod
+    def _day_key(cls, timestamp: float) -> str:
+        return datetime.fromtimestamp(timestamp, cls._calendar_timezone()).date().isoformat()
+
+    @classmethod
+    def _add_daily(cls, connection: sqlite3.Connection, identity: str, timestamp: float, **values: float) -> None:
+        allowed = {
+            "play_seconds", "sessions", "joins", "deaths", "player_kills", "mob_kills",
+            "blocks_broken", "blocks_placed", "damage_dealt", "damage_taken", "distance", "dimension_transitions",
+        }
+        values = {key: value for key, value in values.items() if key in allowed and value > 0}
+        if not values:
+            return
+        day = cls._day_key(timestamp)
+        connection.execute(
+            "INSERT OR IGNORE INTO player_daily(identity,day,updated_at) VALUES(?,?,?)", (identity, day, timestamp),
+        )
+        assignments = ",".join(f"{key}={key}+?" for key in values)
+        connection.execute(
+            f"UPDATE player_daily SET {assignments},updated_at=? WHERE identity=? AND day=?",
+            (*values.values(), timestamp, identity, day),
+        )
+
+    @classmethod
+    def _allocate_daily_play(cls, connection: sqlite3.Connection, identity: str, started_at: float, ended_at: float) -> None:
+        cursor = max(0.0, started_at)
+        end = max(cursor, ended_at)
+        timezone = cls._calendar_timezone()
+        while cursor < end:
+            local = datetime.fromtimestamp(cursor, timezone)
+            next_midnight = datetime.combine(local.date() + timedelta(days=1), datetime.min.time(), timezone).timestamp()
+            boundary = min(end, next_midnight)
+            cls._add_daily(connection, identity, cursor, play_seconds=max(0, boundary - cursor))
+            cursor = boundary
+
     def _player_identity(self, connection: sqlite3.Connection, name: str, xuid: str = "") -> str:
         if xuid:
             identity = f"xuid:{xuid}"
@@ -160,6 +205,7 @@ class StateRepository:
                     connection.execute("UPDATE player_sessions SET identity=? WHERE identity=?", (identity, temporary))
                     connection.execute("UPDATE player_history SET identity=? WHERE identity=?", (identity, temporary))
                     connection.execute("UPDATE player_telemetry SET identity=? WHERE identity=?", (identity, temporary))
+                    connection.execute("UPDATE OR REPLACE player_daily SET identity=? WHERE identity=?", (identity, temporary))
             return identity
         row = connection.execute(
             "SELECT p.identity FROM player_profiles p LEFT JOIN player_aliases a ON a.identity=p.identity "
@@ -192,6 +238,7 @@ class StateRepository:
             if connected and not was_online:
                 connection.execute("INSERT INTO player_sessions(identity,connected_at) VALUES(?,?)", (identity, now))
                 connection.execute("UPDATE player_profiles SET sessions_count=sessions_count+1 WHERE identity=?", (identity,))
+                self._add_daily(connection, identity, now, sessions=1, joins=1)
             elif not connected and was_online:
                 session = connection.execute(
                     "SELECT id,connected_at FROM player_sessions WHERE identity=? AND disconnected_at IS NULL ORDER BY id DESC LIMIT 1",
@@ -204,6 +251,7 @@ class StateRepository:
                         (now, duration, session[0]),
                     )
                     connection.execute("UPDATE player_profiles SET total_play_seconds=total_play_seconds+? WHERE identity=?", (duration, identity))
+                    self._allocate_daily_play(connection, identity, float(session[1]), now)
             if changed:
                 topic = "player.connected" if connected else "player.disconnected"
                 self._record_player_history(connection, identity, topic, source, {"name": name}, now)
@@ -232,6 +280,7 @@ class StateRepository:
                     "WHERE id=(SELECT id FROM player_sessions WHERE identity=? AND disconnected_at IS NULL ORDER BY id DESC LIMIT 1)",
                     (now, duration, reason, identity),
                 )
+                self._allocate_daily_play(connection, identity, float(connected_at or now), now)
                 connection.execute(
                     "UPDATE player_profiles SET online=0,connected_at=NULL,last_seen_at=?,total_play_seconds=total_play_seconds+? WHERE identity=?",
                     (now, duration, identity),
@@ -254,6 +303,7 @@ class StateRepository:
             )
             if inserted:
                 connection.execute("UPDATE player_profiles SET deaths_count=deaths_count+1,last_death_at=?,last_seen_at=? WHERE identity=?", (now, now, identity))
+                self._add_daily(connection, identity, now, deaths=1)
             return inserted
 
     def _record_player_history(self, connection: sqlite3.Connection, identity: str, topic: str, source: str, payload: dict[str, Any], occurred_at: float, event_key: str | None = None) -> bool:
@@ -325,6 +375,9 @@ class StateRepository:
                         "INSERT INTO player_profiles(identity,current_name,first_seen_at,last_seen_at) VALUES(?,?,?,?)",
                         (identity, player, now, now),
                     )
+                previous = connection.execute("SELECT stats FROM player_telemetry WHERE identity=?", (identity,)).fetchone()
+                if previous:
+                    self._apply_snapshot_daily_delta(connection, identity, json.loads(previous[0]), envelope["data"], now)
                 connection.execute(
                     "INSERT INTO player_telemetry(identity,stats,sequence,updated_at) VALUES(?,?,?,?) "
                     "ON CONFLICT(identity) DO UPDATE SET stats=excluded.stats,sequence=excluded.sequence,updated_at=excluded.updated_at",
@@ -334,6 +387,22 @@ class StateRepository:
             elif topic in {"block.broken", "block.placed", "player.respawned", "player.dimension.changed", "entity.died"}:
                 changed.extend(self._apply_telemetry_delta(connection, envelope, now))
         return True, changed
+
+    def _apply_snapshot_daily_delta(
+        self, connection: sqlite3.Connection, identity: str,
+        previous: dict[str, Any], current: dict[str, Any], timestamp: float,
+    ) -> None:
+        fields = {
+            "deaths": "deaths", "playerKills": "player_kills", "mobKills": "mob_kills",
+            "blocksBroken": "blocks_broken", "blocksPlaced": "blocks_placed",
+            "damageDealt": "damage_dealt", "damageTaken": "damage_taken", "distance": "distance",
+        }
+        deltas = {}
+        for source, destination in fields.items():
+            before, after = previous.get(source, 0), current.get(source, 0)
+            if isinstance(before, (int, float)) and isinstance(after, (int, float)) and after > before:
+                deltas[destination] = after - before
+        self._add_daily(connection, identity, timestamp, **deltas)
 
     def _apply_telemetry_delta(self, connection: sqlite3.Connection, envelope: dict[str, Any], now: float) -> list[str]:
         topic, data = envelope["type"], envelope["data"]
@@ -351,13 +420,22 @@ class StateRepository:
                 if topic == "block.broken" and name == names[0]:
                     stats["blocksBroken"] = int(stats.get("blocksBroken", 0)) + 1
                     self._increment_block_map(stats, "brokenByType", data.get("blockType"))
+                    self._add_daily(connection, identity, now, blocks_broken=1)
                 if topic == "block.placed" and name == names[0]:
                     stats["blocksPlaced"] = int(stats.get("blocksPlaced", 0)) + 1
                     self._increment_block_map(stats, "placedByType", data.get("blockType"))
-                if topic == "entity.died" and name == data.get("victim"): stats["deaths"] = int(stats.get("deaths", 0)) + 1
+                    self._add_daily(connection, identity, now, blocks_placed=1)
+                if topic == "entity.died" and name == data.get("victim"):
+                    stats["deaths"] = int(stats.get("deaths", 0)) + 1
+                    derived = connection.execute(
+                        "SELECT 1 FROM player_history WHERE identity=? AND topic='player.death' AND source!='behavior-pack' "
+                        "AND occurred_at BETWEEN ? AND ? LIMIT 1", (identity, now - 10, now + 10),
+                    ).fetchone()
+                    if not derived: self._add_daily(connection, identity, now, deaths=1)
                 if topic == "entity.died" and name == data.get("killer"):
                     key = "playerKills" if data.get("victim") else "mobKills"
                     stats[key] = int(stats.get(key, 0)) + 1
+                    self._add_daily(connection, identity, now, **{"player_kills" if data.get("victim") else "mob_kills": 1})
                 connection.execute("UPDATE player_telemetry SET stats=?,sequence=?,updated_at=? WHERE identity=?", (json.dumps(stats), envelope["sequence"], now, identity))
             if topic == "entity.died" and name == data.get("victim"):
                 if not connection.execute("SELECT 1 FROM player_profiles WHERE identity=?", (identity,)).fetchone():
@@ -381,6 +459,7 @@ class StateRepository:
                     connection, identity, topic, "behavior-pack", data, now,
                     f"telemetry:{envelope['sequence']}:{topic}:{identity}",
                 )
+                if topic == "player.dimension.changed": self._add_daily(connection, identity, now, dimension_transitions=1)
         return list(dict.fromkeys(names))
 
     @staticmethod
@@ -733,4 +812,81 @@ class StateRepository:
             "dimensions": dimensions, "transitions": transitions,
             "rankings": {field: ranking(field) for field in ("distance", "dimension_count", "play_seconds", "sessions")},
             "players": players,
+        }
+
+    def period_analytics(self, days: int = 30, limit: int = 10) -> dict[str, Any]:
+        now = time.time()
+        timezone = self._calendar_timezone()
+        today = datetime.fromtimestamp(now, timezone).date()
+        dates = [(today - timedelta(days=offset)) for offset in reversed(range(days))]
+        start_day, end_day = dates[0].isoformat(), dates[-1].isoformat()
+        start_at = datetime.combine(dates[0], datetime.min.time(), timezone).timestamp()
+        metrics = (
+            "play_seconds", "sessions", "joins", "deaths", "player_kills", "mob_kills",
+            "blocks_broken", "blocks_placed", "damage_dealt", "damage_taken", "distance", "dimension_transitions",
+        )
+        calendar = {day.isoformat(): {"day": day.isoformat(), **{metric: 0 for metric in metrics}} for day in dates}
+        players: dict[str, dict[str, Any]] = {}
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT d.identity,p.current_name,d.day,d.play_seconds,d.sessions,d.joins,d.deaths,d.player_kills,d.mob_kills,"
+                "d.blocks_broken,d.blocks_placed,d.damage_dealt,d.damage_taken,d.distance,d.dimension_transitions "
+                "FROM player_daily d JOIN player_profiles p ON p.identity=d.identity WHERE d.day BETWEEN ? AND ?",
+                (start_day, end_day),
+            ).fetchall()
+            active_sessions = connection.execute(
+                "SELECT s.identity,p.current_name,s.connected_at FROM player_sessions s JOIN player_profiles p ON p.identity=s.identity "
+                "WHERE s.disconnected_at IS NULL AND s.connected_at < ?", (now,),
+            ).fetchall()
+            heat_sessions = connection.execute(
+                "SELECT connected_at,COALESCE(disconnected_at,?) FROM player_sessions "
+                "WHERE connected_at < ? AND COALESCE(disconnected_at,?) > ?", (now, now, now, start_at),
+            ).fetchall()
+
+        for row in rows:
+            identity, name, day = row[:3]
+            player = players.setdefault(identity, {"player": {"id": self._public_player_id(identity), "name": name}, **{metric: 0 for metric in metrics}})
+            for index, metric in enumerate(metrics, start=3):
+                value = row[index] or 0
+                player[metric] += value
+                calendar[day][metric] += value
+
+        for identity, name, connected_at in active_sessions:
+            player = players.setdefault(identity, {"player": {"id": self._public_player_id(identity), "name": name}, **{metric: 0 for metric in metrics}})
+            cursor = max(float(connected_at), start_at)
+            while cursor < now:
+                local = datetime.fromtimestamp(cursor, timezone)
+                next_midnight = datetime.combine(local.date() + timedelta(days=1), datetime.min.time(), timezone).timestamp()
+                boundary = min(now, next_midnight)
+                amount = boundary - cursor
+                key = local.date().isoformat()
+                if key in calendar:
+                    calendar[key]["play_seconds"] += amount
+                    player["play_seconds"] += amount
+                cursor = boundary
+
+        heatmap = [{"weekday": weekday, "hour": hour, "seconds": 0} for weekday in range(7) for hour in range(24)]
+        heatmap_index = {(item["weekday"], item["hour"]): item for item in heatmap}
+        for connected_at, disconnected_at in heat_sessions:
+            cursor, end = max(float(connected_at), start_at), min(float(disconnected_at), now)
+            while cursor < end:
+                local = datetime.fromtimestamp(cursor, timezone)
+                next_hour = (local.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)).timestamp()
+                boundary = min(end, next_hour)
+                heatmap_index[(local.weekday(), local.hour)]["seconds"] += boundary - cursor
+                cursor = boundary
+
+        player_values = list(players.values())
+        rankings = {}
+        for metric in metrics:
+            entries = [{"player": item["player"], "value": round(item[metric], 1)} for item in player_values if item[metric] > 0]
+            rankings[metric] = sorted(entries, key=lambda entry: (-entry["value"], entry["player"]["name"].casefold()))[:limit]
+        days_list = list(calendar.values())
+        most_active = max(days_list, key=lambda item: item["play_seconds"], default=None)
+        if most_active and most_active["play_seconds"] <= 0: most_active = None
+        return {
+            "generated_at": now, "period_days": days, "timezone": str(timezone),
+            "totals": {metric: round(sum(day[metric] for day in days_list), 1) for metric in metrics},
+            "calendar": days_list, "heatmap": heatmap, "rankings": rankings,
+            "most_active_day": most_active, "players": player_values,
         }

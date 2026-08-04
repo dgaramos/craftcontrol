@@ -52,3 +52,6 @@ class SQLitePlayerRepository:
 
     def exploration_analytics(self, limit: int = 10) -> dict[str, Any]:
         return self.database.exploration_analytics(limit)
+
+    def period_analytics(self, days: int = 30, limit: int = 10) -> dict[str, Any]:
+        return self.database.period_analytics(days, limit)

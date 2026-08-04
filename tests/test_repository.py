@@ -1,4 +1,5 @@
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -249,3 +250,37 @@ class StateRepositoryTest(unittest.TestCase):
             self.assertEqual(result["rankings"]["distance"][0]["player"]["name"], "VonCrush")
             self.assertEqual(result["transitions"][0]["to"], "minecraft:nether")
             self.assertNotIn("private-", str(result))
+
+    def test_daily_analytics_records_sessions_and_incremental_telemetry(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = StateRepository(Path(directory) / "state.db")
+            repository.initialize()
+            now = time.time()
+            repository.observe_player("VonCrush", True, "private-daily", occurred_at=now - 120)
+            repository.ingest_telemetry({
+                "schema": 1, "sequence": 1, "type": "snapshot.player", "timestamp": 1,
+                "player": {"name": "VonCrush"}, "data": {"blocksBroken": 10, "damageDealt": 5, "distance": 20},
+            })
+            block = {
+                "schema": 1, "sequence": 2, "type": "block.broken", "timestamp": 2,
+                "player": {"name": "VonCrush"}, "data": {"blockType": "minecraft:stone"},
+            }
+            repository.ingest_telemetry(block)
+            self.assertFalse(repository.ingest_telemetry(block)[0])
+            repository.ingest_telemetry({
+                "schema": 1, "sequence": 3, "type": "snapshot.player", "timestamp": 3,
+                "player": {"name": "VonCrush"}, "data": {"blocksBroken": 11, "damageDealt": 8.5, "distance": 27},
+            })
+            repository.observe_player("VonCrush", False, "private-daily", occurred_at=now)
+            result = repository.period_analytics(7)
+            self.assertEqual(result["period_days"], 7)
+            self.assertEqual(result["totals"]["sessions"], 1)
+            self.assertEqual(result["totals"]["joins"], 1)
+            self.assertAlmostEqual(result["totals"]["play_seconds"], 120, delta=1)
+            self.assertEqual(result["totals"]["blocks_broken"], 1)
+            self.assertEqual(result["totals"]["damage_dealt"], 3.5)
+            self.assertEqual(result["totals"]["distance"], 7)
+            self.assertEqual(result["rankings"]["play_seconds"][0]["player"]["name"], "VonCrush")
+            self.assertEqual(len(result["calendar"]), 7)
+            self.assertEqual(len(result["heatmap"]), 168)
+            self.assertNotIn("private-daily", str(result))

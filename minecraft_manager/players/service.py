@@ -114,6 +114,13 @@ class PlayerService:
             raise ValueError("invalid exploration analytics limit")
         return self.repository.exploration_analytics(limit)
 
+    def periods(self, days: int = 30, limit: int = 10) -> dict[str, Any]:
+        if days not in {7, 30}:
+            raise ValueError("invalid analytics period")
+        if limit < 1 or limit > 25:
+            raise ValueError("invalid period analytics limit")
+        return self.repository.period_analytics(days, limit)
+
     def set_operator(self, player: str, enabled: bool) -> None:
         self.console.set_operator(player, enabled)
         permission = "operator" if enabled else "member"

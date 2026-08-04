@@ -88,10 +88,23 @@ def _migration_003_local_accounts(connection: sqlite3.Connection) -> None:
     )
 
 
+def _migration_004_daily_player_aggregates(connection: sqlite3.Connection) -> None:
+    connection.execute(
+        "CREATE TABLE IF NOT EXISTS player_daily (identity TEXT NOT NULL, day TEXT NOT NULL, "
+        "play_seconds REAL NOT NULL DEFAULT 0, sessions INTEGER NOT NULL DEFAULT 0, joins INTEGER NOT NULL DEFAULT 0, "
+        "deaths INTEGER NOT NULL DEFAULT 0, player_kills INTEGER NOT NULL DEFAULT 0, mob_kills INTEGER NOT NULL DEFAULT 0, "
+        "blocks_broken INTEGER NOT NULL DEFAULT 0, blocks_placed INTEGER NOT NULL DEFAULT 0, "
+        "damage_dealt REAL NOT NULL DEFAULT 0, damage_taken REAL NOT NULL DEFAULT 0, distance REAL NOT NULL DEFAULT 0, "
+        "dimension_transitions INTEGER NOT NULL DEFAULT 0, updated_at REAL NOT NULL, PRIMARY KEY(identity,day))"
+    )
+    connection.execute("CREATE INDEX IF NOT EXISTS idx_player_daily_day ON player_daily(day,identity)")
+
+
 MIGRATIONS: Mapping[int, Migration] = {
     1: _migration_001_initial_schema,
     2: _migration_002_retain_telemetry_payloads,
     3: _migration_003_local_accounts,
+    4: _migration_004_daily_player_aggregates,
 }
 LATEST_SCHEMA_VERSION = max(MIGRATIONS)
 

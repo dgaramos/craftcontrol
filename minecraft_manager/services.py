@@ -269,6 +269,9 @@ class ManagerService:
     def exploration_analytics(self, limit: int = 10) -> dict[str, Any]:
         return self.player_service.exploration(limit)
 
+    def period_analytics(self, days: int = 30, limit: int = 10) -> dict[str, Any]:
+        return self.player_service.periods(days, limit)
+
     def set_player_operator(self, player: str, enabled: bool) -> None:
         self.player_service.set_operator(player, enabled)
 

@@ -5,7 +5,7 @@ import { requireSession } from "./js/auth.js?v=1";
 const state = {
   schema: null, config: {}, gamerules: {}, players: [], online: 0, maxPlayers: 0,
   changes: {}, tab: "home", tabs: ["home", "world", "players", "analytics", "rules", "server"], status: null, updatedAt: 0, domains: {},
-  analytics: { kind: "all", player: "", source: "all", search: "", days: 0, page: 1, rankingCategory: "activity", rankingMetric: "play_time", blocksMode: "mining", selectedOre: "diamond", combatMetric: "mob_kills", explorationMetric: "distance" },
+  analytics: { kind: "all", player: "", source: "all", search: "", days: 0, page: 1, rankingCategory: "activity", rankingMetric: "play_time", blocksMode: "mining", selectedOre: "diamond", combatMetric: "mob_kills", explorationMetric: "distance", periodDays: 30, periodMetric: "play_seconds" },
   locale: (localStorage.getItem("craftcontrol-locale") || localStorage.getItem("manager-locale")) === "en" ? "en" : "pt",
   user: null,
 };
@@ -58,7 +58,7 @@ const messages = {
     deathHistory: "Histórico de mortes", noDeaths: "Nenhuma morte detalhada registrada.", deathCause: "Causa", killedBy: "Responsável", projectile: "Projétil", telemetrySource: "Behavior pack",
     home: "Início", world: "Mundo", players: "Jogadores", analytics: "Dados", rules: "Regras", settings: "Servidor",
     analyticsTitle: "Atividade do servidor", analyticsHelp: "A história compartilhada de quem entrou, saiu, morreu ou teve permissões alteradas.",
-    activityView: "Atividade", deathsView: "Mortes", rankingsView: "Rankings", blocksView: "Blocos", combatView: "Combate", explorationView: "Exploração", eventFilter: "Evento", playerFilter: "Jogador", periodFilter: "Período", sourceFilter: "Origem", detailFilter: "Causa ou responsável", detailFilterHint: "Ex.: zombie, lava…",
+    activityView: "Atividade", deathsView: "Mortes", rankingsView: "Rankings", blocksView: "Blocos", combatView: "Combate", explorationView: "Exploração", trendsView: "Períodos", eventFilter: "Evento", playerFilter: "Jogador", periodFilter: "Período", sourceFilter: "Origem", detailFilter: "Causa ou responsável", detailFilterHint: "Ex.: zombie, lava…",
     everyEvent: "Todos os eventos", joinsOnly: "Entradas", leavesOnly: "Saídas", permissionsOnly: "Permissões", respawnsOnly: "Respawns", dimensionsOnly: "Dimensões",
     everyPlayer: "Todos os jogadores", lifetime: "Desde o início", last7Days: "Últimos 7 dias", last30Days: "Últimos 30 dias",
     everySource: "Todas as fontes", structuredSource: "Telemetry Pack", serverSource: "Servidor e manager",
@@ -70,6 +70,7 @@ const messages = {
     oreDiamond: "Diamante", oreIron: "Ferro", oreGold: "Ouro", oreCopper: "Cobre", oreCoal: "Carvão", oreRedstone: "Redstone", oreLapis: "Lápis-lazúli", oreEmerald: "Esmeralda", oreQuartz: "Quartzo", oreAncient_debris: "Detritos ancestrais",
     combatTitle: "Combate do servidor", combatHelp: "Mortes, eliminações e dano acumulado com a evidência disponível no mundo.", combatEmptyHelp: "Os painéis permanecem visíveis e começam a preencher quando o Telemetry Pack observar combate.", combatDeaths: "Mortes", combatPlayerKills: "Eliminações PvP", combatMobKills: "Criaturas eliminadas", combatDamageDealt: "Dano causado", combatDamageTaken: "Dano recebido", combatRankings: "Ranking de combate", deathCauses: "Causas de morte", lethalOpponents: "Responsáveis pelas mortes", projectiles: "Projéteis", pvpDuels: "Confrontos PvP", combatProfiles: "Resumo por jogador", noCombatEvidence: "Nenhuma evidência registrada ainda.", telemetryWaiting: "Aguardando telemetria", observedDeaths: "Mortes estruturadas observadas",
     explorationTitle: "Exploração do mundo", explorationHelp: "Distância amostrada, dimensões, sessões e jornadas dos jogadores.", explorationEmptyHelp: "Toda a expedição permanece visível mesmo antes do primeiro dado de movimento.", distanceTraveled: "Distância percorrida", dimensionsDiscovered: "Dimensões descobertas", dimensionVisits: "Visitas a dimensões", explorationSessions: "Sessões", explorerRanking: "Ranking de exploradores", dimensionMap: "Mapa dimensional", recentJourneys: "Jornadas recentes", explorerProfiles: "Exploradores", noExplorationEvidence: "Nenhuma jornada registrada ainda.", favoriteDimension: "Dimensão favorita", explorationFirstSeen: "Primeira visita", explorationLastSeen: "Última visita", horizontalSampled: "Distância horizontal amostrada; teletransportes longos são ignorados.", visitCount: "visitas",
+    trendsTitle: "Histórico por período", trendsHelp: "Rankings reais, calendário diário e horários de atividade construídos sem reescrever o passado.", sevenDays: "7 dias", thirtyDays: "30 dias", periodRanking: "Ranking do período", activityCalendar: "Calendário de atividade", sessionHeatmap: "Horários de jogo", mostActiveDay: "Dia mais ativo", collectionStarted: "A coleta diária começa nesta versão; dados vitalícios anteriores não são atribuídos artificialmente a hoje.", noPeriodData: "Ainda não há atividade registrada neste período.", dailyPlayers: "Jogadores ativos", dailyBlocks: "Blocos", dailyKills: "Eliminações", lessActive: "Menos", moreActive: "Mais", weekdayShort: ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"],
     worldIntro: "Configuração do mundo", rulesIntro: "Comportamento do jogo", serverIntro: "Infraestrutura do servidor",
     pendingChanges: "ALTERAÇÕES PENDENTES", reviewChanges: "Revisar alterações",
     pendingHelp: "Estas configurações serão salvas e o servidor será reiniciado somente quando você aplicar.",
@@ -132,7 +133,7 @@ const messages = {
     deathHistory: "Death history", noDeaths: "No detailed deaths recorded.", deathCause: "Cause", killedBy: "Killed by", projectile: "Projectile", telemetrySource: "Behavior pack",
     home: "Home", world: "World", players: "Players", analytics: "Data", rules: "Rules", settings: "Server",
     analyticsTitle: "Server activity", analyticsHelp: "The shared history of players joining, leaving, dying, or receiving permission changes.",
-    activityView: "Activity", deathsView: "Deaths", rankingsView: "Rankings", blocksView: "Blocks", combatView: "Combat", explorationView: "Exploration", eventFilter: "Event", playerFilter: "Player", periodFilter: "Period", sourceFilter: "Source", detailFilter: "Cause or responsible", detailFilterHint: "E.g. zombie, lava…",
+    activityView: "Activity", deathsView: "Deaths", rankingsView: "Rankings", blocksView: "Blocks", combatView: "Combat", explorationView: "Exploration", trendsView: "Periods", eventFilter: "Event", playerFilter: "Player", periodFilter: "Period", sourceFilter: "Source", detailFilter: "Cause or responsible", detailFilterHint: "E.g. zombie, lava…",
     everyEvent: "All events", joinsOnly: "Joins", leavesOnly: "Leaves", permissionsOnly: "Permissions", respawnsOnly: "Respawns", dimensionsOnly: "Dimensions",
     everyPlayer: "All players", lifetime: "All time", last7Days: "Last 7 days", last30Days: "Last 30 days",
     everySource: "All sources", structuredSource: "Telemetry Pack", serverSource: "Server and manager",
@@ -144,6 +145,7 @@ const messages = {
     oreDiamond: "Diamond", oreIron: "Iron", oreGold: "Gold", oreCopper: "Copper", oreCoal: "Coal", oreRedstone: "Redstone", oreLapis: "Lapis lazuli", oreEmerald: "Emerald", oreQuartz: "Quartz", oreAncient_debris: "Ancient debris",
     combatTitle: "Server combat", combatHelp: "Deaths, kills, and accumulated damage backed by the evidence available in the world.", combatEmptyHelp: "Panels remain visible and begin filling when the Telemetry Pack observes combat.", combatDeaths: "Deaths", combatPlayerKills: "PvP kills", combatMobKills: "Mobs defeated", combatDamageDealt: "Damage dealt", combatDamageTaken: "Damage taken", combatRankings: "Combat ranking", deathCauses: "Death causes", lethalOpponents: "Responsible for deaths", projectiles: "Projectiles", pvpDuels: "PvP encounters", combatProfiles: "Player summaries", noCombatEvidence: "No evidence has been recorded yet.", telemetryWaiting: "Waiting for telemetry", observedDeaths: "Observed structured deaths",
     explorationTitle: "World exploration", explorationHelp: "Sampled distance, dimensions, sessions, and player journeys.", explorationEmptyHelp: "The complete expedition remains visible even before the first movement sample.", distanceTraveled: "Distance traveled", dimensionsDiscovered: "Dimensions discovered", dimensionVisits: "Dimension visits", explorationSessions: "Sessions", explorerRanking: "Explorer ranking", dimensionMap: "Dimension map", recentJourneys: "Recent journeys", explorerProfiles: "Explorers", noExplorationEvidence: "No journey has been recorded yet.", favoriteDimension: "Favorite dimension", explorationFirstSeen: "First seen", explorationLastSeen: "Last seen", horizontalSampled: "Sampled horizontal distance; long teleports are ignored.", visitCount: "visits",
+    trendsTitle: "Period history", trendsHelp: "Real rankings, a daily calendar, and play-hour patterns built without rewriting the past.", sevenDays: "7 days", thirtyDays: "30 days", periodRanking: "Period ranking", activityCalendar: "Activity calendar", sessionHeatmap: "Play hours", mostActiveDay: "Most active day", collectionStarted: "Daily collection starts with this release; previous lifetime totals are not artificially assigned to today.", noPeriodData: "There is no recorded activity in this period yet.", dailyPlayers: "Active players", dailyBlocks: "Blocks", dailyKills: "Kills", lessActive: "Less", moreActive: "More", weekdayShort: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
     worldIntro: "World configuration", rulesIntro: "Game behavior", serverIntro: "Server infrastructure",
     pendingChanges: "PENDING CHANGES", reviewChanges: "Review changes",
     pendingHelp: "These settings are saved and the server restarts only after you apply them.",
@@ -687,7 +689,7 @@ async function openAnalyticsPlayer(publicId) {
 }
 
 function analyticsViewSwitch(active) {
-  return `<div class="analytics-view-switch"><button data-analytics-view="all" class="${!['deaths', 'rankings', 'blocks', 'combat', 'exploration'].includes(active) ? "active" : ""}" type="button">☷ ${t("activityView")}</button><button data-analytics-view="deaths" class="death ${active === "deaths" ? "active" : ""}" type="button">☠ ${t("deathsView")}</button><button data-analytics-view="rankings" class="ranking ${active === "rankings" ? "active" : ""}" type="button">♛ ${t("rankingsView")}</button><button data-analytics-view="blocks" class="blocks ${active === "blocks" ? "active" : ""}" type="button">▦ ${t("blocksView")}</button><button data-analytics-view="combat" class="combat ${active === "combat" ? "active" : ""}" type="button">⚔ ${t("combatView")}</button><button data-analytics-view="exploration" class="exploration ${active === "exploration" ? "active" : ""}" type="button">◇ ${t("explorationView")}</button></div>`;
+  return `<div class="analytics-view-switch"><button data-analytics-view="all" class="${!['deaths', 'rankings', 'blocks', 'combat', 'exploration', 'trends'].includes(active) ? "active" : ""}" type="button">☷ ${t("activityView")}</button><button data-analytics-view="deaths" class="death ${active === "deaths" ? "active" : ""}" type="button">☠ ${t("deathsView")}</button><button data-analytics-view="rankings" class="ranking ${active === "rankings" ? "active" : ""}" type="button">♛ ${t("rankingsView")}</button><button data-analytics-view="blocks" class="blocks ${active === "blocks" ? "active" : ""}" type="button">▦ ${t("blocksView")}</button><button data-analytics-view="combat" class="combat ${active === "combat" ? "active" : ""}" type="button">⚔ ${t("combatView")}</button><button data-analytics-view="exploration" class="exploration ${active === "exploration" ? "active" : ""}" type="button">◇ ${t("explorationView")}</button><button data-analytics-view="trends" class="trends ${active === "trends" ? "active" : ""}" type="button">▤ ${t("trendsView")}</button></div>`;
 }
 
 const rankingDefinitions = {
@@ -860,6 +862,52 @@ async function renderExplorationPanel() {
   await load();
 }
 
+const periodDefinitions = {
+  play_seconds: { label: "playTime", format: "duration" },
+  sessions: { label: "explorationSessions", format: "number" },
+  blocks_broken: { label: "rankBlocksBroken", format: "number" },
+  blocks_placed: { label: "rankBlocksPlaced", format: "number" },
+  mob_kills: { label: "combatMobKills", format: "number" },
+  player_kills: { label: "combatPlayerKills", format: "number" },
+  deaths: { label: "combatDeaths", format: "number" },
+  distance: { label: "distanceTraveled", format: "distance" },
+};
+
+function calendarDate(day) {
+  return new Date(`${day}T12:00:00`).toLocaleDateString(state.locale === "en" ? "en-US" : "pt-BR", { day: "2-digit", month: "short" });
+}
+
+async function renderTrendsPanel() {
+  const analytics = state.analytics;
+  content.innerHTML = `<div class="trends-screen">${analyticsViewSwitch("trends")}<header class="trends-hero block-panel"><div><span class="eyebrow">DAILY HISTORY</span><h2>${t("trendsTitle")}</h2><p>${t("trendsHelp")}</p></div><button id="trends-refresh" class="secondary" type="button">↻ ${t("refreshData")}</button></header><div class="period-switch"><button data-period-days="7" class="${analytics.periodDays === 7 ? "active" : ""}" type="button">${t("sevenDays")}</button><button data-period-days="30" class="${analytics.periodDays === 30 ? "active" : ""}" type="button">${t("thirtyDays")}</button></div><div id="trends-content"><div class="analytics-loading">${t("checking")}</div></div></div>`;
+  bindAnalyticsViewSwitch();
+  const load = async () => {
+    const target = $("#trends-content");
+    target.innerHTML = `<div class="analytics-loading">${t("checking")}</div>`;
+    try {
+      const result = await api(`/api/analytics/periods?days=${analytics.periodDays}&limit=10`);
+      const definition = periodDefinitions[analytics.periodMetric] || periodDefinitions.play_seconds;
+      const ranking = result.rankings?.[analytics.periodMetric] || [];
+      const days = result.calendar || [];
+      const maxDay = Math.max(1, ...days.map((day) => Number(day.play_seconds || 0)));
+      const heatmap = result.heatmap || [];
+      const maxHeat = Math.max(1, ...heatmap.map((cell) => Number(cell.seconds || 0)));
+      const weekdays = t("weekdayShort");
+      const totals = result.totals || {};
+      target.innerHTML = `<p class="trends-note">${t("collectionStarted")}<small>${escapeHtml(result.timezone || "")} · ${t("updated")} ${formatDate(result.generated_at)}</small></p><section class="trends-summary"><article><small>${t("playTime")}</small><b>${formatDuration(totals.play_seconds || 0)}</b></article><article><small>${t("explorationSessions")}</small><b>${formatRankingValue(totals.sessions, "number")}</b></article><article><small>${t("dailyBlocks")}</small><b>${formatRankingValue((totals.blocks_broken || 0) + (totals.blocks_placed || 0), "number")}</b></article><article><small>${t("dailyKills")}</small><b>${formatRankingValue((totals.mob_kills || 0) + (totals.player_kills || 0), "number")}</b></article><article><small>${t("mostActiveDay")}</small><b>${result.most_active_day ? calendarDate(result.most_active_day.day) : "—"}</b></article></section><div class="period-metric-picker">${Object.entries(periodDefinitions).map(([key, item]) => `<button data-period-metric="${key}" class="${analytics.periodMetric === key ? "active" : ""}" type="button">${t(item.label)}</button>`).join("")}</div><div class="trends-main-grid"><section class="period-ranking block-panel"><div class="ranking-section-title"><span class="eyebrow">${analytics.periodDays} DAYS</span><h3>${t("periodRanking")}: ${t(definition.label)}</h3></div>${ranking.length ? `<ol>${ranking.map((entry, index) => `<li><b>${index + 1}</b><button data-period-player="${escapeHtml(entry.player.id)}" type="button">${escapeHtml(entry.player.name)}</button><strong>${formatRankingValue(entry.value, definition.format)}</strong></li>`).join("")}</ol>` : `<div class="trends-zero"><span>▤</span><p>${t("noPeriodData")}</p></div>`}</section><section class="activity-calendar block-panel"><div class="ranking-section-title"><span class="eyebrow">${analytics.periodDays} DAYS</span><h3>${t("activityCalendar")}</h3></div><div class="calendar-grid">${days.map((day) => { const level = Math.ceil((Number(day.play_seconds || 0) / maxDay) * 4); return `<article class="level-${level}" title="${escapeHtml(calendarDate(day.day))}"><span>${calendarDate(day.day)}</span><b>${day.play_seconds ? formatDuration(day.play_seconds) : "—"}</b><small>${day.sessions || 0} ${t("explorationSessions").toLocaleLowerCase()}</small></article>`; }).join("")}</div></section></div><section class="heatmap-panel block-panel"><div class="ranking-section-title"><span class="eyebrow">${escapeHtml(result.timezone || "")}</span><h3>${t("sessionHeatmap")}</h3></div><div class="heatmap-scroll"><div class="heatmap-grid"><span></span>${Array.from({ length: 24 }, (_, hour) => `<b>${String(hour).padStart(2, "0")}</b>`).join("")}${weekdays.map((weekday, weekdayIndex) => `<strong>${weekday}</strong>${heatmap.filter((cell) => cell.weekday === weekdayIndex).map((cell) => { const level = Math.ceil((Number(cell.seconds || 0) / maxHeat) * 4); return `<i class="level-${level}" title="${weekday} ${String(cell.hour).padStart(2, "0")}:00 · ${formatDuration(cell.seconds)}"></i>`; }).join("")}`).join("")}</div></div><div class="heatmap-legend"><span>${t("lessActive")}</span><i class="level-0"></i><i class="level-1"></i><i class="level-2"></i><i class="level-3"></i><i class="level-4"></i><span>${t("moreActive")}</span></div></section>`;
+      target.querySelectorAll("[data-period-player]").forEach((button) => button.onclick = () => openAnalyticsPlayer(button.dataset.periodPlayer));
+      target.querySelectorAll("[data-period-metric]").forEach((button) => button.onclick = () => { analytics.periodMetric = button.dataset.periodMetric; load(); });
+    } catch (error) { target.innerHTML = `<div class="analytics-empty"><p>${escapeHtml(error.message)}</p></div>`; }
+  };
+  content.querySelectorAll("[data-period-days]").forEach((button) => button.onclick = () => {
+    analytics.periodDays = Number(button.dataset.periodDays);
+    content.querySelectorAll("[data-period-days]").forEach((item) => item.classList.toggle("active", item === button));
+    load();
+  });
+  $("#trends-refresh").onclick = load;
+  await load();
+}
+
 async function renderAnalyticsPanel() {
   const filters = state.analytics;
   if (filters.kind === "rankings") {
@@ -876,6 +924,10 @@ async function renderAnalyticsPanel() {
   }
   if (filters.kind === "exploration") {
     await renderExplorationPanel();
+    return;
+  }
+  if (filters.kind === "trends") {
+    await renderTrendsPanel();
     return;
   }
   content.innerHTML = `<div class="analytics-screen">${analyticsViewSwitch(filters.kind)}<header class="analytics-hero block-panel"><div><span class="eyebrow">CRAFTCONTROL ANALYTICS</span><h2>${t("analyticsTitle")}</h2><p>${t("analyticsHelp")}</p></div><button id="analytics-refresh" class="secondary" type="button">↻ ${t("refreshData")}</button></header><section class="analytics-filters block-panel"><label><span>${t("eventFilter")}</span><select id="analytics-kind" ${filters.kind === "deaths" ? "disabled" : ""}><option value="all">${t("everyEvent")}</option><option value="joins">${t("joinsOnly")}</option><option value="leaves">${t("leavesOnly")}</option><option value="respawns">${t("respawnsOnly")}</option><option value="dimensions">${t("dimensionsOnly")}</option><option value="permissions">${t("permissionsOnly")}</option></select></label><label><span>${t("playerFilter")}</span><select id="analytics-player"><option value="">${t("everyPlayer")}</option></select></label><label><span>${t("periodFilter")}</span><select id="analytics-days"><option value="0">${t("lifetime")}</option><option value="7">${t("last7Days")}</option><option value="30">${t("last30Days")}</option></select></label><label><span>${t("sourceFilter")}</span><select id="analytics-source"><option value="all">${t("everySource")}</option><option value="structured">${t("structuredSource")}</option><option value="server">${t("serverSource")}</option></select></label><label><span>${t("detailFilter")}</span><input id="analytics-search" type="search" maxlength="64" value="${escapeHtml(filters.search)}" placeholder="${t("detailFilterHint")}"></label></section><div id="analytics-results" class="analytics-results"><div class="analytics-loading">${t("checking")}</div></div><dialog id="analytics-death-dialog" class="analytics-death-dialog"><div class="drawer-header"><div><span class="eyebrow">${t("deathDetails")}</span><h2></h2></div><button class="drawer-close" type="button" aria-label="${t("close")}">×</button></div><div class="analytics-death-content"></div></dialog></div>`;

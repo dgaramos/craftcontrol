@@ -91,3 +91,6 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn('data-analytics-view="exploration"', script)
         self.assertIn("explorationEmptyHelp", script)
         self.assertIn(".exploration-zero", stylesheet)
+        self.assertIn('data-analytics-view="trends"', script)
+        self.assertIn("collectionStarted", script)
+        self.assertIn(".heatmap-grid", stylesheet)

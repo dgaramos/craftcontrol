@@ -54,3 +54,13 @@ def exploration():
         return jsonify(manager().exploration_analytics(int(request.args.get("limit", "10"))))
     except (TypeError, ValueError) as error:
         return jsonify(error=str(error)), 400
+
+
+@analytics_api.get("/api/analytics/periods")
+def periods():
+    try:
+        return jsonify(manager().period_analytics(
+            int(request.args.get("days", "30")), int(request.args.get("limit", "10")),
+        ))
+    except (TypeError, ValueError) as error:
+        return jsonify(error=str(error)), 400

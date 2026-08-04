@@ -31,7 +31,7 @@ The five primary destinations are intentionally task-oriented:
 | Home | Server health, online players, freshness, and common destinations |
 | World | World identity, generation, view distance, time, weather, and cycles |
 | Players | Permanent profiles, sessions, operators, history, and telemetry |
-| Data | Activity, Deaths, Rankings, Mining, Building, Combat, and Exploration |
+| Data | Activity, Deaths, Rankings, Mining, Combat, Exploration, and period history |
 | Rules | Gameplay, interface, mobs, drops, commands, fire, TNT, and regeneration |
 | Server | Packs, network, compression, threads, and container lifecycle |
 
@@ -216,7 +216,7 @@ Without the behavior pack, death messages are parsed from server logs and explic
 
 ## Activity and death analytics
 
-The **Data** workspace provides six global views backed by permanent player history and authoritative lifetime aggregates:
+The **Data** workspace provides seven global views backed by permanent player history, daily buckets, and authoritative lifetime aggregates:
 
 - **Activity** combines joins, leaves, respawns, dimension changes, deaths, and permission changes. New durable events refresh the active view through SSE without browser polling.
 - **Deaths** focuses on cause, responsible entity or player, projectile, dimension, and coordinates when that evidence exists.
@@ -224,6 +224,7 @@ The **Data** workspace provides six global views backed by permanent player hist
 - **Blocks** separates Mining from Building, with server totals, favorite block types, miner/builder leaderboards, and per-ore rankings.
 - **Combat** keeps its complete layout visible even before the first fight, then fills lifetime deaths, PvP and mob kills, damage, structured causes/opponents/projectiles, PvP encounters, and player summaries as evidence arrives.
 - **Exploration** keeps a permanent atlas visible with sampled horizontal distance, discovered dimensions, dimension visits, play time, sessions, recent dimension transitions, and explorer profiles.
+- **Periods** provides honest 7/30-day rankings, a daily activity calendar, a most-active-day record, and a session heatmap in the configured timezone.
 
 Both views support player, lifetime/7-day/30-day, source, event-type, and free-text detail filters. Results are paginated server-side and every item identifies whether it came from the structured Telemetry Pack or server/manager evidence. When a structured and derived death describe the same player within the same short window, the interface prefers the structured event while retaining the raw derived evidence privately in SQLite. XUIDs and raw log lines never leave the repository layer.
 
@@ -321,6 +322,7 @@ When development and deployment use separate directories, copy the source while 
 | `GET` | `/api/analytics/blocks` | Sanitized mining, building, block-type, and ore aggregates |
 | `GET` | `/api/analytics/combat` | Sanitized combat totals, rankings, death evidence, and PvP encounters |
 | `GET` | `/api/analytics/exploration` | Sanitized travel, dimension, presence, and explorer aggregates |
+| `GET` | `/api/analytics/periods` | Sanitized 7/30-day rankings, calendar, and session heatmap |
 | `PUT` | `/api/config` | Validate and queue persistent configuration |
 | `PUT` | `/api/gamerules/<rule>` | Apply an allowlisted gamerule |
 | `POST` | `/api/world/<action>` | Run an allowlisted world shortcut |

@@ -29,6 +29,10 @@ class FakeAnalyticsManager:
         self.arguments = ("exploration", limit)
         return {"period": "lifetime", "totals": {}}
 
+    def period_analytics(self, days, limit):
+        self.arguments = ("periods", days, limit)
+        return {"period_days": days, "totals": {}}
+
 
 class AnalyticsHttpTest(unittest.TestCase):
     def setUp(self) -> None:
@@ -68,6 +72,11 @@ class AnalyticsHttpTest(unittest.TestCase):
         response = self.client.get("/api/analytics/exploration?limit=12")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(self.manager.arguments, ("exploration", 12))
+
+    def test_maps_daily_analytics_period_and_limit(self) -> None:
+        response = self.client.get("/api/analytics/periods?days=7&limit=12")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.manager.arguments, ("periods", 7, 12))
 
 
 if __name__ == "__main__":

@@ -58,3 +58,11 @@ Current pack snapshots do not retain kills by mob type, so CraftControl does not
 The Exploration view always renders five summary cards, a metric picker and ranking, dimensional atlas, recent-journey log, and explorer profiles. Every area has a deliberate zero state, so opening the screen before movement telemetry exists still shows what will be collected.
 
 Distance is a five-second horizontal movement sample. Jumps larger than 128 blocks are discarded to avoid counting long teleports, and the current pack does not separate distance or active time by dimension. Manager play time can include AFK time. CraftControl exposes these limitations instead of presenting sampled distance as exact travel or session duration as active gameplay.
+
+## Daily history and period rankings
+
+Database schema version 4 introduces `player_daily`, one bounded aggregate row per player and local calendar day. Manager evidence increments joins and sessions immediately and splits completed play time across local midnight boundaries. Idempotent telemetry events add blocks, kills, deaths, and dimension transitions; authoritative snapshots contribute only positive deltas not already observed, including sampled distance and aggregate damage.
+
+`GET /api/analytics/periods?days=7|30` returns totals, per-player rankings, a zero-filled daily calendar, the most active day, and a seven-by-twenty-four session heatmap. Open sessions are included at read time without prematurely persisting unfinished duration. Calendar boundaries use `TZ`—`America/Sao_Paulo` by default in this deployment—and the response names the effective timezone.
+
+Daily collection starts when schema version 4 is deployed. Existing lifetime totals become a reconciliation baseline and are not assigned to the installation day, because that would make 7/30-day rankings historically false. Detailed sessions that predate the migration can still contribute to the heatmap, but earlier lifetime telemetry cannot be reconstructed by day. Negative snapshot differences caused by a reset never subtract historical daily evidence.

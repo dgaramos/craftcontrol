@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import threading
 import re
+import time
 from typing import Any
 
 from .bedrock import BedrockClient
@@ -10,6 +11,8 @@ from .docker_ops import DockerOperations
 from .files import ServerFiles
 from .repository import StateRepository
 from .schema import GAMERULES, PROPERTY_NAMES, SETTINGS, validate_value
+from .events import EventBroker
+from .runtime import EventRuntime
 
 
 class ManagerService:
@@ -22,55 +25,145 @@ class ManagerService:
     WEATHER_TYPES = {"clear", "rain", "thunder"}
     TIME_QUERIES = {"daytime", "gametime", "day"}
 
-    def __init__(self, repository: StateRepository, files: ServerFiles, bedrock: BedrockClient, docker: DockerOperations, bootstrap_operator: str = "") -> None:
+    def __init__(self, repository: StateRepository, files: ServerFiles, bedrock: BedrockClient, docker: DockerOperations, bootstrap_operator: str = "", reconcile_seconds: int = 900) -> None:
         self.repository = repository
         self.files = files
         self.bedrock = bedrock
         self.docker = docker
         self.bootstrap_operator = bootstrap_operator
+        self.broker = EventBroker(repository)
+        self.runtime = EventRuntime(self, self.broker, getattr(bedrock, "container_name", "minecraft-bedrock"), reconcile_seconds)
         self._refresh_lock = threading.Lock()
         self._refreshing = False
+        self._pending_rules: set[str] = set()
+        self._pending_rules_lock = threading.Lock()
+        self._gamerule_worker_running = False
 
     @classmethod
     def build(cls, settings: Settings) -> "ManagerService":
         return cls(
             StateRepository(settings.database),
-            ServerFiles(settings.env_file, settings.properties_file),
+            ServerFiles(settings.env_file, settings.properties_file, settings.permissions_file),
             BedrockClient(settings.container, list(GAMERULES), settings.console_wait_seconds),
             DockerOperations(settings.container, settings.project),
             settings.bootstrap_operator,
+            settings.reconcile_seconds,
         )
 
     def initialize(self) -> None:
         self.repository.initialize()
-        self.refresh_async()
+        self.runtime.start()
+        self.refresh_async(reason="manager-startup")
+
+    @property
+    def refreshing(self) -> bool:
+        return self._refreshing
 
     def state(self) -> dict[str, Any]:
         return self.repository.snapshot(self._refreshing)
 
-    def refresh(self) -> None:
+    def public_state(self) -> dict[str, Any]:
+        snapshot = self.state()
+        snapshot.pop("known_players", None)
+        snapshot.pop("bootstrap", None)
+        return snapshot
+
+    def refresh(self, reason: str = "manual") -> None:
         if not self._refresh_lock.acquire(blocking=False):
             return
         self._refreshing = True
+        started = time.time()
+        self.broker.publish("state.reconciliation.started", reason, {"scope": "full"})
         try:
             _, env_values = self.files.read_env()
             properties = self.files.read_properties()
             settings = {key: env_values.get(key) or properties.get(PROPERTY_NAMES.get(key, ""), "") for key in SETTINGS}
             self.repository.store("settings", settings, "env+server.properties")
-            gamerules, players, online, maximum = self.bedrock.query_state()
+            gamerules, players, online, maximum, xuids = self.bedrock.query_state()
             if gamerules:
                 self.repository.store("gamerules", gamerules, "bedrock-console")
             if maximum == 0:
                 maximum = int(env_values.get("MAX_PLAYERS") or properties.get("max-players") or 0)
             self.repository.replace("players", {name: "online" for name in players}, "bedrock-console")
+            if xuids:
+                self.repository.store("known_players", xuids, "bedrock-log")
             self.repository.store("server", {"online": str(online), "max_players": str(maximum)}, "bedrock-console")
+            self.refresh_permissions(publish=False)
             self._bootstrap_operator(players)
+            self.broker.publish("state.changed", reason, {"domains": ["settings", "gamerules", "players", "server"]})
+        except Exception as error:
+            self.broker.publish("state.reconciliation.failed", reason, {"error": str(error)[:240]})
+            raise
         finally:
+            self.broker.publish("state.reconciliation.finished", reason, {"duration_seconds": time.time() - started})
             self._refreshing = False
             self._refresh_lock.release()
 
-    def refresh_async(self) -> None:
-        threading.Thread(target=self.refresh, name="state-refresh", daemon=True).start()
+    def refresh_async(self, reason: str = "manual") -> None:
+        threading.Thread(target=self.refresh, args=(reason,), name="state-refresh", daemon=True).start()
+
+    def refresh_gamerules_async(self, rules: set[str]) -> None:
+        with self._pending_rules_lock:
+            self._pending_rules.update(rules)
+            if self._gamerule_worker_running:
+                return
+            self._gamerule_worker_running = True
+
+        def work() -> None:
+            try:
+                while True:
+                    time.sleep(2)
+                    with self._pending_rules_lock:
+                        pending = set(self._pending_rules)
+                        self._pending_rules.clear()
+                    if not pending:
+                        return
+                    with self._refresh_lock:
+                        self._refreshing = True
+                        try:
+                            values = self.bedrock.query_gamerules(pending)
+                            if values:
+                                self.repository.store("gamerules", values, "targeted-console")
+                                self.broker.publish("state.changed", "targeted-console", {"domains": ["gamerules"], "keys": sorted(values)})
+                        finally:
+                            self._refreshing = False
+            finally:
+                with self._pending_rules_lock:
+                    self._gamerule_worker_running = False
+                    restart = bool(self._pending_rules)
+                if restart:
+                    self.refresh_gamerules_async(set())
+        threading.Thread(target=work, name="gamerule-refresh", daemon=True).start()
+
+    def player_event(self, player: str, connected: bool, xuid: str = "") -> None:
+        snapshot = self.state()
+        players = {name.casefold(): name for name in snapshot["players"]}
+        if connected:
+            players[player.casefold()] = player
+        else:
+            players.pop(player.casefold(), None)
+        self.repository.replace("players", {name: "online" for name in players.values()}, "bedrock-log")
+        if xuid:
+            self.repository.store("known_players", {player: xuid}, "bedrock-log")
+        self.repository.store("server", {"online": str(len(players))}, "bedrock-log")
+        self.broker.publish("state.changed", "bedrock-log", {"domains": ["players", "server"]})
+
+    def refresh_permissions(self, publish: bool = True) -> None:
+        known = self.state().get("known_players", {})
+        names_by_xuid = {xuid: name for name, xuid in known.items()}
+        values: dict[str, str] = {}
+        try:
+            permissions = self.files.read_permissions()
+        except Exception as error:
+            self.broker.publish("permissions.reconciliation.failed", "permissions.json", {"error": str(error)[:240]})
+            return
+        for item in permissions:
+            name = names_by_xuid.get(str(item["xuid"]))
+            if name:
+                values[name.casefold()] = str(item["permission"])
+        self.repository.replace("permissions", values, "permissions.json")
+        if publish:
+            self.broker.publish("state.changed", "permissions.json", {"domains": ["permissions"]})
 
     def save_settings(self, payload: Any) -> list[str]:
         if not isinstance(payload, dict):
@@ -80,6 +173,7 @@ class ManagerService:
             raise ValueError("Nenhuma configuração válida")
         self.files.write_env(changes)
         self.repository.store("settings", changes, "manager")
+        self.broker.publish("state.changed", "manager", {"domains": ["settings"], "keys": list(changes)})
         return list(changes)
 
     def set_gamerule(self, rule: str, value: Any) -> str:
@@ -88,6 +182,7 @@ class ManagerService:
         validated = validate_value(GAMERULES[rule], value)
         self.bedrock.send(["gamerule", rule, validated])
         self.repository.store("gamerules", {rule: validated}, "manager")
+        self.broker.publish("state.changed", "manager", {"domains": ["gamerules"], "keys": [rule]})
         return validated
 
     def run_world_action(self, action: str) -> None:
@@ -111,12 +206,14 @@ class ManagerService:
     def set_player_operator(self, player: str, enabled: bool) -> None:
         self.bedrock.set_operator(player, enabled)
         self.repository.store("permissions", {player.casefold(): "operator" if enabled else "member"}, "manager")
+        self.broker.publish("state.changed", "manager", {"domains": ["permissions"], "player": player})
 
     def time_action(self, action: str, payload: Any) -> dict[str, Any]:
         payload = payload if isinstance(payload, dict) else {}
         if action == "preset" and payload.get("value") in self.TIME_PRESETS:
             value = payload["value"]
             self.bedrock.send(["time", "set", value])
+            self.broker.publish("state.changed", "manager", {"domains": ["time"], "action": action})
             return {"action": action, "value": value}
         if action in {"set", "add"}:
             value = int(payload.get("value"))
@@ -124,9 +221,11 @@ class ManagerService:
             if value < minimum or value > maximum:
                 raise ValueError("valor fora do intervalo")
             self.bedrock.send(["time", action, str(value)])
+            self.broker.publish("state.changed", "manager", {"domains": ["time"], "action": action})
             return {"action": action, "value": value}
         if action == "reset-days":
             self.bedrock.send(["time", "set", "0"])
+            self.broker.publish("state.changed", "manager", {"domains": ["time"], "action": action})
             return {"action": action, "value": 0}
         if action == "query" and payload.get("value") in self.TIME_QUERIES:
             query = payload["value"]
@@ -143,6 +242,7 @@ class ManagerService:
                     raise ValueError("valor fora do intervalo")
                 parts.append(str(ticks))
             self.bedrock.send(parts)
+            self.broker.publish("state.changed", "manager", {"domains": ["weather"], "action": action})
             return {"action": action, "value": weather, "duration": duration}
         if action == "weather-query":
             output = self.bedrock.send_and_read(["weather", "query"])

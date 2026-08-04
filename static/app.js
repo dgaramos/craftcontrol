@@ -1,6 +1,6 @@
 const state = {
   schema: null, config: {}, gamerules: {}, players: [], online: 0, maxPlayers: 0,
-  changes: {}, tab: "home", tabs: ["home", "world", "players", "rules", "server"], status: null, updatedAt: 0,
+  changes: {}, tab: "home", tabs: ["home", "world", "players", "rules", "server"], status: null, updatedAt: 0, domains: {},
   locale: localStorage.getItem("manager-locale") === "en" ? "en" : "pt",
 };
 const $ = (selector) => document.querySelector(selector);
@@ -41,6 +41,7 @@ const messages = {
     pendingHelp: "Estas configurações serão salvas e o servidor será reiniciado somente quando você aplicar.",
     discardAll: "Descartar todas", applyChanges: "Aplicar alterações", removeChange: "Remover",
     currentValue: "Atual", newValue: "Novo", reviewCount: (count) => `Revisar (${count})`,
+    confirmedAt: "Confirmado",
   },
   en: {
     refresh: "Refresh", worldState: "WORLD STATE", quickActions: "Quick actions",
@@ -76,6 +77,7 @@ const messages = {
     pendingHelp: "These settings are saved and the server restarts only after you apply them.",
     discardAll: "Discard all", applyChanges: "Apply changes", removeChange: "Remove",
     currentValue: "Current", newValue: "New", reviewCount: (count) => `Review (${count})`,
+    confirmedAt: "Confirmed",
   },
 };
 
@@ -257,7 +259,9 @@ function settingsMarkup(groupNames) {
     const persistent = Object.entries(state.schema.settings).filter(([, definition]) => definition.group === group);
     const live = Object.entries(state.schema.gamerules).filter(([, definition]) => definition.group === group);
     if (!persistent.length && !live.length) return "";
-    return `<details class="settings-accordion" ${index === 0 ? "open" : ""}><summary><span>${escapeHtml(groupLabel(group))}</span><b>${persistent.length + live.length}</b></summary><div class="card">${persistent.map(([key, definition]) => inputFor(key, definition, Object.hasOwn(state.changes, key) ? state.changes[key] : state.config[key])).join("")}${live.map(([key, definition]) => inputFor(key, definition, state.gamerules[key], true)).join("")}</div></details>`;
+    const domain = persistent.length ? state.domains.settings : state.domains.gamerules;
+    const observed = domain?.observed_at ? `${t("confirmedAt")} ${new Date(domain.observed_at * 1000).toLocaleTimeString(state.locale === "en" ? "en-US" : "pt-BR")}` : t("unknown");
+    return `<details class="settings-accordion" ${index === 0 ? "open" : ""}><summary><span>${escapeHtml(groupLabel(group))}<small>${escapeHtml(observed)}</small></span><b>${persistent.length + live.length}</b></summary><div class="card">${persistent.map(([key, definition]) => inputFor(key, definition, Object.hasOwn(state.changes, key) ? state.changes[key] : state.config[key])).join("")}${live.map(([key, definition]) => inputFor(key, definition, state.gamerules[key], true)).join("")}</div></details>`;
   }).join("");
 }
 
@@ -431,6 +435,7 @@ async function loadState() {
   const snapshot = await api("/api/state");
   state.config = snapshot.settings || {};
   state.gamerules = snapshot.gamerules || {};
+  state.domains = snapshot.domains || {};
   showPlayers(snapshot);
   render();
 }
@@ -440,9 +445,29 @@ async function boot() {
   state.schema = schema;
   state.config = snapshot.settings || {};
   state.gamerules = snapshot.gamerules || {};
+  state.domains = snapshot.domains || {};
   showPlayers(snapshot);
   setStatus(status);
   applyLocale();
+  connectEvents();
+}
+
+let eventRefreshTimer = null;
+let eventSource = null;
+function connectEvents() {
+  if (eventSource) return;
+  eventSource = new EventSource("/api/events");
+  eventSource.addEventListener("state", (message) => {
+    const event = JSON.parse(message.data);
+    if (event.topic === "state.changed" || event.topic.startsWith("server.")) {
+      clearTimeout(eventRefreshTimer);
+      eventRefreshTimer = setTimeout(async () => {
+        await loadState();
+        if (event.topic.startsWith("server.")) setStatus(await api("/api/status"));
+      }, 300);
+    }
+  });
+  eventSource.onerror = () => { /* EventSource reconnects automatically with Last-Event-ID. */ };
 }
 
 $("#language").onclick = () => {

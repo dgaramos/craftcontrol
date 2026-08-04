@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from flask import Blueprint, current_app, jsonify, render_template, request
+from flask import Blueprint, Response, current_app, jsonify, render_template, request, stream_with_context
+import json
 
 from .schema import GAMERULES, SETTINGS
 from .services import ManagerService
@@ -33,13 +34,32 @@ def config():
 
 @api.get("/api/state")
 def state():
-    return jsonify(service().state())
+    return jsonify(service().public_state())
 
 
 @api.post("/api/refresh")
 def refresh():
-    service().refresh_async()
+    service().refresh_async(reason="manual")
     return jsonify(ok=True, refreshing=True), 202
+
+
+@api.get("/api/events")
+def events():
+    try:
+        after_id = int(request.headers.get("Last-Event-ID", "0") or 0)
+    except ValueError:
+        after_id = 0
+
+    @stream_with_context
+    def generate():
+        for event in service().broker.stream(after_id):
+            if event is None:
+                yield ": keepalive\n\n"
+                continue
+            payload = json.dumps({"topic": event.topic, "timestamp": event.timestamp, "source": event.source, "payload": event.payload}, ensure_ascii=False)
+            yield f"id: {event.id}\nevent: state\ndata: {payload}\n\n"
+
+    return Response(generate(), mimetype="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
 @api.put("/api/config")

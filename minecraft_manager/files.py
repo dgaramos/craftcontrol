@@ -3,12 +3,14 @@ from __future__ import annotations
 import os
 from pathlib import Path
 import tempfile
+import json
 
 
 class ServerFiles:
-    def __init__(self, env_file: Path, properties_file: Path) -> None:
+    def __init__(self, env_file: Path, properties_file: Path, permissions_file: Path | None = None) -> None:
         self.env_file = env_file
         self.properties_file = properties_file
+        self.permissions_file = permissions_file or properties_file.parent / "permissions.json"
 
     @staticmethod
     def _parse(lines: list[str]) -> dict[str, str]:
@@ -50,3 +52,9 @@ class ServerFiles:
         finally:
             if os.path.exists(temporary):
                 os.unlink(temporary)
+
+    def read_permissions(self) -> list[dict[str, str]]:
+        if not self.permissions_file.exists():
+            return []
+        data = json.loads(self.permissions_file.read_text(encoding="utf-8"))
+        return [item for item in data if isinstance(item, dict) and "xuid" in item and "permission" in item]

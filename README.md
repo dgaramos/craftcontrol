@@ -68,6 +68,96 @@ Minecraft Bedrock Server
 
 The manager uses one Gunicorn worker with multiple threads so the in-process refresh lock and background refresh state remain consistent. On startup, it creates the SQLite database if necessary and asynchronously queries the Bedrock container to populate the interface.
 
+## Event-driven synchronization
+
+The manager maintains its own event and reconciliation pipeline. It does not depend on the custom exporter, Prometheus, Grafana, or `mc-monitor`; observability services may be unavailable without affecting management operations.
+
+```text
+Bedrock log stream ------+
+                         |
+Docker event stream -----+--> internal event broker --> SQLite event log
+                         |              |                       |
+Manager operations ------+              +--> targeted updates  +--> SSE --> browser
+                                        |
+15-minute safety timer -----------------+--> full reconciliation
+```
+
+### Update rules
+
+| Signal | Action | Bedrock queries |
+| --- | --- | ---: |
+| Player connected or disconnected | Update the cached player set directly from the log | 0 |
+| Recognized gamerule activity | Query only the named gamerule or rules | 1 per affected rule |
+| Permission activity | Mark the permissions domain as changed | 0 |
+| Container start or restart | Run a full reconciliation | One batched session |
+| Manager startup | Mark cached data as potentially stale and run a full reconciliation | One batched session |
+| Unknown or lost state | Preserve the last snapshot and use manual or safety reconciliation | One batched session |
+| Stable server | Full safety reconciliation every 900 seconds | Four sessions per hour |
+
+The full reconciliation currently batches all allowlisted gamerule queries and `list` through one Bedrock console connection. Browser clients never trigger this work through polling.
+
+### Browser updates
+
+`GET /api/events` is a Server-Sent Events stream. The browser keeps one HTTP connection open and refreshes its cached view only after a relevant `state.changed` or server lifecycle event. SSE automatically reconnects and sends `Last-Event-ID`; persisted events newer than that ID are replayed. A keepalive comment is sent every 20 seconds to keep proxies and mobile networks from silently closing the connection.
+
+The Gunicorn process intentionally uses one worker because the broker, refresh lock, and stream supervisors are process-local. Sixteen threads allow several long-lived SSE clients while leaving capacity for API operations.
+
+### Timestamps and freshness
+
+Every cached key stores two timestamps:
+
+- `observed_at`: the latest time the value was confirmed, even when unchanged
+- `changed_at`: the latest time the stored value actually changed
+
+The state API also returns domain-level metadata:
+
+```json
+{
+  "domains": {
+    "gamerules": {
+      "observed_at": 1785792600.0,
+      "changed_at": 1785792000.0,
+      "source": "targeted-console",
+      "freshness": "fresh"
+    }
+  }
+}
+```
+
+A domain becomes `stale` when it has not been observed for 20 minutes. Stale data remains visible instead of being replaced by a false empty value.
+
+### Event topics and retention
+
+The internal broker uses topics such as:
+
+```text
+player.connected
+player.disconnected
+gamerule.invalidated
+permissions.invalidated
+server.start
+server.restart
+server.die
+state.changed
+state.reconciliation.started
+state.reconciliation.finished
+state.reconciliation.failed
+stream.logs.connected
+stream.logs.disconnected
+```
+
+Events are committed to SQLite before being delivered to connected clients. The latest 2,000 events are retained. In-memory subscriber queues are bounded; if a slow browser misses events, reconnect replay or the next state snapshot restores consistency.
+
+### Recovery behavior
+
+- **Manager restarts while Bedrock remains online:** persisted state and events load first, then startup reconciliation confirms the current state.
+- **Manager starts while Bedrock is offline:** the last snapshot remains available and a failed reconciliation is recorded; Docker and log stream supervisors retry with exponential backoff.
+- **Bedrock starts or restarts:** the Docker lifecycle event triggers a full reconciliation.
+- **Log or Docker stream disconnects:** a persistent event records the failure and the supervisor reconnects with a 2-to-60-second exponential backoff.
+- **Duplicate player events:** updates are idempotent because the cache is reconstructed as a keyed player set.
+- **Event bursts:** affected gamerules enter a deduplicated queue with a two-second debounce; the refresh lock serializes targeted and full reconciliation without dropping later rule names.
+- **Unrecognized or externally edited state:** the 15-minute safety reconciliation and manual Refresh button remain the final consistency fallback.
+
 The Python application follows a layered package structure:
 
 ```text
@@ -137,6 +227,7 @@ The manager's own configuration is stored in `.env`:
 | `DATABASE_PATH` | `/data/manager.db` | SQLite cache location inside the container |
 | `CONSOLE_WAIT_SECONDS` | `1` | Delay before reading Bedrock console responses |
 | `BOOTSTRAP_OPERATOR` | `VonCrush` | Player promoted once when first observed online; later UI changes are respected |
+| `RECONCILE_SECONDS` | `900` | Interval for the standalone full safety reconciliation |
 | `TZ` | `America/Sao_Paulo` | Container timezone |
 
 The host-side Bedrock project mount is defined in `docker-compose.yml`:
@@ -230,6 +321,7 @@ The browser uses a small JSON API:
 | `GET` | `/api/schema` | Read the editable settings schema |
 | `GET` | `/api/state` | Read cached settings, gamerules, and players |
 | `POST` | `/api/refresh` | Start an asynchronous state refresh |
+| `GET` | `/api/events` | Receive persisted and live state notifications over SSE |
 | `PUT` | `/api/config` | Validate and save persistent settings |
 | `PUT` | `/api/gamerules/<rule>` | Change an allowlisted gamerule |
 | `GET` | `/api/players` | List currently online players and manager-known operator state |

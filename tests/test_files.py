@@ -19,3 +19,11 @@ class ServerFilesTest(unittest.TestCase):
                 env_file.read_text(encoding="utf-8"),
                 "# Server\nSERVER_NAME=MalavaziRamos\nMAX_PLAYERS=4\nDIFFICULTY=normal\n",
             )
+
+    def test_reads_bedrock_player_permissions(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            permissions = root / "permissions.json"
+            permissions.write_text('[{"permission":"operator","xuid":"123"}]', encoding="utf-8")
+            files = ServerFiles(root / ".env", root / "server.properties", permissions)
+            self.assertEqual(files.read_permissions(), [{"permission": "operator", "xuid": "123"}])

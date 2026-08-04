@@ -28,3 +28,7 @@ class BedrockParserTest(unittest.TestCase):
         self.assertEqual(players, [])
         self.assertEqual(online, 0)
         self.assertEqual(maximum, 10)
+
+    def test_extracts_player_xuids_from_connection_history(self) -> None:
+        history = "Player connected: VonCrush, xuid: 2535000000000001"
+        self.assertEqual(BedrockClient.parse_xuids(history), {"VonCrush": "2535000000000001"})

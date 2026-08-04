@@ -99,7 +99,14 @@ class BedrockClient:
             online = len(players)
         return players[:online], online, maximum
 
-    def query_state(self) -> tuple[dict[str, str], list[str], int, int]:
+    @staticmethod
+    def parse_xuids(history: str) -> dict[str, str]:
+        result: dict[str, str] = {}
+        for name, xuid in re.findall(r"Player connected:\s*([^,]+),\s*xuid:\s*([^,\s]+)", history, re.IGNORECASE):
+            result[name.strip()] = xuid.strip()
+        return result
+
+    def query_state(self) -> tuple[dict[str, str], list[str], int, int, dict[str, str]]:
         import docker as docker_sdk
 
         client = docker_sdk.from_env()
@@ -115,4 +122,18 @@ class BedrockClient:
             client.close()
         gamerules = self.parse_gamerules(logs, self.gamerules)
         players, online, maximum = self.parse_players(logs, history)
-        return gamerules, players, online, maximum
+        return gamerules, players, online, maximum, self.parse_xuids(history)
+
+    def query_gamerules(self, rules: set[str]) -> dict[str, str]:
+        import docker as docker_sdk
+
+        client = docker_sdk.from_env()
+        try:
+            container = client.containers.get(self.container_name)
+            since = int(time.time()) - 1
+            self._write(container, "".join(f"gamerule {rule}\n" for rule in sorted(rules)))
+            time.sleep(self.console_wait_seconds)
+            logs = container.logs(since=since, tail=max(30, len(rules) * 5)).decode("utf-8", errors="replace")
+        finally:
+            client.close()
+        return self.parse_gamerules(logs, sorted(rules))

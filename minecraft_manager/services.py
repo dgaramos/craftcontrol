@@ -22,11 +22,12 @@ class ManagerService:
     WEATHER_TYPES = {"clear", "rain", "thunder"}
     TIME_QUERIES = {"daytime", "gametime", "day"}
 
-    def __init__(self, repository: StateRepository, files: ServerFiles, bedrock: BedrockClient, docker: DockerOperations) -> None:
+    def __init__(self, repository: StateRepository, files: ServerFiles, bedrock: BedrockClient, docker: DockerOperations, bootstrap_operator: str = "") -> None:
         self.repository = repository
         self.files = files
         self.bedrock = bedrock
         self.docker = docker
+        self.bootstrap_operator = bootstrap_operator
         self._refresh_lock = threading.Lock()
         self._refreshing = False
 
@@ -37,6 +38,7 @@ class ManagerService:
             ServerFiles(settings.env_file, settings.properties_file),
             BedrockClient(settings.container, list(GAMERULES), settings.console_wait_seconds),
             DockerOperations(settings.container, settings.project),
+            settings.bootstrap_operator,
         )
 
     def initialize(self) -> None:
@@ -62,6 +64,7 @@ class ManagerService:
                 maximum = int(env_values.get("MAX_PLAYERS") or properties.get("max-players") or 0)
             self.repository.replace("players", {name: "online" for name in players}, "bedrock-console")
             self.repository.store("server", {"online": str(online), "max_players": str(maximum)}, "bedrock-console")
+            self._bootstrap_operator(players)
         finally:
             self._refreshing = False
             self._refresh_lock.release()
@@ -91,6 +94,23 @@ class ManagerService:
         if action not in self.WORLD_ACTIONS:
             raise KeyError(action)
         self.bedrock.send(self.WORLD_ACTIONS[action])
+
+    def _bootstrap_operator(self, players: list[str]) -> None:
+        if not self.bootstrap_operator or self.repository.snapshot().get("bootstrap", {}).get("operator") == "done":
+            return
+        if self.bootstrap_operator.casefold() not in {name.casefold() for name in players}:
+            return
+        self.set_player_operator(self.bootstrap_operator, True)
+        self.repository.store("bootstrap", {"operator": "done"}, "manager")
+
+    def players(self) -> list[dict[str, Any]]:
+        snapshot = self.state()
+        permissions = snapshot.get("permissions", {})
+        return [{"name": name, "online": True, "operator": permissions.get(name.casefold()) == "operator"} for name in snapshot["players"]]
+
+    def set_player_operator(self, player: str, enabled: bool) -> None:
+        self.bedrock.set_operator(player, enabled)
+        self.repository.store("permissions", {player.casefold(): "operator" if enabled else "member"}, "manager")
 
     def time_action(self, action: str, payload: Any) -> dict[str, Any]:
         payload = payload if isinstance(payload, dict) else {}

@@ -16,3 +16,22 @@
   background: var(--emerald);
   box-shadow: 0 0 7px var(--emerald);
 }
+
+.players-screen { padding: 16px; }
+.players-screen > h3 { color: var(--grass-light); font-size: 1.1rem; }
+.players-screen > p { margin: 7px 0 15px; color: var(--muted); font-size: .78rem; }
+.loading-players { padding: 18px; color: var(--muted); text-align: center; background: #0b0e0c; border: 3px solid #080a08; }
+.player-management-list { display: grid; gap: 8px; }
+.player-management-card { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 11px; padding: 11px; background: #0b0e0c; border: 3px solid #080a08; box-shadow: inset 2px 2px 0 #343a35; }
+.player-avatar { width: 42px; height: 42px; display: grid; place-items: center; color: #10170d; font-size: 1.1rem; font-weight: 900; background: linear-gradient(#8bd455, #4b9135); border: 3px solid #111; box-shadow: 3px 3px 0 #000; }
+.player-management-card strong, .player-management-card small { display: block; }
+.player-management-card small { margin-top: 4px; color: var(--emerald); font-size: .68rem; }
+.player-role { display: flex; align-items: center; gap: 9px; }
+.player-role > span { color: var(--muted); font-size: .7rem; font-weight: 900; text-transform: uppercase; }
+.player-role .toggle-value { display: none; }
+.player-role .toggle-control { min-width: 60px; }
+
+@media (max-width: 520px) {
+  .player-management-card { grid-template-columns: auto 1fr; }
+  .player-role { grid-column: 1 / -1; justify-content: space-between; padding-top: 9px; border-top: 2px solid #222822; }
+}

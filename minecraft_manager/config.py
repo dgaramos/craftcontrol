@@ -11,6 +11,7 @@ class Settings:
     project: Path
     database: Path
     console_wait_seconds: float = 1.0
+    bootstrap_operator: str = ""
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -19,6 +20,7 @@ class Settings:
             project=Path(os.getenv("MINECRAFT_PROJECT", "/minecraft-project")),
             database=Path(os.getenv("DATABASE_PATH", "/data/manager.db")),
             console_wait_seconds=float(os.getenv("CONSOLE_WAIT_SECONDS", "1")),
+            bootstrap_operator=os.getenv("BOOTSTRAP_OPERATOR", ""),
         )
 
     @property

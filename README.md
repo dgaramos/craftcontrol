@@ -16,6 +16,7 @@ The manager provides a focused graphical interface for common server settings, l
 - Persistent server settings managed through the Bedrock project's `.env` file
 - Live gamerule updates without editing files or opening a console
 - Current container status and cached online-player list
+- Dedicated online-player screen with operator access toggles and one-time bootstrap operator provisioning
 - Manual state refresh from the web interface
 - One-tap shortcuts for day, night, and clear weather
 - Dedicated time and weather workspace with all Bedrock time presets, exact ticks, time advancement, queries, automatic cycles, weather types, and day-count reset
@@ -133,6 +134,7 @@ The manager's own configuration is stored in `.env`:
 | `MINECRAFT_PROJECT` | `/minecraft-project` | Bedrock project path inside the manager container |
 | `DATABASE_PATH` | `/data/manager.db` | SQLite cache location inside the container |
 | `CONSOLE_WAIT_SECONDS` | `1` | Delay before reading Bedrock console responses |
+| `BOOTSTRAP_OPERATOR` | `VonCrush` | Player promoted once when first observed online; later UI changes are respected |
 | `TZ` | `America/Sao_Paulo` | Container timezone |
 
 The host-side Bedrock project mount is defined in `docker-compose.yml`:
@@ -228,6 +230,8 @@ The browser uses a small JSON API:
 | `POST` | `/api/refresh` | Start an asynchronous state refresh |
 | `PUT` | `/api/config` | Validate and save persistent settings |
 | `PUT` | `/api/gamerules/<rule>` | Change an allowlisted gamerule |
+| `GET` | `/api/players` | List currently online players and manager-known operator state |
+| `PUT` | `/api/players/<name>/operator` | Grant or revoke operator access for an online player |
 | `POST` | `/api/world/<action>` | Run an allowlisted world shortcut |
 | `POST` | `/api/time/<action>` | Run a validated time, cycle, query, or weather operation |
 | `POST` | `/api/server/<action>` | Start, stop, restart, or apply the server |

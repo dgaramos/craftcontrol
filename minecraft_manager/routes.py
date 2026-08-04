@@ -103,3 +103,23 @@ def time_action(action: str):
     except Exception as error:
         return jsonify(error=str(error)), 500
     return jsonify(ok=True, **result)
+
+
+@api.get("/api/players")
+def players():
+    return jsonify(players=service().players())
+
+
+@api.put("/api/players/<player>/operator")
+def player_operator(player: str):
+    try:
+        payload = request.get_json(force=True)
+        enabled = payload.get("enabled")
+        if not isinstance(enabled, bool):
+            raise ValueError("valor booleano inválido")
+        service().set_player_operator(player, enabled)
+    except (AttributeError, TypeError, ValueError) as error:
+        return jsonify(error=str(error)), 400
+    except Exception as error:
+        return jsonify(error=str(error)), 500
+    return jsonify(ok=True, player=player, operator=enabled)

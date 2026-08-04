@@ -38,6 +38,18 @@ class BedrockClient:
         finally:
             client.close()
 
+    def set_operator(self, player: str, enabled: bool) -> None:
+        if not re.fullmatch(r"[a-z0-9 _-]{1,32}", player, re.IGNORECASE):
+            raise ValueError("Jogador inválido")
+        import docker as docker_sdk
+
+        client = docker_sdk.from_env()
+        try:
+            container = client.containers.get(self.container_name)
+            self._write(container, f'{"op" if enabled else "deop"} "{player}"\n')
+        finally:
+            client.close()
+
     @staticmethod
     def _write(container: Any, commands: str) -> None:
         channel = container.attach_socket(params={"stdin": 1, "stream": 1, "stdout": 0, "stderr": 0})

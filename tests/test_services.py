@@ -18,6 +18,9 @@ class FakeBedrock:
         self.commands.append(parts)
         return "The time is 34"
 
+    def set_operator(self, player: str, enabled: bool) -> None:
+        self.commands.append(["op" if enabled else "deop", player])
+
 
 class FakeDocker:
     pass
@@ -28,8 +31,10 @@ class TimeActionsTest(unittest.TestCase):
         self.directory = tempfile.TemporaryDirectory()
         root = Path(self.directory.name)
         self.bedrock = FakeBedrock()
+        repository = StateRepository(root / "state.db")
+        repository.initialize()
         self.service = ManagerService(
-            StateRepository(root / "state.db"),
+            repository,
             ServerFiles(root / ".env", root / "server.properties"),
             self.bedrock,  # type: ignore[arg-type]
             FakeDocker(),  # type: ignore[arg-type]
@@ -55,3 +60,10 @@ class TimeActionsTest(unittest.TestCase):
         result = self.service.time_action("query", {"value": "day"})
         self.assertEqual(result["value"], 34)
         self.assertEqual(self.bedrock.commands[-1], ["time", "query", "day"])
+
+    def test_operator_access_can_be_enabled_and_disabled(self) -> None:
+        self.service.set_player_operator("VonCrush", True)
+        self.assertEqual(self.bedrock.commands[-1], ["op", "VonCrush"])
+        self.assertTrue(self.service.players() == [])
+        self.service.set_player_operator("VonCrush", False)
+        self.assertEqual(self.bedrock.commands[-1], ["deop", "VonCrush"])

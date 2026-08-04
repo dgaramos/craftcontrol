@@ -33,6 +33,8 @@ const messages = {
     resetDays: "Zerar contagem de dias", resetDaysHelp: "Define o tempo como tick 0 e reinicia a contagem exibida de dias.",
     resetDaysConfirm: "Zerar a contagem de dias e definir o relógio como tick 0?", timeUpdated: "Tempo atualizado",
     queryUnavailable: "O servidor não retornou um valor legível.",
+    onlinePlayers: "Jogadores online", operatorAccess: "Operador", operatorHelp: "Pode usar comandos administrativos dentro do jogo.",
+    noOnlinePlayers: "Nenhum jogador online no momento.", permissionUpdated: "Permissão atualizada",
   },
   en: {
     refresh: "Refresh", worldState: "WORLD STATE", quickActions: "Quick actions",
@@ -60,6 +62,8 @@ const messages = {
     resetDays: "Reset day count", resetDaysHelp: "Sets time to tick 0 and resets the displayed day count.",
     resetDaysConfirm: "Reset the day count and set the clock to tick 0?", timeUpdated: "Time updated",
     queryUnavailable: "The server did not return a readable value.",
+    onlinePlayers: "Online players", operatorAccess: "Operator", operatorHelp: "Can use administrative commands in the game.",
+    noOnlinePlayers: "No players are online right now.", permissionUpdated: "Permission updated",
   },
 };
 
@@ -97,6 +101,7 @@ function fieldDescription(definition) {
 
 function groupLabel(group) {
   if (group === "__time__") return t("timeControls");
+  if (group === "__players__") return t("onlinePlayers");
   return state.locale === "en" ? (groups[group] || group) : group;
 }
 
@@ -179,6 +184,10 @@ function render() {
     renderTimePanel();
     return;
   }
+  if (state.tab === "__players__") {
+    renderPlayersPanel();
+    return;
+  }
   const persistent = Object.entries(state.schema.settings).filter(([, definition]) => definition.group === state.tab);
   const live = Object.entries(state.schema.gamerules).filter(([, definition]) => definition.group === state.tab);
   content.innerHTML = `<div class="group"><div class="group-title">${escapeHtml(groupLabel(state.tab))}</div><div class="card">${persistent.map(([key, definition]) => inputFor(key, definition, Object.hasOwn(state.changes, key) ? state.changes[key] : state.config[key])).join("")}${live.map(([key, definition]) => inputFor(key, definition, state.gamerules[key], true)).join("")}</div></div>`;
@@ -208,6 +217,31 @@ function render() {
       }
     });
   });
+}
+
+async function renderPlayersPanel() {
+  content.innerHTML = `<div class="players-screen block-panel"><h3>${t("onlinePlayers")}</h3><p>${t("operatorHelp")}</p><div class="loading-players">${t("checking")}</div></div>`;
+  try {
+    const result = await api("/api/players");
+    const list = result.players || [];
+    const container = content.querySelector(".loading-players");
+    if (!list.length) {
+      container.textContent = t("noOnlinePlayers");
+      return;
+    }
+    container.className = "player-management-list";
+    container.innerHTML = list.map((player) => `<article class="player-management-card"><div class="player-avatar" aria-hidden="true">${escapeHtml(player.name.slice(0, 1).toUpperCase())}</div><div><strong>${escapeHtml(player.name)}</strong><small>● ${t("online")}</small></div><div class="player-role"><span>${t("operatorAccess")}</span>${booleanControl(`operator-${player.name.replace(/[^a-z0-9]/gi, "-")}`, player.operator)}</div></article>`).join("");
+    list.forEach((player) => {
+      const id = `operator-${player.name.replace(/[^a-z0-9]/gi, "-")}`;
+      $(`#${id}`).onchange = async (event) => {
+        updateToggleLabel(event.target);
+        try {
+          await api(`/api/players/${encodeURIComponent(player.name)}/operator`, { method: "PUT", body: JSON.stringify({ enabled: event.target.checked }) });
+          toast(t("permissionUpdated"));
+        } catch (error) { toast(error.message, true); renderPlayersPanel(); }
+      };
+    });
+  } catch (error) { content.querySelector(".loading-players").textContent = error.message; }
 }
 
 function renderTimePanel() {
@@ -322,6 +356,7 @@ async function boot() {
   state.config = snapshot.settings || {};
   state.gamerules = snapshot.gamerules || {};
   const regularTabs = [...new Set([...Object.values(schema.settings), ...Object.values(schema.gamerules)].map((item) => item.group))];
+  regularTabs.unshift("__players__");
   const worldIndex = regularTabs.indexOf("Mundo") + 1;
   regularTabs.splice(worldIndex, 0, "__time__");
   state.tabs = regularTabs;

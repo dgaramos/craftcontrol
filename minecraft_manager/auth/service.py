@@ -72,8 +72,8 @@ class AuthService:
 
     @staticmethod
     def validate_password(password: str) -> None:
-        if not isinstance(password, str) or len(password) < 12 or len(password) > 128:
-            raise ValueError("password must contain 12 to 128 characters")
+        if not isinstance(password, str) or len(password) < 8 or len(password) > 128:
+            raise ValueError("password must contain 8 to 128 characters")
 
     def create_invitation(self, player: str, role: str, actor: str | None = None, lifetime: int = 900) -> str:
         if role not in ROLE_CAPABILITIES:

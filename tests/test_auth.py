@@ -46,8 +46,14 @@ class AuthServiceTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "not been observed"):
             self.auth.create_invitation("Stranger", "viewer")
         invitation = self.auth.create_invitation("Nicole", "viewer")
-        with self.assertRaisesRegex(ValueError, "12 to 128"):
+        with self.assertRaisesRegex(ValueError, "8 to 128"):
             self.auth.claim("Nicole", invitation, "short")
+
+    def test_accepts_eight_character_password(self) -> None:
+        invitation = self.auth.create_invitation("Nicole", "viewer")
+        session, user = self.auth.claim("Nicole", invitation, "12345678")
+        self.assertEqual(user["role"], "viewer")
+        self.assertIsNotNone(self.auth.authenticate(session))
 
     def test_tokens_and_passwords_are_not_stored_in_plaintext(self) -> None:
         invitation = self.auth.create_invitation("Nicole", "viewer")

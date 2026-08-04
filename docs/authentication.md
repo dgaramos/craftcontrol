@@ -23,7 +23,7 @@ After the local-auth release is deployed, create a one-time setup code:
 docker compose exec craftcontrol craftcontrol auth bootstrap --player VonCrush
 ```
 
-Open the CraftControl login screen, choose **First access or invitation**, enter the Gamertag, one-time code, and a new password of 12–128 characters. The code expires after 30 minutes and is stored only as a SHA-256 hash.
+Open the CraftControl login screen, choose **First access or invitation**, enter the Gamertag, one-time code, and a new password of 8–128 characters. The code expires after 30 minutes and is stored only as a SHA-256 hash.
 
 Passwords use `scrypt` with independent random salts. Session identifiers are random, stored only as hashes, idle-expire after 12 hours, absolute-expire after 7 days, and are revocable. Login attempts are limited to five failures in 15 minutes per normalized Gamertag.
 

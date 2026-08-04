@@ -1,0 +1,111 @@
+"""Telemetry reconciliation use cases.
+
+This module is intentionally separate from telemetry.py, which validates the wire
+protocol, and telemetry_installer.py, which manages pack files.
+"""
+
+from __future__ import annotations
+
+import json
+import threading
+import time
+from collections.abc import Callable
+from typing import Any
+
+from .ports import EventPublisher, StateStore
+
+
+class TelemetryService:
+    def __init__(self, repository: StateStore, events: EventPublisher) -> None:
+        self.repository = repository
+        self.events = events
+        self._lock = threading.RLock()
+
+    def ingest(self, envelope: dict[str, Any], request_snapshot: Callable[[str], None]) -> None:
+        with self._lock:
+            topic = envelope["type"]
+            sequence = int(envelope["sequence"])
+            snapshot_topic = topic.startswith("snapshot.")
+            telemetry = self.repository.snapshot().get("telemetry", {})
+            last_sequence = int(telemetry["sequence"]) if telemetry.get("sequence", "").isdigit() else None
+            status = telemetry.get("status", "waiting")
+            resync_reason: str | None = None
+            storage = envelope.get("data", {}).get("storage")
+            storage = storage if isinstance(storage, dict) else None
+            capabilities = envelope.get("data", {}).get("capabilities")
+            capabilities = capabilities if isinstance(capabilities, dict) else None
+            storage_blocked = bool(storage and (storage.get("persistenceBlocked") is True or storage.get("status") == "blocked"))
+            known_storage_blocked = storage_blocked or telemetry.get("persistence_blocked") == "true"
+
+            pack_reset = topic == "telemetry.started" and last_sequence is not None and sequence < last_sequence
+            if not snapshot_topic and last_sequence is not None and sequence <= last_sequence and not pack_reset:
+                self.events.publish("telemetry.sequence.rejected", "behavior-pack", {
+                    "sequence": sequence, "last_sequence": last_sequence, "topic": topic,
+                })
+                return
+
+            updates = {
+                "schema": str(envelope["schema"]), "sequence": str(sequence),
+                "expected_sequence": str(sequence + 1), "last_topic": topic,
+                "last_event_at": str(time.time()),
+            }
+            if storage:
+                updates.update(
+                    storage_version=str(storage.get("storageVersion", "")),
+                    storage_status=str(storage.get("status", "unknown")),
+                    persistence_blocked="true" if storage_blocked else "false",
+                )
+                updates["storage_migrated_from"] = str(storage["migratedFrom"]) if storage.get("migratedFrom") is not None else ""
+            if capabilities:
+                supported = sum(1 for value in capabilities.values() if isinstance(value, dict) and value.get("supported") is True)
+                updates.update(
+                    capabilities=json.dumps(capabilities, ensure_ascii=False, sort_keys=True),
+                    capability_status="full" if supported == len(capabilities) else "limited",
+                    capabilities_supported=str(supported),
+                    capabilities_total=str(len(capabilities)),
+                )
+            if snapshot_topic:
+                if topic == "snapshot.started":
+                    updates.update(status="degraded" if storage_blocked else "syncing", snapshot_started_at=str(time.time()))
+                elif topic == "snapshot.finished":
+                    if known_storage_blocked:
+                        updates.update(status="degraded", last_error="telemetry pack persistence is blocked")
+                    else:
+                        updates.update(status="healthy", last_snapshot_at=str(time.time()), last_error="")
+            elif last_sequence is not None and sequence > last_sequence + 1:
+                missing = sequence - last_sequence - 1
+                updates.update(
+                    status="degraded",
+                    gap_count=str(int(telemetry.get("gap_count", "0")) + 1),
+                    missing_events=str(int(telemetry.get("missing_events", "0")) + missing),
+                    last_gap=f"{last_sequence + 1}-{sequence - 1}",
+                    last_error=f"sequence gap: expected {last_sequence + 1}, received {sequence}",
+                )
+                resync_reason = "sequence-gap"
+            elif topic == "telemetry.started":
+                updates["status"] = "syncing"
+                if pack_reset:
+                    updates.update(
+                        reset_count=str(int(telemetry.get("reset_count", "0")) + 1),
+                        last_error=f"pack sequence reset: {last_sequence} -> {sequence}",
+                    )
+                resync_reason = "pack-started"
+            elif status not in {"syncing", "degraded"}:
+                updates["status"] = "healthy"
+
+            if storage_blocked:
+                updates.update(status="degraded", last_error=str(storage.get("error") or "telemetry pack persistence is blocked")[:240])
+
+            accepted, players = self.repository.ingest_telemetry(envelope)
+            if not accepted:
+                return
+            self.repository.store("telemetry", updates, "behavior-pack")
+
+        self.events.publish(f"telemetry.{topic}", "behavior-pack", {"players": players, "sequence": envelope["sequence"]})
+        if players or topic in {"snapshot.finished", "telemetry.started"}:
+            self.events.publish("state.changed", "behavior-pack", {"domains": ["telemetry", "player_profiles"], "players": players})
+        if resync_reason:
+            self.events.publish("telemetry.reconciliation.required", "behavior-pack", {
+                "reason": resync_reason, "sequence": sequence,
+            })
+            request_snapshot(resync_reason)

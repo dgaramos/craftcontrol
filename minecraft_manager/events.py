@@ -6,7 +6,7 @@ import threading
 import time
 from typing import Any, Iterator
 
-from .repository import StateRepository
+from .ports import EventStore
 
 
 @dataclass(frozen=True)
@@ -19,7 +19,7 @@ class Event:
 
 
 class EventBroker:
-    def __init__(self, repository: StateRepository) -> None:
+    def __init__(self, repository: EventStore) -> None:
         self.repository = repository
         self._subscribers: set[queue.Queue[Event]] = set()
         self._lock = threading.Lock()

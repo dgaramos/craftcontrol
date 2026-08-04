@@ -4,14 +4,12 @@ import re
 import json
 import threading
 import time
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from .events import EventBroker
 from .schema import GAMERULES
 from .telemetry import PREFIX as TELEMETRY_PREFIX, parse_telemetry_line
-
-if TYPE_CHECKING:
-    from .services import ManagerService
+from .ports import EventPublisher, RuntimeApplication
 
 
 class EventRuntime:
@@ -22,7 +20,7 @@ class EventRuntime:
         "was struck by lightning", "froze to death", "was impaled by", "was squashed by",
         "died", "foi morto", "morreu", "afogou", "caiu de", "queimou", "tentou nadar em lava",
     )
-    def __init__(self, service: "ManagerService", broker: EventBroker, container: str, reconcile_seconds: int = 900) -> None:
+    def __init__(self, service: RuntimeApplication, broker: EventPublisher, container: str, reconcile_seconds: int = 900) -> None:
         self.service = service
         self.broker = broker
         self.container = container
@@ -146,7 +144,7 @@ class EventRuntime:
                     if action in {"start", "restart"}:
                         self.service.refresh_async(reason=f"docker.{action}")
                     elif action in {"die", "destroy"}:
-                        closed = self.service.repository.close_online_sessions(f"docker.{action}")
+                        closed = self.service.close_online_sessions(f"docker.{action}")
                         if closed:
                             self.broker.publish("state.changed", "docker-events", {"domains": ["players", "player_profiles"], "players": closed})
             except Exception as error:

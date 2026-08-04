@@ -1,3 +1,6 @@
+import { api } from "./js/api.js";
+import { connectEventStream } from "./js/events.js";
+
 const state = {
   schema: null, config: {}, gamerules: {}, players: [], online: 0, maxPlayers: 0,
   changes: {}, tab: "home", tabs: ["home", "world", "players", "rules", "server"], status: null, updatedAt: 0, domains: {},
@@ -189,13 +192,6 @@ function toast(message, error = false) {
   element.style.background = error ? "#ffd2cf" : "#eef8ee";
   element.classList.add("show");
   setTimeout(() => element.classList.remove("show"), 2600);
-}
-
-async function api(url, options = {}) {
-  const response = await fetch(url, { headers: { "Content-Type": "application/json" }, ...options });
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error || "Request failed");
-  return data;
 }
 
 function booleanControl(id, value) {
@@ -641,12 +637,8 @@ async function boot() {
 }
 
 let eventRefreshTimer = null;
-let eventSource = null;
 function connectEvents() {
-  if (eventSource) return;
-  eventSource = new EventSource("/api/events");
-  eventSource.addEventListener("state", (message) => {
-    const event = JSON.parse(message.data);
+  connectEventStream((event) => {
     if (event.topic === "state.changed" || event.topic.startsWith("server.")) {
       clearTimeout(eventRefreshTimer);
       eventRefreshTimer = setTimeout(async () => {
@@ -655,7 +647,6 @@ function connectEvents() {
       }, 300);
     }
   });
-  eventSource.onerror = () => { /* EventSource reconnects automatically with Last-Event-ID. */ };
 }
 
 $("#language").onclick = () => {

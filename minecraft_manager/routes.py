@@ -5,17 +5,15 @@ import json
 
 from .schema import GAMERULES, SETTINGS
 from .services import ManagerService
-from .telemetry_installer import TelemetryPackInstaller
+from .http import players_api, telemetry_api
 
 api = Blueprint("api", __name__)
+api.register_blueprint(players_api)
+api.register_blueprint(telemetry_api)
 
 
 def service() -> ManagerService:
     return current_app.extensions["manager_service"]
-
-
-def telemetry_installer() -> TelemetryPackInstaller:
-    return TelemetryPackInstaller.bundled(service().files.env_file.parent)
 
 
 @api.get("/")
@@ -81,57 +79,6 @@ def status():
     return jsonify(service().docker.status())
 
 
-@api.get("/api/telemetry-pack")
-def telemetry_pack_status():
-    try:
-        pack = telemetry_installer().status().to_dict()
-        snapshot = service().state()
-        domain = snapshot.get("domains", {}).get("telemetry", {})
-        values = snapshot.get("telemetry", {})
-        pack["health"] = values.get("status", "waiting")
-        pack["last_topic"] = values.get("last_topic")
-        pack["last_response_at"] = float(values["last_event_at"]) if values.get("last_event_at") else domain.get("observed_at")
-        pack["sequence"] = values.get("sequence")
-        pack["expected_sequence"] = values.get("expected_sequence")
-        pack["gap_count"] = int(values.get("gap_count", 0))
-        pack["missing_events"] = int(values.get("missing_events", 0))
-        pack["last_gap"] = values.get("last_gap")
-        pack["last_snapshot_at"] = float(values["last_snapshot_at"]) if values.get("last_snapshot_at") else None
-        pack["last_error"] = values.get("last_error") or None
-        pack["storage_version"] = values.get("storage_version")
-        pack["storage_status"] = values.get("storage_status")
-        pack["storage_migrated_from"] = values.get("storage_migrated_from")
-        pack["persistence_blocked"] = values.get("persistence_blocked") == "true"
-        try:
-            pack["capabilities"] = json.loads(values.get("capabilities", "{}"))
-        except (TypeError, ValueError):
-            pack["capabilities"] = {}
-        pack["capability_status"] = values.get("capability_status")
-        pack["capabilities_supported"] = int(values.get("capabilities_supported", 0))
-        pack["capabilities_total"] = int(values.get("capabilities_total", 0))
-        return jsonify(pack)
-    except (FileNotFoundError, TypeError, ValueError) as error:
-        return jsonify(error=str(error)), 400
-
-
-@api.post("/api/telemetry-pack/<action>")
-def telemetry_pack_action(action: str):
-    try:
-        installer = telemetry_installer()
-        if action in {"install", "upgrade"}:
-            result = installer.install()
-            result["action"] = action
-        elif action == "disable":
-            result = installer.disable()
-        elif action == "rollback":
-            result = installer.rollback()
-        else:
-            return jsonify(error="Ação de telemetria não permitida"), 404
-        return jsonify(result)
-    except (FileNotFoundError, TypeError, ValueError) as error:
-        return jsonify(error=str(error)), 400
-
-
 @api.post("/api/server/<action>")
 def server_action(action: str):
     try:
@@ -179,31 +126,3 @@ def time_action(action: str):
     except Exception as error:
         return jsonify(error=str(error)), 500
     return jsonify(ok=True, **result)
-
-
-@api.get("/api/players")
-def players():
-    return jsonify(players=service().players())
-
-
-@api.get("/api/players/profile/<path:identity>")
-def player_profile(identity: str):
-    profile = service().player_profile(identity)
-    if profile is None:
-        return jsonify(error="Jogador não encontrado"), 404
-    return jsonify(profile)
-
-
-@api.put("/api/players/<player>/operator")
-def player_operator(player: str):
-    try:
-        payload = request.get_json(force=True)
-        enabled = payload.get("enabled")
-        if not isinstance(enabled, bool):
-            raise ValueError("valor booleano inválido")
-        service().set_player_operator(player, enabled)
-    except (AttributeError, TypeError, ValueError) as error:
-        return jsonify(error=str(error)), 400
-    except Exception as error:
-        return jsonify(error=str(error)), 500
-    return jsonify(ok=True, player=player, operator=enabled)

@@ -251,21 +251,21 @@ docker compose config --quiet
 git diff --check
 ```
 
-The application follows a layered structure:
+The application is a modular monolith with layered use cases, explicit dependency injection, ports and adapters at meaningful external boundaries, and an internal event-driven runtime. Production dependencies are assembled manually in `composition.py`; no service locator or dependency-injection framework is required.
 
 ```text
 minecraft_manager/
-├── routes.py       # HTTP mapping
-├── services.py     # use-case orchestration
-├── repository.py   # SQLite persistence
-├── runtime.py      # log and Docker event supervisors
-├── bedrock.py      # console adapter and parsers
-├── docker_ops.py   # allowlisted lifecycle operations
-├── files.py        # atomic configuration access
-├── telemetry.py   # structured envelope validation
-├── schema.py       # editable fields and validation
-└── config.py       # environment-backed settings
+├── composition.py  # production composition root
+├── ports.py        # structural boundary contracts
+├── http/           # HTTP mapping grouped by domain
+├── players/        # player application use cases
+├── services.py     # compatibility orchestration facade
+├── repository.py   # compatibility SQLite repository
+├── runtime.py      # event supervisors and reconciliation
+└── adapters        # Bedrock, Docker, files, and telemetry installation
 ```
+
+The modular migration is incremental and preserves public endpoints, SQLite data, environment variables, and deployment paths. See [Architecture](docs/architecture.md) for system context, dependency rules, dependency injection, event consistency, deliberate non-goals, and the target module layout.
 
 ## Roadmap
 

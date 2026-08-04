@@ -10,11 +10,11 @@ if TYPE_CHECKING:
 
 
 def create_app(settings: Settings | None = None, service: ManagerService | None = None) -> Flask:
+    from .composition import compose_manager
     from .routes import api
-    from .services import ManagerService
 
     settings = settings or Settings.from_env()
-    service = service or ManagerService.build(settings)
+    service = service or compose_manager(settings)
     app = Flask(__name__, template_folder="../templates", static_folder="../static")
     app.config["APP_NAME"] = "CraftControl"
     app.extensions["manager_service"] = service

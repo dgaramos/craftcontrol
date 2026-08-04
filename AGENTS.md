@@ -10,12 +10,18 @@ Before planning, reviewing, or changing this project, read `README.md` and every
 
 ## Architecture
 
+- Treat `docs/architecture.md` as the authoritative architecture and dependency-direction reference.
+- Keep CraftControl a modular monolith: organize by domain, retain layered use cases inside modules, and use ports/adapters only at meaningful persistence and infrastructure boundaries.
+- Inject dependencies through constructors and assemble production implementations in the composition root. Use `typing.Protocol` for replaceable boundaries; do not add a DI framework, service locator, or redundant interface for every concrete service.
+- Runtime supervisors must call application-facing ports and must never reach through a service to its repository or adapter.
 - Keep HTTP mapping in `minecraft_manager/routes.py`, orchestration in `services.py`, event ingestion in `runtime.py`, persistence in `repository.py`, and Bedrock/Docker/filesystem concerns in their adapters.
 - Preserve the internal event broker, persisted operational events, SSE browser updates, targeted refreshes, and periodic full reconciliation.
 - Keep one Gunicorn worker unless the process-local broker and runtime supervisors are redesigned for multiple workers.
 - Do not add browser polling when an event-driven invalidation and targeted reconciliation is sufficient.
 - Keep the manager independent from the exporter and observability stack.
 - Use SQLite for local durable state and schema changes that migrate existing databases without deleting user data.
+
+The legacy file locations in the preceding rule are compatibility facades during the modular refactor. New domain modules may live under `http/`, `server/`, `players/`, `telemetry/`, `operations/`, and `runtime/`; do not remove a compatibility import until its callers and tests have migrated.
 
 ## Player data invariants
 
@@ -45,6 +51,8 @@ Run these checks before handing off changes:
 python -m unittest discover -s tests -v
 python -m compileall -q minecraft_manager app.py wsgi.py
 node --check static/app.js
+node --check static/js/api.js
+node --check static/js/events.js
 docker compose config --quiet
 git diff --check
 ```

@@ -1,0 +1,51 @@
+export const SCHEMA_VERSION = 1;
+export const STATE_KEY = "bedrock_telemetry:state";
+export const LOG_PREFIX = "[BEDROCK_TELEMETRY]";
+export const MAX_BLOCK_TYPES = 128;
+
+export function emptyState() {
+  return { schema: SCHEMA_VERSION, sequence: 0, players: {} };
+}
+
+export function playerKey(name) {
+  return String(name).trim().toLocaleLowerCase();
+}
+
+export function emptyPlayer(name, now) {
+  return {
+    name, aliases: [name], firstSeenAt: now, lastSeenAt: now,
+    joins: 0, deaths: 0, playerKills: 0, mobKills: 0,
+    blocksBroken: 0, blocksPlaced: 0, damageDealt: 0, damageTaken: 0,
+    distance: 0, dimensions: {}, brokenByType: {}, placedByType: {},
+  };
+}
+
+export function ensurePlayer(state, name, now = Date.now()) {
+  const key = playerKey(name);
+  const player = state.players[key] || emptyPlayer(name, now);
+  player.name = name;
+  player.lastSeenAt = now;
+  if (!player.aliases.includes(name)) player.aliases.push(name);
+  state.players[key] = player;
+  return player;
+}
+
+export function incrementMap(map, key, amount = 1, limit = MAX_BLOCK_TYPES) {
+  map[key] = (map[key] || 0) + amount;
+  const entries = Object.entries(map);
+  if (entries.length > limit) {
+    entries.sort((a, b) => b[1] - a[1]);
+    for (const [name] of entries.slice(limit)) delete map[name];
+  }
+}
+
+export function horizontalDistance(from, to) {
+  const x = to.x - from.x;
+  const z = to.z - from.z;
+  return Math.sqrt(x * x + z * z);
+}
+
+export function round(value, digits = 2) {
+  const factor = 10 ** digits;
+  return Math.round(value * factor) / factor;
+}

@@ -1,0 +1,11 @@
+{
+  "name": "craftcontrol-telemetry",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "check": "node --check behavior_pack/scripts/main.js && node --test",
+    "pack": "bash scripts/package.sh"
+  }
+}

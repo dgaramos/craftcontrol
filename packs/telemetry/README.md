@@ -94,6 +94,8 @@ The package command creates:
 dist/craftcontrol-telemetry-0.2.0.mcpack
 ```
 
+Packaging uses sorted paths, normalized timestamps, and stripped ZIP metadata so the standalone repository and CraftControl subtree produce byte-equivalent artifacts from the same commit.
+
 ## Install on a dedicated server
 
 Stop the Bedrock server and identify the persistent BDS data directory plus the exact world directory name. For the `itzg/minecraft-bedrock-server` image, the persistent host directory normally corresponds to `/data` inside the container.

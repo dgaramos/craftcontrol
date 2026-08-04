@@ -27,6 +27,8 @@ CraftControl persists the latest world-local sequence and treats incremental rec
 
 Snapshot frames may legitimately share a sequence and repeated snapshots at the same sequence remain authoritative. Health returns to `healthy` only after `snapshot.finished`; an empty or incomplete response remains `degraded` instead of being left indefinitely as synchronizing. The panel exposes health, current sequence, last completed snapshot, detected gaps, missing-event count, and the latest error. Snapshot requests within the cooldown window are coalesced to avoid command storms.
 
+Pack storage and wire protocol are versioned independently. Telemetry Pack `0.2.1` migrates legacy world state to storage version `1` only after validation, retains the untouched legacy JSON in `bedrock_telemetry:state_backup_v0`, and fills missing fields without resetting counters. Startup and snapshot envelopes carry storage health. CraftControl keeps health `degraded` after `snapshot.finished` whenever the pack reports blocked persistence, and the panel shows the storage version and migration state.
+
 ## Safety and persistence
 
 The installer:

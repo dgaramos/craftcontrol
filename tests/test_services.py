@@ -150,3 +150,25 @@ class TimeActionsTest(unittest.TestCase):
         self.assertEqual(telemetry["status"], "syncing")
         self.assertEqual(telemetry["reset_count"], "1")
         self.assertEqual(requested, ["pack-started"])
+
+    def test_blocked_pack_storage_stays_degraded_after_snapshot(self) -> None:
+        self.service.request_telemetry_snapshot_async = lambda reason: None  # type: ignore[method-assign]
+        storage = {"status": "blocked", "storageVersion": 1, "persistenceBlocked": True, "error": "invalid persisted state"}
+        self.service.telemetry_event({"schema": 1, "sequence": 1, "type": "telemetry.started", "timestamp": 1, "player": None, "data": {"storage": storage}})
+        self.service.telemetry_event({"schema": 1, "sequence": 1, "type": "snapshot.started", "timestamp": 2, "player": None, "data": {"players": 0, "storage": storage}})
+        self.service.telemetry_event({"schema": 1, "sequence": 1, "type": "snapshot.finished", "timestamp": 3, "player": None, "data": {}})
+        telemetry = self.service.state()["telemetry"]
+        self.assertEqual(telemetry["status"], "degraded")
+        self.assertEqual(telemetry["persistence_blocked"], "true")
+        self.assertEqual(telemetry["storage_version"], "1")
+        self.assertEqual(telemetry["last_error"], "telemetry pack persistence is blocked")
+
+    def test_pack_storage_migration_is_reported_separately_from_protocol(self) -> None:
+        self.service.request_telemetry_snapshot_async = lambda reason: None  # type: ignore[method-assign]
+        storage = {"status": "migrated", "storageVersion": 1, "migratedFrom": 0, "persistenceBlocked": False}
+        self.service.telemetry_event({"schema": 1, "sequence": 8, "type": "telemetry.started", "timestamp": 1, "player": None, "data": {"storage": storage}})
+        telemetry = self.service.state()["telemetry"]
+        self.assertEqual(telemetry["schema"], "1")
+        self.assertEqual(telemetry["storage_version"], "1")
+        self.assertEqual(telemetry["storage_migrated_from"], "0")
+        self.assertEqual(telemetry["storage_status"], "migrated")

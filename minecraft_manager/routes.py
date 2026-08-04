@@ -98,6 +98,10 @@ def telemetry_pack_status():
         pack["last_gap"] = values.get("last_gap")
         pack["last_snapshot_at"] = float(values["last_snapshot_at"]) if values.get("last_snapshot_at") else None
         pack["last_error"] = values.get("last_error") or None
+        pack["storage_version"] = values.get("storage_version")
+        pack["storage_status"] = values.get("storage_status")
+        pack["storage_migrated_from"] = values.get("storage_migrated_from")
+        pack["persistence_blocked"] = values.get("persistence_blocked") == "true"
         return jsonify(pack)
     except (FileNotFoundError, TypeError, ValueError) as error:
         return jsonify(error=str(error)), 400

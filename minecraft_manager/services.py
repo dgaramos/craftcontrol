@@ -174,6 +174,10 @@ class ManagerService:
             last_sequence = int(telemetry["sequence"]) if telemetry.get("sequence", "").isdigit() else None
             status = telemetry.get("status", "waiting")
             resync_reason: str | None = None
+            storage = envelope.get("data", {}).get("storage")
+            storage = storage if isinstance(storage, dict) else None
+            storage_blocked = bool(storage and (storage.get("persistenceBlocked") is True or storage.get("status") == "blocked"))
+            known_storage_blocked = storage_blocked or telemetry.get("persistence_blocked") == "true"
 
             pack_reset = topic == "telemetry.started" and last_sequence is not None and sequence < last_sequence
             if not snapshot_topic and last_sequence is not None and sequence <= last_sequence and not pack_reset:
@@ -187,11 +191,22 @@ class ManagerService:
                 "expected_sequence": str(sequence + 1), "last_topic": topic,
                 "last_event_at": str(time.time()),
             }
+            if storage:
+                updates.update(
+                    storage_version=str(storage.get("storageVersion", "")),
+                    storage_status=str(storage.get("status", "unknown")),
+                    persistence_blocked="true" if storage_blocked else "false",
+                )
+                if storage.get("migratedFrom") is not None:
+                    updates["storage_migrated_from"] = str(storage["migratedFrom"])
             if snapshot_topic:
                 if topic == "snapshot.started":
-                    updates.update(status="syncing", snapshot_started_at=str(time.time()))
+                    updates.update(status="degraded" if storage_blocked else "syncing", snapshot_started_at=str(time.time()))
                 elif topic == "snapshot.finished":
-                    updates.update(status="healthy", last_snapshot_at=str(time.time()), last_error="")
+                    if known_storage_blocked:
+                        updates.update(status="degraded", last_error="telemetry pack persistence is blocked")
+                    else:
+                        updates.update(status="healthy", last_snapshot_at=str(time.time()), last_error="")
             elif last_sequence is not None and sequence > last_sequence + 1:
                 missing = sequence - last_sequence - 1
                 updates.update(
@@ -212,6 +227,9 @@ class ManagerService:
                 resync_reason = "pack-started"
             elif status not in {"syncing", "degraded"}:
                 updates["status"] = "healthy"
+
+            if storage_blocked:
+                updates.update(status="degraded", last_error=str(storage.get("error") or "telemetry pack persistence is blocked")[:240])
 
             accepted, players = self.repository.ingest_telemetry(envelope)
             if not accepted:

@@ -30,3 +30,11 @@ def rankings():
         return jsonify(manager().player_rankings(int(request.args.get("limit", "10"))))
     except (TypeError, ValueError) as error:
         return jsonify(error=str(error)), 400
+
+
+@analytics_api.get("/api/analytics/blocks")
+def blocks():
+    try:
+        return jsonify(manager().block_analytics(int(request.args.get("limit", "10"))))
+    except (TypeError, ValueError) as error:
+        return jsonify(error=str(error)), 400

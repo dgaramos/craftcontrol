@@ -144,3 +144,28 @@ class StateRepositoryTest(unittest.TestCase):
             self.assertEqual(rankings["metrics"]["blocks_broken"][0]["player"]["name"], "Nicole")
             self.assertEqual(rankings["metrics"]["distance"][0]["value"], 123.5)
             self.assertNotIn("99", str(rankings))
+
+    def test_block_analytics_aggregates_types_ores_and_players(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = StateRepository(Path(directory) / "state.db")
+            repository.initialize()
+            repository.observe_player("VonCrush", False, "private-99")
+            repository.observe_player("Nicole", False, "private-456")
+            repository.ingest_telemetry({
+                "schema": 1, "sequence": 1, "type": "snapshot.player", "timestamp": 1,
+                "player": {"name": "VonCrush"},
+                "data": {"blocksBroken": 5, "blocksPlaced": 4, "brokenByType": {"minecraft:diamond_ore": 3, "minecraft:iron_ore": 2}, "placedByType": {"minecraft:stone": 4}},
+            })
+            repository.ingest_telemetry({
+                "schema": 1, "sequence": 2, "type": "snapshot.player", "timestamp": 2,
+                "player": {"name": "Nicole"},
+                "data": {"blocksBroken": 5, "blocksPlaced": 2, "brokenByType": {"minecraft:deepslate_diamond_ore": 5}, "placedByType": {"minecraft:oak_planks": 2}},
+            })
+            result = repository.block_analytics()
+            self.assertEqual(result["totals"], {"broken": 10, "placed": 6})
+            self.assertEqual(result["ores"]["diamond"], 8)
+            self.assertEqual(result["rankings"]["miners"][0]["player"]["name"], "Nicole")
+            self.assertEqual(result["rankings"]["builders"][0]["player"]["name"], "VonCrush")
+            self.assertEqual(result["rankings"]["ores"]["diamond"][0]["value"], 5)
+            self.assertEqual(result["top_broken"][0], {"block": "minecraft:deepslate_diamond_ore", "count": 5})
+            self.assertNotIn("private-", str(result))

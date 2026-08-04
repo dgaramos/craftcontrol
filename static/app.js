@@ -5,7 +5,7 @@ import { requireSession } from "./js/auth.js?v=1";
 const state = {
   schema: null, config: {}, gamerules: {}, players: [], online: 0, maxPlayers: 0,
   changes: {}, tab: "home", tabs: ["home", "world", "players", "analytics", "rules", "server"], status: null, updatedAt: 0, domains: {},
-  analytics: { kind: "all", player: "", source: "all", search: "", days: 0, page: 1, rankingCategory: "activity", rankingMetric: "play_time" },
+  analytics: { kind: "all", player: "", source: "all", search: "", days: 0, page: 1, rankingCategory: "activity", rankingMetric: "play_time", blocksMode: "mining", selectedOre: "diamond" },
   locale: (localStorage.getItem("craftcontrol-locale") || localStorage.getItem("manager-locale")) === "en" ? "en" : "pt",
   user: null,
 };
@@ -58,7 +58,7 @@ const messages = {
     deathHistory: "Histórico de mortes", noDeaths: "Nenhuma morte detalhada registrada.", deathCause: "Causa", killedBy: "Responsável", projectile: "Projétil", telemetrySource: "Behavior pack",
     home: "Início", world: "Mundo", players: "Jogadores", analytics: "Dados", rules: "Regras", settings: "Servidor",
     analyticsTitle: "Atividade do servidor", analyticsHelp: "A história compartilhada de quem entrou, saiu, morreu ou teve permissões alteradas.",
-    activityView: "Atividade", deathsView: "Mortes", rankingsView: "Rankings", eventFilter: "Evento", playerFilter: "Jogador", periodFilter: "Período", sourceFilter: "Origem", detailFilter: "Causa ou responsável", detailFilterHint: "Ex.: zombie, lava…",
+    activityView: "Atividade", deathsView: "Mortes", rankingsView: "Rankings", blocksView: "Blocos", eventFilter: "Evento", playerFilter: "Jogador", periodFilter: "Período", sourceFilter: "Origem", detailFilter: "Causa ou responsável", detailFilterHint: "Ex.: zombie, lava…",
     everyEvent: "Todos os eventos", joinsOnly: "Entradas", leavesOnly: "Saídas", permissionsOnly: "Permissões", respawnsOnly: "Respawns", dimensionsOnly: "Dimensões",
     everyPlayer: "Todos os jogadores", lifetime: "Desde o início", last7Days: "Últimos 7 dias", last30Days: "Últimos 30 dias",
     everySource: "Todas as fontes", structuredSource: "Telemetry Pack", serverSource: "Servidor e manager",
@@ -66,6 +66,8 @@ const messages = {
     previous: "Anterior", next: "Próxima", refreshData: "Atualizar dados", sourceStructured: "Estruturado", sourceServer: "Evidência do servidor", deathDetails: "Detalhes da morte", viewDetails: "Ver detalhes", fromDimension: "Origem", toDimension: "Destino",
     rankingsTitle: "Rankings e recordes", rankingsHelp: "Compare os recordes vitalícios que o servidor consegue provar hoje.", lifetimeRecord: "Recorde vitalício", leaderboard: "Classificação", records: "Recordes do servidor", noRankingData: "Ainda não há dados para esta categoria.",
     categoryActivity: "Atividade", categoryCombat: "Combate", categoryBuilding: "Blocos", categoryExploration: "Exploração", rankPlayTime: "Tempo jogado", rankSessions: "Sessões", rankLongestSession: "Maior sessão", rankDeaths: "Mortes", rankPlayerKills: "Jogadores eliminados", rankMobKills: "Criaturas eliminadas", rankBlocksBroken: "Blocos quebrados", rankBlocksPlaced: "Blocos colocados", rankDamageDealt: "Dano causado", rankDamageTaken: "Dano recebido", rankDistance: "Distância", rankDimensions: "Dimensões",
+    blocksTitle: "Mineração e construção", blocksHelp: "Descubra o que o mundo consumiu, quem mais minerou e quem mais construiu.", miningView: "Mineração", buildingView: "Construção", oresTitle: "Minérios encontrados", topBlocks: "Blocos mais frequentes", favoriteBlocks: "Favoritos dos jogadores", miners: "Mineradores", builders: "Construtores", noBlockData: "Ainda não há blocos registrados pelo Telemetry Pack.", blocksTelemetryHint: "Os números começam a contar após a instalação do Telemetry Pack.", broken: "Quebrados", placed: "Colocados", oreRanking: "Ranking do minério",
+    oreDiamond: "Diamante", oreIron: "Ferro", oreGold: "Ouro", oreCopper: "Cobre", oreCoal: "Carvão", oreRedstone: "Redstone", oreLapis: "Lápis-lazúli", oreEmerald: "Esmeralda", oreQuartz: "Quartzo", oreAncient_debris: "Detritos ancestrais",
     worldIntro: "Configuração do mundo", rulesIntro: "Comportamento do jogo", serverIntro: "Infraestrutura do servidor",
     pendingChanges: "ALTERAÇÕES PENDENTES", reviewChanges: "Revisar alterações",
     pendingHelp: "Estas configurações serão salvas e o servidor será reiniciado somente quando você aplicar.",
@@ -128,7 +130,7 @@ const messages = {
     deathHistory: "Death history", noDeaths: "No detailed deaths recorded.", deathCause: "Cause", killedBy: "Killed by", projectile: "Projectile", telemetrySource: "Behavior pack",
     home: "Home", world: "World", players: "Players", analytics: "Data", rules: "Rules", settings: "Server",
     analyticsTitle: "Server activity", analyticsHelp: "The shared history of players joining, leaving, dying, or receiving permission changes.",
-    activityView: "Activity", deathsView: "Deaths", rankingsView: "Rankings", eventFilter: "Event", playerFilter: "Player", periodFilter: "Period", sourceFilter: "Source", detailFilter: "Cause or responsible", detailFilterHint: "E.g. zombie, lava…",
+    activityView: "Activity", deathsView: "Deaths", rankingsView: "Rankings", blocksView: "Blocks", eventFilter: "Event", playerFilter: "Player", periodFilter: "Period", sourceFilter: "Source", detailFilter: "Cause or responsible", detailFilterHint: "E.g. zombie, lava…",
     everyEvent: "All events", joinsOnly: "Joins", leavesOnly: "Leaves", permissionsOnly: "Permissions", respawnsOnly: "Respawns", dimensionsOnly: "Dimensions",
     everyPlayer: "All players", lifetime: "All time", last7Days: "Last 7 days", last30Days: "Last 30 days",
     everySource: "All sources", structuredSource: "Telemetry Pack", serverSource: "Server and manager",
@@ -136,6 +138,8 @@ const messages = {
     previous: "Previous", next: "Next", refreshData: "Refresh data", sourceStructured: "Structured", sourceServer: "Server evidence", deathDetails: "Death details", viewDetails: "View details", fromDimension: "From", toDimension: "To",
     rankingsTitle: "Rankings and records", rankingsHelp: "Compare the lifetime records the server can prove today.", lifetimeRecord: "Lifetime record", leaderboard: "Leaderboard", records: "Server records", noRankingData: "There is no data for this category yet.",
     categoryActivity: "Activity", categoryCombat: "Combat", categoryBuilding: "Blocks", categoryExploration: "Exploration", rankPlayTime: "Play time", rankSessions: "Sessions", rankLongestSession: "Longest session", rankDeaths: "Deaths", rankPlayerKills: "Player kills", rankMobKills: "Mob kills", rankBlocksBroken: "Blocks broken", rankBlocksPlaced: "Blocks placed", rankDamageDealt: "Damage dealt", rankDamageTaken: "Damage taken", rankDistance: "Distance", rankDimensions: "Dimensions",
+    blocksTitle: "Mining and building", blocksHelp: "See what the world consumed, who mined the most, and who built the most.", miningView: "Mining", buildingView: "Building", oresTitle: "Ores discovered", topBlocks: "Most frequent blocks", favoriteBlocks: "Player favorites", miners: "Miners", builders: "Builders", noBlockData: "The Telemetry Pack has not recorded any blocks yet.", blocksTelemetryHint: "Counters start after the Telemetry Pack is installed.", broken: "Broken", placed: "Placed", oreRanking: "Ore ranking",
+    oreDiamond: "Diamond", oreIron: "Iron", oreGold: "Gold", oreCopper: "Copper", oreCoal: "Coal", oreRedstone: "Redstone", oreLapis: "Lapis lazuli", oreEmerald: "Emerald", oreQuartz: "Quartz", oreAncient_debris: "Ancient debris",
     worldIntro: "World configuration", rulesIntro: "Game behavior", serverIntro: "Server infrastructure",
     pendingChanges: "PENDING CHANGES", reviewChanges: "Review changes",
     pendingHelp: "These settings are saved and the server restarts only after you apply them.",
@@ -679,7 +683,7 @@ async function openAnalyticsPlayer(publicId) {
 }
 
 function analyticsViewSwitch(active) {
-  return `<div class="analytics-view-switch"><button data-analytics-view="all" class="${!['deaths', 'rankings'].includes(active) ? "active" : ""}" type="button">☷ ${t("activityView")}</button><button data-analytics-view="deaths" class="death ${active === "deaths" ? "active" : ""}" type="button">☠ ${t("deathsView")}</button><button data-analytics-view="rankings" class="ranking ${active === "rankings" ? "active" : ""}" type="button">♛ ${t("rankingsView")}</button></div>`;
+  return `<div class="analytics-view-switch"><button data-analytics-view="all" class="${!['deaths', 'rankings', 'blocks'].includes(active) ? "active" : ""}" type="button">☷ ${t("activityView")}</button><button data-analytics-view="deaths" class="death ${active === "deaths" ? "active" : ""}" type="button">☠ ${t("deathsView")}</button><button data-analytics-view="rankings" class="ranking ${active === "rankings" ? "active" : ""}" type="button">♛ ${t("rankingsView")}</button><button data-analytics-view="blocks" class="blocks ${active === "blocks" ? "active" : ""}" type="button">▦ ${t("blocksView")}</button></div>`;
 }
 
 const rankingDefinitions = {
@@ -736,10 +740,59 @@ async function renderRankingsPanel() {
   await load();
 }
 
+function blockName(identifier) {
+  return String(identifier || "—").replace(/^minecraft:/, "").replaceAll("_", " ");
+}
+
+function oreLabel(ore) {
+  return t(`ore${ore.charAt(0).toUpperCase()}${ore.slice(1)}`);
+}
+
+function blockLeaderboard(entries, title) {
+  return `<section class="block-leaderboard block-panel"><div class="ranking-section-title"><span class="eyebrow">TOP 10</span><h3>${title}</h3></div>${entries.length ? `<ol>${entries.map((entry, index) => `<li><b>${index + 1}</b><span>${escapeHtml(blockName(entry.block))}</span><strong>${formatRankingValue(entry.count, "number")}</strong></li>`).join("")}</ol>` : `<div class="analytics-empty"><p>${t("noBlockData")}</p></div>`}</section>`;
+}
+
+function playerBlockRanking(entries, title) {
+  return `<section class="block-player-ranking block-panel"><div class="ranking-section-title"><span class="eyebrow">LIFETIME</span><h3>${title}</h3></div>${entries.length ? `<ol>${entries.map((entry, index) => `<li><b>${index + 1}</b><button data-block-player="${escapeHtml(entry.player.id)}" type="button">${escapeHtml(entry.player.name)}</button><strong>${formatRankingValue(entry.value, "number")}</strong></li>`).join("")}</ol>` : `<div class="analytics-empty"><p>${t("noBlockData")}</p></div>`}</section>`;
+}
+
+async function renderBlocksPanel() {
+  const analytics = state.analytics;
+  content.innerHTML = `<div class="blocks-screen">${analyticsViewSwitch("blocks")}<header class="blocks-hero block-panel"><div><span class="eyebrow">WORLD STATISTICS</span><h2>${t("blocksTitle")}</h2><p>${t("blocksHelp")}</p></div><button id="blocks-refresh" class="secondary" type="button">↻ ${t("refreshData")}</button></header><div class="blocks-mode"><button data-block-mode="mining" class="${analytics.blocksMode === "mining" ? "active" : ""}" type="button">⛏ ${t("miningView")}</button><button data-block-mode="building" class="${analytics.blocksMode === "building" ? "active" : ""}" type="button">▦ ${t("buildingView")}</button></div><div id="blocks-content"><div class="analytics-loading">${t("checking")}</div></div></div>`;
+  bindAnalyticsViewSwitch();
+  const load = async () => {
+    const target = $("#blocks-content");
+    target.innerHTML = `<div class="analytics-loading">${t("checking")}</div>`;
+    try {
+      const result = await api("/api/analytics/blocks?limit=10");
+      const mining = analytics.blocksMode === "mining";
+      const oreEntries = Object.entries(result.ores || {});
+      if (!oreEntries.some(([ore]) => ore === analytics.selectedOre)) analytics.selectedOre = oreEntries[0]?.[0] || "diamond";
+      const ranking = mining ? result.rankings?.miners || [] : result.rankings?.builders || [];
+      const types = mining ? result.top_broken || [] : result.top_placed || [];
+      const oreRanking = result.rankings?.ores?.[analytics.selectedOre] || [];
+      target.innerHTML = `<section class="blocks-summary"><article><small>${t("broken")}</small><b>${formatRankingValue(result.totals?.broken, "number")}</b><span>⛏</span></article><article><small>${t("placed")}</small><b>${formatRankingValue(result.totals?.placed, "number")}</b><span>▦</span></article><p>${t("blocksTelemetryHint")}<br><small>${t("updated")} ${formatDate(result.generated_at)}</small></p></section>${mining ? `<section class="ore-section block-panel"><div class="ranking-section-title"><span class="eyebrow">ORE TRACKER</span><h3>${t("oresTitle")}</h3></div><div class="ore-grid">${oreEntries.map(([ore, count]) => `<button data-ore="${ore}" class="${ore === analytics.selectedOre ? "active" : ""}" type="button"><span class="ore-gem ore-${ore}">◆</span><small>${oreLabel(ore)}</small><b>${formatRankingValue(count, "number")}</b></button>`).join("")}</div></section>` : ""}<div class="blocks-rank-grid">${blockLeaderboard(types, t("topBlocks"))}${playerBlockRanking(ranking, mining ? t("miners") : t("builders"))}${mining ? playerBlockRanking(oreRanking, `${t("oreRanking")}: ${oreLabel(analytics.selectedOre)}`) : ""}</div><section class="player-favorites block-panel"><div class="ranking-section-title"><span class="eyebrow">PLAYERS</span><h3>${t("favoriteBlocks")}</h3></div><div>${(result.players || []).map((item) => { const favorite = mining ? item.favorite_broken : item.favorite_placed; return `<button data-block-player="${escapeHtml(item.player.id)}" type="button"><strong>${escapeHtml(item.player.name)}</strong><span>${favorite ? escapeHtml(blockName(favorite.block)) : "—"}</span><b>${favorite ? formatRankingValue(favorite.count, "number") : "0"}</b></button>`; }).join("") || `<p>${t("noBlockData")}</p>`}</div></section>`;
+      target.querySelectorAll("[data-block-player]").forEach((button) => button.onclick = () => openAnalyticsPlayer(button.dataset.blockPlayer));
+      target.querySelectorAll("[data-ore]").forEach((button) => button.onclick = () => { analytics.selectedOre = button.dataset.ore; load(); });
+    } catch (error) { target.innerHTML = `<div class="analytics-empty"><p>${escapeHtml(error.message)}</p></div>`; }
+  };
+  content.querySelectorAll("[data-block-mode]").forEach((button) => button.onclick = () => {
+    analytics.blocksMode = button.dataset.blockMode;
+    content.querySelectorAll("[data-block-mode]").forEach((item) => item.classList.toggle("active", item === button));
+    load();
+  });
+  $("#blocks-refresh").onclick = load;
+  await load();
+}
+
 async function renderAnalyticsPanel() {
   const filters = state.analytics;
   if (filters.kind === "rankings") {
     await renderRankingsPanel();
+    return;
+  }
+  if (filters.kind === "blocks") {
+    await renderBlocksPanel();
     return;
   }
   content.innerHTML = `<div class="analytics-screen">${analyticsViewSwitch(filters.kind)}<header class="analytics-hero block-panel"><div><span class="eyebrow">CRAFTCONTROL ANALYTICS</span><h2>${t("analyticsTitle")}</h2><p>${t("analyticsHelp")}</p></div><button id="analytics-refresh" class="secondary" type="button">↻ ${t("refreshData")}</button></header><section class="analytics-filters block-panel"><label><span>${t("eventFilter")}</span><select id="analytics-kind" ${filters.kind === "deaths" ? "disabled" : ""}><option value="all">${t("everyEvent")}</option><option value="joins">${t("joinsOnly")}</option><option value="leaves">${t("leavesOnly")}</option><option value="respawns">${t("respawnsOnly")}</option><option value="dimensions">${t("dimensionsOnly")}</option><option value="permissions">${t("permissionsOnly")}</option></select></label><label><span>${t("playerFilter")}</span><select id="analytics-player"><option value="">${t("everyPlayer")}</option></select></label><label><span>${t("periodFilter")}</span><select id="analytics-days"><option value="0">${t("lifetime")}</option><option value="7">${t("last7Days")}</option><option value="30">${t("last30Days")}</option></select></label><label><span>${t("sourceFilter")}</span><select id="analytics-source"><option value="all">${t("everySource")}</option><option value="structured">${t("structuredSource")}</option><option value="server">${t("serverSource")}</option></select></label><label><span>${t("detailFilter")}</span><input id="analytics-search" type="search" maxlength="64" value="${escapeHtml(filters.search)}" placeholder="${t("detailFilterHint")}"></label></section><div id="analytics-results" class="analytics-results"><div class="analytics-loading">${t("checking")}</div></div><dialog id="analytics-death-dialog" class="analytics-death-dialog"><div class="drawer-header"><div><span class="eyebrow">${t("deathDetails")}</span><h2></h2></div><button class="drawer-close" type="button" aria-label="${t("close")}">×</button></div><div class="analytics-death-content"></div></dialog></div>`;

@@ -99,3 +99,23 @@ class TelemetryTest(unittest.TestCase):
             self.assertTrue(repository.ingest_telemetry(first)[0])
             self.assertTrue(repository.ingest_telemetry(second)[0])
             self.assertEqual(repository.player_profiles()[0]["telemetry"]["blocksBroken"], 15)
+
+    def test_block_deltas_update_bounded_type_maps_and_are_idempotent(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = StateRepository(Path(directory) / "state.db")
+            repository.initialize()
+            repository.ingest_telemetry({
+                "schema": 1, "sequence": 1, "type": "snapshot.player", "timestamp": 1,
+                "player": {"name": "VonCrush"},
+                "data": {"blocksBroken": 4, "blocksPlaced": 2, "brokenByType": {"minecraft:stone": 4}, "placedByType": {}},
+            })
+            broken = {"schema": 1, "sequence": 2, "type": "block.broken", "timestamp": 2, "player": {"name": "VonCrush"}, "data": {"blockType": "minecraft:diamond_ore"}}
+            placed = {"schema": 1, "sequence": 3, "type": "block.placed", "timestamp": 3, "player": {"name": "VonCrush"}, "data": {"blockType": "minecraft:oak_planks"}}
+            self.assertTrue(repository.ingest_telemetry(broken)[0])
+            self.assertFalse(repository.ingest_telemetry(broken)[0])
+            self.assertTrue(repository.ingest_telemetry(placed)[0])
+            stats = repository.player_profiles()[0]["telemetry"]
+            self.assertEqual(stats["blocksBroken"], 5)
+            self.assertEqual(stats["brokenByType"]["minecraft:diamond_ore"], 1)
+            self.assertEqual(stats["blocksPlaced"], 3)
+            self.assertEqual(stats["placedByType"]["minecraft:oak_planks"], 1)

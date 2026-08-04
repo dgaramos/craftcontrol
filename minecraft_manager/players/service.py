@@ -99,6 +99,11 @@ class PlayerService:
             raise ValueError("invalid ranking limit")
         return self.repository.player_rankings(limit)
 
+    def blocks(self, limit: int = 10) -> dict[str, Any]:
+        if limit < 1 or limit > 25:
+            raise ValueError("invalid block analytics limit")
+        return self.repository.block_analytics(limit)
+
     def set_operator(self, player: str, enabled: bool) -> None:
         self.console.set_operator(player, enabled)
         permission = "operator" if enabled else "member"

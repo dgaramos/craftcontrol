@@ -31,7 +31,7 @@ The five primary destinations are intentionally task-oriented:
 | Home | Server health, online players, freshness, and common destinations |
 | World | World identity, generation, view distance, time, weather, and cycles |
 | Players | Permanent profiles, sessions, operators, history, and telemetry |
-| Data | Global Activity, Deaths, lifetime Rankings, and server Records |
+| Data | Global Activity, Deaths, Rankings, Records, Mining, and Building |
 | Rules | Gameplay, interface, mobs, drops, commands, fire, TNT, and regeneration |
 | Server | Packs, network, compression, threads, and container lifecycle |
 
@@ -216,11 +216,12 @@ Without the behavior pack, death messages are parsed from server logs and explic
 
 ## Activity and death analytics
 
-The **Data** workspace provides three global views backed by permanent player history and authoritative lifetime aggregates:
+The **Data** workspace provides four global views backed by permanent player history and authoritative lifetime aggregates:
 
 - **Activity** combines joins, leaves, respawns, dimension changes, deaths, and permission changes. New durable events refresh the active view through SSE without browser polling.
 - **Deaths** focuses on cause, responsible entity or player, projectile, dimension, and coordinates when that evidence exists.
 - **Rankings** compares lifetime activity, combat, blocks, and exploration aggregates in a podium, top-ten leaderboard, and server record cards.
+- **Blocks** separates Mining from Building, with server totals, favorite block types, miner/builder leaderboards, and per-ore rankings.
 
 Both views support player, lifetime/7-day/30-day, source, event-type, and free-text detail filters. Results are paginated server-side and every item identifies whether it came from the structured Telemetry Pack or server/manager evidence. When a structured and derived death describe the same player within the same short window, the interface prefers the structured event while retaining the raw derived evidence privately in SQLite. XUIDs and raw log lines never leave the repository layer.
 
@@ -315,6 +316,7 @@ When development and deployment use separate directories, copy the source while 
 | `PUT` | `/api/players/<name>/operator` | Grant or revoke in-game operator status |
 | `GET` | `/api/analytics/activity` | Filtered and paginated global activity/death history |
 | `GET` | `/api/analytics/rankings` | Sanitized lifetime leaderboards and record holders |
+| `GET` | `/api/analytics/blocks` | Sanitized mining, building, block-type, and ore aggregates |
 | `PUT` | `/api/config` | Validate and queue persistent configuration |
 | `PUT` | `/api/gamerules/<rule>` | Apply an allowlisted gamerule |
 | `POST` | `/api/world/<action>` | Run an allowlisted world shortcut |

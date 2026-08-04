@@ -14,6 +14,19 @@ from .migrations import LATEST_SCHEMA_VERSION, run_migrations, schema_version
 
 LOGGER = logging.getLogger(__name__)
 
+ORE_BLOCKS = {
+    "diamond": {"minecraft:diamond_ore", "minecraft:deepslate_diamond_ore"},
+    "iron": {"minecraft:iron_ore", "minecraft:deepslate_iron_ore"},
+    "gold": {"minecraft:gold_ore", "minecraft:deepslate_gold_ore", "minecraft:nether_gold_ore"},
+    "copper": {"minecraft:copper_ore", "minecraft:deepslate_copper_ore"},
+    "coal": {"minecraft:coal_ore", "minecraft:deepslate_coal_ore"},
+    "redstone": {"minecraft:redstone_ore", "minecraft:deepslate_redstone_ore"},
+    "lapis": {"minecraft:lapis_ore", "minecraft:deepslate_lapis_ore"},
+    "emerald": {"minecraft:emerald_ore", "minecraft:deepslate_emerald_ore"},
+    "quartz": {"minecraft:nether_quartz_ore"},
+    "ancient_debris": {"minecraft:ancient_debris"},
+}
+
 
 class StateRepository:
     def __init__(self, path: Path) -> None:
@@ -335,8 +348,12 @@ class StateRepository:
             row = connection.execute("SELECT stats FROM player_telemetry WHERE identity=?", (identity,)).fetchone()
             if row:
                 stats = json.loads(row[0])
-                if topic == "block.broken" and name == names[0]: stats["blocksBroken"] = int(stats.get("blocksBroken", 0)) + 1
-                if topic == "block.placed" and name == names[0]: stats["blocksPlaced"] = int(stats.get("blocksPlaced", 0)) + 1
+                if topic == "block.broken" and name == names[0]:
+                    stats["blocksBroken"] = int(stats.get("blocksBroken", 0)) + 1
+                    self._increment_block_map(stats, "brokenByType", data.get("blockType"))
+                if topic == "block.placed" and name == names[0]:
+                    stats["blocksPlaced"] = int(stats.get("blocksPlaced", 0)) + 1
+                    self._increment_block_map(stats, "placedByType", data.get("blockType"))
                 if topic == "entity.died" and name == data.get("victim"): stats["deaths"] = int(stats.get("deaths", 0)) + 1
                 if topic == "entity.died" and name == data.get("killer"):
                     key = "playerKills" if data.get("victim") else "mobKills"
@@ -365,6 +382,16 @@ class StateRepository:
                     f"telemetry:{envelope['sequence']}:{topic}:{identity}",
                 )
         return list(dict.fromkeys(names))
+
+    @staticmethod
+    def _increment_block_map(stats: dict[str, Any], field: str, block_type: Any, limit: int = 128) -> None:
+        if not isinstance(block_type, str) or not block_type.startswith("minecraft:") or len(block_type) > 112:
+            return
+        values = stats.get(field) if isinstance(stats.get(field), dict) else {}
+        values[block_type] = int(values.get(block_type, 0)) + 1
+        if len(values) > limit:
+            values = dict(sorted(values.items(), key=lambda item: (-int(item[1]), item[0]))[:limit])
+        stats[field] = values
 
     def player_profile(self, public_id: str, history_limit: int = 100, session_limit: int = 50) -> dict[str, Any] | None:
         with self._connect() as connection:
@@ -519,3 +546,57 @@ class StateRepository:
             entries.sort(key=lambda entry: (-entry["value"], entry["player"]["name"].casefold()))
             metrics[key] = entries[:limit]
         return {"generated_at": time.time(), "period": "lifetime", "metrics": metrics}
+
+    def block_analytics(self, limit: int = 10) -> dict[str, Any]:
+        profiles = [profile for profile in self.player_profiles() if profile.get("telemetry_updated_at")]
+        global_broken: dict[str, int] = {}
+        global_placed: dict[str, int] = {}
+        ore_totals = {ore: 0 for ore in ORE_BLOCKS}
+        players = []
+
+        def clean_map(value: Any) -> dict[str, int]:
+            if not isinstance(value, dict):
+                return {}
+            return {str(key): int(count) for key, count in value.items() if str(key).startswith("minecraft:") and isinstance(count, (int, float)) and count > 0}
+
+        def favorite(values: dict[str, int]) -> dict[str, Any] | None:
+            if not values:
+                return None
+            block, count = min(values.items(), key=lambda item: (-item[1], item[0]))
+            return {"block": block, "count": count}
+
+        for profile in profiles:
+            telemetry = profile.get("telemetry", {})
+            broken = clean_map(telemetry.get("brokenByType"))
+            placed = clean_map(telemetry.get("placedByType"))
+            ores = {ore: sum(broken.get(block, 0) for block in blocks) for ore, blocks in ORE_BLOCKS.items()}
+            for block, count in broken.items(): global_broken[block] = global_broken.get(block, 0) + count
+            for block, count in placed.items(): global_placed[block] = global_placed.get(block, 0) + count
+            for ore, count in ores.items(): ore_totals[ore] += count
+            players.append({
+                "player": {"id": profile["id"], "name": profile["name"]},
+                "blocks_broken": int(telemetry.get("blocksBroken", 0)),
+                "blocks_placed": int(telemetry.get("blocksPlaced", 0)),
+                "favorite_broken": favorite(broken), "favorite_placed": favorite(placed),
+                "ores": ores, "updated_at": profile.get("telemetry_updated_at"),
+            })
+
+        def ranking(value_for):
+            entries = [{"player": item["player"], "value": value_for(item), "updated_at": item["updated_at"]} for item in players]
+            entries = [entry for entry in entries if entry["value"] > 0]
+            return sorted(entries, key=lambda entry: (-entry["value"], entry["player"]["name"].casefold()))[:limit]
+
+        def top(values: dict[str, int]) -> list[dict[str, Any]]:
+            return [{"block": block, "count": count} for block, count in sorted(values.items(), key=lambda item: (-item[1], item[0]))[:limit]]
+
+        return {
+            "generated_at": time.time(), "period": "lifetime",
+            "totals": {"broken": sum(item["blocks_broken"] for item in players), "placed": sum(item["blocks_placed"] for item in players)},
+            "top_broken": top(global_broken), "top_placed": top(global_placed), "ores": ore_totals,
+            "rankings": {
+                "miners": ranking(lambda item: item["blocks_broken"]),
+                "builders": ranking(lambda item: item["blocks_placed"]),
+                "ores": {ore: ranking(lambda item, key=ore: item["ores"][key]) for ore in ORE_BLOCKS},
+            },
+            "players": players,
+        }

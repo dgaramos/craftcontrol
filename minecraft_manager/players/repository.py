@@ -43,3 +43,6 @@ class SQLitePlayerRepository:
 
     def player_rankings(self, limit: int = 10) -> dict[str, Any]:
         return self.database.player_rankings(limit)
+
+    def block_analytics(self, limit: int = 10) -> dict[str, Any]:
+        return self.database.block_analytics(limit)

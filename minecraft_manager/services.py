@@ -98,7 +98,7 @@ class ManagerService:
             self.refresh_permissions(publish=False)
             self._bootstrap_operator(players)
             self.broker.publish("state.changed", reason, {"domains": ["settings", "gamerules", "players", "server"]})
-            self.request_telemetry_snapshot(reason)
+            self.request_telemetry_snapshot_async(reason)
         except Exception as error:
             self.broker.publish("state.reconciliation.failed", reason, {"error": str(error)[:240]})
             raise

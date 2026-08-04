@@ -10,14 +10,17 @@
     <link rel="manifest" href="/static/site.webmanifest">
     <link rel="stylesheet" href="/static/app.css?v=21">
     <link rel="stylesheet" href="/static/players.css?v=17">
+    <link rel="stylesheet" href="/static/auth.css?v=1">
   </head>
   <body>
+    <div id="auth-overlay" hidden></div>
     <header class="topbar">
       <div class="brand">
         <div class="block-logo"><img src="/static/craftcontrol-mark.svg" alt=""></div>
         <div class="brand-copy"><span class="eyebrow" data-i18n="brandKicker">CENTRAL BEDROCK</span><h1>Craft<span>Control</span></h1><div class="instance-line"><span id="instance-name">Minecraft Bedrock</span><span aria-hidden="true">•</span><span id="status" class="status">Verificando…</span></div></div>
       </div>
       <div class="top-actions">
+        <div id="identity" hidden></div>
         <button id="language" class="language-button" type="button" aria-label="Switch language">EN</button>
         <button id="refresh" class="icon-button" title="Atualizar estado"><b aria-hidden="true">↻</b><span data-i18n="refresh">Atualizar</span></button>
       </div>

@@ -1,5 +1,6 @@
 import { api } from "./js/api.js";
 import { connectEventStream } from "./js/events.js";
+import { requireSession } from "./js/auth.js";
 
 const state = {
   schema: null, config: {}, gamerules: {}, players: [], online: 0, maxPlayers: 0,
@@ -727,4 +728,6 @@ document.querySelectorAll("[data-server]").forEach((button) => button.onclick = 
   } catch (error) { toast(error.message, true); }
 });
 
-boot().catch((error) => toast(error.message, true));
+requireSession().then((user) => {
+  if (user) boot().catch((error) => toast(error.message, true));
+}).catch((error) => toast(error.message, true));

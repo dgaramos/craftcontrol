@@ -14,6 +14,8 @@ class Settings:
     bootstrap_operator: str = ""
     reconcile_seconds: int = 900
     backup_root: Path = Path("/data/backups/coordinated")
+    auth_mode: str = "local"
+    auth_cookie_secure: bool = True
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -25,6 +27,8 @@ class Settings:
             bootstrap_operator=os.getenv("BOOTSTRAP_OPERATOR", ""),
             reconcile_seconds=int(os.getenv("RECONCILE_SECONDS", "900")),
             backup_root=Path(os.getenv("BACKUP_ROOT", "/data/backups/coordinated")),
+            auth_mode=os.getenv("AUTH_MODE", "local").lower(),
+            auth_cookie_secure=os.getenv("AUTH_COOKIE_SECURE", "true").lower() == "true",
         )
 
     @property

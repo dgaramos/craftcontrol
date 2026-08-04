@@ -117,6 +117,8 @@ The planned homelab hostname is `craftcontrol.lab.home.arpa`; DNS and reverse-pr
 | `BOOTSTRAP_OPERATOR` | `VonCrush` | Player provisioned once as the initial in-game operator |
 | `RECONCILE_SECONDS` | `900` | Full safety-reconciliation interval |
 | `BACKUP_ROOT` | `/data/backups/coordinated` | Coordinated recovery-set directory |
+| `AUTH_MODE` | `local` | Built-in authentication; `disabled` is LAN recovery compatibility only |
+| `AUTH_COOKIE_SECURE` | `true` | Send panel session cookies over HTTPS only |
 | `TZ` | `America/Sao_Paulo` | Container timezone |
 
 The old service name, container name, database filename, Python package, and variables remain supported deliberately. This visual rebrand does not destructively rename persistent paths. Compatibility migrations will be released separately.
@@ -234,6 +236,11 @@ This is an internal API and may evolve before a stable release. There is no arbi
 
 Current safeguards:
 
+- local player-backed accounts with salted `scrypt` password hashes;
+- opaque, revocable, server-side sessions with idle and absolute expiration;
+- owner, operator, and viewer capability enforcement in the API;
+- one-time bootstrap, invitation, and recovery codes stored only as hashes;
+- login throttling and security audit records;
 - explicit allowlists for every server action and command;
 - validation of types, ranges, lengths, and characters;
 - atomic `.env` updates;
@@ -243,12 +250,11 @@ Current safeguards:
 
 Current limitations:
 
-- no built-in authentication or authorization;
 - no CSRF protection;
 - no TLS termination;
 - direct Docker socket access.
 
-The planned community security model attaches panel accounts to observed Minecraft player profiles, uses one-time invitations and local password authentication, keeps panel roles separate from in-game operator status, adds server-side sessions and CSRF protection, and later replaces direct Docker access with a restricted operations boundary.
+Panel accounts attach to observed Minecraft player profiles while remaining independent from in-game operator status. See [Local authentication and authorization](docs/authentication.md). Keep an external trusted authentication boundary in place until CSRF protection is delivered and validated; later security work also replaces direct Docker access with a restricted operations boundary.
 
 ## Development
 

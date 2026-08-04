@@ -10,6 +10,11 @@ from .dependencies import manager
 core_api = Blueprint("core_api", __name__)
 
 
+@core_api.get("/api/health")
+def health():
+    return jsonify(ok=True)
+
+
 @core_api.get("/")
 def index() -> str:
     return render_template("index.html")

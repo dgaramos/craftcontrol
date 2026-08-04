@@ -7,6 +7,8 @@ from pathlib import Path
 from .config import Settings
 from .bedrock import BedrockClient
 from .operations.backup import BackupService, docker_container_running
+from .auth.service import AuthService
+from .repository import StateRepository
 from .telemetry_installer import TelemetryPackInstaller
 
 
@@ -38,12 +40,42 @@ def parser() -> argparse.ArgumentParser:
     restore = backup_actions.add_parser("restore")
     restore.add_argument("backup_id")
     restore.add_argument("--yes", action="store_true", help="Confirm offline replacement of world and manager database")
+
+    auth = commands.add_parser("auth", help="Bootstrap and recover local panel access")
+    auth_actions = auth.add_subparsers(dest="action", required=True)
+    bootstrap = auth_actions.add_parser("bootstrap")
+    bootstrap.add_argument("--player")
+    invite = auth_actions.add_parser("invite")
+    invite.add_argument("player")
+    invite.add_argument("--role", choices=("owner", "operator", "viewer"), default="viewer")
+    recover = auth_actions.add_parser("recover")
+    recover.add_argument("player")
     return root
 
 
 def main(argv: list[str] | None = None) -> int:
     arguments = parser().parse_args(argv)
     settings = Settings.from_env()
+    if arguments.command == "auth":
+        StateRepository(settings.database).initialize()
+        service = AuthService(settings.database)
+        if arguments.action == "bootstrap":
+            player = arguments.player or settings.bootstrap_operator
+            if not player:
+                raise SystemExit("Pass --player or configure BOOTSTRAP_OPERATOR")
+            token = service.bootstrap(player)
+            result = {"action": "bootstrap", "player": player, "role": "owner", "token": token, "expires_in": 1800}
+        elif arguments.action == "invite":
+            token = service.create_invitation(arguments.player, arguments.role)
+            result = {"action": "invite", "player": arguments.player, "role": arguments.role, "token": token, "expires_in": 900}
+        elif arguments.action == "recover":
+            token = service.create_invitation(arguments.player, "owner", lifetime=900)
+            result = {"action": "recover", "player": arguments.player, "role": "owner", "token": token, "expires_in": 900}
+        else:
+            raise SystemExit("Unsupported auth action")
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0
+
     if arguments.command == "backup":
         service = BackupService(
             settings.database,

@@ -15,6 +15,7 @@ Key constraints:
 - XUID stays internal. Player history is durable. Log-derived deaths are explicitly non-authoritative.
 - Keep the UI mobile-first, Minecraft-inspired, bilingual, and understandable to non-specialists.
 - Do not expose arbitrary console commands or weaken the existing allowlists.
+- Preserve player-backed local authentication, backend RBAC, one-time hashed invitations, and revocable server-side sessions. Panel roles never imply Minecraft operator status.
 - Never overwrite `.env`, the SQLite database, or world data.
 - Use `craftcontrol backup` and `docs/backup-and-restore.md` for recovery operations. Never perform a live restore; require explicit confirmation and preserve the pre-restore recovery set.
 - Run the quality gate documented in `AGENTS.md` before handoff.

@@ -60,9 +60,38 @@ def _migration_002_retain_telemetry_payloads(connection: sqlite3.Connection) -> 
     connection.execute("CREATE INDEX IF NOT EXISTS idx_telemetry_events_received ON telemetry_events(received_at DESC)")
 
 
+def _migration_003_local_accounts(connection: sqlite3.Connection) -> None:
+    connection.execute(
+        "CREATE TABLE IF NOT EXISTS panel_accounts (identity TEXT PRIMARY KEY, role TEXT NOT NULL, "
+        "status TEXT NOT NULL, password_hash TEXT, created_at REAL NOT NULL, updated_at REAL NOT NULL, "
+        "CHECK(role IN ('owner','operator','viewer')), CHECK(status IN ('invited','active','suspended')))"
+    )
+    connection.execute(
+        "CREATE TABLE IF NOT EXISTS panel_invitations (token_hash TEXT PRIMARY KEY, identity TEXT NOT NULL, "
+        "role TEXT NOT NULL, created_at REAL NOT NULL, expires_at REAL NOT NULL, used_at REAL, created_by TEXT, "
+        "CHECK(role IN ('owner','operator','viewer')))"
+    )
+    connection.execute(
+        "CREATE TABLE IF NOT EXISTS panel_sessions (token_hash TEXT PRIMARY KEY, identity TEXT NOT NULL, "
+        "created_at REAL NOT NULL, last_seen_at REAL NOT NULL, idle_expires_at REAL NOT NULL, "
+        "absolute_expires_at REAL NOT NULL, revoked_at REAL)"
+    )
+    connection.execute("CREATE INDEX IF NOT EXISTS idx_panel_sessions_identity ON panel_sessions(identity)")
+    connection.execute(
+        "CREATE TABLE IF NOT EXISTS auth_attempts (id INTEGER PRIMARY KEY AUTOINCREMENT, login_key TEXT NOT NULL, "
+        "occurred_at REAL NOT NULL, successful INTEGER NOT NULL)"
+    )
+    connection.execute("CREATE INDEX IF NOT EXISTS idx_auth_attempts_key ON auth_attempts(login_key,occurred_at DESC)")
+    connection.execute(
+        "CREATE TABLE IF NOT EXISTS audit_log (id INTEGER PRIMARY KEY AUTOINCREMENT, occurred_at REAL NOT NULL, "
+        "actor_identity TEXT, action TEXT NOT NULL, target TEXT, result TEXT NOT NULL, details TEXT NOT NULL)"
+    )
+
+
 MIGRATIONS: Mapping[int, Migration] = {
     1: _migration_001_initial_schema,
     2: _migration_002_retain_telemetry_payloads,
+    3: _migration_003_local_accounts,
 }
 LATEST_SCHEMA_VERSION = max(MIGRATIONS)
 

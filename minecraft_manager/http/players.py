@@ -3,6 +3,7 @@ from __future__ import annotations
 from flask import Blueprint, jsonify, request
 
 from .dependencies import manager
+from ..auth.http import require
 
 players_api = Blueprint("players_api", __name__)
 
@@ -21,6 +22,7 @@ def player_profile(identity: str):
 
 
 @players_api.put("/api/players/<player>/operator")
+@require("players.manage_permissions")
 def player_operator(player: str):
     try:
         payload = request.get_json(force=True)

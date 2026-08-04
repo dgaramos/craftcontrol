@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, g, jsonify, request
 
 from .dependencies import manager
+from ..auth.http import auth_service, require
 
 server_api = Blueprint("server_api", __name__)
 
 
 @server_api.put("/api/config")
+@require("server.configure")
 def update_config():
     try:
         changed = manager().save_settings(request.get_json(force=True))
@@ -24,7 +26,16 @@ def status():
 @server_api.post("/api/server/<action>")
 def server_action(action: str):
     try:
+        capability = {
+            "start": "server.lifecycle.start", "restart": "server.lifecycle.restart",
+            "apply": "server.configure", "stop": "server.lifecycle.stop",
+        }.get(action)
+        if capability is None:
+            raise KeyError(action)
+        auth_service().require_capability(g.user, capability)
         manager().docker.execute(action)
+    except PermissionError:
+        return jsonify(error="insufficient permission", capability=capability), 403
     except KeyError:
         return jsonify(error="Ação não permitida"), 404
     except RuntimeError as error:
@@ -33,6 +44,7 @@ def server_action(action: str):
 
 
 @server_api.put("/api/gamerules/<rule>")
+@require("world.manage")
 def set_gamerule(rule: str):
     try:
         payload = request.get_json(force=True)
@@ -47,6 +59,7 @@ def set_gamerule(rule: str):
 
 
 @server_api.post("/api/world/<action>")
+@require("world.manage")
 def world_action(action: str):
     try:
         manager().run_world_action(action)
@@ -58,6 +71,7 @@ def world_action(action: str):
 
 
 @server_api.post("/api/time/<action>")
+@require("world.manage")
 def time_action(action: str):
     try:
         result = manager().time_action(action, request.get_json(silent=True) or {})

@@ -1,0 +1,14 @@
+#auth-overlay { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 20px; background: rgba(8, 12, 10, .94); }
+#auth-overlay[hidden] { display: none; }
+.auth-card { width: min(100%, 430px); padding: 28px; display: grid; gap: 14px; }
+.auth-card > img { width: 72px; }
+.auth-card h1 { margin: 0 0 8px; }
+.auth-card form { display: grid; gap: 14px; }
+.auth-card label { display: grid; gap: 7px; font-weight: 700; }
+.auth-card input { min-height: 48px; padding: 0 12px; font: inherit; border: 2px solid #526258; background: #111814; color: #fff; }
+.auth-card button { width: 100%; min-height: 48px; }
+.auth-error { min-height: 1.4em; margin: 0; color: #ffaaa3; }
+#identity { display: flex; align-items: center; gap: 8px; }
+#identity small { text-transform: uppercase; color: #91aa98; }
+#identity button { min-height: 38px; }
+@media (max-width: 620px) { #identity span, #identity small { display: none; } }

@@ -5,6 +5,7 @@ import json
 from flask import Blueprint, jsonify
 
 from .dependencies import manager, telemetry_installer
+from ..auth.http import require
 
 telemetry_api = Blueprint("telemetry_api", __name__)
 
@@ -43,6 +44,7 @@ def telemetry_pack_status():
 
 
 @telemetry_api.post("/api/telemetry-pack/<action>")
+@require("telemetry.manage")
 def telemetry_pack_action(action: str):
     try:
         installer = telemetry_installer()

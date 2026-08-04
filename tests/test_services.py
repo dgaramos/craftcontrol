@@ -101,3 +101,7 @@ class TimeActionsTest(unittest.TestCase):
         telemetry = self.service.state()["telemetry"]
         self.assertEqual(telemetry["status"], "connected")
         self.assertEqual(telemetry["sequence"], "12")
+
+    def test_manual_snapshot_is_ingested_synchronously(self) -> None:
+        self.assertEqual(self.service.request_telemetry_snapshot("manual"), 2)
+        self.assertEqual(self.service.state()["telemetry"]["last_topic"], "snapshot.finished")

@@ -94,6 +94,7 @@ class ManagerService:
             self.refresh_permissions(publish=False)
             self._bootstrap_operator(players)
             self.broker.publish("state.changed", reason, {"domains": ["settings", "gamerules", "players", "server"]})
+            self.request_telemetry_snapshot(reason)
         except Exception as error:
             self.broker.publish("state.reconciliation.failed", reason, {"error": str(error)[:240]})
             raise
@@ -177,22 +178,25 @@ class ManagerService:
             self.request_telemetry_snapshot_async("pack-started")
 
     def request_telemetry_snapshot_async(self, reason: str) -> None:
-        def request() -> None:
-            try:
-                logs = self.bedrock.request_telemetry_snapshot()
-                accepted = 0
-                for line in logs.splitlines():
-                    if TELEMETRY_PREFIX not in line:
-                        continue
-                    envelope = parse_telemetry_line(line)
-                    if envelope:
-                        self.telemetry_event(envelope)
-                        accepted += 1
-                self.broker.publish("telemetry.snapshot.requested", reason)
-                self.broker.publish("telemetry.snapshot.read", reason, {"envelopes": accepted})
-            except Exception as error:
-                self.broker.publish("telemetry.snapshot.failed", reason, {"error": str(error)[:240]})
-        threading.Thread(target=request, name="telemetry-sync", daemon=True).start()
+        threading.Thread(target=self.request_telemetry_snapshot, args=(reason,), name="telemetry-sync", daemon=True).start()
+
+    def request_telemetry_snapshot(self, reason: str) -> int:
+        try:
+            logs = self.bedrock.request_telemetry_snapshot()
+            accepted = 0
+            for line in logs.splitlines():
+                if TELEMETRY_PREFIX not in line:
+                    continue
+                envelope = parse_telemetry_line(line)
+                if envelope:
+                    self.telemetry_event(envelope)
+                    accepted += 1
+            self.broker.publish("telemetry.snapshot.requested", reason)
+            self.broker.publish("telemetry.snapshot.read", reason, {"envelopes": accepted})
+            return accepted
+        except Exception as error:
+            self.broker.publish("telemetry.snapshot.failed", reason, {"error": str(error)[:240]})
+            return 0
 
     def refresh_permissions(self, publish: bool = True) -> None:
         known = self.state().get("known_players", {})

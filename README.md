@@ -413,7 +413,7 @@ Press **Refresh** while players are connected. The manager queries the console a
 
 ### Behavior-pack telemetry remains unavailable
 
-The manager requests a full telemetry snapshot when its Bedrock log stream connects. It consumes events continuously from that stream and also reads the snapshot response directly as a recovery path. Duplicate envelopes are safe: schema and sequence identifiers make ingestion idempotent. A completed empty snapshot is valid when nobody is online; a player must join at least once after the pack is active before the pack can report that player's structured statistics.
+The manager requests a full telemetry snapshot when its Bedrock log stream connects and on every full refresh, including the manual **Refresh** action. It consumes events continuously from that stream and also reads snapshot responses directly as a recovery path. Duplicate envelopes are safe: schema and sequence identifiers make ingestion idempotent. A completed empty snapshot is valid when nobody is online; a player must join at least once after the pack is active before the pack can report that player's structured statistics.
 
 ### A death is missing or counted incorrectly
 

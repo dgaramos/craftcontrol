@@ -69,8 +69,8 @@ def main(argv: list[str] | None = None) -> int:
             token = service.create_invitation(arguments.player, arguments.role)
             result = {"action": "invite", "player": arguments.player, "role": arguments.role, "token": token, "expires_in": 900}
         elif arguments.action == "recover":
-            token = service.create_invitation(arguments.player, "owner", lifetime=900)
-            result = {"action": "recover", "player": arguments.player, "role": "owner", "token": token, "expires_in": 900}
+            token, role = service.create_recovery(arguments.player, lifetime=900)
+            result = {"action": "recover", "player": arguments.player, "role": role, "token": token, "expires_in": 900}
         else:
             raise SystemExit("Unsupported auth action")
         print(json.dumps(result, ensure_ascii=False, indent=2))

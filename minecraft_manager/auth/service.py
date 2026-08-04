@@ -113,6 +113,18 @@ class AuthService:
                 raise ValueError("an active owner already exists")
         return self.create_invitation(player, "owner", actor=None, lifetime=1800)
 
+    def create_recovery(self, player: str, lifetime: int = 900) -> tuple[str, str]:
+        """Create a one-time credential reset without changing the account's panel role."""
+        with self._connect() as connection:
+            identity = self._resolve_identity(connection, player)
+            account = connection.execute(
+                "SELECT role,status FROM panel_accounts WHERE identity=?", (identity,),
+            ).fetchone()
+            if not account or account[1] != "active":
+                raise ValueError("player has no active panel account")
+            role = str(account[0])
+        return self.create_invitation(player, role, actor=identity, lifetime=lifetime), role
+
     def claim(self, player: str, token: str, password: str) -> tuple[str, dict[str, Any]]:
         password_hash = self.hash_password(password)
         now = time.time()

@@ -87,6 +87,19 @@ class AuthServiceTest(unittest.TestCase):
         access = {item["name"]: item for item in self.auth.access_list()}
         self.assertEqual(access["Nicole"]["status"], "suspended")
 
+    def test_recovery_preserves_existing_role(self) -> None:
+        invitation = self.auth.create_invitation("Nicole", "viewer")
+        first_session, _ = self.auth.claim("Nicole", invitation, "a sufficiently long password")
+        self.auth.logout(first_session)
+        recovery, role = self.auth.create_recovery("Nicole")
+        self.assertEqual(role, "viewer")
+        _, user = self.auth.claim("Nicole", recovery, "a different secure password")
+        self.assertEqual(user["role"], "viewer")
+
+    def test_recovery_rejects_player_without_active_panel_account(self) -> None:
+        with self.assertRaisesRegex(ValueError, "no active panel account"):
+            self.auth.create_recovery("Nicole")
+
     def test_http_boundary_rejects_anonymous_and_sets_secure_session_cookie(self) -> None:
         invitation = self.auth.create_invitation("Nicole", "viewer")
         app = Flask(__name__)

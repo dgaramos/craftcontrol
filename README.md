@@ -123,6 +123,75 @@ The planned homelab hostname is `craftcontrol.lab.home.arpa`; DNS and reverse-pr
 
 The old service name, container name, database filename, Python package, and variables remain supported deliberately. This visual rebrand does not destructively rename persistent paths. Compatibility migrations will be released separately.
 
+## User access management
+
+CraftControl accounts belong to players the Bedrock server has already observed. There is no separate username directory: a player's private stable identity keeps panel access attached across Gamertag changes, while the public API and interface never expose the XUID.
+
+Three states are deliberately independent:
+
+| State | Meaning |
+| --- | --- |
+| Online / offline | Whether the player is currently connected to Bedrock |
+| Minecraft member / operator | Commands and administrative power inside the game |
+| CraftControl viewer / operator / owner | What the player can do in this web panel |
+
+Granting Minecraft operator status does not grant panel access, and granting panel access does not change in-game permission.
+
+### Panel roles
+
+| Capability | Viewer | Operator | Owner |
+| --- | :---: | :---: | :---: |
+| Read status, players, history, and telemetry | Yes | Yes | Yes |
+| Configure the server, world, gamerules, time, and weather | No | Yes | Yes |
+| Start and restart Bedrock | No | Yes | Yes |
+| Stop Bedrock | No | No | Yes |
+| Change Minecraft operator permission | No | Yes | Yes |
+| Manage panel users and the Telemetry Pack | No | No | Yes |
+
+Authorization is enforced by the API; hiding a control in the browser is not treated as a security boundary.
+
+### Claim the first owner
+
+The player must have joined the server at least once. Generate the one-time bootstrap code:
+
+```bash
+docker compose exec craftcontrol craftcontrol auth bootstrap --player VonCrush
+```
+
+On the login screen, open **First access or invitation**, enter the Gamertag and code, then choose a password containing 8–128 characters. The bootstrap code expires after 30 minutes and can create only the first active owner.
+
+### Invite or recover a player from the interface
+
+As an owner, open **Players**, select a player, and use the separate **CraftControl access** card:
+
+1. choose `viewer`, `operator`, or `owner`;
+2. press **Generate access**;
+3. copy the one-time code shown by the interface;
+4. send it through a private channel;
+5. the player uses **First access or invitation** to set a personal password.
+
+Invitation codes expire after 15 minutes, work once, and are stored only as SHA-256 hashes. Generating a recovery code for an active account follows the same flow. Suspending access immediately revokes all of that player's sessions without deleting Minecraft permissions, telemetry, or history. CraftControl prevents suspension of the last active owner.
+
+The CLI provides break-glass equivalents:
+
+```bash
+# Invite an observed player
+docker compose exec craftcontrol craftcontrol auth invite Nicole --role operator
+
+# Reset an active account's password without changing its existing role
+docker compose exec craftcontrol craftcontrol auth recover VonCrush
+```
+
+Tokens are displayed once. Avoid putting them in screenshots, tickets, shared logs, or shell history. Password change and user-controlled revocation of other sessions are planned; until then, use a recovery code to replace a forgotten password and owner suspension to revoke access.
+
+### Sessions and browser security
+
+Passwords use salted `scrypt` hashes. Opaque session identifiers are stored only as hashes, expire after 12 idle hours or 7 absolute days, and are revoked on logout or suspension. Five failed login attempts within 15 minutes temporarily block that normalized Gamertag.
+
+Every authenticated state-changing request requires a CSRF token bound to that exact session. The browser handles it automatically and the server also validates the request origin. `AUTH_COOKIE_SECURE=true` requires HTTPS. Authelia or another external identity gate is optional for trusted-LAN deployments, but removing it also removes its MFA and second authentication layer. CraftControl is not ready for direct Internet exposure while it retains direct Docker socket access.
+
+For recovery procedures and security details, see [Local authentication and authorization](docs/authentication.md).
+
 ## Player history
 
 CraftControl stores permanent player data in `./data/manager.db`:
@@ -231,6 +300,13 @@ When development and deployment use separate directories, copy the source while 
 | `POST` | `/api/world/<action>` | Run an allowlisted world shortcut |
 | `POST` | `/api/time/<action>` | Run validated time and weather operations |
 | `POST` | `/api/server/<action>` | Start, stop, restart, or apply the server |
+| `GET` | `/api/auth/me` | Current panel identity, role, capabilities, and CSRF token |
+| `POST` | `/api/auth/login` | Start a local authenticated session |
+| `POST` | `/api/auth/claim` | Claim an invitation or recovery code and set a password |
+| `POST` | `/api/auth/logout` | Revoke the current session |
+| `GET` | `/api/auth/access` | Owner-only player access roster |
+| `POST` | `/api/auth/access/invite` | Owner-only invitation or recovery code creation |
+| `PUT` | `/api/auth/access/<player>/suspend` | Owner-only access suspension and session revocation |
 
 This is an internal API and may evolve before a stable release. There is no arbitrary console or shell endpoint.
 

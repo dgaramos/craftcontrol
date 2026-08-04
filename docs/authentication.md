@@ -41,7 +41,7 @@ Generate a recovery code for an observed player:
 docker compose exec craftcontrol craftcontrol auth recover VonCrush
 ```
 
-Owners can generate invitations directly from each card in the **Players** screen: choose `viewer`, `operator`, or `owner`, press **Generate access code**, and copy the one-time code. Active accounts instead receive a recovery code. Owners can suspend access, which revokes every active session immediately; the last active owner cannot be suspended or demoted.
+Owners can generate invitations from the dedicated player profile: open **Players**, select the player, then use the separate **CraftControl access** card. Choose `viewer`, `operator`, or `owner`, press **Generate access**, and copy the one-time code. The Minecraft permission card beside it is independent and never changes panel access. Active accounts instead receive a recovery code. Owners can suspend access, which revokes every active session immediately; the last active owner cannot be suspended or demoted.
 
 The same operations remain available from the CLI for recovery:
 
@@ -50,10 +50,10 @@ docker compose exec craftcontrol craftcontrol auth invite Nicole --role operator
 docker compose exec craftcontrol craftcontrol auth invite PlayerName --role viewer
 ```
 
-Tokens are printed once. Do not store them in shell history, tickets, screenshots, or logs. Player-access management will also be exposed in the owner-only Players interface.
+Tokens are printed once. Do not store them in shell history, tickets, screenshots, or logs. CLI recovery preserves the account's existing role and never promotes a viewer or operator to owner.
 
 ## Deployment transition
 
 `AUTH_MODE=local` enables internal authentication and is the community default. `AUTH_MODE=disabled` exists only as a trusted-LAN recovery compatibility mode and must not be used for Internet exposure. `AUTH_COOKIE_SECURE=true` requires HTTPS, which is the recommended configuration.
 
-Keep Authelia in front of CraftControl until owner claim, login, logout, recovery, role enforcement, and CSRF behavior are validated in the deployed environment. Local authentication can replace Authelia after those checks pass, provided HTTPS remains enabled.
+Authelia is optional for trusted-LAN deployments after owner claim, login, logout, recovery, role enforcement, and CSRF behavior have been validated. Removing it also removes its MFA and second authentication layer. Keep HTTPS enabled, and do not expose CraftControl directly to the Internet while direct Docker socket access remains.

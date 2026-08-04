@@ -50,3 +50,11 @@ The responsive Blocks view offers two task-focused modes. Mining presents ore ca
 The Combat view always renders its complete information architecture, including when every value is zero. Zero-valued summary cards, explanatory empty panels, and per-player telemetry status distinguish “nothing observed yet” from a broken or unavailable screen. Rankings omit zero-valued entries but retain their labeled container and empty explanation.
 
 Current pack snapshots do not retain kills by mob type, so CraftControl does not claim favorite creature targets. Per-hit events are intentionally not persisted: only aggregate damage is reconciled by snapshots, avoiding high-frequency permanent logging. Like the other snapshot-backed views, Combat is lifetime-only until durable daily buckets exist.
+
+## Exploration
+
+`GET /api/analytics/exploration` combines Telemetry Pack movement and dimension aggregates with manager-owned sessions and play time. It returns sampled horizontal distance, the union and visit counts of observed dimensions, recent structured dimension transitions, and bounded rankings for distance, discovered dimensions, play time, and sessions. Public player references use opaque IDs and Gamertags only.
+
+The Exploration view always renders five summary cards, a metric picker and ranking, dimensional atlas, recent-journey log, and explorer profiles. Every area has a deliberate zero state, so opening the screen before movement telemetry exists still shows what will be collected.
+
+Distance is a five-second horizontal movement sample. Jumps larger than 128 blocks are discarded to avoid counting long teleports, and the current pack does not separate distance or active time by dimension. Manager play time can include AFK time. CraftControl exposes these limitations instead of presenting sampled distance as exact travel or session duration as active gameplay.

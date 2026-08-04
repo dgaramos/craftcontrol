@@ -671,3 +671,66 @@ class StateRepository:
             "rankings": {field: ranking(field) for field in ("deaths", "player_kills", "mob_kills", "damage_dealt", "damage_taken")},
             "players": players,
         }
+
+    def exploration_analytics(self, limit: int = 10) -> dict[str, Any]:
+        profiles = self.player_profiles()
+        players = []
+        dimension_totals: dict[str, int] = {}
+        for profile in profiles:
+            telemetry = profile.get("telemetry", {}) if profile.get("telemetry_updated_at") else {}
+            raw_dimensions = telemetry.get("dimensions") if isinstance(telemetry.get("dimensions"), dict) else {}
+            dimensions = {
+                str(name): int(count) for name, count in raw_dimensions.items()
+                if str(name).startswith("minecraft:") and isinstance(count, (int, float)) and count > 0
+            }
+            for name, count in dimensions.items(): dimension_totals[name] = dimension_totals.get(name, 0) + count
+            favorite = None
+            if dimensions:
+                name, count = min(dimensions.items(), key=lambda item: (-item[1], item[0]))
+                favorite = {"dimension": name, "visits": count}
+            players.append({
+                "player": {"id": profile["id"], "name": profile["name"]},
+                "distance": float(telemetry.get("distance", 0)),
+                "dimensions": dimensions,
+                "dimension_count": len(dimensions),
+                "favorite_dimension": favorite,
+                "play_seconds": int(profile.get("total_play_seconds", 0)),
+                "sessions": int(profile.get("sessions_count", 0)),
+                "first_seen_at": profile.get("first_seen_at"),
+                "last_seen_at": profile.get("last_seen_at"),
+                "telemetry_available": bool(profile.get("telemetry_updated_at")),
+                "updated_at": profile.get("telemetry_updated_at") or profile.get("last_seen_at"),
+            })
+
+        def ranking(field: str) -> list[dict[str, Any]]:
+            entries = [{"player": item["player"], "value": item[field], "updated_at": item["updated_at"]} for item in players if item[field] > 0]
+            return sorted(entries, key=lambda entry: (-entry["value"], entry["player"]["name"].casefold()))[:limit]
+
+        transitions = []
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT p.identity,p.current_name,h.occurred_at,h.payload FROM player_history h "
+                "JOIN player_profiles p ON p.identity=h.identity WHERE h.topic='player.dimension.changed' "
+                "ORDER BY h.occurred_at DESC,h.id DESC LIMIT ?", (limit,),
+            ).fetchall()
+        for identity, name, occurred_at, raw_payload in rows:
+            payload = json.loads(raw_payload)
+            transitions.append({
+                "player": {"id": self._public_player_id(identity), "name": name},
+                "from": payload.get("from"), "to": payload.get("to"), "timestamp": occurred_at,
+            })
+
+        dimensions = [{"dimension": name, "visits": count} for name, count in sorted(dimension_totals.items(), key=lambda item: (-item[1], item[0]))]
+        return {
+            "generated_at": time.time(), "period": "lifetime",
+            "totals": {
+                "distance": round(sum(item["distance"] for item in players), 1),
+                "dimensions": len(dimension_totals),
+                "dimension_visits": sum(dimension_totals.values()),
+                "play_seconds": sum(item["play_seconds"] for item in players),
+                "sessions": sum(item["sessions"] for item in players),
+            },
+            "dimensions": dimensions, "transitions": transitions,
+            "rankings": {field: ranking(field) for field in ("distance", "dimension_count", "play_seconds", "sessions")},
+            "players": players,
+        }

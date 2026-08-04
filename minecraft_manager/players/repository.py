@@ -49,3 +49,6 @@ class SQLitePlayerRepository:
 
     def combat_analytics(self, limit: int = 10) -> dict[str, Any]:
         return self.database.combat_analytics(limit)
+
+    def exploration_analytics(self, limit: int = 10) -> dict[str, Any]:
+        return self.database.exploration_analytics(limit)

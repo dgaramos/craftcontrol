@@ -5,7 +5,7 @@ import { requireSession } from "./js/auth.js?v=1";
 const state = {
   schema: null, config: {}, gamerules: {}, players: [], online: 0, maxPlayers: 0,
   changes: {}, tab: "home", tabs: ["home", "world", "players", "analytics", "rules", "server"], status: null, updatedAt: 0, domains: {},
-  analytics: { kind: "all", player: "", source: "all", search: "", days: 0, page: 1, rankingCategory: "activity", rankingMetric: "play_time", blocksMode: "mining", selectedOre: "diamond", combatMetric: "mob_kills" },
+  analytics: { kind: "all", player: "", source: "all", search: "", days: 0, page: 1, rankingCategory: "activity", rankingMetric: "play_time", blocksMode: "mining", selectedOre: "diamond", combatMetric: "mob_kills", explorationMetric: "distance" },
   locale: (localStorage.getItem("craftcontrol-locale") || localStorage.getItem("manager-locale")) === "en" ? "en" : "pt",
   user: null,
 };
@@ -58,7 +58,7 @@ const messages = {
     deathHistory: "Histórico de mortes", noDeaths: "Nenhuma morte detalhada registrada.", deathCause: "Causa", killedBy: "Responsável", projectile: "Projétil", telemetrySource: "Behavior pack",
     home: "Início", world: "Mundo", players: "Jogadores", analytics: "Dados", rules: "Regras", settings: "Servidor",
     analyticsTitle: "Atividade do servidor", analyticsHelp: "A história compartilhada de quem entrou, saiu, morreu ou teve permissões alteradas.",
-    activityView: "Atividade", deathsView: "Mortes", rankingsView: "Rankings", blocksView: "Blocos", combatView: "Combate", eventFilter: "Evento", playerFilter: "Jogador", periodFilter: "Período", sourceFilter: "Origem", detailFilter: "Causa ou responsável", detailFilterHint: "Ex.: zombie, lava…",
+    activityView: "Atividade", deathsView: "Mortes", rankingsView: "Rankings", blocksView: "Blocos", combatView: "Combate", explorationView: "Exploração", eventFilter: "Evento", playerFilter: "Jogador", periodFilter: "Período", sourceFilter: "Origem", detailFilter: "Causa ou responsável", detailFilterHint: "Ex.: zombie, lava…",
     everyEvent: "Todos os eventos", joinsOnly: "Entradas", leavesOnly: "Saídas", permissionsOnly: "Permissões", respawnsOnly: "Respawns", dimensionsOnly: "Dimensões",
     everyPlayer: "Todos os jogadores", lifetime: "Desde o início", last7Days: "Últimos 7 dias", last30Days: "Últimos 30 dias",
     everySource: "Todas as fontes", structuredSource: "Telemetry Pack", serverSource: "Servidor e manager",
@@ -69,6 +69,7 @@ const messages = {
     blocksTitle: "Mineração e construção", blocksHelp: "Descubra o que o mundo consumiu, quem mais minerou e quem mais construiu.", miningView: "Mineração", buildingView: "Construção", oresTitle: "Minérios encontrados", topBlocks: "Blocos mais frequentes", favoriteBlocks: "Favoritos dos jogadores", miners: "Mineradores", builders: "Construtores", noBlockData: "Ainda não há blocos registrados pelo Telemetry Pack.", blocksTelemetryHint: "Os números começam a contar após a instalação do Telemetry Pack.", broken: "Quebrados", placed: "Colocados", oreRanking: "Ranking do minério",
     oreDiamond: "Diamante", oreIron: "Ferro", oreGold: "Ouro", oreCopper: "Cobre", oreCoal: "Carvão", oreRedstone: "Redstone", oreLapis: "Lápis-lazúli", oreEmerald: "Esmeralda", oreQuartz: "Quartzo", oreAncient_debris: "Detritos ancestrais",
     combatTitle: "Combate do servidor", combatHelp: "Mortes, eliminações e dano acumulado com a evidência disponível no mundo.", combatEmptyHelp: "Os painéis permanecem visíveis e começam a preencher quando o Telemetry Pack observar combate.", combatDeaths: "Mortes", combatPlayerKills: "Eliminações PvP", combatMobKills: "Criaturas eliminadas", combatDamageDealt: "Dano causado", combatDamageTaken: "Dano recebido", combatRankings: "Ranking de combate", deathCauses: "Causas de morte", lethalOpponents: "Responsáveis pelas mortes", projectiles: "Projéteis", pvpDuels: "Confrontos PvP", combatProfiles: "Resumo por jogador", noCombatEvidence: "Nenhuma evidência registrada ainda.", telemetryWaiting: "Aguardando telemetria", observedDeaths: "Mortes estruturadas observadas",
+    explorationTitle: "Exploração do mundo", explorationHelp: "Distância amostrada, dimensões, sessões e jornadas dos jogadores.", explorationEmptyHelp: "Toda a expedição permanece visível mesmo antes do primeiro dado de movimento.", distanceTraveled: "Distância percorrida", dimensionsDiscovered: "Dimensões descobertas", dimensionVisits: "Visitas a dimensões", explorationSessions: "Sessões", explorerRanking: "Ranking de exploradores", dimensionMap: "Mapa dimensional", recentJourneys: "Jornadas recentes", explorerProfiles: "Exploradores", noExplorationEvidence: "Nenhuma jornada registrada ainda.", favoriteDimension: "Dimensão favorita", explorationFirstSeen: "Primeira visita", explorationLastSeen: "Última visita", horizontalSampled: "Distância horizontal amostrada; teletransportes longos são ignorados.", visitCount: "visitas",
     worldIntro: "Configuração do mundo", rulesIntro: "Comportamento do jogo", serverIntro: "Infraestrutura do servidor",
     pendingChanges: "ALTERAÇÕES PENDENTES", reviewChanges: "Revisar alterações",
     pendingHelp: "Estas configurações serão salvas e o servidor será reiniciado somente quando você aplicar.",
@@ -131,7 +132,7 @@ const messages = {
     deathHistory: "Death history", noDeaths: "No detailed deaths recorded.", deathCause: "Cause", killedBy: "Killed by", projectile: "Projectile", telemetrySource: "Behavior pack",
     home: "Home", world: "World", players: "Players", analytics: "Data", rules: "Rules", settings: "Server",
     analyticsTitle: "Server activity", analyticsHelp: "The shared history of players joining, leaving, dying, or receiving permission changes.",
-    activityView: "Activity", deathsView: "Deaths", rankingsView: "Rankings", blocksView: "Blocks", combatView: "Combat", eventFilter: "Event", playerFilter: "Player", periodFilter: "Period", sourceFilter: "Source", detailFilter: "Cause or responsible", detailFilterHint: "E.g. zombie, lava…",
+    activityView: "Activity", deathsView: "Deaths", rankingsView: "Rankings", blocksView: "Blocks", combatView: "Combat", explorationView: "Exploration", eventFilter: "Event", playerFilter: "Player", periodFilter: "Period", sourceFilter: "Source", detailFilter: "Cause or responsible", detailFilterHint: "E.g. zombie, lava…",
     everyEvent: "All events", joinsOnly: "Joins", leavesOnly: "Leaves", permissionsOnly: "Permissions", respawnsOnly: "Respawns", dimensionsOnly: "Dimensions",
     everyPlayer: "All players", lifetime: "All time", last7Days: "Last 7 days", last30Days: "Last 30 days",
     everySource: "All sources", structuredSource: "Telemetry Pack", serverSource: "Server and manager",
@@ -142,6 +143,7 @@ const messages = {
     blocksTitle: "Mining and building", blocksHelp: "See what the world consumed, who mined the most, and who built the most.", miningView: "Mining", buildingView: "Building", oresTitle: "Ores discovered", topBlocks: "Most frequent blocks", favoriteBlocks: "Player favorites", miners: "Miners", builders: "Builders", noBlockData: "The Telemetry Pack has not recorded any blocks yet.", blocksTelemetryHint: "Counters start after the Telemetry Pack is installed.", broken: "Broken", placed: "Placed", oreRanking: "Ore ranking",
     oreDiamond: "Diamond", oreIron: "Iron", oreGold: "Gold", oreCopper: "Copper", oreCoal: "Coal", oreRedstone: "Redstone", oreLapis: "Lapis lazuli", oreEmerald: "Emerald", oreQuartz: "Quartz", oreAncient_debris: "Ancient debris",
     combatTitle: "Server combat", combatHelp: "Deaths, kills, and accumulated damage backed by the evidence available in the world.", combatEmptyHelp: "Panels remain visible and begin filling when the Telemetry Pack observes combat.", combatDeaths: "Deaths", combatPlayerKills: "PvP kills", combatMobKills: "Mobs defeated", combatDamageDealt: "Damage dealt", combatDamageTaken: "Damage taken", combatRankings: "Combat ranking", deathCauses: "Death causes", lethalOpponents: "Responsible for deaths", projectiles: "Projectiles", pvpDuels: "PvP encounters", combatProfiles: "Player summaries", noCombatEvidence: "No evidence has been recorded yet.", telemetryWaiting: "Waiting for telemetry", observedDeaths: "Observed structured deaths",
+    explorationTitle: "World exploration", explorationHelp: "Sampled distance, dimensions, sessions, and player journeys.", explorationEmptyHelp: "The complete expedition remains visible even before the first movement sample.", distanceTraveled: "Distance traveled", dimensionsDiscovered: "Dimensions discovered", dimensionVisits: "Dimension visits", explorationSessions: "Sessions", explorerRanking: "Explorer ranking", dimensionMap: "Dimension map", recentJourneys: "Recent journeys", explorerProfiles: "Explorers", noExplorationEvidence: "No journey has been recorded yet.", favoriteDimension: "Favorite dimension", explorationFirstSeen: "First seen", explorationLastSeen: "Last seen", horizontalSampled: "Sampled horizontal distance; long teleports are ignored.", visitCount: "visits",
     worldIntro: "World configuration", rulesIntro: "Game behavior", serverIntro: "Server infrastructure",
     pendingChanges: "PENDING CHANGES", reviewChanges: "Review changes",
     pendingHelp: "These settings are saved and the server restarts only after you apply them.",
@@ -685,7 +687,7 @@ async function openAnalyticsPlayer(publicId) {
 }
 
 function analyticsViewSwitch(active) {
-  return `<div class="analytics-view-switch"><button data-analytics-view="all" class="${!['deaths', 'rankings', 'blocks', 'combat'].includes(active) ? "active" : ""}" type="button">☷ ${t("activityView")}</button><button data-analytics-view="deaths" class="death ${active === "deaths" ? "active" : ""}" type="button">☠ ${t("deathsView")}</button><button data-analytics-view="rankings" class="ranking ${active === "rankings" ? "active" : ""}" type="button">♛ ${t("rankingsView")}</button><button data-analytics-view="blocks" class="blocks ${active === "blocks" ? "active" : ""}" type="button">▦ ${t("blocksView")}</button><button data-analytics-view="combat" class="combat ${active === "combat" ? "active" : ""}" type="button">⚔ ${t("combatView")}</button></div>`;
+  return `<div class="analytics-view-switch"><button data-analytics-view="all" class="${!['deaths', 'rankings', 'blocks', 'combat', 'exploration'].includes(active) ? "active" : ""}" type="button">☷ ${t("activityView")}</button><button data-analytics-view="deaths" class="death ${active === "deaths" ? "active" : ""}" type="button">☠ ${t("deathsView")}</button><button data-analytics-view="rankings" class="ranking ${active === "rankings" ? "active" : ""}" type="button">♛ ${t("rankingsView")}</button><button data-analytics-view="blocks" class="blocks ${active === "blocks" ? "active" : ""}" type="button">▦ ${t("blocksView")}</button><button data-analytics-view="combat" class="combat ${active === "combat" ? "active" : ""}" type="button">⚔ ${t("combatView")}</button><button data-analytics-view="exploration" class="exploration ${active === "exploration" ? "active" : ""}" type="button">◇ ${t("explorationView")}</button></div>`;
 }
 
 const rankingDefinitions = {
@@ -821,6 +823,43 @@ async function renderCombatPanel() {
   await load();
 }
 
+const explorationDefinitions = {
+  distance: { label: "distanceTraveled", format: "distance" },
+  dimension_count: { label: "dimensionsDiscovered", format: "number" },
+  play_seconds: { label: "playTime", format: "duration" },
+  sessions: { label: "explorationSessions", format: "number" },
+};
+
+function dimensionName(identifier) {
+  return blockName(identifier).replace("the end", state.locale === "pt" ? "o End" : "The End");
+}
+
+function explorationRanking(entries, definition) {
+  return `<section class="exploration-ranking block-panel"><div class="ranking-section-title"><span class="eyebrow">LIFETIME</span><h3>${t("explorerRanking")}: ${t(definition.label)}</h3></div>${entries.length ? `<ol>${entries.map((entry, index) => `<li><b>${index + 1}</b><button data-exploration-player="${escapeHtml(entry.player.id)}" type="button">${escapeHtml(entry.player.name)}</button><strong>${formatRankingValue(entry.value, definition.format)}</strong></li>`).join("")}</ol>` : `<div class="exploration-zero"><span>◇</span><p>${t("noExplorationEvidence")}</p></div>`}</section>`;
+}
+
+async function renderExplorationPanel() {
+  const analytics = state.analytics;
+  content.innerHTML = `<div class="exploration-screen">${analyticsViewSwitch("exploration")}<header class="exploration-hero block-panel"><div><span class="eyebrow">WORLD ATLAS</span><h2>${t("explorationTitle")}</h2><p>${t("explorationHelp")}</p></div><button id="exploration-refresh" class="secondary" type="button">↻ ${t("refreshData")}</button></header><div id="exploration-content"><div class="analytics-loading">${t("checking")}</div></div></div>`;
+  bindAnalyticsViewSwitch();
+  const load = async () => {
+    const target = $("#exploration-content");
+    target.innerHTML = `<div class="analytics-loading">${t("checking")}</div>`;
+    try {
+      const result = await api("/api/analytics/exploration?limit=10");
+      const totals = result.totals || {};
+      const definition = explorationDefinitions[analytics.explorationMetric] || explorationDefinitions.distance;
+      const ranking = result.rankings?.[analytics.explorationMetric] || [];
+      const summary = [["distanceTraveled", totals.distance, "distance", "◇"], ["dimensionsDiscovered", totals.dimensions, "number", "◈"], ["dimensionVisits", totals.dimension_visits, "number", "↝"], ["playTime", totals.play_seconds, "duration", "⌛"], ["explorationSessions", totals.sessions, "number", "☷"]];
+      target.innerHTML = `<section class="exploration-summary">${summary.map(([label, value, format, icon]) => `<article><small>${t(label)}</small><b>${formatRankingValue(value, format)}</b><span>${icon}</span></article>`).join("")}</section><p class="exploration-note">${t("explorationEmptyHelp")} <span>${t("horizontalSampled")}</span><small>${t("updated")} ${formatDate(result.generated_at)}</small></p><div class="exploration-metric-picker">${Object.entries(explorationDefinitions).map(([key, item]) => `<button data-exploration-metric="${key}" class="${analytics.explorationMetric === key ? "active" : ""}" type="button">${t(item.label)}</button>`).join("")}</div><div class="exploration-main-grid">${explorationRanking(ranking, definition)}<section class="dimension-map block-panel"><div class="ranking-section-title"><span class="eyebrow">ATLAS</span><h3>${t("dimensionMap")}</h3></div><div class="dimension-cards">${(result.dimensions || []).map((item) => `<article><span>◈</span><strong>${escapeHtml(dimensionName(item.dimension))}</strong><b>${formatRankingValue(item.visits, "number")}</b><small>${t("visitCount")}</small></article>`).join("") || `<div class="exploration-zero"><span>◈</span><p>${t("noExplorationEvidence")}</p></div>`}</div></section></div><section class="journey-panel block-panel"><div class="ranking-section-title"><span class="eyebrow">TRAVEL LOG</span><h3>${t("recentJourneys")}</h3></div>${(result.transitions || []).length ? `<ol>${result.transitions.map((journey) => `<li><button data-exploration-player="${escapeHtml(journey.player.id)}" type="button">${escapeHtml(journey.player.name)}</button><span>${escapeHtml(dimensionName(journey.from))} → ${escapeHtml(dimensionName(journey.to))}</span>${timelineTimestamp(journey.timestamp)}</li>`).join("")}</ol>` : `<div class="exploration-zero"><span>↝</span><p>${t("noExplorationEvidence")}</p></div>`}</section><section class="explorer-profiles block-panel"><div class="ranking-section-title"><span class="eyebrow">PLAYERS</span><h3>${t("explorerProfiles")}</h3></div><div>${(result.players || []).map((item) => `<button data-exploration-player="${escapeHtml(item.player.id)}" type="button"><strong>${escapeHtml(item.player.name)}</strong><span>${t("distanceTraveled")} <b>${formatRankingValue(item.distance, "distance")}</b></span><span>${t("dimensionsDiscovered")} <b>${item.dimension_count}</b></span><span>${t("favoriteDimension")} <b>${item.favorite_dimension ? escapeHtml(dimensionName(item.favorite_dimension.dimension)) : "—"}</b></span><small>${t("explorationFirstSeen")} ${formatDate(item.first_seen_at)} · ${t("explorationLastSeen")} ${formatDate(item.last_seen_at)}</small></button>`).join("") || `<div class="exploration-zero"><span>◇</span><p>${t("noExplorationEvidence")}</p></div>`}</div></section>`;
+      target.querySelectorAll("[data-exploration-player]").forEach((button) => button.onclick = () => openAnalyticsPlayer(button.dataset.explorationPlayer));
+      target.querySelectorAll("[data-exploration-metric]").forEach((button) => button.onclick = () => { analytics.explorationMetric = button.dataset.explorationMetric; load(); });
+    } catch (error) { target.innerHTML = `<div class="analytics-empty"><p>${escapeHtml(error.message)}</p></div>`; }
+  };
+  $("#exploration-refresh").onclick = load;
+  await load();
+}
+
 async function renderAnalyticsPanel() {
   const filters = state.analytics;
   if (filters.kind === "rankings") {
@@ -833,6 +872,10 @@ async function renderAnalyticsPanel() {
   }
   if (filters.kind === "combat") {
     await renderCombatPanel();
+    return;
+  }
+  if (filters.kind === "exploration") {
+    await renderExplorationPanel();
     return;
   }
   content.innerHTML = `<div class="analytics-screen">${analyticsViewSwitch(filters.kind)}<header class="analytics-hero block-panel"><div><span class="eyebrow">CRAFTCONTROL ANALYTICS</span><h2>${t("analyticsTitle")}</h2><p>${t("analyticsHelp")}</p></div><button id="analytics-refresh" class="secondary" type="button">↻ ${t("refreshData")}</button></header><section class="analytics-filters block-panel"><label><span>${t("eventFilter")}</span><select id="analytics-kind" ${filters.kind === "deaths" ? "disabled" : ""}><option value="all">${t("everyEvent")}</option><option value="joins">${t("joinsOnly")}</option><option value="leaves">${t("leavesOnly")}</option><option value="respawns">${t("respawnsOnly")}</option><option value="dimensions">${t("dimensionsOnly")}</option><option value="permissions">${t("permissionsOnly")}</option></select></label><label><span>${t("playerFilter")}</span><select id="analytics-player"><option value="">${t("everyPlayer")}</option></select></label><label><span>${t("periodFilter")}</span><select id="analytics-days"><option value="0">${t("lifetime")}</option><option value="7">${t("last7Days")}</option><option value="30">${t("last30Days")}</option></select></label><label><span>${t("sourceFilter")}</span><select id="analytics-source"><option value="all">${t("everySource")}</option><option value="structured">${t("structuredSource")}</option><option value="server">${t("serverSource")}</option></select></label><label><span>${t("detailFilter")}</span><input id="analytics-search" type="search" maxlength="64" value="${escapeHtml(filters.search)}" placeholder="${t("detailFilterHint")}"></label></section><div id="analytics-results" class="analytics-results"><div class="analytics-loading">${t("checking")}</div></div><dialog id="analytics-death-dialog" class="analytics-death-dialog"><div class="drawer-header"><div><span class="eyebrow">${t("deathDetails")}</span><h2></h2></div><button class="drawer-close" type="button" aria-label="${t("close")}">×</button></div><div class="analytics-death-content"></div></dialog></div>`;

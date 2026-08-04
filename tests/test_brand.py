@@ -88,3 +88,6 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn('data-analytics-view="combat"', script)
         self.assertIn("combatEmptyHelp", script)
         self.assertIn(".combat-zero", stylesheet)
+        self.assertIn('data-analytics-view="exploration"', script)
+        self.assertIn("explorationEmptyHelp", script)
+        self.assertIn(".exploration-zero", stylesheet)

@@ -46,3 +46,11 @@ def combat():
         return jsonify(manager().combat_analytics(int(request.args.get("limit", "10"))))
     except (TypeError, ValueError) as error:
         return jsonify(error=str(error)), 400
+
+
+@analytics_api.get("/api/analytics/exploration")
+def exploration():
+    try:
+        return jsonify(manager().exploration_analytics(int(request.args.get("limit", "10"))))
+    except (TypeError, ValueError) as error:
+        return jsonify(error=str(error)), 400

@@ -122,8 +122,8 @@ class StateRepositoryTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             repository = StateRepository(Path(directory) / "state.db")
             repository.initialize()
-            repository.observe_player("VonCrush", True, "99", occurred_at=100)
-            repository.observe_player("VonCrush", False, "99", occurred_at=220)
+            repository.observe_player("VonCrush", True, "private-ranking-xuid", occurred_at=100)
+            repository.observe_player("VonCrush", False, "private-ranking-xuid", occurred_at=220)
             repository.observe_player("Nicole", True, "456", occurred_at=100)
             repository.observe_player("Nicole", False, "456", occurred_at=160)
             repository.ingest_telemetry({
@@ -143,7 +143,7 @@ class StateRepositoryTest(unittest.TestCase):
             self.assertEqual(rankings["metrics"]["deaths"][0]["player"]["name"], "Nicole")
             self.assertEqual(rankings["metrics"]["blocks_broken"][0]["player"]["name"], "Nicole")
             self.assertEqual(rankings["metrics"]["distance"][0]["value"], 123.5)
-            self.assertNotIn("99", str(rankings))
+            self.assertNotIn("private-ranking-xuid", str(rankings))
 
     def test_block_analytics_aggregates_types_ores_and_players(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -207,4 +207,45 @@ class StateRepositoryTest(unittest.TestCase):
             self.assertEqual(result["rankings"]["player_kills"][0]["player"]["name"], "VonCrush")
             self.assertEqual(result["breakdowns"]["causes"][0], {"key": "projectile", "count": 1})
             self.assertEqual(result["pvp"][0]["attacker"]["name"], "VonCrush")
+            self.assertNotIn("private-", str(result))
+
+    def test_exploration_analytics_has_complete_zero_state(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = StateRepository(Path(directory) / "state.db")
+            repository.initialize()
+            result = repository.exploration_analytics()
+            self.assertEqual(result["totals"], {"distance": 0, "dimensions": 0, "dimension_visits": 0, "play_seconds": 0, "sessions": 0})
+            self.assertEqual(result["dimensions"], [])
+            self.assertEqual(result["transitions"], [])
+            self.assertEqual(result["players"], [])
+
+    def test_exploration_analytics_combines_telemetry_and_manager_presence(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = StateRepository(Path(directory) / "state.db")
+            repository.initialize()
+            repository.observe_player("VonCrush", True, "private-99", occurred_at=100)
+            repository.observe_player("VonCrush", False, "private-99", occurred_at=220)
+            repository.observe_player("Nicole", True, "private-456", occurred_at=100)
+            repository.observe_player("Nicole", False, "private-456", occurred_at=160)
+            repository.ingest_telemetry({
+                "schema": 1, "sequence": 1, "type": "snapshot.player", "timestamp": 1,
+                "player": {"name": "VonCrush"},
+                "data": {"distance": 120.5, "dimensions": {"minecraft:overworld": 3, "minecraft:nether": 2}},
+            })
+            repository.ingest_telemetry({
+                "schema": 1, "sequence": 2, "type": "snapshot.player", "timestamp": 2,
+                "player": {"name": "Nicole"},
+                "data": {"distance": 80, "dimensions": {"minecraft:overworld": 1}},
+            })
+            repository.ingest_telemetry({
+                "schema": 1, "sequence": 3, "type": "player.dimension.changed", "timestamp": 3,
+                "player": {"name": "VonCrush"}, "data": {"from": "minecraft:overworld", "to": "minecraft:nether"},
+            })
+            result = repository.exploration_analytics()
+            self.assertEqual(result["totals"]["distance"], 200.5)
+            self.assertEqual(result["totals"]["play_seconds"], 180)
+            self.assertEqual(result["totals"]["dimensions"], 2)
+            self.assertEqual(result["dimensions"][0], {"dimension": "minecraft:overworld", "visits": 4})
+            self.assertEqual(result["rankings"]["distance"][0]["player"]["name"], "VonCrush")
+            self.assertEqual(result["transitions"][0]["to"], "minecraft:nether")
             self.assertNotIn("private-", str(result))

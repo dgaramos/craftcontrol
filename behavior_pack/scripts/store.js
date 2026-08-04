@@ -1,10 +1,11 @@
 import { world } from "@minecraft/server";
-import { STATE_BACKUP_KEY, STATE_KEY, emptyState } from "./model.js";
-import { migrateState } from "./migrations.js";
+import { PLAYER_STATE_PREFIX, STATE_BACKUP_KEY, STATE_BACKUP_V1_KEY, STATE_KEY, emptyState, playerKey, playerStateKey } from "./model.js";
+import { migrateState, validateMeta, validatePlayerShard } from "./migrations.js";
 import { STORAGE_VERSION } from "./versions.js";
 
 let state;
-let dirty = false;
+let metaDirty = false;
+const dirtyPlayers = new Set();
 let blocked = false;
 let migration = { status: "not-required", storageVersion: STORAGE_VERSION, migratedFrom: null };
 
@@ -14,18 +15,51 @@ function serialize(candidate) {
   return value;
 }
 
+function loadShardedState(meta) {
+  const validated = validateMeta(meta);
+  if (typeof world.getDynamicPropertyIds !== "function") throw new Error("dynamic property discovery is unavailable");
+  const players = {};
+  let sequence = validated.sequence;
+  for (const id of world.getDynamicPropertyIds().filter((item) => item.startsWith(PLAYER_STATE_PREFIX))) {
+    const raw = world.getDynamicProperty(id);
+    if (typeof raw !== "string") continue;
+    const shard = validatePlayerShard(JSON.parse(raw));
+    if (players[shard.key]) throw new Error(`duplicate player shard: ${shard.key}`);
+    players[shard.key] = shard.player;
+    sequence = Math.max(sequence, shard.sequence);
+  }
+  if (sequence !== validated.sequence) metaDirty = true;
+  return { storageVersion: STORAGE_VERSION, sequence, players };
+}
+
+function persistMigration(raw, result) {
+  const shards = Object.entries(result.state.players).map(([key, player]) => [
+    playerStateKey(key),
+    serialize({ storageVersion: STORAGE_VERSION, sequence: result.state.sequence, key, player }),
+  ]);
+  const meta = serialize({ storageVersion: STORAGE_VERSION, sequence: result.state.sequence });
+  const backupKey = result.migratedFrom === 0 ? STATE_BACKUP_KEY : STATE_BACKUP_V1_KEY;
+  if (typeof world.getDynamicProperty(backupKey) !== "string") world.setDynamicProperty(backupKey, raw);
+  for (const [id, value] of shards) {
+    world.setDynamicProperty(id, value);
+    if (world.getDynamicProperty(id) !== value) throw new Error(`failed to verify player shard: ${id}`);
+  }
+  world.setDynamicProperty(STATE_KEY, meta);
+  if (world.getDynamicProperty(STATE_KEY) !== meta) throw new Error("failed to verify storage metadata");
+}
+
 export function loadState() {
   if (state) return state;
   const raw = world.getDynamicProperty(STATE_KEY);
   if (typeof raw !== "string") return (state = emptyState());
   try {
     const parsed = JSON.parse(raw);
-    const result = migrateState(parsed);
-    state = result.state;
-    if (result.migratedFrom !== null) {
-      const serialized = serialize(state);
-      if (typeof world.getDynamicProperty(STATE_BACKUP_KEY) !== "string") world.setDynamicProperty(STATE_BACKUP_KEY, raw);
-      world.setDynamicProperty(STATE_KEY, serialized);
+    if (parsed?.storageVersion === STORAGE_VERSION) {
+      state = loadShardedState(parsed);
+    } else {
+      const result = migrateState(parsed);
+      state = result.state;
+      persistMigration(raw, result);
       migration = { status: "migrated", storageVersion: STORAGE_VERSION, migratedFrom: result.migratedFrom };
       console.warn(`[BEDROCK_TELEMETRY_MIGRATION] storage ${result.migratedFrom} -> ${STORAGE_VERSION} complete`);
     }
@@ -45,7 +79,16 @@ export function storageStatus() {
 
 export function mutate(callback) {
   const result = callback(loadState());
-  dirty = true;
+  metaDirty = true;
+  return result;
+}
+
+export function mutatePlayer(name, callback) {
+  const current = loadState();
+  const key = playerKey(name);
+  const result = callback(current);
+  dirtyPlayers.add(key);
+  metaDirty = true;
   return result;
 }
 
@@ -54,14 +97,21 @@ export function nextSequence() {
 }
 
 export function flush(force = false) {
-  if (!dirty && !force) return;
+  if (!metaDirty && dirtyPlayers.size === 0 && !force) return;
   if (blocked) {
     console.error("[BEDROCK_TELEMETRY_ERROR] persistence blocked; preserving original state");
     return;
   }
   try {
-    world.setDynamicProperty(STATE_KEY, serialize(loadState()));
-    dirty = false;
+    const current = loadState();
+    for (const key of dirtyPlayers) {
+      const player = current.players[key];
+      if (!player) continue;
+      world.setDynamicProperty(playerStateKey(key), serialize({ storageVersion: STORAGE_VERSION, sequence: current.sequence, key, player }));
+    }
+    world.setDynamicProperty(STATE_KEY, serialize({ storageVersion: STORAGE_VERSION, sequence: current.sequence }));
+    dirtyPlayers.clear();
+    metaDirty = false;
   } catch (error) {
     console.error(`[BEDROCK_TELEMETRY_ERROR] ${error}`);
   }

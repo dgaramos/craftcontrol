@@ -14,6 +14,7 @@ The manager provides a focused graphical interface for common server settings, l
 - Contextual help text for every server setting and gamerule
 - Touch-friendly toggles and segmented option controls instead of ambiguous boolean dropdowns
 - Intent-based five-destination navigation with expandable setting sections instead of a technical tab carousel
+- Review drawer for queued persistent changes, with per-item removal before applying and restarting
 - Persistent server settings managed through the Bedrock project's `.env` file
 - Live gamerule updates without editing files or opening a console
 - Current container status and cached online-player list

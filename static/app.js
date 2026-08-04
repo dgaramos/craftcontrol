@@ -37,6 +37,10 @@ const messages = {
     noOnlinePlayers: "Nenhum jogador online no momento.", permissionUpdated: "Permissão atualizada",
     home: "Início", world: "Mundo", players: "Jogadores", rules: "Regras", settings: "Servidor",
     worldIntro: "Configuração do mundo", rulesIntro: "Comportamento do jogo", serverIntro: "Infraestrutura do servidor",
+    pendingChanges: "ALTERAÇÕES PENDENTES", reviewChanges: "Revisar alterações",
+    pendingHelp: "Estas configurações serão salvas e o servidor será reiniciado somente quando você aplicar.",
+    discardAll: "Descartar todas", applyChanges: "Aplicar alterações", removeChange: "Remover",
+    currentValue: "Atual", newValue: "Novo", reviewCount: (count) => `Revisar (${count})`,
   },
   en: {
     refresh: "Refresh", worldState: "WORLD STATE", quickActions: "Quick actions",
@@ -68,6 +72,10 @@ const messages = {
     noOnlinePlayers: "No players are online right now.", permissionUpdated: "Permission updated",
     home: "Home", world: "World", players: "Players", rules: "Rules", settings: "Server",
     worldIntro: "World configuration", rulesIntro: "Game behavior", serverIntro: "Server infrastructure",
+    pendingChanges: "PENDING CHANGES", reviewChanges: "Review changes",
+    pendingHelp: "These settings are saved and the server restarts only after you apply them.",
+    discardAll: "Discard all", applyChanges: "Apply changes", removeChange: "Remove",
+    currentValue: "Current", newValue: "New", reviewCount: (count) => `Review (${count})`,
   },
 };
 
@@ -167,7 +175,42 @@ function inputFor(key, definition, value, live = false) {
 
 function updateSaveLabel() {
   const count = Object.keys(state.changes).length;
-  $("#save-label").textContent = count ? t("saveCount", count) : t("saveChanges");
+  $("#save").hidden = count === 0;
+  $("#save-label").textContent = t("reviewCount", count);
+  document.querySelector("footer").classList.toggle("has-pending", count > 0);
+  if ($("#changes-drawer").open) renderChangesDrawer();
+}
+
+function comparableValue(value) {
+  if (typeof value === "boolean") return String(value);
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function displayValue(value, definition) {
+  if (definition.type === "boolean") return comparableValue(value) === "true" ? t("enabled") : t("disabled");
+  if (definition.type === "select") return optionLabel(String(value));
+  return String(value ?? "—");
+}
+
+function definitionFor(key) {
+  return state.schema.settings[key];
+}
+
+function renderChangesDrawer() {
+  const entries = Object.entries(state.changes);
+  if (!entries.length) {
+    $("#changes-drawer").close();
+    return;
+  }
+  $("#changes-list").innerHTML = entries.map(([key, value]) => {
+    const definition = definitionFor(key);
+    return `<article class="change-item"><div class="change-copy"><strong>${escapeHtml(fieldLabel(definition))}</strong><div class="change-values"><span><small>${t("currentValue")}</small>${escapeHtml(displayValue(state.config[key], definition))}</span><b>→</b><span><small>${t("newValue")}</small>${escapeHtml(displayValue(value, definition))}</span></div></div><button type="button" class="remove-change" data-remove-change="${escapeHtml(key)}" aria-label="${t("removeChange")}">×</button></article>`;
+  }).join("");
+  $("#changes-list").querySelectorAll("[data-remove-change]").forEach((button) => button.onclick = () => {
+    delete state.changes[button.dataset.removeChange];
+    render();
+    updateSaveLabel();
+  });
 }
 
 function bindSegmentedControls() {
@@ -232,7 +275,9 @@ function bindSettingFields(groupNames) {
     const element = $(`#field-${key}`);
     element.addEventListener("change", () => {
       if (definition.type === "boolean") updateToggleLabel(element);
-      state.changes[key] = definition.type === "boolean" ? element.checked : element.value;
+      const value = definition.type === "boolean" ? element.checked : element.value;
+      if (comparableValue(value) === comparableValue(state.config[key])) delete state.changes[key];
+      else state.changes[key] = value;
       updateSaveLabel();
     });
   });
@@ -424,17 +469,33 @@ $("#refresh").onclick = async () => {
   } catch (error) { $("#refresh").classList.remove("spinning"); toast(error.message, true); }
 };
 
-$("#save").onclick = async () => {
-  if (!Object.keys(state.changes).length) return toast(t("noChanges"));
+$("#save").onclick = () => {
+  renderChangesDrawer();
+  $("#changes-drawer").showModal();
+};
+
+$("#close-changes").onclick = () => $("#changes-drawer").close();
+$("#discard-all").onclick = () => {
+  state.changes = {};
+  $("#changes-drawer").close();
+  render();
+  updateSaveLabel();
+};
+
+$("#apply-changes").onclick = async () => {
+  if (!Object.keys(state.changes).length) return;
   try {
+    $("#apply-changes").disabled = true;
     await api("/api/config", { method: "PUT", body: JSON.stringify(state.changes) });
     toast(t("saved"));
     await api("/api/server/apply", { method: "POST" });
     Object.assign(state.config, state.changes);
     state.changes = {};
+    $("#changes-drawer").close();
     updateSaveLabel();
     toast(t("serverUpdated"));
   } catch (error) { toast(error.message, true); }
+  finally { $("#apply-changes").disabled = false; }
 };
 
 document.querySelectorAll("[data-world]").forEach((button) => button.onclick = async () => {

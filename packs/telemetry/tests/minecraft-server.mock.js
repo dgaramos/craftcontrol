@@ -21,6 +21,7 @@ export const world = {
   getAllPlayers() { return this.players; },
   getDynamicProperty(key) { return properties.get(key); },
   setDynamicProperty(key, value) { properties.set(key, value); },
+  getDynamicPropertyIds() { return [...properties.keys()]; },
 };
 
 export function setMockDynamicProperty(key, value) { properties.set(key, value); }

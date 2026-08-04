@@ -10,7 +10,7 @@ function record(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-function normalizePlayer(value, key) {
+export function normalizePlayer(value, key) {
   if (!record(value)) throw new Error(`invalid player record: ${key}`);
   const name = typeof value.name === "string" && value.name.trim() ? value.name : key;
   const player = { ...value, name };
@@ -32,9 +32,26 @@ export function validateState(value) {
   return { storageVersion: STORAGE_VERSION, sequence: value.sequence, players };
 }
 
+export function validateMeta(value) {
+  if (!record(value) || value.storageVersion !== STORAGE_VERSION) throw new Error(`unsupported storage version: ${value?.storageVersion}`);
+  if (!Number.isInteger(value.sequence) || value.sequence < 0) throw new Error("invalid persisted sequence");
+  if (value.players !== undefined) throw new Error("storage v2 metadata must not contain players");
+  return { storageVersion: STORAGE_VERSION, sequence: value.sequence };
+}
+
+export function validatePlayerShard(value) {
+  if (!record(value) || value.storageVersion !== STORAGE_VERSION) throw new Error(`unsupported player shard version: ${value?.storageVersion}`);
+  if (typeof value.key !== "string" || !value.key) throw new Error("invalid player shard key");
+  if (!Number.isInteger(value.sequence) || value.sequence < 0) throw new Error("invalid player shard sequence");
+  return { storageVersion: STORAGE_VERSION, sequence: value.sequence, key: value.key, player: normalizePlayer(value.player, value.key) };
+}
+
 export function migrateState(value) {
   if (!record(value)) throw new Error("persisted state must be an object");
-  if (value.storageVersion === STORAGE_VERSION) return { state: validateState(value), migratedFrom: null };
+  if (value.storageVersion === 1) {
+    const candidate = { storageVersion: STORAGE_VERSION, sequence: value.sequence, players: value.players };
+    return { state: validateState(candidate), migratedFrom: 1 };
+  }
   if (value.storageVersion !== undefined) throw new Error(`unsupported storage version: ${value.storageVersion}`);
   if (value.schema !== 1) throw new Error("unrecognized legacy persisted state");
   const candidate = { storageVersion: STORAGE_VERSION, sequence: value.sequence, players: value.players };

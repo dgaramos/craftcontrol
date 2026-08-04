@@ -1,6 +1,6 @@
 import { system, world } from "@minecraft/server";
 import { ensurePlayer, horizontalDistance, incrementMap, round } from "./model.js";
-import { flush, loadState, mutate, storageStatus } from "./store.js";
+import { flush, loadState, mutatePlayer, storageStatus } from "./store.js";
 import { publish, publishSnapshot } from "./transport.js";
 
 const positions = new Map();
@@ -10,7 +10,7 @@ function playerName(entity) {
 }
 
 function update(name, callback) {
-  return mutate((state) => callback(ensurePlayer(state, name)));
+  return mutatePlayer(name, (state) => callback(ensurePlayer(state, name)));
 }
 
 world.afterEvents.playerJoin.subscribe((event) => {
@@ -100,6 +100,6 @@ system.runInterval(() => {
 
 system.runTimeout(() => {
   loadState();
-  publish("telemetry.started", null, { version: "0.2.1", product: "CraftControl Telemetry Pack", storage: storageStatus() });
+  publish("telemetry.started", null, { version: "0.2.2", product: "CraftControl Telemetry Pack", storage: storageStatus() });
   publishSnapshot();
 }, 1);

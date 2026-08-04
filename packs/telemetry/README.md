@@ -28,7 +28,7 @@ Stable Bedrock world events
           v
 Behavior pack adapters
           |
-          +--> in-memory aggregates --> world dynamic property
+          +--> in-memory aggregates --> metadata + per-player world properties
           |
           +--> [BEDROCK_TELEMETRY] JSON --> BDS log --> external consumer
                                                      |
@@ -46,7 +46,7 @@ The behavior pack is not another Docker service. Its source is maintained indepe
 - Snapshots emit one player per line to avoid oversized server log records.
 - Per-block-type maps retain the 128 most frequent values to bound state growth.
 - A movement jump greater than 128 blocks per sample is treated as teleportation and is not added to traveled distance.
-- State writes stop before the serialized dynamic-property value exceeds 30 KB; an explicit error is logged instead of corrupting persisted state.
+- Metadata and every player shard are checked independently against the 30 KB safety limit; an oversized write is refused instead of corrupting persisted state.
 - Persisted storage and log protocol have independent versions. Legacy storage is validated and migrated before event subscriptions begin.
 - The original legacy JSON is retained at `bedrock_telemetry:state_backup_v0`; failed, corrupt, oversized, or future-version state blocks writes instead of being replaced with empty counters.
 
@@ -94,7 +94,7 @@ The runtime integration test loads the production `main.js` through a determinis
 The package command creates:
 
 ```text
-dist/craftcontrol-telemetry-0.2.1.mcpack
+dist/craftcontrol-telemetry-0.2.2.mcpack
 ```
 
 Packaging uses sorted paths, normalized timestamps, and stripped ZIP metadata so the standalone repository and CraftControl subtree produce byte-equivalent artifacts from the same commit.
@@ -140,7 +140,9 @@ The CraftControl rebrand preserves the original pack UUIDs, `bedrock_telemetry` 
 
 ## Persisted-state migrations
 
-Release `0.2.1` introduces storage schema version `1`, independently from telemetry protocol schema `1`. On first load of the legacy `{ "schema": 1, ... }` format, the pack fills missing aggregate fields without resetting existing counters, validates the complete candidate, checks the 30 KB safety limit, saves the untouched source JSON as `bedrock_telemetry:state_backup_v0`, and only then writes the migrated state.
+Release `0.2.2` introduces sharded storage schema version `2`, independently from telemetry protocol schema `1`. Metadata and sequence remain under `bedrock_telemetry:state`; each player is persisted under a separate `bedrock_telemetry:player:*` property. On first load of legacy storage `0` or monolithic storage `1`, the pack fills missing aggregate fields without resetting counters, validates every candidate shard, saves the untouched source JSON as `bedrock_telemetry:state_backup_v0` or `bedrock_telemetry:state_backup_v1`, writes and verifies all player shards, and commits metadata last.
+
+On normal writes, player shards are persisted before metadata. Startup discovers every shard and promotes metadata to the highest shard sequence when recovering from an interrupted write, preventing sequence reuse. One large roster can therefore no longer exhaust a single dynamic-property value.
 
 Migration failures never fall back to writable empty state. Persistence is blocked for that runtime, the original dynamic property remains untouched, and startup/snapshot envelopes report the blocked storage status for the manager. Unknown future storage versions are treated the same way, preventing an older pack from downgrading a newer world's data.
 
@@ -150,7 +152,7 @@ Migration failures never fall back to writable empty state. Persistence is block
 - Distance is sampled horizontal movement, not a native Minecraft statistic.
 - Gamertag is the only player identity emitted. A trusted consumer must correlate it with its private Bedrock identity registry.
 - Damage and movement totals are persisted but intentionally not emitted for every occurrence; snapshots reconcile them.
-- The single dynamic-property state is suitable for a small homelab roster. A future schema will shard it before larger deployments.
+- Each player's bounded aggregate record is stored independently. A single unusually large per-player record is rejected without replacing persisted storage.
 
 ## Security and privacy
 

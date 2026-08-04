@@ -3,6 +3,8 @@ import { PROTOCOL_SCHEMA_VERSION, STORAGE_VERSION } from "./versions.js";
 export const SCHEMA_VERSION = PROTOCOL_SCHEMA_VERSION;
 export const STATE_KEY = "bedrock_telemetry:state";
 export const STATE_BACKUP_KEY = "bedrock_telemetry:state_backup_v0";
+export const STATE_BACKUP_V1_KEY = "bedrock_telemetry:state_backup_v1";
+export const PLAYER_STATE_PREFIX = "bedrock_telemetry:player:";
 export const LOG_PREFIX = "[BEDROCK_TELEMETRY]";
 export const MAX_BLOCK_TYPES = 128;
 
@@ -12,6 +14,10 @@ export function emptyState() {
 
 export function playerKey(name) {
   return String(name).trim().toLocaleLowerCase();
+}
+
+export function playerStateKey(key) {
+  return `${PLAYER_STATE_PREFIX}${encodeURIComponent(key)}`;
 }
 
 export function emptyPlayer(name, now) {

@@ -257,6 +257,9 @@ class ManagerService:
     def player_activity(self, kind: str, player: str, source: str, search: str, days: int, page: int, page_size: int) -> dict[str, Any]:
         return self.player_service.activity(kind, player, source, search, days, page, page_size)
 
+    def player_rankings(self, limit: int = 10) -> dict[str, Any]:
+        return self.player_service.rankings(limit)
+
     def set_player_operator(self, player: str, enabled: bool) -> None:
         self.player_service.set_operator(player, enabled)
 

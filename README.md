@@ -31,7 +31,7 @@ The five primary destinations are intentionally task-oriented:
 | Home | Server health, online players, freshness, and common destinations |
 | World | World identity, generation, view distance, time, weather, and cycles |
 | Players | Permanent profiles, sessions, operators, history, and telemetry |
-| Data | Global Activity and Deaths views with filters, provenance, and pagination |
+| Data | Global Activity, Deaths, lifetime Rankings, and server Records |
 | Rules | Gameplay, interface, mobs, drops, commands, fire, TNT, and regeneration |
 | Server | Packs, network, compression, threads, and container lifecycle |
 
@@ -216,16 +216,19 @@ Without the behavior pack, death messages are parsed from server logs and explic
 
 ## Activity and death analytics
 
-The **Data** workspace provides two global views backed by permanent player history:
+The **Data** workspace provides three global views backed by permanent player history and authoritative lifetime aggregates:
 
 - **Activity** combines joins, leaves, respawns, dimension changes, deaths, and permission changes. New durable events refresh the active view through SSE without browser polling.
 - **Deaths** focuses on cause, responsible entity or player, projectile, dimension, and coordinates when that evidence exists.
+- **Rankings** compares lifetime activity, combat, blocks, and exploration aggregates in a podium, top-ten leaderboard, and server record cards.
 
 Both views support player, lifetime/7-day/30-day, source, event-type, and free-text detail filters. Results are paginated server-side and every item identifies whether it came from the structured Telemetry Pack or server/manager evidence. When a structured and derived death describe the same player within the same short window, the interface prefers the structured event while retaining the raw derived evidence privately in SQLite. XUIDs and raw log lines never leave the repository layer.
 
 Player names in the global feed open the permanent player profile and return to the same analytics filters. Death entries offer a focused detail dialog so cause, killer, projectile, dimension, coordinates, source, and timestamp remain readable on a phone.
 
 Snapshots can recover aggregate totals after downtime, but they cannot recreate every missed historical event. Empty states and source labels preserve that distinction instead of presenting missing details as zero.
+
+Lifetime rankings combine manager-owned play time, session count, and longest-session evidence with Telemetry Pack deaths, kills, blocks, damage, distance, and dimensions. Period rankings are intentionally unavailable until detailed history can prove them; CraftControl never relabels lifetime snapshots as seven- or thirty-day statistics.
 
 ## Optional telemetry pack
 
@@ -311,6 +314,7 @@ When development and deployment use separate directories, copy the source while 
 | `GET` | `/api/players/profile/<id>` | One opaque player profile and history |
 | `PUT` | `/api/players/<name>/operator` | Grant or revoke in-game operator status |
 | `GET` | `/api/analytics/activity` | Filtered and paginated global activity/death history |
+| `GET` | `/api/analytics/rankings` | Sanitized lifetime leaderboards and record holders |
 | `PUT` | `/api/config` | Validate and queue persistent configuration |
 | `PUT` | `/api/gamerules/<rule>` | Apply an allowlisted gamerule |
 | `POST` | `/api/world/<action>` | Run an allowlisted world shortcut |

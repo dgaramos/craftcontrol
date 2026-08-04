@@ -22,3 +22,11 @@ def activity():
         return jsonify(result)
     except (TypeError, ValueError) as error:
         return jsonify(error=str(error)), 400
+
+
+@analytics_api.get("/api/analytics/rankings")
+def rankings():
+    try:
+        return jsonify(manager().player_rankings(int(request.args.get("limit", "10"))))
+    except (TypeError, ValueError) as error:
+        return jsonify(error=str(error)), 400

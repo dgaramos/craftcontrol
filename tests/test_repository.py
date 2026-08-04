@@ -117,3 +117,30 @@ class StateRepositoryTest(unittest.TestCase):
             import sqlite3
             with sqlite3.connect(path) as connection:
                 self.assertEqual(connection.execute("SELECT count(*) FROM player_history WHERE topic='player.death'").fetchone()[0], 2)
+
+    def test_rankings_combine_manager_and_telemetry_aggregates(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = StateRepository(Path(directory) / "state.db")
+            repository.initialize()
+            repository.observe_player("VonCrush", True, "99", occurred_at=100)
+            repository.observe_player("VonCrush", False, "99", occurred_at=220)
+            repository.observe_player("Nicole", True, "456", occurred_at=100)
+            repository.observe_player("Nicole", False, "456", occurred_at=160)
+            repository.ingest_telemetry({
+                "schema": 1, "sequence": 1, "type": "snapshot.player", "timestamp": 1,
+                "player": {"name": "VonCrush"},
+                "data": {"deaths": 2, "mobKills": 8, "blocksBroken": 40, "distance": 123.5, "dimensions": {"overworld": 1, "nether": 1}},
+            })
+            repository.ingest_telemetry({
+                "schema": 1, "sequence": 2, "type": "snapshot.player", "timestamp": 2,
+                "player": {"name": "Nicole"},
+                "data": {"deaths": 3, "mobKills": 2, "blocksBroken": 60, "distance": 80, "dimensions": {"overworld": 1}},
+            })
+            rankings = repository.player_rankings()
+            self.assertEqual(rankings["period"], "lifetime")
+            self.assertEqual(rankings["metrics"]["play_time"][0]["player"]["name"], "VonCrush")
+            self.assertEqual(rankings["metrics"]["longest_session"][0]["value"], 120)
+            self.assertEqual(rankings["metrics"]["deaths"][0]["player"]["name"], "Nicole")
+            self.assertEqual(rankings["metrics"]["blocks_broken"][0]["player"]["name"], "Nicole")
+            self.assertEqual(rankings["metrics"]["distance"][0]["value"], 123.5)
+            self.assertNotIn("99", str(rankings))

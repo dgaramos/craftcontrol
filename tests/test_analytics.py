@@ -13,6 +13,10 @@ class FakeAnalyticsManager:
         self.arguments = (kind, player, source, search, days, page, page_size)
         return {"events": [], "page": page, "pages": 1, "page_size": page_size, "total": 0, "summary": {}}
 
+    def player_rankings(self, limit):
+        self.arguments = ("rankings", limit)
+        return {"period": "lifetime", "metrics": {}}
+
 
 class AnalyticsHttpTest(unittest.TestCase):
     def setUp(self) -> None:
@@ -32,6 +36,11 @@ class AnalyticsHttpTest(unittest.TestCase):
     def test_rejects_non_numeric_pagination(self) -> None:
         response = self.client.get("/api/analytics/activity?page=not-a-number")
         self.assertEqual(response.status_code, 400)
+
+    def test_maps_bounded_ranking_limit(self) -> None:
+        response = self.client.get("/api/analytics/rankings?limit=12")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.manager.arguments, ("rankings", 12))
 
 
 if __name__ == "__main__":

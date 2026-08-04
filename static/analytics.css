@@ -4,10 +4,11 @@
 .analytics-hero p { max-width: 62ch; margin: 0; color: var(--muted); line-height: 1.45; }
 .analytics-hero button { flex: 0 0 auto; }
 
-.analytics-view-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.analytics-view-switch { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
 .analytics-view-switch button { color: var(--muted); background: #171d19; }
 .analytics-view-switch button.active { color: #071006; background: linear-gradient(#78c34d, #4b9c34); border-top-color: #acf17a; border-left-color: #8ad45c; text-shadow: 1px 1px 0 #a5e77a; }
 .analytics-view-switch button.death.active { color: #fff; background: linear-gradient(#a43c34, #68221d); border-top-color: #e9796f; border-left-color: #ce5a51; text-shadow: 1px 2px 0 #3b0c09; }
+.analytics-view-switch button.ranking.active { color: #211706; background: linear-gradient(#efc85c, #ad7825); border-top-color: #ffe597; border-left-color: #f2c35c; text-shadow: 1px 1px 0 #ffe5a0; }
 
 .analytics-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 10px; padding: 14px; }
 .analytics-filters label { display: grid; gap: 6px; min-width: 0; }
@@ -62,6 +63,44 @@
 .analytics-death-meta { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #4b2926; }
 .analytics-death-meta > span { color: #ffb0a8; font-size: .65rem; font-weight: 900; text-transform: uppercase; }
 
+/* Lifetime rankings and server records */
+.rankings-screen, .rankings-content { display: grid; gap: 12px; }
+.rankings-hero { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 20px; background-color: #282217; }
+.rankings-hero h2 { margin: 5px 0 7px; color: #ffe083; }
+.rankings-hero p { margin: 0; color: #c9bea4; }
+.ranking-categories { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+.ranking-categories button { min-width: 0; color: var(--muted); font-size: .68rem; }
+.ranking-categories button span { display: block; margin-bottom: 4px; color: #e6c36a; font-size: 1.2rem; }
+.ranking-categories button.active { color: #201805; background: linear-gradient(#e8c65f, #a87525); border-top-color: #ffe590; border-left-color: #f2c65f; text-shadow: 1px 1px 0 #ffe9a3; }
+.ranking-metric-picker { display: flex; gap: 7px; padding-bottom: 3px; overflow-x: auto; scrollbar-width: none; }
+.ranking-metric-picker::-webkit-scrollbar { display: none; }
+.ranking-metric-picker button { flex: 0 0 auto; min-height: 40px; padding: 7px 11px; color: var(--muted); font-size: .65rem; }
+.ranking-metric-picker button.active { color: #fff; background: #68491f; border-top-color: #e0b65a; }
+.ranking-podium { padding: 18px; overflow: hidden; background-color: #241d12; }
+.ranking-section-title h3 { margin-top: 5px; color: var(--text); }
+.podium-places { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; gap: 8px; margin-top: 18px; }
+.podium-place { display: grid; justify-items: center; gap: 6px; min-width: 0; padding: 14px 8px; text-align: center; background: #12130f; border: 2px solid #4b4431; }
+.podium-place.rank-1 { min-height: 154px; padding-top: 20px; background: linear-gradient(#4b3e1b, #18160e); border-color: #c89c37; order: 2; }
+.podium-place.rank-2 { min-height: 128px; order: 1; }
+.podium-place.rank-3 { min-height: 112px; order: 3; }
+.podium-medal { font-size: 1.65rem; }
+.podium-place button, .record-cards button, .leaderboard-panel li button { min-height: 0; padding: 0; overflow: hidden; color: var(--grass-light); text-overflow: ellipsis; white-space: nowrap; background: transparent; border: 0; box-shadow: none; text-shadow: none; }
+.podium-place b { color: #ffe083; font-size: 1rem; }
+.podium-place small { color: var(--muted); font-size: .52rem; text-transform: uppercase; }
+.rankings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.leaderboard-panel, .records-panel { padding: 16px; }
+.leaderboard-panel ol { margin: 12px 0 0; padding: 0; list-style: none; }
+.leaderboard-panel li { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 8px; min-height: 44px; border-bottom: 1px solid #343a35; }
+.leaderboard-panel li > b { color: #e0bd63; text-align: center; }
+.leaderboard-panel li > strong { color: var(--text); font-size: .72rem; }
+.record-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin-top: 12px; }
+.record-cards article { min-width: 0; padding: 10px; background: #111511; border: 1px solid #3d443e; }
+.record-cards small, .record-cards button, .record-cards b, .record-cards span { display: block; }
+.record-cards small { color: var(--muted); font-size: .54rem; font-weight: 900; text-transform: uppercase; }
+.record-cards button { width: 100%; margin-top: 6px; text-align: left; }
+.record-cards b { margin-top: 5px; color: #ffe083; }
+.ranking-freshness { color: var(--muted); text-align: center; }
+
 @media (max-width: 700px) {
   .analytics-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .analytics-event { grid-template-columns: 36px minmax(0, 1fr); align-items: start; }
@@ -69,12 +108,17 @@
   .analytics-event > .timeline-timestamp { grid-column: 2; display: flex; min-width: 0; gap: 6px; padding: 0; text-align: left; border: 0; }
   .analytics-event > .timeline-timestamp span::after { content: " ·"; }
   .analytics-summary { grid-template-columns: repeat(3, 1fr); }
+  .rankings-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 480px) {
   .analytics-hero { align-items: stretch; flex-direction: column; }
+  .rankings-hero { align-items: stretch; flex-direction: column; }
   .analytics-filters { grid-template-columns: 1fr; }
   .analytics-summary { grid-template-columns: repeat(2, 1fr); }
   .analytics-event-title { align-items: flex-start; flex-direction: column; }
   .analytics-death-dialog .analytics-event-details { grid-template-columns: 1fr; }
+  .ranking-categories { grid-template-columns: repeat(2, 1fr); }
+  .podium-places { gap: 4px; }
+  .podium-place { padding-left: 4px; padding-right: 4px; }
 }

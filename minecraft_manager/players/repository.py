@@ -40,3 +40,6 @@ class SQLitePlayerRepository:
 
     def player_activity(self, kind: str, player: str, source: str, search: str, days: int, page: int, page_size: int) -> dict[str, Any]:
         return self.database.player_activity(kind, player, source, search, days, page, page_size)
+
+    def player_rankings(self, limit: int = 10) -> dict[str, Any]:
+        return self.database.player_rankings(limit)

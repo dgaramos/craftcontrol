@@ -5,7 +5,7 @@ import { requireSession } from "./js/auth.js?v=1";
 const state = {
   schema: null, config: {}, gamerules: {}, players: [], online: 0, maxPlayers: 0,
   changes: {}, tab: "home", tabs: ["home", "world", "players", "analytics", "rules", "server"], status: null, updatedAt: 0, domains: {},
-  analytics: { kind: "all", player: "", source: "all", search: "", days: 0, page: 1 },
+  analytics: { kind: "all", player: "", source: "all", search: "", days: 0, page: 1, rankingCategory: "activity", rankingMetric: "play_time" },
   locale: (localStorage.getItem("craftcontrol-locale") || localStorage.getItem("manager-locale")) === "en" ? "en" : "pt",
   user: null,
 };
@@ -58,12 +58,14 @@ const messages = {
     deathHistory: "Histórico de mortes", noDeaths: "Nenhuma morte detalhada registrada.", deathCause: "Causa", killedBy: "Responsável", projectile: "Projétil", telemetrySource: "Behavior pack",
     home: "Início", world: "Mundo", players: "Jogadores", analytics: "Dados", rules: "Regras", settings: "Servidor",
     analyticsTitle: "Atividade do servidor", analyticsHelp: "A história compartilhada de quem entrou, saiu, morreu ou teve permissões alteradas.",
-    activityView: "Atividade", deathsView: "Mortes", eventFilter: "Evento", playerFilter: "Jogador", periodFilter: "Período", sourceFilter: "Origem", detailFilter: "Causa ou responsável", detailFilterHint: "Ex.: zombie, lava…",
+    activityView: "Atividade", deathsView: "Mortes", rankingsView: "Rankings", eventFilter: "Evento", playerFilter: "Jogador", periodFilter: "Período", sourceFilter: "Origem", detailFilter: "Causa ou responsável", detailFilterHint: "Ex.: zombie, lava…",
     everyEvent: "Todos os eventos", joinsOnly: "Entradas", leavesOnly: "Saídas", permissionsOnly: "Permissões", respawnsOnly: "Respawns", dimensionsOnly: "Dimensões",
     everyPlayer: "Todos os jogadores", lifetime: "Desde o início", last7Days: "Últimos 7 dias", last30Days: "Últimos 30 dias",
     everySource: "Todas as fontes", structuredSource: "Telemetry Pack", serverSource: "Servidor e manager",
     activityEmpty: "Nenhum evento corresponde a estes filtros.", eventCount: (count) => `${count} eventos`, pageCount: (page, pages) => `Página ${page} de ${pages}`,
     previous: "Anterior", next: "Próxima", refreshData: "Atualizar dados", sourceStructured: "Estruturado", sourceServer: "Evidência do servidor", deathDetails: "Detalhes da morte", viewDetails: "Ver detalhes", fromDimension: "Origem", toDimension: "Destino",
+    rankingsTitle: "Rankings e recordes", rankingsHelp: "Compare os recordes vitalícios que o servidor consegue provar hoje.", lifetimeRecord: "Recorde vitalício", leaderboard: "Classificação", records: "Recordes do servidor", noRankingData: "Ainda não há dados para esta categoria.",
+    categoryActivity: "Atividade", categoryCombat: "Combate", categoryBuilding: "Blocos", categoryExploration: "Exploração", rankPlayTime: "Tempo jogado", rankSessions: "Sessões", rankLongestSession: "Maior sessão", rankDeaths: "Mortes", rankPlayerKills: "Jogadores eliminados", rankMobKills: "Criaturas eliminadas", rankBlocksBroken: "Blocos quebrados", rankBlocksPlaced: "Blocos colocados", rankDamageDealt: "Dano causado", rankDamageTaken: "Dano recebido", rankDistance: "Distância", rankDimensions: "Dimensões",
     worldIntro: "Configuração do mundo", rulesIntro: "Comportamento do jogo", serverIntro: "Infraestrutura do servidor",
     pendingChanges: "ALTERAÇÕES PENDENTES", reviewChanges: "Revisar alterações",
     pendingHelp: "Estas configurações serão salvas e o servidor será reiniciado somente quando você aplicar.",
@@ -126,12 +128,14 @@ const messages = {
     deathHistory: "Death history", noDeaths: "No detailed deaths recorded.", deathCause: "Cause", killedBy: "Killed by", projectile: "Projectile", telemetrySource: "Behavior pack",
     home: "Home", world: "World", players: "Players", analytics: "Data", rules: "Rules", settings: "Server",
     analyticsTitle: "Server activity", analyticsHelp: "The shared history of players joining, leaving, dying, or receiving permission changes.",
-    activityView: "Activity", deathsView: "Deaths", eventFilter: "Event", playerFilter: "Player", periodFilter: "Period", sourceFilter: "Source", detailFilter: "Cause or responsible", detailFilterHint: "E.g. zombie, lava…",
+    activityView: "Activity", deathsView: "Deaths", rankingsView: "Rankings", eventFilter: "Event", playerFilter: "Player", periodFilter: "Period", sourceFilter: "Source", detailFilter: "Cause or responsible", detailFilterHint: "E.g. zombie, lava…",
     everyEvent: "All events", joinsOnly: "Joins", leavesOnly: "Leaves", permissionsOnly: "Permissions", respawnsOnly: "Respawns", dimensionsOnly: "Dimensions",
     everyPlayer: "All players", lifetime: "All time", last7Days: "Last 7 days", last30Days: "Last 30 days",
     everySource: "All sources", structuredSource: "Telemetry Pack", serverSource: "Server and manager",
     activityEmpty: "No events match these filters.", eventCount: (count) => `${count} events`, pageCount: (page, pages) => `Page ${page} of ${pages}`,
     previous: "Previous", next: "Next", refreshData: "Refresh data", sourceStructured: "Structured", sourceServer: "Server evidence", deathDetails: "Death details", viewDetails: "View details", fromDimension: "From", toDimension: "To",
+    rankingsTitle: "Rankings and records", rankingsHelp: "Compare the lifetime records the server can prove today.", lifetimeRecord: "Lifetime record", leaderboard: "Leaderboard", records: "Server records", noRankingData: "There is no data for this category yet.",
+    categoryActivity: "Activity", categoryCombat: "Combat", categoryBuilding: "Blocks", categoryExploration: "Exploration", rankPlayTime: "Play time", rankSessions: "Sessions", rankLongestSession: "Longest session", rankDeaths: "Deaths", rankPlayerKills: "Player kills", rankMobKills: "Mob kills", rankBlocksBroken: "Blocks broken", rankBlocksPlaced: "Blocks placed", rankDamageDealt: "Damage dealt", rankDamageTaken: "Damage taken", rankDistance: "Distance", rankDimensions: "Dimensions",
     worldIntro: "World configuration", rulesIntro: "Game behavior", serverIntro: "Server infrastructure",
     pendingChanges: "PENDING CHANGES", reviewChanges: "Review changes",
     pendingHelp: "These settings are saved and the server restarts only after you apply them.",
@@ -674,9 +678,71 @@ async function openAnalyticsPlayer(publicId) {
   } catch (error) { toast(error.message, true); }
 }
 
+function analyticsViewSwitch(active) {
+  return `<div class="analytics-view-switch"><button data-analytics-view="all" class="${!['deaths', 'rankings'].includes(active) ? "active" : ""}" type="button">☷ ${t("activityView")}</button><button data-analytics-view="deaths" class="death ${active === "deaths" ? "active" : ""}" type="button">☠ ${t("deathsView")}</button><button data-analytics-view="rankings" class="ranking ${active === "rankings" ? "active" : ""}" type="button">♛ ${t("rankingsView")}</button></div>`;
+}
+
+const rankingDefinitions = {
+  play_time: { label: "rankPlayTime", category: "activity", format: "duration" },
+  sessions: { label: "rankSessions", category: "activity", format: "number" },
+  longest_session: { label: "rankLongestSession", category: "activity", format: "duration" },
+  deaths: { label: "rankDeaths", category: "combat", format: "number" },
+  player_kills: { label: "rankPlayerKills", category: "combat", format: "number" },
+  mob_kills: { label: "rankMobKills", category: "combat", format: "number" },
+  damage_dealt: { label: "rankDamageDealt", category: "combat", format: "decimal" },
+  damage_taken: { label: "rankDamageTaken", category: "combat", format: "decimal" },
+  blocks_broken: { label: "rankBlocksBroken", category: "building", format: "number" },
+  blocks_placed: { label: "rankBlocksPlaced", category: "building", format: "number" },
+  distance: { label: "rankDistance", category: "exploration", format: "distance" },
+  dimensions: { label: "rankDimensions", category: "exploration", format: "number" },
+};
+
+function formatRankingValue(value, format) {
+  if (format === "duration") return formatDuration(Number(value));
+  if (format === "distance") return `${Math.round(Number(value || 0)).toLocaleString(state.locale === "en" ? "en-US" : "pt-BR")} m`;
+  if (format === "decimal") return Number(value || 0).toLocaleString(state.locale === "en" ? "en-US" : "pt-BR", { maximumFractionDigits: 1 });
+  return Number(value || 0).toLocaleString(state.locale === "en" ? "en-US" : "pt-BR");
+}
+
+function bindAnalyticsViewSwitch() {
+  content.querySelectorAll("[data-analytics-view]").forEach((button) => button.onclick = () => {
+    state.analytics.kind = button.dataset.analyticsView;
+    state.analytics.page = 1;
+    renderAnalyticsPanel();
+  });
+}
+
+async function renderRankingsPanel() {
+  const analytics = state.analytics;
+  content.innerHTML = `<div class="rankings-screen">${analyticsViewSwitch("rankings")}<header class="rankings-hero block-panel"><div><span class="eyebrow">LIFETIME</span><h2>${t("rankingsTitle")}</h2><p>${t("rankingsHelp")}</p></div><button id="rankings-refresh" class="secondary" type="button">↻ ${t("refreshData")}</button></header><div class="ranking-categories">${[["activity", "categoryActivity", "⌛"], ["combat", "categoryCombat", "⚔"], ["building", "categoryBuilding", "▦"], ["exploration", "categoryExploration", "◇"]].map(([category, label, icon]) => `<button data-ranking-category="${category}" class="${analytics.rankingCategory === category ? "active" : ""}" type="button"><span>${icon}</span>${t(label)}</button>`).join("")}</div><div id="rankings-content" class="rankings-content"><div class="analytics-loading">${t("checking")}</div></div></div>`;
+  bindAnalyticsViewSwitch();
+  const load = async () => {
+    const target = $("#rankings-content");
+    target.innerHTML = `<div class="analytics-loading">${t("checking")}</div>`;
+    try {
+      const result = await api("/api/analytics/rankings?limit=10");
+      const categoryMetrics = Object.entries(rankingDefinitions).filter(([, definition]) => definition.category === analytics.rankingCategory);
+      if (!categoryMetrics.some(([key]) => key === analytics.rankingMetric)) analytics.rankingMetric = categoryMetrics[0][0];
+      const selectedDefinition = rankingDefinitions[analytics.rankingMetric];
+      const selectedEntries = result.metrics?.[analytics.rankingMetric] || [];
+      const podium = selectedEntries.slice(0, 3);
+      target.innerHTML = `<div class="ranking-metric-picker">${categoryMetrics.map(([key, definition]) => `<button data-ranking-metric="${key}" class="${key === analytics.rankingMetric ? "active" : ""}" type="button">${t(definition.label)}</button>`).join("")}</div>${podium.length ? `<section class="ranking-podium block-panel"><div class="ranking-section-title"><span class="eyebrow">${t("lifetimeRecord")}</span><h3>${t(selectedDefinition.label)}</h3></div><div class="podium-places">${podium.map((entry, index) => `<article class="podium-place rank-${index + 1}"><span class="podium-medal">${["🥇", "🥈", "🥉"][index]}</span><button data-ranking-player="${escapeHtml(entry.player.id)}" type="button">${escapeHtml(entry.player.name)}</button><b>${formatRankingValue(entry.value, selectedDefinition.format)}</b><small>${entry.source === "telemetry-pack" ? t("sourceStructured") : t("sourceServer")}</small></article>`).join("")}</div></section>` : `<div class="analytics-empty"><p>${t("noRankingData")}</p></div>`}<div class="rankings-grid"><section class="leaderboard-panel block-panel"><div class="ranking-section-title"><span class="eyebrow">TOP 10</span><h3>${t("leaderboard")}</h3></div><ol>${selectedEntries.map((entry, index) => `<li><b>${index + 1}</b><button data-ranking-player="${escapeHtml(entry.player.id)}" type="button">${escapeHtml(entry.player.name)}</button><strong>${formatRankingValue(entry.value, selectedDefinition.format)}</strong></li>`).join("")}</ol></section><section class="records-panel block-panel"><div class="ranking-section-title"><span class="eyebrow">LIFETIME</span><h3>${t("records")}</h3></div><div class="record-cards">${categoryMetrics.map(([key, definition]) => { const leader = result.metrics?.[key]?.[0]; return `<article><small>${t(definition.label)}</small>${leader ? `<button data-ranking-player="${escapeHtml(leader.player.id)}" type="button">${escapeHtml(leader.player.name)}</button><b>${formatRankingValue(leader.value, definition.format)}</b>` : `<span>—</span>`}</article>`; }).join("")}</div></section></div><small class="ranking-freshness">${t("updated")} ${formatDate(result.generated_at)} · ${t("lifetime")}</small>`;
+      target.querySelectorAll("[data-ranking-metric]").forEach((button) => button.onclick = () => { analytics.rankingMetric = button.dataset.rankingMetric; load(); });
+      target.querySelectorAll("[data-ranking-player]").forEach((button) => button.onclick = () => openAnalyticsPlayer(button.dataset.rankingPlayer));
+    } catch (error) { target.innerHTML = `<div class="analytics-empty"><p>${escapeHtml(error.message)}</p></div>`; }
+  };
+  content.querySelectorAll("[data-ranking-category]").forEach((button) => button.onclick = () => { analytics.rankingCategory = button.dataset.rankingCategory; load(); content.querySelectorAll("[data-ranking-category]").forEach((item) => item.classList.toggle("active", item === button)); });
+  $("#rankings-refresh").onclick = load;
+  await load();
+}
+
 async function renderAnalyticsPanel() {
   const filters = state.analytics;
-  content.innerHTML = `<div class="analytics-screen"><header class="analytics-hero block-panel"><div><span class="eyebrow">CRAFTCONTROL ANALYTICS</span><h2>${t("analyticsTitle")}</h2><p>${t("analyticsHelp")}</p></div><button id="analytics-refresh" class="secondary" type="button">↻ ${t("refreshData")}</button></header><div class="analytics-view-switch"><button data-analytics-view="all" class="${filters.kind !== "deaths" ? "active" : ""}" type="button">☷ ${t("activityView")}</button><button data-analytics-view="deaths" class="${filters.kind === "deaths" ? "active death" : "death"}" type="button">☠ ${t("deathsView")}</button></div><section class="analytics-filters block-panel"><label><span>${t("eventFilter")}</span><select id="analytics-kind" ${filters.kind === "deaths" ? "disabled" : ""}><option value="all">${t("everyEvent")}</option><option value="joins">${t("joinsOnly")}</option><option value="leaves">${t("leavesOnly")}</option><option value="respawns">${t("respawnsOnly")}</option><option value="dimensions">${t("dimensionsOnly")}</option><option value="permissions">${t("permissionsOnly")}</option></select></label><label><span>${t("playerFilter")}</span><select id="analytics-player"><option value="">${t("everyPlayer")}</option></select></label><label><span>${t("periodFilter")}</span><select id="analytics-days"><option value="0">${t("lifetime")}</option><option value="7">${t("last7Days")}</option><option value="30">${t("last30Days")}</option></select></label><label><span>${t("sourceFilter")}</span><select id="analytics-source"><option value="all">${t("everySource")}</option><option value="structured">${t("structuredSource")}</option><option value="server">${t("serverSource")}</option></select></label><label><span>${t("detailFilter")}</span><input id="analytics-search" type="search" maxlength="64" value="${escapeHtml(filters.search)}" placeholder="${t("detailFilterHint")}"></label></section><div id="analytics-results" class="analytics-results"><div class="analytics-loading">${t("checking")}</div></div><dialog id="analytics-death-dialog" class="analytics-death-dialog"><div class="drawer-header"><div><span class="eyebrow">${t("deathDetails")}</span><h2></h2></div><button class="drawer-close" type="button" aria-label="${t("close")}">×</button></div><div class="analytics-death-content"></div></dialog></div>`;
+  if (filters.kind === "rankings") {
+    await renderRankingsPanel();
+    return;
+  }
+  content.innerHTML = `<div class="analytics-screen">${analyticsViewSwitch(filters.kind)}<header class="analytics-hero block-panel"><div><span class="eyebrow">CRAFTCONTROL ANALYTICS</span><h2>${t("analyticsTitle")}</h2><p>${t("analyticsHelp")}</p></div><button id="analytics-refresh" class="secondary" type="button">↻ ${t("refreshData")}</button></header><section class="analytics-filters block-panel"><label><span>${t("eventFilter")}</span><select id="analytics-kind" ${filters.kind === "deaths" ? "disabled" : ""}><option value="all">${t("everyEvent")}</option><option value="joins">${t("joinsOnly")}</option><option value="leaves">${t("leavesOnly")}</option><option value="respawns">${t("respawnsOnly")}</option><option value="dimensions">${t("dimensionsOnly")}</option><option value="permissions">${t("permissionsOnly")}</option></select></label><label><span>${t("playerFilter")}</span><select id="analytics-player"><option value="">${t("everyPlayer")}</option></select></label><label><span>${t("periodFilter")}</span><select id="analytics-days"><option value="0">${t("lifetime")}</option><option value="7">${t("last7Days")}</option><option value="30">${t("last30Days")}</option></select></label><label><span>${t("sourceFilter")}</span><select id="analytics-source"><option value="all">${t("everySource")}</option><option value="structured">${t("structuredSource")}</option><option value="server">${t("serverSource")}</option></select></label><label><span>${t("detailFilter")}</span><input id="analytics-search" type="search" maxlength="64" value="${escapeHtml(filters.search)}" placeholder="${t("detailFilterHint")}"></label></section><div id="analytics-results" class="analytics-results"><div class="analytics-loading">${t("checking")}</div></div><dialog id="analytics-death-dialog" class="analytics-death-dialog"><div class="drawer-header"><div><span class="eyebrow">${t("deathDetails")}</span><h2></h2></div><button class="drawer-close" type="button" aria-label="${t("close")}">×</button></div><div class="analytics-death-content"></div></dialog></div>`;
   const applyFilterValues = () => {
     $("#analytics-kind").value = filters.kind === "deaths" ? "all" : filters.kind;
     $("#analytics-days").value = String(filters.days);
@@ -701,11 +767,7 @@ async function renderAnalyticsPanel() {
       $("#analytics-next").onclick = () => { filters.page += 1; reload(); window.scrollTo({ top: 0, behavior: "smooth" }); };
     } catch (error) { target.innerHTML = `<div class="analytics-empty"><p>${escapeHtml(error.message)}</p></div>`; }
   };
-  content.querySelectorAll("[data-analytics-view]").forEach((button) => button.onclick = () => {
-    filters.kind = button.dataset.analyticsView;
-    filters.page = 1;
-    renderAnalyticsPanel();
-  });
+  bindAnalyticsViewSwitch();
   [["analytics-kind", "kind"], ["analytics-player", "player"], ["analytics-source", "source"]].forEach(([id, key]) => {
     $(`#${id}`).onchange = (event) => { filters[key] = event.target.value; filters.page = 1; reload(); };
   });

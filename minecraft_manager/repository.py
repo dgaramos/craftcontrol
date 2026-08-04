@@ -482,3 +482,40 @@ class StateRepository:
                 "dimensions": counts.get("player.dimension.changed", 0),
             },
         }
+
+    def player_rankings(self, limit: int = 10) -> dict[str, Any]:
+        profiles = self.player_profiles()
+        with self._connect() as connection:
+            longest_rows = connection.execute(
+                "SELECT identity,max(COALESCE(duration_seconds,? - connected_at)) "
+                "FROM player_sessions GROUP BY identity", (time.time(),),
+            ).fetchall()
+        longest = {self._public_player_id(row[0]): int(max(0, row[1] or 0)) for row in longest_rows}
+
+        definitions = {
+            "play_time": ("manager", lambda profile: int(profile.get("total_play_seconds", 0))),
+            "sessions": ("manager", lambda profile: int(profile.get("sessions_count", 0))),
+            "longest_session": ("manager", lambda profile: longest.get(profile["id"], 0)),
+            "deaths": ("mixed", lambda profile: int(profile.get("deaths_count", 0))),
+            "player_kills": ("telemetry-pack", lambda profile: int(profile.get("telemetry", {}).get("playerKills", 0))),
+            "mob_kills": ("telemetry-pack", lambda profile: int(profile.get("telemetry", {}).get("mobKills", 0))),
+            "blocks_broken": ("telemetry-pack", lambda profile: int(profile.get("telemetry", {}).get("blocksBroken", 0))),
+            "blocks_placed": ("telemetry-pack", lambda profile: int(profile.get("telemetry", {}).get("blocksPlaced", 0))),
+            "damage_dealt": ("telemetry-pack", lambda profile: float(profile.get("telemetry", {}).get("damageDealt", 0))),
+            "damage_taken": ("telemetry-pack", lambda profile: float(profile.get("telemetry", {}).get("damageTaken", 0))),
+            "distance": ("telemetry-pack", lambda profile: float(profile.get("telemetry", {}).get("distance", 0))),
+            "dimensions": ("telemetry-pack", lambda profile: len(profile.get("telemetry", {}).get("dimensions", {}))),
+        }
+        metrics: dict[str, list[dict[str, Any]]] = {}
+        for key, (source, value_for) in definitions.items():
+            eligible = profiles if source in {"manager", "mixed"} else [profile for profile in profiles if profile.get("telemetry_updated_at")]
+            entries = [{
+                "player": {"id": profile["id"], "name": profile["name"]},
+                "value": value_for(profile),
+                "source": profile.get("deaths_source", source) if key == "deaths" else source,
+                "updated_at": profile.get("telemetry_updated_at") if source == "telemetry-pack" else profile.get("last_seen_at"),
+            } for profile in eligible]
+            entries = [entry for entry in entries if entry["value"] > 0]
+            entries.sort(key=lambda entry: (-entry["value"], entry["player"]["name"].casefold()))
+            metrics[key] = entries[:limit]
+        return {"generated_at": time.time(), "period": "lifetime", "metrics": metrics}

@@ -94,6 +94,11 @@ class PlayerService:
             raise ValueError("invalid activity filter")
         return self.repository.player_activity(kind, player.strip(), source, search.strip(), days, page, page_size)
 
+    def rankings(self, limit: int = 10) -> dict[str, Any]:
+        if limit < 1 or limit > 25:
+            raise ValueError("invalid ranking limit")
+        return self.repository.player_rankings(limit)
+
     def set_operator(self, player: str, enabled: bool) -> None:
         self.console.set_operator(player, enabled)
         permission = "operator" if enabled else "member"

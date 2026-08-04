@@ -82,3 +82,6 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn('data-analytics-player=', script)
         self.assertIn('id="analytics-death-dialog"', script)
         self.assertIn("respawnsOnly", script)
+        self.assertIn('class="ranking-podium', script)
+        self.assertIn("rankingsTitle", script)
+        self.assertIn(".podium-place.rank-1", stylesheet)

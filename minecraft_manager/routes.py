@@ -102,6 +102,13 @@ def telemetry_pack_status():
         pack["storage_status"] = values.get("storage_status")
         pack["storage_migrated_from"] = values.get("storage_migrated_from")
         pack["persistence_blocked"] = values.get("persistence_blocked") == "true"
+        try:
+            pack["capabilities"] = json.loads(values.get("capabilities", "{}"))
+        except (TypeError, ValueError):
+            pack["capabilities"] = {}
+        pack["capability_status"] = values.get("capability_status")
+        pack["capabilities_supported"] = int(values.get("capabilities_supported", 0))
+        pack["capabilities_total"] = int(values.get("capabilities_total", 0))
         return jsonify(pack)
     except (FileNotFoundError, TypeError, ValueError) as error:
         return jsonify(error=str(error)), 400

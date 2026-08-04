@@ -166,6 +166,8 @@ Telemetry reconciliation is sequence-aware. Missing ranges and pack resets autom
 
 Telemetry Pack storage has its own migration version, separate from the log protocol. Pack `0.2.2` validates and backs up monolithic world state before migrating it to sharded storage version `2`: metadata remains in `bedrock_telemetry:state`, while every player receives an independent bounded property. Invalid, oversized, or future-version state blocks persistence instead of overwriting counters. CraftControl surfaces that condition as degraded health even if log delivery itself remains available.
 
+Pack `0.2.3` capability-checks every optional stable Bedrock event before subscription. Missing signals disable only their corresponding metric and are reported in startup/snapshot envelopes. The Telemetry Pack panel distinguishes full from partial support and lists every available or unavailable metric, preventing unsupported data from being presented as a real zero.
+
 ## Data and backups
 
 CraftControl does not store the Minecraft world. World data remains in the Bedrock project, normally:

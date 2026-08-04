@@ -29,6 +29,8 @@ Snapshot frames may legitimately share a sequence and repeated snapshots at the 
 
 Pack storage and wire protocol are versioned independently. Telemetry Pack `0.2.2` migrates legacy storage `0` or monolithic storage `1` to sharded storage `2` only after validation. It retains the untouched source JSON in `bedrock_telemetry:state_backup_v0` or `bedrock_telemetry:state_backup_v1`, fills missing fields without resetting counters, writes and verifies player shards first, and commits metadata last. Startup discovers shards and promotes metadata to the highest shard sequence after an interrupted write. Startup and snapshot envelopes carry storage health; CraftControl keeps health `degraded` whenever the pack reports blocked persistence.
 
+Telemetry Pack `0.2.3` also probes optional stable event signals before subscribing. Capability results travel in `telemetry.started` and `snapshot.started`, are persisted by CraftControl, and appear as a bilingual support list in the panel. Unsupported metrics remain explicitly unavailable rather than being silently interpreted as zero; other supported collectors continue running.
+
 ## Safety and persistence
 
 The installer:

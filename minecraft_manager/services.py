@@ -4,6 +4,7 @@ import threading
 import re
 import time
 import hashlib
+import json
 from typing import Any
 
 from .bedrock import BedrockClient
@@ -176,6 +177,8 @@ class ManagerService:
             resync_reason: str | None = None
             storage = envelope.get("data", {}).get("storage")
             storage = storage if isinstance(storage, dict) else None
+            capabilities = envelope.get("data", {}).get("capabilities")
+            capabilities = capabilities if isinstance(capabilities, dict) else None
             storage_blocked = bool(storage and (storage.get("persistenceBlocked") is True or storage.get("status") == "blocked"))
             known_storage_blocked = storage_blocked or telemetry.get("persistence_blocked") == "true"
 
@@ -199,6 +202,14 @@ class ManagerService:
                 )
                 if storage.get("migratedFrom") is not None:
                     updates["storage_migrated_from"] = str(storage["migratedFrom"])
+            if capabilities:
+                supported = sum(1 for value in capabilities.values() if isinstance(value, dict) and value.get("supported") is True)
+                updates.update(
+                    capabilities=json.dumps(capabilities, ensure_ascii=False, sort_keys=True),
+                    capability_status="full" if supported == len(capabilities) else "limited",
+                    capabilities_supported=str(supported),
+                    capabilities_total=str(len(capabilities)),
+                )
             if snapshot_topic:
                 if topic == "snapshot.started":
                     updates.update(status="degraded" if storage_blocked else "syncing", snapshot_started_at=str(time.time()))

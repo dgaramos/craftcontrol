@@ -172,3 +172,16 @@ class TimeActionsTest(unittest.TestCase):
         self.assertEqual(telemetry["storage_version"], "1")
         self.assertEqual(telemetry["storage_migrated_from"], "0")
         self.assertEqual(telemetry["storage_status"], "migrated")
+
+    def test_pack_capabilities_are_persisted_without_degrading_supported_metrics(self) -> None:
+        self.service.request_telemetry_snapshot_async = lambda reason: None  # type: ignore[method-assign]
+        capabilities = {
+            "blocksBroken": {"supported": True},
+            "dimensionChanges": {"supported": False},
+        }
+        self.service.telemetry_event({"schema": 1, "sequence": 4, "type": "telemetry.started", "timestamp": 1, "player": None, "data": {"capabilities": capabilities}})
+        telemetry = self.service.state()["telemetry"]
+        self.assertEqual(telemetry["capability_status"], "limited")
+        self.assertEqual(telemetry["capabilities_supported"], "1")
+        self.assertEqual(telemetry["capabilities_total"], "2")
+        self.assertEqual(json.loads(telemetry["capabilities"]), capabilities)

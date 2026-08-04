@@ -547,10 +547,33 @@ function historyMarkup(events) {
   }).join("")}</ol>`;
 }
 
+function sessionMoment(timestamp) {
+  if (!timestamp) return "—";
+  const value = new Date(timestamp * 1000);
+  const locale = state.locale === "en" ? "en-US" : "pt-BR";
+  const date = value.toLocaleDateString(locale, { day: "2-digit", month: "short", year: "numeric" });
+  const time = value.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
+  return `<time datetime="${value.toISOString()}"><span>${escapeHtml(date)}</span><b>${escapeHtml(time)}</b></time>`;
+}
+
+function sessionsMarkup(sessions) {
+  if (!sessions.length) return `<p>${t("noHistory")}</p>`;
+  return `<ol class="session-list">${sessions.map((session) => {
+    const active = Boolean(session.active);
+    const inferred = Boolean(session.inferred);
+    const title = active
+      ? (state.locale === "pt" ? "Sessão em andamento" : "Session in progress")
+      : (state.locale === "pt" ? "Sessão encerrada" : "Session ended");
+    const status = active ? (state.locale === "pt" ? "Jogador conectado agora" : "Player currently connected") : inferred ? t("inferredExit") : t("normalExit");
+    const reason = session.close_reason && session.close_reason !== "disconnect" ? ` · ${escapeHtml(session.close_reason)}` : "";
+    return `<li class="session-item ${active ? "is-active" : ""} ${inferred ? "is-inferred" : ""}"><div class="session-state"><span class="session-status-dot" aria-hidden="true"></span><div><strong>${title}</strong><small>${status}${reason}</small></div></div><div class="session-duration"><small>${active ? (state.locale === "pt" ? "Tempo atual" : "Elapsed") : (state.locale === "pt" ? "Duração" : "Duration")}</small><b>${formatDuration(session.duration_seconds)}</b></div><div class="session-period"><span><small>${state.locale === "pt" ? "Início" : "Started"}</small>${sessionMoment(session.connected_at)}</span>${session.disconnected_at ? `<span><small>${state.locale === "pt" ? "Fim" : "Ended"}</small>${sessionMoment(session.disconnected_at)}</span>` : ""}</div></li>`;
+  }).join("")}</ol>`;
+}
+
 function profileMarkup(profile) {
   const aliases = (profile.aliases || []).filter((name) => name !== profile.name);
   const sessions = Array.isArray(profile.sessions) ? profile.sessions : [];
-  return `<div class="profile-facts"><span><small>${t("permission")}</small><b>${escapeHtml(optionLabel(profile.permission || "member"))}</b></span><span><small>${t("lastDeath")}</small><b>${formatDate(profile.last_death_at)}</b></span><span><small>${t("aliases")}</small><b>${aliases.length ? aliases.map(escapeHtml).join(" · ") : "—"}</b></span></div>${deathHistoryMarkup(profile.history || [])}<section class="session-history"><h4>${t("recentSessions")}</h4>${sessions.length ? `<ol>${sessions.map((session) => `<li><div><b>${formatDate(session.connected_at)}</b><time>${session.active ? t("activeSession") : formatDuration(session.duration_seconds)}</time></div><small>${session.active ? t("connectedSince") : session.inferred ? t("inferredExit") : t("normalExit")}${session.close_reason ? ` · ${escapeHtml(session.close_reason)}` : ""}</small></li>`).join("")}</ol>` : `<p>${t("noHistory")}</p>`}</section><section class="event-history"><h4>${state.locale === "pt" ? "Linha do tempo" : "Timeline"}</h4>${historyMarkup(profile.history || [])}</section>`;
+  return `<div class="profile-facts"><span><small>${t("permission")}</small><b>${escapeHtml(optionLabel(profile.permission || "member"))}</b></span><span><small>${t("lastDeath")}</small><b>${formatDate(profile.last_death_at)}</b></span><span><small>${t("aliases")}</small><b>${aliases.length ? aliases.map(escapeHtml).join(" · ") : "—"}</b></span></div>${deathHistoryMarkup(profile.history || [])}<section class="session-history"><h4>${t("recentSessions")}</h4>${sessionsMarkup(sessions)}</section><section class="event-history"><h4>${state.locale === "pt" ? "Linha do tempo" : "Timeline"}</h4>${historyMarkup(profile.history || [])}</section>`;
 }
 
 function deathHistoryMarkup(events) {

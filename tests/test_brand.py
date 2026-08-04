@@ -59,3 +59,12 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn('class="timeline-timestamp"', script)
         self.assertIn('month: "short"', script)
         self.assertIn(".timeline-timestamp", stylesheet)
+
+    def test_recent_sessions_have_distinct_state_duration_and_period_layout(self) -> None:
+        script = (ROOT / "static" / "app.js").read_text()
+        stylesheet = (ROOT / "static" / "players.css").read_text()
+        self.assertIn('class="session-state"', script)
+        self.assertIn('class="session-duration"', script)
+        self.assertIn('class="session-period"', script)
+        self.assertIn("session.disconnected_at", script)
+        self.assertIn(".session-item.is-inferred", stylesheet)

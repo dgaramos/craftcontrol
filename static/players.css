@@ -143,6 +143,24 @@
 .player-history-grid ol { margin: 0; padding: 0; list-style: none; }
 .player-history-grid li { padding: 10px 0; border-bottom: 1px solid #293029; }
 .player-history-grid li:last-child { border: 0; }
+.session-list { display: grid; gap: 8px; }
+.player-history-grid .session-item { display: grid; grid-template-columns: minmax(140px, 1fr) auto; gap: 12px 18px; padding: 13px; background: #111612; border: 1px solid #344038; }
+.session-state { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.session-state strong, .session-state small { display: block; }
+.session-state strong { color: var(--text); font-size: .76rem; }
+.session-state small { margin-top: 4px; color: var(--muted); font-size: .62rem; }
+.session-status-dot { flex: 0 0 auto; width: 9px; height: 9px; background: #69736c; box-shadow: 0 0 0 2px #293029; }
+.session-item.is-active .session-status-dot { background: var(--grass-light); box-shadow: 0 0 0 2px #245c31; }
+.session-item.is-inferred .session-status-dot { background: var(--sand); box-shadow: 0 0 0 2px #705b2b; }
+.session-duration { min-width: 82px; text-align: right; }
+.session-duration small, .session-duration b { display: block; }
+.session-duration small, .session-period small { color: var(--muted); font-size: .56rem; font-weight: 900; text-transform: uppercase; }
+.session-duration b { margin-top: 4px; color: var(--sand); font-size: .78rem; }
+.session-period { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding-top: 10px; border-top: 1px solid #293029; }
+.session-period > span { min-width: 0; }
+.session-period time { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+.session-period time span { color: var(--muted); font-size: .62rem; text-transform: capitalize; }
+.session-period time b { color: var(--text); font-size: .68rem; }
 .event-history .timeline-list { position: relative; }
 .event-history .timeline-list::before { position: absolute; top: 18px; bottom: 18px; left: 6px; width: 2px; content: ""; background: #344038; }
 .event-history .timeline-item { position: relative; display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 54px; padding: 10px 0; }
@@ -169,4 +187,7 @@
   .event-history .timeline-item { grid-template-columns: 14px minmax(0, 1fr); align-items: start; }
   .timeline-timestamp { grid-column: 2; grid-row: 2; display: flex; min-width: 0; gap: 6px; padding: 0; text-align: left; border: 0; }
   .timeline-timestamp span::after { content: " ·"; }
+  .player-history-grid .session-item { grid-template-columns: 1fr; }
+  .session-duration { padding-left: 19px; text-align: left; }
+  .session-period { grid-column: 1; grid-template-columns: 1fr; }
 }

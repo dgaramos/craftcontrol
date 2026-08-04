@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from functools import wraps
 from typing import Any, Callable
+from urllib.parse import urlsplit
 
 from flask import Blueprint, Flask, current_app, g, jsonify, request
 
@@ -9,6 +10,17 @@ from .service import AuthService
 
 auth_api = Blueprint("auth_api", __name__)
 COOKIE_NAME = "craftcontrol_session"
+CSRF_HEADER = "X-CSRF-Token"
+SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
+CSRF_EXEMPT_PATHS = {"/api/auth/login", "/api/auth/claim"}
+
+
+def _same_origin() -> bool:
+    origin = request.headers.get("Origin")
+    if not origin:
+        return True
+    parsed = urlsplit(origin)
+    return parsed.scheme in {"http", "https"} and parsed.netloc.casefold() == request.host.casefold()
 
 
 def auth_service() -> AuthService:
@@ -27,11 +39,19 @@ def install_auth(app: Flask, service: AuthService, mode: str, secure_cookie: boo
             g.user = {"id": "disabled", "name": "Local administrator", "role": "owner", "capabilities": ["*"]}
             return None
         g.user = service.authenticate(request.cookies.get(COOKIE_NAME))
-        public = request.path == "/" or request.path.startswith("/static/") or request.path == "/api/health" or request.path.startswith("/api/auth/")
-        if public:
-            return None
+        public = (
+            request.path == "/" or request.path.startswith("/static/") or request.path == "/api/health"
+            or request.path in {"/api/auth/me", *CSRF_EXEMPT_PATHS}
+        )
         if g.user is None:
+            if public:
+                return None
             return jsonify(error="authentication required"), 401
+        if request.method not in SAFE_METHODS and request.path not in CSRF_EXEMPT_PATHS:
+            if not _same_origin():
+                return jsonify(error="invalid request origin"), 403
+            if not service.verify_csrf(request.cookies.get(COOKIE_NAME), request.headers.get(CSRF_HEADER)):
+                return jsonify(error="invalid or missing CSRF token"), 403
         return None
 
 
@@ -54,11 +74,14 @@ def require(capability: str):
 def me():
     if getattr(g, "user", None) is None:
         return jsonify(error="authentication required"), 401
-    return jsonify(user=g.user)
+    session_token = request.cookies.get(COOKIE_NAME)
+    if current_app.config["AUTH_MODE"] == "disabled":
+        return jsonify(user=g.user)
+    return jsonify(user=g.user, csrf_token=auth_service().csrf_token(session_token))
 
 
 def _session_response(user: dict[str, Any], token: str):
-    response = jsonify(user=user)
+    response = jsonify(user=user, csrf_token=auth_service().csrf_token(token))
     response.set_cookie(
         COOKIE_NAME, token, max_age=604800, secure=current_app.config["AUTH_COOKIE_SECURE"],
         httponly=True, samesite="Lax", path="/",

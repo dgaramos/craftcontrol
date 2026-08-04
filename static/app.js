@@ -1,6 +1,6 @@
-import { api } from "./js/api.js";
+import { api } from "./js/api.js?v=1";
 import { connectEventStream } from "./js/events.js";
-import { requireSession } from "./js/auth.js";
+import { requireSession } from "./js/auth.js?v=1";
 
 const state = {
   schema: null, config: {}, gamerules: {}, players: [], online: 0, maxPlayers: 0,

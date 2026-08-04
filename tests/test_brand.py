@@ -42,3 +42,12 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn("CraftControl access", script)
         self.assertIn('class="player-server-settings', script)
         self.assertIn("Somente leitura", script)
+
+    def test_browser_api_attaches_session_bound_csrf_header(self) -> None:
+        api_script = (ROOT / "static" / "js" / "api.js").read_text()
+        app_script = (ROOT / "static" / "app.js").read_text()
+        auth_script = (ROOT / "static" / "js" / "auth.js").read_text()
+        self.assertIn('headers["X-CSRF-Token"] = csrfToken', api_script)
+        self.assertIn('typeof data.csrf_token === "string"', api_script)
+        self.assertIn('./js/api.js?v=1', app_script)
+        self.assertIn('./api.js?v=1', auth_script)

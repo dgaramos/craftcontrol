@@ -113,4 +113,66 @@ class AuthServiceTest(unittest.TestCase):
         self.assertIn("HttpOnly", cookie)
         self.assertIn("SameSite=Lax", cookie)
         self.assertEqual(client.get("/api/private", base_url="https://localhost").status_code, 200)
-        self.assertEqual(client.post("/api/world-test", base_url="https://localhost").status_code, 403)
+        csrf_token = response.get_json()["csrf_token"]
+        missing = client.post("/api/world-test", base_url="https://localhost")
+        self.assertEqual(missing.status_code, 403)
+        self.assertEqual(missing.get_json()["error"], "invalid or missing CSRF token")
+        invalid = client.post("/api/world-test", base_url="https://localhost", headers={"X-CSRF-Token": "invalid"})
+        self.assertEqual(invalid.status_code, 403)
+        cross_origin = client.post(
+            "/api/world-test", base_url="https://localhost",
+            headers={"X-CSRF-Token": csrf_token, "Origin": "https://attacker.example"},
+        )
+        self.assertEqual(cross_origin.status_code, 403)
+        self.assertEqual(cross_origin.get_json()["error"], "invalid request origin")
+        authorized_csrf = client.post(
+            "/api/world-test", base_url="https://localhost",
+            headers={"X-CSRF-Token": csrf_token, "Origin": "https://localhost"},
+        )
+        self.assertEqual(authorized_csrf.status_code, 403)
+        self.assertEqual(authorized_csrf.get_json()["error"], "insufficient permission")
+
+    def test_csrf_token_is_session_bound_and_protects_logout(self) -> None:
+        invitation = self.auth.create_invitation("Nicole", "operator")
+        app = Flask(__name__)
+        install_auth(app, self.auth, "local", secure_cookie=False)
+        app.register_blueprint(auth_api)
+        client = app.test_client()
+        claim = client.post("/api/auth/claim", json={
+            "player": "Nicole", "token": invitation, "password": "a sufficiently long password",
+        })
+        csrf_token = claim.get_json()["csrf_token"]
+        self.assertEqual(len(csrf_token), 64)
+        self.assertEqual(client.post("/api/auth/logout").status_code, 403)
+        self.assertEqual(client.get("/api/auth/me").status_code, 200)
+        logout = client.post("/api/auth/logout", headers={"X-CSRF-Token": csrf_token})
+        self.assertEqual(logout.status_code, 200)
+        self.assertEqual(client.get("/api/auth/me").status_code, 401)
+
+    def test_csrf_tokens_cannot_be_reused_across_sessions(self) -> None:
+        first, _ = self.auth.claim(
+            "Nicole", self.auth.create_invitation("Nicole", "operator"), "a sufficiently long password",
+        )
+        second, _ = self.auth.login("Nicole", "a sufficiently long password")
+        self.assertNotEqual(self.auth.csrf_token(first), self.auth.csrf_token(second))
+        self.assertFalse(self.auth.verify_csrf(second, self.auth.csrf_token(first)))
+
+    def test_expired_session_is_rejected_before_csrf_validation(self) -> None:
+        invitation = self.auth.create_invitation("Nicole", "operator")
+        app = Flask(__name__)
+        expired_auth = AuthService(self.path, idle_seconds=-1, absolute_seconds=120)
+        install_auth(app, expired_auth, "local", secure_cookie=False)
+        app.register_blueprint(auth_api)
+
+        @app.post("/api/mutation")
+        @require("server.configure")
+        def mutation():
+            return jsonify(ok=True)
+
+        client = app.test_client()
+        claim = client.post("/api/auth/claim", json={
+            "player": "Nicole", "token": invitation, "password": "a sufficiently long password",
+        })
+        response = client.post("/api/mutation", headers={"X-CSRF-Token": claim.get_json()["csrf_token"]})
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.get_json()["error"], "authentication required")

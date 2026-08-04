@@ -27,6 +27,12 @@ Open the CraftControl login screen, choose **First access or invitation**, enter
 
 Passwords use `scrypt` with independent random salts. Session identifiers are random, stored only as hashes, idle-expire after 12 hours, absolute-expire after 7 days, and are revocable. Login attempts are limited to five failures in 15 minutes per normalized Gamertag.
 
+## CSRF protection
+
+Every authenticated state-changing request requires a synchronizer token in the `X-CSRF-Token` header. The token is cryptographically bound to the opaque session, returned by login, claim, and `/api/auth/me`, and attached automatically by the browser client. A missing token, an invalid token, or a token issued for another session is rejected with `403` before authorization or application code runs. When a browser supplies an `Origin` header, its host must also match the request host.
+
+Login and invitation claim are exempt because they do not rely on an existing authenticated session. `AUTH_MODE=disabled` is an explicit trusted-LAN recovery mode and disables both session authentication and CSRF enforcement.
+
 ## Recovery and invitations
 
 Generate a recovery code for an observed player:
@@ -50,4 +56,4 @@ Tokens are printed once. Do not store them in shell history, tickets, screenshot
 
 `AUTH_MODE=local` enables internal authentication and is the community default. `AUTH_MODE=disabled` exists only as a trusted-LAN recovery compatibility mode and must not be used for Internet exposure. `AUTH_COOKIE_SECURE=true` requires HTTPS, which is the recommended configuration.
 
-Keep Authelia in front of CraftControl until the owner claim, login, logout, recovery, role enforcement, and the following CSRF release are validated. Local authentication replaces Authelia only after those checks pass.
+Keep Authelia in front of CraftControl until owner claim, login, logout, recovery, role enforcement, and CSRF behavior are validated in the deployed environment. Local authentication can replace Authelia after those checks pass, provided HTTPS remains enabled.

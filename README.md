@@ -6,7 +6,7 @@
 </div>
 
 > [!IMPORTANT]
-> CraftControl currently targets trusted private networks. Built-in authentication, CSRF protection, and hardened Docker access are planned but are not part of this release. Do not expose port `8082` directly to the Internet.
+> CraftControl currently targets trusted private networks. Built-in authentication and CSRF protection are active, but TLS termination and hardened Docker access remain deployment requirements. Do not expose port `8082` directly to the Internet.
 
 ## Why CraftControl?
 
@@ -243,6 +243,7 @@ Current safeguards:
 - owner, operator, and viewer capability enforcement in the API;
 - one-time bootstrap, invitation, and recovery codes stored only as hashes;
 - login throttling and security audit records;
+- session-bound CSRF tokens required for every state-changing authenticated request;
 - explicit allowlists for every server action and command;
 - validation of types, ranges, lengths, and characters;
 - atomic `.env` updates;
@@ -252,11 +253,10 @@ Current safeguards:
 
 Current limitations:
 
-- no CSRF protection;
 - no TLS termination;
 - direct Docker socket access.
 
-Panel accounts attach to observed Minecraft player profiles while remaining independent from in-game operator status. See [Local authentication and authorization](docs/authentication.md). Keep an external trusted authentication boundary in place until CSRF protection is delivered and validated; later security work also replaces direct Docker access with a restricted operations boundary.
+Panel accounts attach to observed Minecraft player profiles while remaining independent from in-game operator status. See [Local authentication and authorization](docs/authentication.md). CSRF validation is transparent to the interface: the API issues a token bound to the active opaque session, and the browser sends it in `X-CSRF-Token` for every state-changing request. Keep HTTPS and a trusted external boundary in place until direct Docker access is replaced with a restricted operations boundary.
 
 ## Development
 

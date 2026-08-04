@@ -50,6 +50,16 @@ class AuthService:
     def _token_hash(token: str) -> str:
         return hashlib.sha256(token.encode()).hexdigest()
 
+    @staticmethod
+    def csrf_token(session_token: str) -> str:
+        """Derive a CSRF token bound to an opaque session without persisting another secret."""
+        return hmac.new(session_token.encode(), b"craftcontrol:csrf:v1", hashlib.sha256).hexdigest()
+
+    def verify_csrf(self, session_token: str | None, candidate: str | None) -> bool:
+        if not session_token or not candidate:
+            return False
+        return hmac.compare_digest(self.csrf_token(session_token), candidate)
+
     @classmethod
     def hash_password(cls, password: str) -> str:
         cls.validate_password(password)

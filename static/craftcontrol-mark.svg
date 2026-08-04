@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title description">
+  <title id="title">CraftControl</title>
+  <desc id="description">A pixel-inspired block with three control sliders.</desc>
+  <path fill="#0a0e0c" d="M8 4h48v4h4v48h-4v4H8v-4H4V8h4z"/>
+  <path fill="#1b2420" d="M10 10h44v44H10z"/>
+  <path fill="#26332d" d="M10 10h44v8H10z"/>
+  <path fill="#b6653e" d="M14 22h36v5H14zM14 31h36v5H14zM14 40h36v5H14z"/>
+  <path fill="#f0a06f" d="M14 22h36v2H14zM14 31h36v2H14zM14 40h36v2H14z"/>
+  <path fill="#0a0e0c" d="M21 18h10v13H21zM37 27h10v13H37zM17 36h10v13H17z"/>
+  <path fill="#78d64b" d="M24 21h4v7h-4zM40 30h4v7h-4zM20 39h4v7h-4z"/>
+  <path fill="#b6f58f" d="M24 21h4v2h-4zM40 30h4v2h-4zM20 39h4v2h-4z"/>
+</svg>

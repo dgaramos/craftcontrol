@@ -16,6 +16,7 @@ def create_app(settings: Settings | None = None, service: ManagerService | None 
     settings = settings or Settings.from_env()
     service = service or ManagerService.build(settings)
     app = Flask(__name__, template_folder="../templates", static_folder="../static")
+    app.config["APP_NAME"] = "CraftControl"
     app.extensions["manager_service"] = service
     app.register_blueprint(api)
     service.initialize()

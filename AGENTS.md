@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Maintain a mobile-first, bilingual control panel for the private MalavaziRamos Minecraft Bedrock server. The manager must remain usable without Prometheus, Grafana, the custom exporter, or a behavior pack.
+Maintain CraftControl, a mobile-first, bilingual control panel for Minecraft Bedrock servers. The application must remain usable without Prometheus, Grafana, the custom exporter, or a behavior pack.
 
 ## Required context
 

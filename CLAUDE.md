@@ -1,4 +1,4 @@
-# Claude Project Guide
+# CraftControl Project Guide
 
 Follow `AGENTS.md` as the authoritative project instruction file. Before working, read `README.md` and all Markdown files in `roadmap/` when present. The `roadmap/` directory is private, ignored planning context and must never be committed, published, or included in deployment copies.
 

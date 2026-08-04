@@ -3,16 +3,19 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#101311">
-    <title>MalavaziRamos · Gerenciador</title>
-    <link rel="stylesheet" href="/static/app.css?v=11">
-    <link rel="stylesheet" href="/static/players.css?v=16">
+    <meta name="theme-color" content="#151c18">
+    <meta name="description" content="CraftControl — a mobile-first control center for Minecraft Bedrock servers.">
+    <title>CraftControl · Bedrock control center</title>
+    <link rel="icon" href="/static/craftcontrol-mark.svg" type="image/svg+xml">
+    <link rel="manifest" href="/static/site.webmanifest">
+    <link rel="stylesheet" href="/static/app.css?v=17">
+    <link rel="stylesheet" href="/static/players.css?v=17">
   </head>
   <body>
     <header class="topbar">
       <div class="brand">
-        <div class="block-logo" aria-hidden="true"><span>M</span></div>
-        <div><span class="eyebrow">BEDROCK SERVER</span><h1>MalavaziRamos</h1><span id="status" class="status">Verificando…</span></div>
+        <div class="block-logo"><img src="/static/craftcontrol-mark.svg" alt=""></div>
+        <div class="brand-copy"><span class="eyebrow" data-i18n="brandKicker">CENTRAL BEDROCK</span><h1>Craft<span>Control</span></h1><div class="instance-line"><span id="instance-name">Minecraft Bedrock</span><span aria-hidden="true">•</span><span id="status" class="status">Verificando…</span></div></div>
       </div>
       <div class="top-actions">
         <button id="language" class="language-button" type="button" aria-label="Switch language">EN</button>
@@ -63,6 +66,6 @@
       <div class="dialog-actions"><button data-server="start" data-i18n="start">Iniciar</button><button data-server="restart" data-i18n="restart">Reiniciar</button><button data-server="stop" class="danger" data-i18n="stop">Parar</button></div>
       <button id="close-dialog" class="secondary wide" data-i18n="close">Fechar</button>
     </dialog>
-    <script src="/static/app.js?v=16"></script>
+    <script src="/static/app.js?v=17"></script>
   </body>
 </html>

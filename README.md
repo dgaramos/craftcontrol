@@ -1,470 +1,267 @@
-# Minecraft Bedrock Manager
-
-A mobile-first web control panel for managing a self-hosted Minecraft Bedrock server from a phone, tablet, or desktop browser.
-
-The manager provides a focused graphical interface for common server settings, live gamerules, player presence, world shortcuts, and container operations. It is designed for a private homelab and currently targets the [`itzg/minecraft-bedrock-server`](https://github.com/itzg/docker-minecraft-bedrock-server) container layout used by the companion Bedrock project.
+<div align="center">
+  <img src="static/craftcontrol-mark.svg" width="112" alt="CraftControl logo">
+  <h1>CraftControl</h1>
+  <p><strong>A mobile-first control center for Minecraft Bedrock servers.</strong></p>
+  <p>Manage worlds, players, rules, time, weather, permissions, and structured gameplay statistics without living in a server console.</p>
+</div>
 
 > [!IMPORTANT]
-> This project is intended for trusted local networks. It does not provide built-in authentication and must not be exposed directly to the Internet.
+> CraftControl currently targets trusted private networks. Built-in authentication, CSRF protection, and hardened Docker access are planned but are not part of this release. Do not expose port `8082` directly to the Internet.
 
-## Highlights
+## Why CraftControl?
 
-- Responsive, touch-friendly interface with a Minecraft-inspired visual design
-- Portuguese and English interface with a browser-persisted language preference
-- Contextual help text for every server setting and gamerule
-- Touch-friendly toggles and segmented option controls instead of ambiguous boolean dropdowns
-- Intent-based five-destination navigation with expandable setting sections instead of a technical tab carousel
-- Review drawer for queued persistent changes, with per-item removal before applying and restarting
-- Persistent server settings managed through the Bedrock project's `.env` file
-- Live gamerule updates without editing files or opening a console
-- Current container status and event-driven online-player presence
-- Permanent player profiles with first/last seen, session count, play time, deaths, and event history
-- Player screen with online/offline status, permission, current session, first/last seen, last death, aliases, operator toggles, session history, event timeline, and one-time bootstrap operator provisioning
-- Player roster overview, name search, and all/online/offline/operator filters
-- Optional Bedrock Telemetry behavior-pack integration for authoritative deaths, kills, blocks, damage, distance, and dimensions
-- Clickable online-player overview widget that opens the complete roster and individual histories
-- Manual state refresh from the web interface
-- One-tap shortcuts for day, night, and clear weather
-- Dedicated time and weather workspace with all Bedrock time presets, exact ticks, time advancement, queries, automatic cycles, weather types, and day-count reset
-- Start, stop, restart, and apply operations for the Bedrock container
-- SQLite state cache initialized automatically at startup
-- Strict allowlists for editable properties, gamerules, and console commands
-- No generic command shell exposed by the API
+Bedrock Dedicated Server is powerful, but routine administration still means remembering property names, editing files, issuing console commands, and reconstructing player state from logs. CraftControl turns those operations into a focused interface designed for a phone first.
 
-## Screens and settings
+- **Purposeful controls:** toggles, segmented choices, contextual explanations, and a review drawer instead of a wall of raw fields.
+- **Live world management:** gamerules, time, weather, operators, and safe server lifecycle actions.
+- **Durable player profiles:** presence, aliases, sessions, play time, permissions, deaths, and event history survive disconnects and manager restarts.
+- **Optional world telemetry:** the companion behavior pack adds authoritative kills, blocks, damage, distance, dimensions, and structured death events.
+- **Independent operation:** CraftControl does not require Prometheus, Grafana, Loki, the custom exporter, or the behavior pack.
+- **Bilingual and responsive:** the complete interface works in Portuguese and English on phones, tablets, Steam Deck, and desktop browsers.
 
-The interface groups configuration into practical categories:
+## Interface
 
-- **General:** server name, game mode, difficulty, cheats, and player limit
-- **World:** view distance, simulation distance, world name, seed, world type, and forced game mode
-- **Players:** idle timeout, default permission, allowlist, and Xbox Live authentication
-- **Packs:** required resource packs
-- **Network:** LAN visibility and IPv4/IPv6 Bedrock ports
-- **Advanced:** thread and compression settings
-- **Interface:** coordinates, days played, death messages, and recipe messages
-- **Gameplay:** PvP, keep inventory, natural regeneration, immediate respawn, and spawn radius
-- **Time and weather:** daylight, weather, fire, TNT, and random tick behavior
-- **Mobs, drops, and commands:** the corresponding Bedrock gamerules
+CraftControl uses a Minecraft-inspired visual system without reproducing the game UI. Deepslate surfaces, emerald state, and copper accents keep the application recognizable while preserving readability and touch-friendly interaction.
 
-Persistent settings require the server container to be recreated. Live gamerules and quick actions are sent directly to the running Bedrock server and take effect immediately.
+The five primary destinations are intentionally task-oriented:
+
+| Area | What it manages |
+| --- | --- |
+| Home | Server health, online players, freshness, and common destinations |
+| World | World identity, generation, view distance, time, weather, and cycles |
+| Players | Permanent profiles, sessions, operators, history, and telemetry |
+| Rules | Gameplay, interface, mobs, drops, commands, fire, TNT, and regeneration |
+| Server | Packs, network, compression, threads, and container lifecycle |
+
+Persistent changes enter a review drawer and are applied together. Lightning-marked gamerules take effect immediately.
 
 ## Architecture
 
 ```text
-Mobile or desktop browser
+Phone, tablet, or desktop
           |
-          | HTTP :8082 (LAN only)
+          | HTTP :8082 — trusted LAN only
           v
-Minecraft Bedrock Manager
-  |       |                |
-  |       |                +-- /data/manager.db
-  |       |                    cached state and players
-  |       |
-  |       +-- /minecraft-project/.env
-  |           persistent server configuration
-  |
-  +-- /var/run/docker.sock
-      container status, lifecycle, and Bedrock console access
-          |
-          v
-Minecraft Bedrock Server
+┌────────────────────────────────────────────┐
+│                CraftControl                │
+│                                            │
+│ Flask API ─ Service layer ─ Event runtime  │
+│     │             │              │         │
+│     │             │              └─ SSE    │
+│     │             └─ SQLite player state   │
+│     └─ validated HTTP operations           │
+└───────────────┬────────────────────────────┘
+                │ Docker socket + project mount
+                v
+      itzg/minecraft-bedrock-server
+                │
+                └─ optional telemetry pack
 ```
 
-The manager uses one Gunicorn worker with multiple threads so the in-process refresh lock and background refresh state remain consistent. On startup, it creates the SQLite database if necessary and asynchronously queries the Bedrock container to populate the interface.
+The process intentionally runs with one Gunicorn worker and multiple threads. Its broker, refresh lock, Docker supervisors, and SSE delivery are process-local; multiple workers would duplicate those responsibilities.
 
-## Event-driven synchronization
+### Event-driven state
 
-The manager maintains its own event and reconciliation pipeline. It does not depend on the custom exporter, Prometheus, Grafana, or `mc-monitor`; observability services may be unavailable without affecting management operations.
-
-The optional `minecraft-bedrock-telemetry` behavior pack extends player profiles without becoming a hard dependency. The manager validates `[BEDROCK_TELEMETRY]` schema-1 records, deduplicates incremental events, stores authoritative snapshots in SQLite, and requests a full snapshot through the existing Bedrock stdin connection after manager or pack startup. When the pack is absent, existing presence, sessions, permissions, and derived death parsing continue to work.
+CraftControl avoids browser polling. It follows Bedrock logs and Docker lifecycle events, commits operational events to SQLite, publishes changes through Server-Sent Events, and performs targeted refreshes. A full safety reconciliation runs every 15 minutes by default.
 
 ```text
-Bedrock log stream ------+
-                         |
-Docker event stream -----+--> internal event broker --> SQLite event log
-                         |              |                       |
-Manager operations ------+              +--> targeted updates  +--> SSE --> browser
-                                        |
-15-minute safety timer -----------------+--> full reconciliation
+Bedrock logs ───────┐
+Docker events ──────┼─> event broker ─> SQLite ─> SSE ─> browser
+Manager operations ─┘        │
+                             └─> targeted reconciliation
 ```
 
-### Update rules
+Cached values retain both the last observation time and the last actual change time. Stale values remain visible and are marked instead of being silently replaced with false empty data.
 
-| Signal | Action | Bedrock queries |
-| --- | --- | ---: |
-| Player connected or disconnected | Update presence, profile, session, and permanent history directly from the log | 0 |
-| Recognized player death | Increment the derived death counter and append the raw event to permanent history | 0 |
-| Recognized gamerule activity | Query only the named gamerule or rules | 1 per affected rule |
-| Permission activity | Mark the permissions domain as changed | 0 |
-| Container start or restart | Run a full reconciliation | One batched session |
-| Manager startup | Mark cached data as potentially stale and run a full reconciliation | One batched session |
-| Unknown or lost state | Preserve the last snapshot and use manual or safety reconciliation | One batched session |
-| Stable server | Full safety reconciliation every 900 seconds | Four sessions per hour |
+## Quick start
 
-The full reconciliation currently batches all allowlisted gamerule queries and `list` through one Bedrock console connection. Browser clients never trigger this work through polling.
-
-### Browser updates
-
-`GET /api/events` is a Server-Sent Events stream. The browser keeps one HTTP connection open and refreshes its cached view only after a relevant `state.changed` or server lifecycle event. SSE automatically reconnects and sends `Last-Event-ID`; persisted events newer than that ID are replayed. A keepalive comment is sent every 20 seconds to keep proxies and mobile networks from silently closing the connection.
-
-The Gunicorn process intentionally uses one worker because the broker, refresh lock, and stream supervisors are process-local. Sixteen threads allow several long-lived SSE clients while leaving capacity for API operations.
-
-### Timestamps and freshness
-
-Every cached key stores two timestamps:
-
-- `observed_at`: the latest time the value was confirmed, even when unchanged
-- `changed_at`: the latest time the stored value actually changed
-
-The state API also returns domain-level metadata:
-
-```json
-{
-  "domains": {
-    "gamerules": {
-      "observed_at": 1785792600.0,
-      "changed_at": 1785792000.0,
-      "source": "targeted-console",
-      "freshness": "fresh"
-    }
-  }
-}
-```
-
-A domain becomes `stale` when it has not been observed for 20 minutes. Stale data remains visible instead of being replaced by a false empty value.
-
-### Event topics and retention
-
-The internal broker uses topics such as:
-
-```text
-player.connected
-player.disconnected
-player.death
-player.permission.changed
-telemetry.telemetry.started
-telemetry.snapshot.started
-telemetry.snapshot.player
-telemetry.snapshot.finished
-gamerule.invalidated
-permissions.invalidated
-server.start
-server.restart
-server.die
-state.changed
-state.reconciliation.started
-state.reconciliation.finished
-state.reconciliation.failed
-stream.logs.connected
-stream.logs.disconnected
-```
-
-Operational events are committed to SQLite before being delivered to connected clients. The latest 2,000 broker events are retained. Player history is stored separately and is not affected by this rolling limit. In-memory subscriber queues are bounded; if a slow browser misses events, reconnect replay or the next state snapshot restores consistency.
-
-### Recovery behavior
-
-- **Manager restarts while Bedrock remains online:** persisted state and events load first, then startup reconciliation confirms the current state.
-- **Manager starts while Bedrock is offline:** the last snapshot remains available and a failed reconciliation is recorded; Docker and log stream supervisors retry with exponential backoff.
-- **Bedrock starts or restarts:** the Docker lifecycle event triggers a full reconciliation.
-- **Log or Docker stream disconnects:** a persistent event records the failure and the supervisor reconnects with a 2-to-60-second exponential backoff.
-- **Duplicate player events:** presence transitions are idempotent; repeated connect messages do not create additional sessions.
-- **Abrupt server stop:** Docker `die` or `destroy` events mark remaining players offline and close their sessions as inferred.
-- **Manager downtime:** startup reconciliation compares the persisted roster with the current Bedrock player list and closes stale sessions.
-- **Gamertag changes:** XUID is the internal identity and aliases remain associated with the same profile. XUIDs are not exposed by the public state endpoint.
-- **Duplicate death lines:** short-window fingerprints prevent log reconnects from incrementing the same death twice.
-- **Telemetry replay:** `(sequence, topic, player)` identities make behavior-pack events idempotent; duplicate snapshot lines are ignored.
-- **Telemetry gaps or manager restart:** the manager sends `scriptevent bedrock_telemetry:sync full` directly through the Bedrock stdin attachment and treats the returned per-player snapshots as authoritative.
-- **Behavior pack unavailable:** the last structured snapshot remains visible with its update timestamp, while ordinary manager functions remain independent.
-- **Event bursts:** affected gamerules enter a deduplicated queue with a two-second debounce; the refresh lock serializes targeted and full reconciliation without dropping later rule names.
-- **Unrecognized or externally edited state:** the 15-minute safety reconciliation and manual Refresh button remain the final consistency fallback.
-
-The Python application follows a layered package structure:
-
-```text
-minecraft_manager/
-├── __init__.py      # Flask application factory
-├── routes.py        # HTTP endpoints and response mapping
-├── services.py      # Use-case orchestration and refresh lifecycle
-├── bedrock.py       # Bedrock console adapter and log parsers
-├── docker_ops.py    # Allowlisted container lifecycle operations
-├── files.py         # Atomic .env and server.properties access
-├── repository.py    # SQLite state repository
-├── schema.py        # Editable fields, gamerules, and validation
-└── config.py        # Environment-backed runtime configuration
-```
-
-`wsgi.py` is the production entry point used by Gunicorn. The top-level `app.py` remains only as a compatibility entry point for Flask tooling. HTTP routes contain no direct Docker, filesystem, or SQLite implementation logic, which keeps infrastructure replaceable and the core behavior testable.
-
-## Requirements
+### Requirements
 
 - Docker Engine with the Compose plugin
-- An existing Minecraft Bedrock Compose project
-- A Bedrock container named `minecraft-bedrock`, or a custom name configured through `MINECRAFT_CONTAINER`
-- The manager and Bedrock project stored as sibling directories by default:
+- An existing `itzg/minecraft-bedrock-server` deployment
+- CraftControl and the Bedrock project stored as sibling directories, or a customized project mount
+
+Expected default layout:
 
 ```text
 /mnt/storage/docker/
 ├── minecraft-bedrock/
-└── minecraft-bedrock-manager/
+└── minecraft-bedrock-manager/   # compatibility path in this release
 ```
 
-The default deployment expects the Bedrock project at `../minecraft-bedrock` relative to this repository.
-
-## Installation
-
-Clone or copy the project into the Docker services directory:
+Create the local configuration and start the service:
 
 ```bash
-cd /mnt/storage/docker/minecraft-bedrock-manager
 cp .env.example .env
 docker compose up -d --build
-```
-
-Confirm that the container is healthy:
-
-```bash
 docker compose ps
-docker compose logs --tail=100 minecraft-bedrock-manager
 ```
 
-Open the manager from another device on the same local network:
+Open the interface from a device on the same network:
 
 ```text
 http://HOST_IP:8082
 ```
 
-Replace `HOST_IP` with the LAN address of the Docker host, for example `192.168.1.50`.
+The planned homelab hostname is `craftcontrol.lab.home.arpa`; DNS and reverse-proxy configuration remain external to this release.
 
 ## Configuration
 
-The manager's own configuration is stored in `.env`:
-
-| Variable | Default | Description |
+| Variable | Default | Purpose |
 | --- | --- | --- |
-| `MANAGER_PORT` | `8082` | Host TCP port used by the web interface |
-| `MINECRAFT_CONTAINER` | `minecraft-bedrock` | Name of the managed Bedrock container |
-| `MINECRAFT_PROJECT` | `/minecraft-project` | Bedrock project path inside the manager container |
-| `DATABASE_PATH` | `/data/manager.db` | SQLite cache location inside the container |
-| `CONSOLE_WAIT_SECONDS` | `1` | Delay before reading Bedrock console responses |
-| `BOOTSTRAP_OPERATOR` | `VonCrush` | Player promoted once when first observed online; later UI changes are respected |
-| `RECONCILE_SECONDS` | `900` | Interval for the standalone full safety reconciliation |
+| `MANAGER_PORT` | `8082` | Compatibility host port for the web interface |
+| `MINECRAFT_CONTAINER` | `minecraft-bedrock` | Bedrock container managed by CraftControl |
+| `MINECRAFT_PROJECT` | `/minecraft-project` | Bedrock Compose project inside CraftControl |
+| `DATABASE_PATH` | `/data/manager.db` | Existing SQLite state and player-history database |
+| `CONSOLE_WAIT_SECONDS` | `1` | Delay before reading console responses |
+| `BOOTSTRAP_OPERATOR` | `VonCrush` | Player provisioned once as the initial in-game operator |
+| `RECONCILE_SECONDS` | `900` | Full safety-reconciliation interval |
 | `TZ` | `America/Sao_Paulo` | Container timezone |
 
-The host-side Bedrock project mount is defined in `docker-compose.yml`:
+The old service name, container name, database filename, Python package, and variables remain supported deliberately. This visual rebrand does not destructively rename persistent paths. Compatibility migrations will be released separately.
 
-```yaml
-- ../minecraft-bedrock:/minecraft-project
-```
+## Player history
 
-If the projects are not sibling directories, update the source side of this mount. The `MINECRAFT_PROJECT` variable normally should remain `/minecraft-project` because it represents the path inside the manager container.
+CraftControl stores permanent player data in `./data/manager.db`:
 
-## How configuration changes work
+- private XUID-backed identity and public opaque profile ID;
+- current Gamertag and preserved aliases;
+- online/offline state and active session;
+- session count and accumulated play time;
+- operator and Bedrock permission state;
+- connection, disconnection, permission, and death history;
+- optional structured behavior-pack statistics.
 
-There are two distinct update paths:
+XUIDs never appear in public API responses or the interface. Disconnecting a player closes the session and marks the profile offline; it never deletes the profile.
 
-### Persistent server settings
+### Death data
 
-1. The manager validates the submitted value against its allowlist and type constraints.
-2. It updates the Minecraft Bedrock project's `.env` file atomically.
-3. The value is stored in the manager cache.
-4. The interface applies the change by recreating the Bedrock service with Docker Compose.
+Without the behavior pack, death messages are parsed from server logs and explicitly shown as derived data. With structured telemetry active, new death events are stored with the cause, killer entity or player, and projectile when Bedrock supplies them. Aggregate snapshots recover totals but cannot reconstruct details for older events.
 
-The world data directory is not replaced or deleted during this operation.
+## Optional telemetry pack
 
-### Live gamerules and world actions
+The companion Bedrock behavior pack runs inside the world and emits schema-versioned JSON through content logs. CraftControl consumes incremental events and requests authoritative snapshots after startup, reconnects, manual refreshes, and recovery.
 
-Gamerules and quick actions are validated against fixed allowlists and sent to the running Bedrock process through its console connection. They do not require a container restart.
+Current structured metrics include:
 
-The **Day** and **Night** buttons only set the current world time. They do not enable or disable the daylight cycle; use the corresponding gamerule for that behavior.
+- joins, leaves, respawns, and first/last observation;
+- deaths, player kills, mob kills, causes, and projectiles;
+- blocks broken and placed, including bounded per-type totals;
+- damage dealt and received;
+- sampled horizontal distance;
+- dimensions visited.
 
-## Player profiles, sessions, and history
-
-The manager keeps a small SQLite cache at:
-
-```text
-./data/manager.db
-```
-
-The database stores cached server state plus permanent player profiles, aliases, sessions, and history. A disconnected player is never removed: their status changes to offline, `last_seen_at` is updated, and the open session is closed. The Players screen lists everyone observed by the manager, provides search and presence/role filters, summarizes the roster, and opens individual session and event histories. Public responses use an opaque profile identifier and never expose the player's XUID.
-
-Online players are updated immediately from connection/disconnection log events and periodically reconciled with the Bedrock console. Connected-session time is calculated live and committed when the session closes. Container termination closes any remaining session with an `inferred` marker so an abrupt stop does not leave players permanently online.
-
-### Death counters
-
-Death tracking currently parses Bedrock death messages for players already known to the manager. Each accepted event stores the original log line, parsed cause, source, timestamp, and `derived: true`. A fingerprint deduplicates the same line when the Docker log stream reconnects.
-
-This counter is intentionally presented as derived rather than authoritative: message wording can change across Bedrock versions or languages, and deaths that occur while the manager is unavailable may not be observed. Keep the `showdeathmessages` gamerule enabled for this integration. A future optional behavior pack can emit structured death events through the Bedrock Script API when fully authoritative victim, cause, and killer data is required. The manager otherwise remains independent of behavior packs and the Prometheus exporter.
-
-Statistics such as blocks mined, distance traveled, inventory, and achievements are not inferred from ordinary server logs and require world-side instrumentation.
-
-### Structured behavior-pack statistics
-
-When the optional telemetry pack is installed and Bedrock content logging is enabled, the player detail view adds authoritative player kills, mob kills, blocks broken and placed, damage dealt and received, sampled distance, and dimensions visited. Structured death totals replace the derived log counter; the UI keeps the asterisk only while it is using the fallback parser.
-
-The integration requires `CONTENT_LOG_CONSOLE_OUTPUT_ENABLED=true` on the `itzg/minecraft-bedrock-server` container. It does not require Microsoft's `emit-server-telemetry` setting, outbound networking, the Prometheus exporter, or experimental Script APIs.
-
-## Container operations
-
-The **Server** menu provides these operations:
-
-- **Start:** starts the `minecraft-bedrock` Compose service
-- **Restart:** restarts the configured Bedrock container
-- **Stop:** stops the configured Bedrock container
-- **Apply:** recreates the Bedrock service after persistent configuration changes
-
-Equivalent commands for the manager itself are:
-
-```bash
-cd /mnt/storage/docker/minecraft-bedrock-manager
-docker compose restart
-docker compose stop
-docker compose up -d
-```
-
-## Updating
-
-If the deployment directory is a Git checkout:
-
-```bash
-cd /mnt/storage/docker/minecraft-bedrock-manager
-git pull --ff-only
-docker compose up -d --build
-```
-
-If development and deployment use separate directories, copy the updated source files into the deployment directory and rebuild the service. The current Compose file bind-mounts `app.py`, `wsgi.py`, `minecraft_manager/`, `static/`, and `templates/`, but rebuilding is still recommended when dependencies or the Dockerfile change.
+The manager remains fully usable when the pack is absent or temporarily unavailable. The future **CraftControl Telemetry Pack** integration will provide native status, installation, upgrade, disable, removal, backup, and rollback commands.
 
 ## Data and backups
 
-The manager does not store Minecraft world data. The Bedrock world's files remain in the separate Minecraft server project, normally under:
+CraftControl does not store the Minecraft world. World data remains in the Bedrock project, normally:
 
 ```text
 /mnt/storage/docker/minecraft-bedrock/data/
 ```
 
-The manager database lives in `./data/manager.db`. Cached server settings can be reconstructed, but player profiles, session durations, aliases, permission history, and derived death history cannot be fully rebuilt after the original logs disappear. Back up this database if player history matters to you.
+CraftControl state lives in:
 
-World backup and restore procedures must be performed against the Minecraft Bedrock project, not this manager repository.
+```text
+./data/manager.db
+```
 
-## API overview
+Back up `manager.db` together with its `-wal` and `-shm` companions when present. Cached settings can be reconstructed; player aliases, sessions, detailed history, and manager-side event evidence cannot always be rebuilt from a world backup.
 
-The browser uses a small JSON API:
+## Updating
+
+For an in-place Git checkout:
+
+```bash
+git pull --ff-only
+docker compose up -d --build
+```
+
+When development and deployment use separate directories, copy the source while preserving `.env` and `data/`, then rebuild. Never overwrite the world or manager database as part of an application update.
+
+## API
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
-| `GET` | `/api/status` | Read the Bedrock container status |
-| `GET` | `/api/schema` | Read the editable settings schema |
-| `GET` | `/api/state` | Read cached settings, gamerules, and players |
-| `POST` | `/api/refresh` | Start an asynchronous state refresh |
-| `GET` | `/api/events` | Receive persisted and live state notifications over SSE |
-| `PUT` | `/api/config` | Validate and save persistent settings |
-| `PUT` | `/api/gamerules/<rule>` | Change an allowlisted gamerule |
-| `GET` | `/api/players` | List every known player with presence, aggregate sessions, play time, deaths, and operator state |
-| `GET` | `/api/players/profile/<identity>` | Read one player's aliases, recent sessions, aggregate status, and permanent event timeline; the opaque identity must not be interpreted by clients |
-| `PUT` | `/api/players/<name>/operator` | Grant or revoke operator access for a known player |
+| `GET` | `/api/status` | Bedrock container status |
+| `GET` | `/api/schema` | Editable settings and gamerule schema |
+| `GET` | `/api/state` | Cached server state and freshness |
+| `POST` | `/api/refresh` | Asynchronous full reconciliation and telemetry snapshot |
+| `GET` | `/api/events` | Persisted and live SSE notifications |
+| `GET` | `/api/players` | Permanent player roster |
+| `GET` | `/api/players/profile/<id>` | One opaque player profile and history |
+| `PUT` | `/api/players/<name>/operator` | Grant or revoke in-game operator status |
+| `PUT` | `/api/config` | Validate and queue persistent configuration |
+| `PUT` | `/api/gamerules/<rule>` | Apply an allowlisted gamerule |
 | `POST` | `/api/world/<action>` | Run an allowlisted world shortcut |
-| `POST` | `/api/time/<action>` | Run a validated time, cycle, query, or weather operation |
+| `POST` | `/api/time/<action>` | Run validated time and weather operations |
 | `POST` | `/api/server/<action>` | Start, stop, restart, or apply the server |
 
-This API is an internal implementation interface and may change before a stable release.
+This is an internal API and may evolve before a stable release. There is no arbitrary console or shell endpoint.
 
-## Security model
+## Security status
 
-The manager mounts `/var/run/docker.sock` to inspect and operate the Bedrock container. Access to the Docker socket is effectively administrative access to the Docker host, even though this application restricts its own API to fixed operations.
+Current safeguards:
 
-Current safeguards include:
+- explicit allowlists for every server action and command;
+- validation of types, ranges, lengths, and characters;
+- atomic `.env` updates;
+- no XUID exposure;
+- `no-new-privileges` on the application container;
+- no dependency on outbound telemetry or observability services.
 
-- No generic console or shell endpoint
-- Fixed allowlists for server operations, gamerules, and world commands
-- Input type, range, length, and character validation
-- Atomic writes to the Bedrock `.env` file
-- `no-new-privileges` enabled for the manager container
+Current limitations:
 
-Current limitations include:
+- no built-in authentication or authorization;
+- no CSRF protection;
+- no TLS termination;
+- direct Docker socket access.
 
-- No built-in authentication or authorization
-- No CSRF protection
-- No TLS termination
-- Direct Docker socket access
-
-Keep port `8082` restricted to a trusted LAN. Before any Internet-facing deployment, place the service behind an authenticated reverse proxy such as Authelia and add CSRF protection. A restricted Docker socket proxy or dedicated operations gateway is also recommended.
-
-## Troubleshooting
-
-### The interface loads but server actions fail
-
-Verify the container name and project mount:
-
-```bash
-docker inspect minecraft-bedrock
-docker compose exec minecraft-bedrock-manager ls -la /minecraft-project
-```
-
-### Current gamerules are not displayed
-
-The Bedrock container must be running and accepting console input. Press **Refresh**, wait a few seconds, and inspect the manager logs:
-
-```bash
-docker compose logs --tail=200 minecraft-bedrock-manager
-```
-
-### Online players are missing or stale
-
-Press **Refresh** while players are connected. The manager queries the console and scans recent connection logs, so a newly recreated Bedrock container may have limited history.
-
-### Behavior-pack telemetry remains unavailable
-
-The manager requests a full telemetry snapshot when its Bedrock log stream connects and on every full refresh, including the manual **Refresh** action. It consumes events continuously from that stream and also reads snapshot responses directly as a recovery path. Duplicate envelopes are safe: schema and sequence identifiers make ingestion idempotent. A completed empty snapshot is valid when nobody is online; a player must join at least once after the pack is active before the pack can report that player's structured statistics.
-
-### A death is missing or counted incorrectly
-
-Confirm that the `showdeathmessages` gamerule is enabled and inspect the Bedrock log wording. Death statistics are derived from recognized messages and are not authoritative. Keep the original line when reporting a parser issue so a sanitized regression fixture can be added. Replayed identical lines are deduplicated in a short time window.
-
-When the behavior pack is active, new player deaths are also stored as structured history entries. The player profile presents them in a dedicated death-history section with the recorded cause, killer entity or player, and projectile when Bedrock supplies those fields. Aggregate snapshots can recover counters, but they cannot reconstruct the details of deaths that happened before structured event persistence was enabled.
-
-### Player history must be backed up
-
-Stop or quiesce writes to the manager database, then copy `./data/manager.db` together with its `-wal` and `-shm` companions when present. A future release will provide a coordinated backup/export operation; copying only the world does not preserve manager-side player history.
-
-### Changes are saved but not active
-
-Persistent settings require the Bedrock container to be recreated. Use **Save changes** in the interface or recreate the server from its Compose project.
+The planned community security model attaches panel accounts to observed Minecraft player profiles, uses one-time invitations and local password authentication, keeps panel roles separate from in-game operator status, adds server-side sessions and CSRF protection, and later replaces direct Docker access with a restricted operations boundary.
 
 ## Development
 
-The application uses:
+CraftControl uses Python 3.12, Flask, Gunicorn, SQLite, Docker SDK for Python, and dependency-free browser JavaScript.
 
-- Python 3.12
-- Flask
-- Gunicorn
-- Docker SDK for Python
-- SQLite
-- Vanilla HTML, CSS, and JavaScript
-
-Run syntax checks before committing changes:
+Run the complete quality gate:
 
 ```bash
 python -m unittest discover -s tests -v
 python -m compileall -q minecraft_manager app.py wsgi.py
 node --check static/app.js
 docker compose config --quiet
+git diff --check
+```
+
+The application follows a layered structure:
+
+```text
+minecraft_manager/
+├── routes.py       # HTTP mapping
+├── services.py     # use-case orchestration
+├── repository.py   # SQLite persistence
+├── runtime.py      # log and Docker event supervisors
+├── bedrock.py      # console adapter and parsers
+├── docker_ops.py   # allowlisted lifecycle operations
+├── files.py        # atomic configuration access
+├── telemetry.py   # structured envelope validation
+├── schema.py       # editable fields and validation
+└── config.py       # environment-backed settings
 ```
 
 ## Roadmap
 
-- Authelia integration and trusted-proxy configuration
-- CSRF protection
-- Restricted Docker socket proxy or minimal operations gateway
-- Player search, filters, pagination, and detailed session views
-- Coordinated backup, restore, and export for durable player history
-- Optional behavior-pack integration for authoritative structured player statistics
-- Allowlist and operator management
-- Backup and restore controls for the Bedrock world
-- Audit log for configuration and lifecycle changes
-- Prometheus metrics and Grafana dashboard links
-- Automated tests and release images
+The immediate direction is:
+
+1. complete the CraftControl visual and compatibility rebrand;
+2. integrate the independently versioned CraftControl Telemetry Pack;
+3. add player-backed local accounts, roles, sessions, and CSRF protection;
+4. expand deaths, rankings, mining, building, combat, exploration, and activity analytics;
+5. add coordinated backup, export, retention, and operational diagnostics.
 
 ## License and trademarks
 
-No license has been declared for this repository yet. All rights remain with the repository owner unless a license is added.
+No project license has been declared yet. All rights remain with the repository owner until a license is added.
 
-This is an independent homelab project and is not affiliated with Mojang Studios or Microsoft. Minecraft is a trademark of Microsoft Corporation.
+CraftControl is an independent project and is not affiliated with Mojang Studios or Microsoft. Minecraft is a trademark of Microsoft Corporation.

@@ -1,7 +1,7 @@
 const state = {
   schema: null, config: {}, gamerules: {}, players: [], online: 0, maxPlayers: 0,
   changes: {}, tab: "home", tabs: ["home", "world", "players", "rules", "server"], status: null, updatedAt: 0, domains: {},
-  locale: localStorage.getItem("manager-locale") === "en" ? "en" : "pt",
+  locale: (localStorage.getItem("craftcontrol-locale") || localStorage.getItem("manager-locale")) === "en" ? "en" : "pt",
 };
 const $ = (selector) => document.querySelector(selector);
 const content = $("#content");
@@ -11,6 +11,7 @@ window.addEventListener("pageshow", () => requestAnimationFrame(() => window.scr
 
 const messages = {
   pt: {
+    brandKicker: "CENTRAL BEDROCK",
     refresh: "Atualizar", worldState: "ESTADO DO MUNDO", quickActions: "Ações rápidas",
     day: "Dia", night: "Noite", clearWeather: "Clima limpo", server: "Servidor",
     saveChanges: "Salvar alterações", control: "CONTROLE", serverOperation: "Operação do servidor",
@@ -58,6 +59,7 @@ const messages = {
     confirmedAt: "Confirmado",
   },
   en: {
+    brandKicker: "BEDROCK CONTROL CENTER",
     refresh: "Refresh", worldState: "WORLD STATE", quickActions: "Quick actions",
     day: "Day", night: "Night", clearWeather: "Clear weather", server: "Server",
     saveChanges: "Save changes", control: "CONTROL", serverOperation: "Server operation",
@@ -540,6 +542,12 @@ function showPlayers(snapshot) {
   $("#updated-at").textContent = state.updatedAt ? `${t("updated")} ${new Date(state.updatedAt * 1000).toLocaleTimeString(state.locale === "en" ? "en-US" : "pt-BR")}` : t("awaiting");
 }
 
+function updateBrand() {
+  const name = state.config.SERVER_NAME || "Minecraft Bedrock";
+  $("#instance-name").textContent = name;
+  document.title = `CraftControl · ${name}`;
+}
+
 function applyLocale() {
   document.documentElement.lang = state.locale === "en" ? "en" : "pt-BR";
   document.querySelectorAll("[data-i18n]").forEach((element) => { element.textContent = t(element.dataset.i18n); });
@@ -550,6 +558,7 @@ function applyLocale() {
   updateSaveLabel();
   if (state.status) setStatus(state.status);
   showPlayers({ players: state.players, online: state.online, max_players: state.maxPlayers, updated_at: state.updatedAt });
+  updateBrand();
 }
 
 async function loadState() {
@@ -557,6 +566,7 @@ async function loadState() {
   state.config = snapshot.settings || {};
   state.gamerules = snapshot.gamerules || {};
   state.domains = snapshot.domains || {};
+  updateBrand();
   showPlayers(snapshot);
   render();
 }
@@ -567,6 +577,7 @@ async function boot() {
   state.config = snapshot.settings || {};
   state.gamerules = snapshot.gamerules || {};
   state.domains = snapshot.domains || {};
+  updateBrand();
   showPlayers(snapshot);
   setStatus(status);
   applyLocale();
@@ -593,7 +604,7 @@ function connectEvents() {
 
 $("#language").onclick = () => {
   state.locale = state.locale === "pt" ? "en" : "pt";
-  localStorage.setItem("manager-locale", state.locale);
+  localStorage.setItem("craftcontrol-locale", state.locale);
   applyLocale();
 };
 

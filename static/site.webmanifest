@@ -1,0 +1,12 @@
+{
+  "name": "CraftControl",
+  "short_name": "CraftControl",
+  "description": "A mobile-first control center for Minecraft Bedrock servers.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b100d",
+  "theme_color": "#151c18",
+  "icons": [
+    { "src": "/static/craftcontrol-mark.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

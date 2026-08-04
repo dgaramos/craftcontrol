@@ -49,6 +49,7 @@ The behavior pack is not another Docker service. Its source is maintained indepe
 - Metadata and every player shard are checked independently against the 30 KB safety limit; an oversized write is refused instead of corrupting persisted state.
 - Persisted storage and log protocol have independent versions. Legacy storage is validated and migrated before event subscriptions begin.
 - The original legacy JSON is retained at `bedrock_telemetry:state_backup_v0`; failed, corrupt, oversized, or future-version state blocks writes instead of being replaced with empty counters.
+- Every optional stable event is capability-checked before subscription. Unavailable signals disable only their corresponding metric and are reported once in logs and every authoritative snapshot.
 
 See [docs/protocol.md](docs/protocol.md) for the wire contract.
 
@@ -94,7 +95,7 @@ The runtime integration test loads the production `main.js` through a determinis
 The package command creates:
 
 ```text
-dist/craftcontrol-telemetry-0.2.2.mcpack
+dist/craftcontrol-telemetry-0.2.3.mcpack
 ```
 
 Packaging uses sorted paths, normalized timestamps, and stripped ZIP metadata so the standalone repository and CraftControl subtree produce byte-equivalent artifacts from the same commit.
@@ -145,6 +146,10 @@ Release `0.2.2` introduces sharded storage schema version `2`, independently fro
 On normal writes, player shards are persisted before metadata. Startup discovers every shard and promotes metadata to the highest shard sequence when recovering from an interrupted write, preventing sequence reuse. One large roster can therefore no longer exhaust a single dynamic-property value.
 
 Migration failures never fall back to writable empty state. Persistence is blocked for that runtime, the original dynamic property remains untouched, and startup/snapshot envelopes report the blocked storage status for the manager. Unknown future storage versions are treated the same way, preventing an older pack from downgrading a newer world's data.
+
+## Runtime capabilities
+
+Release `0.2.3` probes stable Bedrock event signals before subscribing. Joins, leaves, respawns, deaths and kills, damage, broken and placed blocks, dimension changes, movement sampling, and snapshot requests are reported independently. A missing or throwing optional signal produces one `[BEDROCK_TELEMETRY_CAPABILITY]` warning and leaves the rest of the pack running. `telemetry.started` and `snapshot.started` include the complete capability map so consumers never present an unavailable metric as silently authoritative.
 
 ## Performance and limitations
 

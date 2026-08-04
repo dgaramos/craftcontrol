@@ -2,6 +2,7 @@ import { system, world } from "@minecraft/server";
 import { ensurePlayer, horizontalDistance, incrementMap, round } from "./model.js";
 import { flush, loadState, mutatePlayer, storageStatus } from "./store.js";
 import { publish, publishSnapshot } from "./transport.js";
+import { capabilitySnapshot, startMovementSampling, subscribeScriptEvents, subscribeWorldEvent } from "./capabilities.js";
 
 const positions = new Map();
 
@@ -13,25 +14,25 @@ function update(name, callback) {
   return mutatePlayer(name, (state) => callback(ensurePlayer(state, name)));
 }
 
-world.afterEvents.playerJoin.subscribe((event) => {
+subscribeWorldEvent("playerJoin", "playerJoins", (event) => {
   update(event.playerName, (stats) => { stats.joins += 1; });
   publish("player.joined", event.playerName);
 });
 
-world.afterEvents.playerLeave.subscribe((event) => {
+subscribeWorldEvent("playerLeave", "playerLeaves", (event) => {
   positions.delete(event.playerId);
   update(event.playerName, () => {});
   publish("player.left", event.playerName);
 });
 
-world.afterEvents.playerSpawn.subscribe((event) => {
+subscribeWorldEvent("playerSpawn", "playerRespawns", (event) => {
   const player = event.player;
   update(player.name, () => {});
   positions.set(player.id, { ...player.location, dimension: player.dimension.id });
   if (!event.initialSpawn) publish("player.respawned", player.name);
 });
 
-world.afterEvents.entityDie.subscribe((event) => {
+subscribeWorldEvent("entityDie", "deathsAndKills", (event) => {
   const victim = playerName(event.deadEntity);
   const killer = playerName(event.damageSource.damagingEntity);
   const cause = String(event.damageSource.cause);
@@ -50,14 +51,14 @@ world.afterEvents.entityDie.subscribe((event) => {
   });
 });
 
-world.afterEvents.entityHurt.subscribe((event) => {
+subscribeWorldEvent("entityHurt", "damageAggregates", (event) => {
   const victim = playerName(event.hurtEntity);
   const attacker = playerName(event.damageSource.damagingEntity);
   if (victim) update(victim, (stats) => { stats.damageTaken = round(stats.damageTaken + event.damage); });
   if (attacker) update(attacker, (stats) => { stats.damageDealt = round(stats.damageDealt + event.damage); });
 });
 
-world.afterEvents.playerBreakBlock.subscribe((event) => {
+subscribeWorldEvent("playerBreakBlock", "blocksBroken", (event) => {
   const type = event.brokenBlockPermutation?.type?.id || "minecraft:unknown";
   update(event.player.name, (stats) => {
     stats.blocksBroken += 1;
@@ -66,7 +67,7 @@ world.afterEvents.playerBreakBlock.subscribe((event) => {
   publish("block.broken", event.player.name, { blockType: type });
 });
 
-world.afterEvents.playerPlaceBlock.subscribe((event) => {
+subscribeWorldEvent("playerPlaceBlock", "blocksPlaced", (event) => {
   const type = event.block?.typeId || "minecraft:unknown";
   update(event.player.name, (stats) => {
     stats.blocksPlaced += 1;
@@ -75,17 +76,17 @@ world.afterEvents.playerPlaceBlock.subscribe((event) => {
   publish("block.placed", event.player.name, { blockType: type });
 });
 
-world.afterEvents.playerDimensionChange.subscribe((event) => {
+subscribeWorldEvent("playerDimensionChange", "dimensionChanges", (event) => {
   update(event.player.name, (stats) => incrementMap(stats.dimensions, event.toDimension.id, 1, 8));
   positions.set(event.player.id, { ...event.toLocation, dimension: event.toDimension.id });
   publish("player.dimension.changed", event.player.name, { from: event.fromDimension.id, to: event.toDimension.id });
 });
 
-system.afterEvents.scriptEventReceive.subscribe((event) => {
+subscribeScriptEvents((event) => {
   if (event.id === "bedrock_telemetry:sync") system.run(publishSnapshot);
 });
 
-system.runInterval(() => {
+startMovementSampling(() => {
   for (const player of world.getAllPlayers()) {
     const previous = positions.get(player.id);
     const current = { ...player.location, dimension: player.dimension.id };
@@ -100,6 +101,6 @@ system.runInterval(() => {
 
 system.runTimeout(() => {
   loadState();
-  publish("telemetry.started", null, { version: "0.2.2", product: "CraftControl Telemetry Pack", storage: storageStatus() });
+  publish("telemetry.started", null, { version: "0.2.3", product: "CraftControl Telemetry Pack", storage: storageStatus(), capabilities: capabilitySnapshot() });
   publishSnapshot();
 }, 1);

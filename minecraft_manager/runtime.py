@@ -55,10 +55,10 @@ class EventRuntime:
                 self.broker.publish("stream.logs.connected", "docker-logs")
                 threading.Timer(3, lambda: self.service.refresh_async(reason="log-stream-connected")).start()
                 threading.Timer(5, lambda: self.service.request_telemetry_snapshot_async("log-stream-connected")).start()
-                for raw in container.logs(stream=True, follow=True, since=int(time.time()) - 2):
+                for line in self._decoded_log_lines(container.logs(stream=True, follow=True, since=int(time.time()) - 2)):
                     if self._stop.is_set():
                         return
-                    self._handle_log(raw.decode("utf-8", errors="replace").strip())
+                    self._handle_log(line)
                 raise RuntimeError("Bedrock log stream ended")
             except Exception as error:
                 self.broker.publish("stream.logs.disconnected", "docker-logs", {"error": str(error)[:240]})
@@ -67,6 +67,18 @@ class EventRuntime:
             finally:
                 if client is not None:
                     client.close()
+
+    @staticmethod
+    def _decoded_log_lines(chunks: Any):
+        pending = ""
+        for raw in chunks:
+            pending += raw.decode("utf-8", errors="replace")
+            while "\n" in pending:
+                line, pending = pending.split("\n", 1)
+                if line.strip():
+                    yield line.rstrip("\r")
+        if pending.strip():
+            yield pending.rstrip("\r")
 
     def _handle_log(self, line: str) -> None:
         if TELEMETRY_PREFIX in line:

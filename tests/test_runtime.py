@@ -9,6 +9,10 @@ class FakeService:
 
 
 class RuntimeParserTest(unittest.TestCase):
+    def test_frames_multiple_and_partial_lines_from_docker_chunks(self) -> None:
+        chunks = [b"first line\nsecond", b" line\r\nthird line"]
+        self.assertEqual(list(EventRuntime._decoded_log_lines(chunks)), ["first line", "second line", "third line"])
+
     def setUp(self) -> None:
         self.runtime = object.__new__(EventRuntime)
         self.runtime.service = FakeService()

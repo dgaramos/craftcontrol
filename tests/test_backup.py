@@ -1,4 +1,5 @@
 import json
+import stat
 import sqlite3
 import tarfile
 import tempfile
@@ -59,6 +60,8 @@ class BackupServiceTest(unittest.TestCase):
         manifest = json.loads((self.root / "backups" / identifier / "manifest.json").read_text())
         self.assertEqual(manifest["world"], "BedrockLevel")
         self.assertEqual(manifest["database_schema"], 1)
+        self.assertEqual(stat.S_IMODE((self.root / "backups" / identifier).stat().st_mode), 0o750)
+        self.assertEqual(stat.S_IMODE((self.root / "backups" / identifier / "manifest.json").stat().st_mode), 0o640)
         with tarfile.open(self.root / "backups" / identifier / "configuration.tar.gz") as archive:
             self.assertIn(".env", archive.getnames())
             self.assertIn("data/server.properties", archive.getnames())

@@ -66,6 +66,7 @@ class BackupService:
                 manifest = self._manifest(identifier, world_dir.name, staging)
                 (staging / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
                 os.replace(staging, destination)
+                self._normalize_permissions(destination)
             finally:
                 if held:
                     self.console.send(["save", "resume"])
@@ -137,6 +138,7 @@ class BackupService:
         self._backup_database(recovery_root / "manager.db")
         if world_target.exists():
             self._archive(recovery_root / "world.tar.gz", ((world_target, f"worlds/{world_name}"),))
+        self._normalize_permissions(recovery_root)
 
         with tempfile.TemporaryDirectory(prefix=".restore-", dir=self.project / "data") as temporary:
             staging = Path(temporary)
@@ -241,6 +243,18 @@ class BackupService:
             for chunk in iter(lambda: stream.read(1024 * 1024), b""):
                 digest.update(chunk)
         return digest.hexdigest()
+
+    def _normalize_permissions(self, root: Path) -> None:
+        """Keep sensitive artifacts private but manageable by the host data owner."""
+        owner = self.database.parent.stat()
+        for directory, names, files in os.walk(root):
+            current = Path(directory)
+            os.chown(current, owner.st_uid, owner.st_gid)
+            current.chmod(0o750)
+            for name in files:
+                path = current / name
+                os.chown(path, owner.st_uid, owner.st_gid)
+                path.chmod(0o640)
 
 
 def docker_container_running(container: str) -> bool:

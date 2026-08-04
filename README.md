@@ -18,6 +18,7 @@ The manager provides a focused graphical interface for common server settings, l
 - Current container status and cached online-player list
 - Manual state refresh from the web interface
 - One-tap shortcuts for day, night, and clear weather
+- Dedicated time and weather workspace with all Bedrock time presets, exact ticks, time advancement, queries, automatic cycles, weather types, and day-count reset
 - Start, stop, restart, and apply operations for the Bedrock container
 - SQLite state cache initialized automatically at startup
 - Strict allowlists for editable properties, gamerules, and console commands
@@ -228,6 +229,7 @@ The browser uses a small JSON API:
 | `PUT` | `/api/config` | Validate and save persistent settings |
 | `PUT` | `/api/gamerules/<rule>` | Change an allowlisted gamerule |
 | `POST` | `/api/world/<action>` | Run an allowlisted world shortcut |
+| `POST` | `/api/time/<action>` | Run a validated time, cycle, query, or weather operation |
 | `POST` | `/api/server/<action>` | Start, stop, restart, or apply the server |
 
 This API is an internal implementation interface and may change before a stable release.

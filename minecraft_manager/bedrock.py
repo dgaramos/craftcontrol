@@ -23,6 +23,21 @@ class BedrockClient:
         finally:
             client.close()
 
+    def send_and_read(self, parts: list[str]) -> str:
+        import docker as docker_sdk
+
+        if not parts or any(not re.fullmatch(r"[a-z0-9_-]+", part, re.IGNORECASE) for part in parts):
+            raise ValueError("Comando inválido")
+        client = docker_sdk.from_env()
+        try:
+            container = client.containers.get(self.container_name)
+            since = int(time.time()) - 1
+            self._write(container, " ".join(parts) + "\n")
+            time.sleep(self.console_wait_seconds)
+            return container.logs(since=since, tail=50).decode("utf-8", errors="replace")
+        finally:
+            client.close()
+
     @staticmethod
     def _write(container: Any, commands: str) -> None:
         channel = container.attach_socket(params={"stdin": 1, "stream": 1, "stdout": 0, "stderr": 0})

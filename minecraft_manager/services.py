@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import threading
+import re
 from typing import Any
 
 from .bedrock import BedrockClient
@@ -17,6 +18,9 @@ class ManagerService:
         "night": ["time", "set", "night"],
         "clear-weather": ["weather", "clear"],
     }
+    TIME_PRESETS = {"sunrise", "day", "noon", "sunset", "night", "midnight"}
+    WEATHER_TYPES = {"clear", "rain", "thunder"}
+    TIME_QUERIES = {"daytime", "gametime", "day"}
 
     def __init__(self, repository: StateRepository, files: ServerFiles, bedrock: BedrockClient, docker: DockerOperations) -> None:
         self.repository = repository
@@ -87,3 +91,42 @@ class ManagerService:
         if action not in self.WORLD_ACTIONS:
             raise KeyError(action)
         self.bedrock.send(self.WORLD_ACTIONS[action])
+
+    def time_action(self, action: str, payload: Any) -> dict[str, Any]:
+        payload = payload if isinstance(payload, dict) else {}
+        if action == "preset" and payload.get("value") in self.TIME_PRESETS:
+            value = payload["value"]
+            self.bedrock.send(["time", "set", value])
+            return {"action": action, "value": value}
+        if action in {"set", "add"}:
+            value = int(payload.get("value"))
+            minimum, maximum = (0, 24000) if action == "set" else (1, 240000)
+            if value < minimum or value > maximum:
+                raise ValueError("valor fora do intervalo")
+            self.bedrock.send(["time", action, str(value)])
+            return {"action": action, "value": value}
+        if action == "reset-days":
+            self.bedrock.send(["time", "set", "0"])
+            return {"action": action, "value": 0}
+        if action == "query" and payload.get("value") in self.TIME_QUERIES:
+            query = payload["value"]
+            output = self.bedrock.send_and_read(["time", "query", query])
+            numbers = re.findall(r"-?\d+", output)
+            return {"action": action, "query": query, "value": int(numbers[-1]) if numbers else None}
+        if action == "weather" and payload.get("value") in self.WEATHER_TYPES:
+            weather = payload["value"]
+            parts = ["weather", weather]
+            duration = payload.get("duration")
+            if duration not in (None, ""):
+                ticks = int(duration)
+                if ticks < 1 or ticks > 1000000:
+                    raise ValueError("valor fora do intervalo")
+                parts.append(str(ticks))
+            self.bedrock.send(parts)
+            return {"action": action, "value": weather, "duration": duration}
+        if action == "weather-query":
+            output = self.bedrock.send_and_read(["weather", "query"])
+            lowered = output.lower()
+            weather = next((item for item in self.WEATHER_TYPES if item in lowered), "unknown")
+            return {"action": action, "value": weather}
+        raise KeyError(action)

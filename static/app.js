@@ -22,6 +22,17 @@ const messages = {
     stateUpdated: "Estado atualizado", worldUpdated: "Mundo atualizado", operationDone: "Operação concluída",
     confirmAction: (action) => `${action} o servidor?`, saveCount: (count) => `Salvar (${count})`,
     fieldUpdated: (label) => `${label} atualizado`,
+    timeControls: "Tempo e clima", timeControlsHint: "Horário, ciclos e clima", timeOfDay: "Horário do mundo",
+    sunrise: "Nascer do sol", noon: "Meio-dia", sunset: "Pôr do sol", midnight: "Meia-noite",
+    exactTime: "Horário exato", exactTimeHelp: "Defina um valor entre 0 e 24000 ticks.", setTime: "Definir horário",
+    advanceTime: "Avançar tempo", advanceTimeHelp: "Adicione de 1 a 240000 ticks ao relógio atual.", addTime: "Avançar",
+    cycles: "Ciclos automáticos", daylightCycle: "Ciclo de dia e noite", weatherCycle: "Ciclo climático",
+    timeQueries: "Consultar relógio", daytime: "Ticks do dia", gametime: "Tempo total", days: "Dias jogados",
+    queryResult: "Resultado", weatherTitle: "Clima", clear: "Limpo", rain: "Chuva", thunder: "Tempestade",
+    duration: "Duração opcional em ticks", setWeather: "Aplicar clima", queryWeather: "Consultar clima",
+    resetDays: "Zerar contagem de dias", resetDaysHelp: "Define o tempo como tick 0 e reinicia a contagem exibida de dias.",
+    resetDaysConfirm: "Zerar a contagem de dias e definir o relógio como tick 0?", timeUpdated: "Tempo atualizado",
+    queryUnavailable: "O servidor não retornou um valor legível.",
   },
   en: {
     refresh: "Refresh", worldState: "WORLD STATE", quickActions: "Quick actions",
@@ -38,6 +49,17 @@ const messages = {
     stateUpdated: "State updated", worldUpdated: "World updated", operationDone: "Operation completed",
     confirmAction: (action) => `${action} the server?`, saveCount: (count) => `Save (${count})`,
     fieldUpdated: (label) => `${label} updated`,
+    timeControls: "Time & weather", timeControlsHint: "Clock, cycles, and weather", timeOfDay: "World time",
+    sunrise: "Sunrise", noon: "Noon", sunset: "Sunset", midnight: "Midnight",
+    exactTime: "Exact time", exactTimeHelp: "Set a value between 0 and 24000 ticks.", setTime: "Set time",
+    advanceTime: "Advance time", advanceTimeHelp: "Add 1 to 240000 ticks to the current clock.", addTime: "Advance",
+    cycles: "Automatic cycles", daylightCycle: "Daylight cycle", weatherCycle: "Weather cycle",
+    timeQueries: "Query clock", daytime: "Day ticks", gametime: "Total game time", days: "Days played",
+    queryResult: "Result", weatherTitle: "Weather", clear: "Clear", rain: "Rain", thunder: "Thunder",
+    duration: "Optional duration in ticks", setWeather: "Apply weather", queryWeather: "Query weather",
+    resetDays: "Reset day count", resetDaysHelp: "Sets time to tick 0 and resets the displayed day count.",
+    resetDaysConfirm: "Reset the day count and set the clock to tick 0?", timeUpdated: "Time updated",
+    queryUnavailable: "The server did not return a readable value.",
   },
 };
 
@@ -74,6 +96,7 @@ function fieldDescription(definition) {
 }
 
 function groupLabel(group) {
+  if (group === "__time__") return t("timeControls");
   return state.locale === "en" ? (groups[group] || group) : group;
 }
 
@@ -152,6 +175,10 @@ function updateToggleLabel(element) {
 
 function render() {
   if (!state.schema) return;
+  if (state.tab === "__time__") {
+    renderTimePanel();
+    return;
+  }
   const persistent = Object.entries(state.schema.settings).filter(([, definition]) => definition.group === state.tab);
   const live = Object.entries(state.schema.gamerules).filter(([, definition]) => definition.group === state.tab);
   content.innerHTML = `<div class="group"><div class="group-title">${escapeHtml(groupLabel(state.tab))}</div><div class="card">${persistent.map(([key, definition]) => inputFor(key, definition, Object.hasOwn(state.changes, key) ? state.changes[key] : state.config[key])).join("")}${live.map(([key, definition]) => inputFor(key, definition, state.gamerules[key], true)).join("")}</div></div>`;
@@ -181,6 +208,64 @@ function render() {
       }
     });
   });
+}
+
+function renderTimePanel() {
+  const presets = ["sunrise", "day", "noon", "sunset", "night", "midnight"];
+  const presetIcons = { sunrise: "🌅", day: "☀", noon: "◉", sunset: "🌇", night: "☾", midnight: "✦" };
+  content.innerHTML = `
+    <div class="time-screen">
+      <section class="time-card block-panel"><h3>${t("timeOfDay")}</h3><p>${state.locale === "pt" ? "Escolha um momento predefinido do ciclo completo." : "Choose a preset from the complete daylight cycle."}</p><div class="time-presets">${presets.map((preset) => `<button type="button" data-time-preset="${preset}"><span>${presetIcons[preset]}</span>${t(preset)}</button>`).join("")}</div></section>
+      <section class="time-card block-panel"><h3>${t("exactTime")}</h3><p>${t("exactTimeHelp")}</p><div class="command-row"><input id="exact-time" type="number" min="0" max="24000" value="0"><button type="button" id="set-exact-time">${t("setTime")}</button></div><h3 class="subheading">${t("advanceTime")}</h3><p>${t("advanceTimeHelp")}</p><div class="command-row"><input id="add-time" type="number" min="1" max="240000" value="1000"><button type="button" id="add-time-button">${t("addTime")}</button></div></section>
+      <section class="time-card block-panel"><h3>${t("cycles")}</h3><div class="cycle-row"><div><strong>${t("daylightCycle")}</strong><small>${state.locale === "pt" ? "Desative para congelar o horário atual." : "Disable to freeze the current time."}</small></div>${booleanControl("time-daylight-cycle", state.gamerules.dodaylightcycle)}</div><div class="cycle-row"><div><strong>${t("weatherCycle")}</strong><small>${state.locale === "pt" ? "Desative para manter o clima escolhido." : "Disable to keep the selected weather."}</small></div>${booleanControl("time-weather-cycle", state.gamerules.doweathercycle)}</div></section>
+      <section class="time-card block-panel"><h3>${t("weatherTitle")}</h3><p>${state.locale === "pt" ? "Escolha o clima e, se quiser, uma duração em ticks." : "Choose the weather and optionally set a duration in ticks."}</p><div class="weather-options"><button data-weather="clear">☀ ${t("clear")}</button><button data-weather="rain">☂ ${t("rain")}</button><button data-weather="thunder">ϟ ${t("thunder")}</button></div><input id="weather-duration" type="number" min="1" max="1000000" placeholder="${t("duration")}"><button id="weather-query" class="secondary wide">${t("queryWeather")}</button></section>
+      <section class="time-card block-panel"><h3>${t("timeQueries")}</h3><div class="query-buttons"><button data-time-query="daytime">${t("daytime")}</button><button data-time-query="gametime">${t("gametime")}</button><button data-time-query="day">${t("days")}</button></div><output id="time-query-result">${t("queryResult")}: —</output></section>
+      <section class="time-card danger-zone block-panel"><h3>${t("resetDays")}</h3><p>${t("resetDaysHelp")}</p><button id="reset-days" class="danger wide">${t("resetDays")}</button></section>
+    </div>`;
+  bindTimePanel();
+}
+
+async function runTimeAction(action, payload = {}) {
+  const result = await api(`/api/time/${action}`, { method: "POST", body: JSON.stringify(payload) });
+  toast(t("timeUpdated"));
+  return result;
+}
+
+function bindTimePanel() {
+  content.querySelectorAll("[data-time-preset]").forEach((button) => button.onclick = async () => {
+    try { await runTimeAction("preset", { value: button.dataset.timePreset }); } catch (error) { toast(error.message, true); }
+  });
+  $("#set-exact-time").onclick = async () => {
+    try { await runTimeAction("set", { value: $("#exact-time").value }); } catch (error) { toast(error.message, true); }
+  };
+  $("#add-time-button").onclick = async () => {
+    try { await runTimeAction("add", { value: $("#add-time").value }); } catch (error) { toast(error.message, true); }
+  };
+  [["time-daylight-cycle", "dodaylightcycle"], ["time-weather-cycle", "doweathercycle"]].forEach(([id, rule]) => {
+    $(`#${id}`).onchange = async (event) => {
+      updateToggleLabel(event.target);
+      try {
+        await api(`/api/gamerules/${rule}`, { method: "PUT", body: JSON.stringify({ value: event.target.checked }) });
+        state.gamerules[rule] = String(event.target.checked);
+      } catch (error) { toast(error.message, true); renderTimePanel(); }
+    };
+  });
+  content.querySelectorAll("[data-weather]").forEach((button) => button.onclick = async () => {
+    try { await runTimeAction("weather", { value: button.dataset.weather, duration: $("#weather-duration").value }); } catch (error) { toast(error.message, true); }
+  });
+  $("#weather-query").onclick = async () => {
+    try { const result = await runTimeAction("weather-query"); $("#time-query-result").textContent = `${t("queryResult")}: ${t(result.value) || result.value}`; } catch (error) { toast(error.message, true); }
+  };
+  content.querySelectorAll("[data-time-query]").forEach((button) => button.onclick = async () => {
+    try {
+      const result = await runTimeAction("query", { value: button.dataset.timeQuery });
+      $("#time-query-result").textContent = `${t("queryResult")}: ${result.value ?? t("queryUnavailable")}`;
+    } catch (error) { toast(error.message, true); }
+  });
+  $("#reset-days").onclick = async () => {
+    if (!confirm(t("resetDaysConfirm"))) return;
+    try { await runTimeAction("reset-days"); } catch (error) { toast(error.message, true); }
+  };
 }
 
 function renderTabs() {
@@ -236,7 +321,10 @@ async function boot() {
   state.schema = schema;
   state.config = snapshot.settings || {};
   state.gamerules = snapshot.gamerules || {};
-  state.tabs = [...new Set([...Object.values(schema.settings), ...Object.values(schema.gamerules)].map((item) => item.group))];
+  const regularTabs = [...new Set([...Object.values(schema.settings), ...Object.values(schema.gamerules)].map((item) => item.group))];
+  const worldIndex = regularTabs.indexOf("Mundo") + 1;
+  regularTabs.splice(worldIndex, 0, "__time__");
+  state.tabs = regularTabs;
   showPlayers(snapshot);
   setStatus(status);
   applyLocale();
@@ -246,6 +334,13 @@ $("#language").onclick = () => {
   state.locale = state.locale === "pt" ? "en" : "pt";
   localStorage.setItem("manager-locale", state.locale);
   applyLocale();
+};
+
+$("#time-controls").onclick = () => {
+  state.tab = "__time__";
+  renderTabs();
+  render();
+  window.scrollTo({ top: 0, behavior: "smooth" });
 };
 
 $("#refresh").onclick = async () => {

@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#101311">
     <title>MalavaziRamos · Gerenciador</title>
-    <link rel="stylesheet" href="/static/app.css?v=5">
-    <link rel="stylesheet" href="/static/players.css?v=5">
+    <link rel="stylesheet" href="/static/app.css?v=6">
+    <link rel="stylesheet" href="/static/players.css?v=6">
   </head>
   <body>
     <header class="topbar">
@@ -25,24 +25,17 @@
     <main>
       <section id="hero" class="hero block-panel">
         <div class="grass-edge" aria-hidden="true"></div>
-        <div class="hero-heading">
-          <div class="shield" aria-hidden="true">✓</div>
-          <div><span class="eyebrow" data-i18n="worldState">ESTADO DO MUNDO</span><h2 id="server-state-title">Consultando servidor</h2></div>
-        </div>
-
-        <div class="players-card">
-          <div class="player-count"><span class="pixel-icon" aria-hidden="true">♟</span><strong id="players-summary">0 jogadores online</strong></div>
-          <div id="players-list">Ninguém conectado</div>
-          <small id="updated-at">Aguardando atualização</small>
-        </div>
-
-        <div class="quick-section">
-          <h3 data-i18n="quickActions">Ações rápidas</h3>
-          <div class="quick-actions">
-            <button data-world="day" class="day"><span aria-hidden="true">☀</span><b data-i18n="day">Dia</b></button>
-            <button data-world="night" class="night"><span aria-hidden="true">☾</span><b data-i18n="night">Noite</b></button>
-            <button data-world="clear-weather" class="weather"><span aria-hidden="true">☁</span><b data-i18n="clearWeather">Clima limpo</b></button>
+        <div class="overview-grid">
+          <div class="overview-item server-overview">
+            <div class="shield" aria-hidden="true">✓</div>
+            <div><span class="eyebrow" data-i18n="worldState">ESTADO DO MUNDO</span><h2 id="server-state-title">Consultando servidor</h2></div>
           </div>
+          <div class="overview-item players-card">
+            <div class="player-count"><span class="pixel-icon" aria-hidden="true">♟</span><strong id="players-summary">0 jogadores online</strong></div>
+            <div id="players-list">Ninguém conectado</div>
+            <small id="updated-at">Aguardando atualização</small>
+          </div>
+          <button id="time-controls" class="overview-item time-launch" type="button"><span aria-hidden="true">☀</span><b data-i18n="timeControls">Tempo e clima</b><small data-i18n="timeControlsHint">Horário, ciclos e clima</small></button>
         </div>
       </section>
 
@@ -61,6 +54,6 @@
       <div class="dialog-actions"><button data-server="start" data-i18n="start">Iniciar</button><button data-server="restart" data-i18n="restart">Reiniciar</button><button data-server="stop" class="danger" data-i18n="stop">Parar</button></div>
       <button id="close-dialog" class="secondary wide" data-i18n="close">Fechar</button>
     </dialog>
-    <script src="/static/app.js?v=5"></script>
+    <script src="/static/app.js?v=6"></script>
   </body>
 </html>

@@ -56,3 +56,13 @@ class TelemetryTest(unittest.TestCase):
             self.assertEqual(deaths[0]["source"], "behavior-pack")
             self.assertEqual(deaths[0]["payload"]["killerType"], "minecraft:zombie")
             self.assertIsNotNone(profile["last_death_at"])
+
+    def test_new_snapshot_at_same_sequence_replaces_authoritative_totals(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = StateRepository(Path(directory) / "state.db")
+            repository.initialize()
+            first = {"schema": 1, "sequence": 8, "type": "snapshot.player", "timestamp": 1, "player": {"name": "VonCrush"}, "data": {"blocksBroken": 10}}
+            second = {**first, "timestamp": 2, "data": {"blocksBroken": 15}}
+            self.assertTrue(repository.ingest_telemetry(first)[0])
+            self.assertTrue(repository.ingest_telemetry(second)[0])
+            self.assertEqual(repository.player_profiles()[0]["telemetry"]["blocksBroken"], 15)

@@ -21,6 +21,12 @@ Commands never stop or restart Bedrock. A changed installation returns `"restart
 
 The responsive **Server → Telemetry Pack** panel uses this same installer implementation. It shows the installed and embedded versions, active association, runtime health, last response timestamp, and upgrade availability. Its state-changing controls require confirmation and likewise never restart Bedrock automatically.
 
+## Reconciliation and health
+
+CraftControl persists the latest world-local sequence and treats incremental records and snapshot frames differently. A forward sequence gap marks telemetry as `degraded`, records the missing range, and requests one coalesced full snapshot. Stale or out-of-order deltas are rejected before they can change counters. A lower `telemetry.started` sequence is treated as a pack-state reset and also triggers reconciliation.
+
+Snapshot frames may legitimately share a sequence and repeated snapshots at the same sequence remain authoritative. Health returns to `healthy` only after `snapshot.finished`; an empty or incomplete response remains `degraded` instead of being left indefinitely as synchronizing. The panel exposes health, current sequence, last completed snapshot, detected gaps, missing-event count, and the latest error. Snapshot requests within the cooldown window are coalesced to avoid command storms.
+
 ## Safety and persistence
 
 The installer:

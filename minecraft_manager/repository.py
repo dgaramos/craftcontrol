@@ -302,7 +302,8 @@ class StateRepository:
     def ingest_telemetry(self, envelope: dict[str, Any]) -> tuple[bool, list[str]]:
         sequence, topic = envelope["sequence"], envelope["type"]
         player = (envelope.get("player") or {}).get("name")
-        key = f"{sequence}:{topic}:{player or '-'}"
+        replay_identity = f":{envelope.get('timestamp', '-')}" if topic.startswith("snapshot.") or topic == "telemetry.started" else ""
+        key = f"{sequence}:{topic}:{player or '-'}{replay_identity}"
         now = time.time()
         changed: list[str] = []
         with self._connect() as connection:

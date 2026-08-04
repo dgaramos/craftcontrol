@@ -40,6 +40,10 @@ class ManagerService:
         self._pending_rules: set[str] = set()
         self._pending_rules_lock = threading.Lock()
         self._gamerule_worker_running = False
+        self._telemetry_lock = threading.RLock()
+        self._telemetry_sync_lock = threading.Lock()
+        self._telemetry_sync_running = False
+        self._telemetry_last_request = 0.0
 
     @classmethod
     def build(cls, settings: Settings) -> "ManagerService":
@@ -162,26 +166,89 @@ class ManagerService:
         return inserted
 
     def telemetry_event(self, envelope: dict[str, Any]) -> None:
-        accepted, players = self.repository.ingest_telemetry(envelope)
-        if not accepted:
-            return
-        topic = envelope["type"]
-        self.repository.store("telemetry", {
-            "status": "syncing" if topic == "snapshot.started" else "connected",
-            "schema": str(envelope["schema"]), "sequence": str(envelope["sequence"]),
-            "last_topic": topic,
-        }, "behavior-pack")
+        with self._telemetry_lock:
+            topic = envelope["type"]
+            sequence = int(envelope["sequence"])
+            snapshot_topic = topic.startswith("snapshot.")
+            telemetry = self.state().get("telemetry", {})
+            last_sequence = int(telemetry["sequence"]) if telemetry.get("sequence", "").isdigit() else None
+            status = telemetry.get("status", "waiting")
+            resync_reason: str | None = None
+
+            pack_reset = topic == "telemetry.started" and last_sequence is not None and sequence < last_sequence
+            if not snapshot_topic and last_sequence is not None and sequence <= last_sequence and not pack_reset:
+                self.broker.publish("telemetry.sequence.rejected", "behavior-pack", {
+                    "sequence": sequence, "last_sequence": last_sequence, "topic": topic,
+                })
+                return
+
+            updates = {
+                "schema": str(envelope["schema"]), "sequence": str(sequence),
+                "expected_sequence": str(sequence + 1), "last_topic": topic,
+                "last_event_at": str(time.time()),
+            }
+            if snapshot_topic:
+                if topic == "snapshot.started":
+                    updates.update(status="syncing", snapshot_started_at=str(time.time()))
+                elif topic == "snapshot.finished":
+                    updates.update(status="healthy", last_snapshot_at=str(time.time()), last_error="")
+            elif last_sequence is not None and sequence > last_sequence + 1:
+                missing = sequence - last_sequence - 1
+                updates.update(
+                    status="degraded",
+                    gap_count=str(int(telemetry.get("gap_count", "0")) + 1),
+                    missing_events=str(int(telemetry.get("missing_events", "0")) + missing),
+                    last_gap=f"{last_sequence + 1}-{sequence - 1}",
+                    last_error=f"sequence gap: expected {last_sequence + 1}, received {sequence}",
+                )
+                resync_reason = "sequence-gap"
+            elif topic == "telemetry.started":
+                updates["status"] = "syncing"
+                if pack_reset:
+                    updates.update(
+                        reset_count=str(int(telemetry.get("reset_count", "0")) + 1),
+                        last_error=f"pack sequence reset: {last_sequence} -> {sequence}",
+                    )
+                resync_reason = "pack-started"
+            elif status not in {"syncing", "degraded"}:
+                updates["status"] = "healthy"
+
+            accepted, players = self.repository.ingest_telemetry(envelope)
+            if not accepted:
+                return
+            self.repository.store("telemetry", updates, "behavior-pack")
         self.broker.publish(f"telemetry.{topic}", "behavior-pack", {"players": players, "sequence": envelope["sequence"]})
         if players or topic in {"snapshot.finished", "telemetry.started"}:
             self.broker.publish("state.changed", "behavior-pack", {"domains": ["telemetry", "player_profiles"], "players": players})
-        if topic == "telemetry.started":
-            self.request_telemetry_snapshot_async("pack-started")
+        if resync_reason:
+            self.broker.publish("telemetry.reconciliation.required", "behavior-pack", {
+                "reason": resync_reason, "sequence": sequence,
+            })
+            self.request_telemetry_snapshot_async(resync_reason)
 
     def request_telemetry_snapshot_async(self, reason: str) -> None:
-        threading.Thread(target=self.request_telemetry_snapshot, args=(reason,), name="telemetry-sync", daemon=True).start()
+        with self._telemetry_sync_lock:
+            now = time.monotonic()
+            if self._telemetry_sync_running or now - self._telemetry_last_request < 5:
+                self.broker.publish("telemetry.snapshot.coalesced", reason)
+                return
+            self._telemetry_sync_running = True
+            self._telemetry_last_request = now
+
+        def work() -> None:
+            try:
+                self.request_telemetry_snapshot(reason)
+            finally:
+                with self._telemetry_sync_lock:
+                    self._telemetry_sync_running = False
+
+        threading.Thread(target=work, name="telemetry-sync", daemon=True).start()
 
     def request_telemetry_snapshot(self, reason: str) -> int:
         try:
+            self.repository.store("telemetry", {
+                "status": "syncing", "sync_reason": reason, "last_request_at": str(time.time()),
+            }, "manager")
             logs = self.bedrock.request_telemetry_snapshot()
             accepted = 0
             for line in logs.splitlines():
@@ -193,8 +260,15 @@ class ManagerService:
                     accepted += 1
             self.broker.publish("telemetry.snapshot.requested", reason)
             self.broker.publish("telemetry.snapshot.read", reason, {"envelopes": accepted})
+            if accepted == 0 or self.state().get("telemetry", {}).get("status") != "healthy":
+                message = "snapshot returned no envelopes" if accepted == 0 else "snapshot did not finish"
+                self.repository.store("telemetry", {"status": "degraded", "last_error": message}, "manager")
+                self.broker.publish("telemetry.snapshot.incomplete", reason, {"envelopes": accepted, "error": message})
             return accepted
         except Exception as error:
+            self.repository.store("telemetry", {
+                "status": "degraded", "last_error": str(error)[:240],
+            }, "manager")
             self.broker.publish("telemetry.snapshot.failed", reason, {"error": str(error)[:240]})
             return 0
 

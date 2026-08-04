@@ -90,7 +90,14 @@ def telemetry_pack_status():
         values = snapshot.get("telemetry", {})
         pack["health"] = values.get("status", "waiting")
         pack["last_topic"] = values.get("last_topic")
-        pack["last_response_at"] = domain.get("observed_at")
+        pack["last_response_at"] = float(values["last_event_at"]) if values.get("last_event_at") else domain.get("observed_at")
+        pack["sequence"] = values.get("sequence")
+        pack["expected_sequence"] = values.get("expected_sequence")
+        pack["gap_count"] = int(values.get("gap_count", 0))
+        pack["missing_events"] = int(values.get("missing_events", 0))
+        pack["last_gap"] = values.get("last_gap")
+        pack["last_snapshot_at"] = float(values["last_snapshot_at"]) if values.get("last_snapshot_at") else None
+        pack["last_error"] = values.get("last_error") or None
         return jsonify(pack)
     except (FileNotFoundError, TypeError, ValueError) as error:
         return jsonify(error=str(error)), 400

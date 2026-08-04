@@ -63,6 +63,8 @@ const messages = {
     installPack: "Instalar", upgradePack: "Atualizar", disablePack: "Desativar", rollbackPack: "Restaurar backup",
     restartPackNotice: "A alteração foi preparada. Reinicie o servidor Bedrock explicitamente para aplicá-la.",
     packActionConfirm: "Executar esta ação no Telemetry Pack? Um backup será criado antes da alteração.",
+    telemetrySequence: "Sequência", lastSnapshot: "Último snapshot", detectedGaps: "Lacunas", missingEvents: "Eventos ausentes",
+    healthy: "Saudável", syncing: "Sincronizando", degraded: "Degradado", waiting: "Aguardando",
   },
   en: {
     brandKicker: "BEDROCK CONTROL CENTER",
@@ -117,6 +119,8 @@ const messages = {
     installPack: "Install", upgradePack: "Upgrade", disablePack: "Disable", rollbackPack: "Restore backup",
     restartPackNotice: "The change is ready. Explicitly restart the Bedrock server to apply it.",
     packActionConfirm: "Run this Telemetry Pack action? A backup will be created before the change.",
+    telemetrySequence: "Sequence", lastSnapshot: "Last snapshot", detectedGaps: "Gaps", missingEvents: "Missing events",
+    healthy: "Healthy", syncing: "Synchronizing", degraded: "Degraded", waiting: "Waiting",
   },
 };
 
@@ -305,7 +309,8 @@ async function loadTelemetryPack() {
     const pack = await api("/api/telemetry-pack");
     const status = pack.installed ? (pack.enabled ? t("packActive") : t("packInactive")) : t("packMissing");
     const primaryAction = pack.installed ? (pack.upgrade_available ? "upgrade" : null) : "install";
-    target.innerHTML = `<div class="telemetry-pack-summary"><strong>${escapeHtml(status)}</strong>${pack.upgrade_available && pack.installed ? `<span>${t("upgradeAvailable")}</span>` : ""}</div><dl><div><dt>${t("installedVersion")}</dt><dd>${escapeHtml(pack.installed_version || "—")}</dd></div><div><dt>${t("bundledVersion")}</dt><dd>${escapeHtml(pack.source_version)}</dd></div><div><dt>${t("packHealth")}</dt><dd>${escapeHtml(pack.health || "waiting")}</dd></div><div><dt>${t("lastResponse")}</dt><dd>${formatDate(pack.last_response_at)}</dd></div></dl><div class="telemetry-pack-actions">${primaryAction ? `<button data-pack-action="${primaryAction}">${t(primaryAction === "install" ? "installPack" : "upgradePack")}</button>` : ""}${pack.enabled ? `<button class="secondary" data-pack-action="disable">${t("disablePack")}</button>` : ""}<button class="secondary" data-pack-action="rollback">${t("rollbackPack")}</button></div>`;
+    const health = t(pack.health) || pack.health || t("waiting");
+    target.innerHTML = `<div class="telemetry-pack-summary"><strong>${escapeHtml(status)}</strong><span class="health-${escapeHtml(pack.health || "waiting")}">${escapeHtml(health)}</span>${pack.upgrade_available && pack.installed ? `<span>${t("upgradeAvailable")}</span>` : ""}</div><dl><div><dt>${t("installedVersion")}</dt><dd>${escapeHtml(pack.installed_version || "—")}</dd></div><div><dt>${t("bundledVersion")}</dt><dd>${escapeHtml(pack.source_version)}</dd></div><div><dt>${t("telemetrySequence")}</dt><dd>${escapeHtml(pack.sequence || "—")}</dd></div><div><dt>${t("lastResponse")}</dt><dd>${formatDate(pack.last_response_at)}</dd></div><div><dt>${t("lastSnapshot")}</dt><dd>${formatDate(pack.last_snapshot_at)}</dd></div><div><dt>${t("detectedGaps")}</dt><dd>${escapeHtml(pack.gap_count || 0)}</dd></div><div><dt>${t("missingEvents")}</dt><dd>${escapeHtml(pack.missing_events || 0)}</dd></div><div><dt>${t("packHealth")}</dt><dd>${escapeHtml(health)}</dd></div></dl>${pack.last_error ? `<p class="telemetry-pack-error">${escapeHtml(pack.last_error)}</p>` : ""}<div class="telemetry-pack-actions">${primaryAction ? `<button data-pack-action="${primaryAction}">${t(primaryAction === "install" ? "installPack" : "upgradePack")}</button>` : ""}${pack.enabled ? `<button class="secondary" data-pack-action="disable">${t("disablePack")}</button>` : ""}<button class="secondary" data-pack-action="rollback">${t("rollbackPack")}</button></div>`;
     target.querySelectorAll("[data-pack-action]").forEach((button) => button.onclick = async () => {
       if (!confirm(t("packActionConfirm"))) return;
       button.disabled = true;

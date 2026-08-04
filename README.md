@@ -162,6 +162,8 @@ Installation is idempotent, writes only to persistent Bedrock data, creates a re
 
 The **Server → Telemetry Pack** panel exposes the same installer service on mobile and desktop. It reports embedded and installed versions, world association, runtime health, and the timestamp of the latest pack response. Install, upgrade, disable, and rollback actions create a backup first and leave the required Bedrock restart under explicit operator control.
 
+Telemetry reconciliation is sequence-aware. Missing ranges and pack resets automatically degrade health and request a coalesced authoritative snapshot; stale deltas are rejected, and health becomes healthy again only after a complete snapshot. The panel surfaces the current sequence, completed-snapshot time, gap count, missing-event count, and recovery errors.
+
 ## Data and backups
 
 CraftControl does not store the Minecraft world. World data remains in the Bedrock project, normally:

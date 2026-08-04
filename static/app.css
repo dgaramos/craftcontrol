@@ -359,6 +359,10 @@ dialog.drawer { position: fixed; inset: auto 0 0; width: min(100%, 680px); max-h
 .telemetry-pack-summary { display: flex; align-items: center; gap: .65rem; flex-wrap: wrap; }
 .telemetry-pack-summary strong { font-size: 1.05rem; }
 .telemetry-pack-summary span { padding: .3rem .55rem; background: #f4c95d; color: #211b0a; font-size: .75rem; font-weight: 900; }
+.telemetry-pack-summary .health-healthy { background: #8bd66f; }
+.telemetry-pack-summary .health-degraded { background: #ff8c78; }
+.telemetry-pack-summary .health-syncing { background: #82c8ed; }
+.telemetry-pack-error { padding: .7rem; color: #ffd2cf !important; background: rgba(120, 20, 20, .35); border-left: 4px solid #ff8c78; }
 .telemetry-pack-state dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; margin: 0; }
 .telemetry-pack-state dl div { padding: .7rem; background: rgba(0, 0, 0, .12); }
 .telemetry-pack-state dt { color: var(--muted); font-size: .75rem; }

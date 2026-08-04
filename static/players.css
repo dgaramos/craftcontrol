@@ -143,6 +143,17 @@
 .player-history-grid ol { margin: 0; padding: 0; list-style: none; }
 .player-history-grid li { padding: 10px 0; border-bottom: 1px solid #293029; }
 .player-history-grid li:last-child { border: 0; }
+.event-history .timeline-list { position: relative; }
+.event-history .timeline-list::before { position: absolute; top: 18px; bottom: 18px; left: 6px; width: 2px; content: ""; background: #344038; }
+.event-history .timeline-item { position: relative; display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 54px; padding: 10px 0; }
+.timeline-node { z-index: 1; width: 10px; height: 10px; background: var(--grass-light); border: 2px solid #0b0e0c; box-shadow: 0 0 0 2px #344038; }
+.timeline-action { min-width: 0; }
+.timeline-action strong, .timeline-action small { display: block; }
+.timeline-action strong { color: var(--text); font-size: .78rem; }
+.timeline-action small { margin-top: 5px; color: var(--muted); line-height: 1.45; }
+.timeline-timestamp { display: grid; min-width: 108px; gap: 3px; padding-left: 12px; text-align: right; border-left: 1px solid #344038; }
+.timeline-timestamp span { color: var(--muted); font-size: .62rem; text-transform: capitalize; }
+.timeline-timestamp b { color: var(--sand); font-size: .76rem; }
 .player-server-settings { padding: 18px; }
 .player-server-settings .section-heading { margin-bottom: 12px; }
 .player-server-settings .section-heading h3 { margin: 5px 0; }
@@ -155,4 +166,7 @@
   .player-admin-grid, .player-history-grid { grid-template-columns: 1fr; }
   .player-detail-stats { grid-template-columns: repeat(2, 1fr); }
   .player-history-grid .profile-facts { grid-column: auto; }
+  .event-history .timeline-item { grid-template-columns: 14px minmax(0, 1fr); align-items: start; }
+  .timeline-timestamp { grid-column: 2; grid-row: 2; display: flex; min-width: 0; gap: 6px; padding: 0; text-align: left; border: 0; }
+  .timeline-timestamp span::after { content: " ·"; }
 }

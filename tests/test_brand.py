@@ -51,3 +51,11 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn('typeof data.csrf_token === "string"', api_script)
         self.assertIn('./js/api.js?v=1', app_script)
         self.assertIn('./api.js?v=1', auth_script)
+
+    def test_player_timeline_separates_action_from_localized_timestamp(self) -> None:
+        script = (ROOT / "static" / "app.js").read_text()
+        stylesheet = (ROOT / "static" / "players.css").read_text()
+        self.assertIn('class="timeline-action"', script)
+        self.assertIn('class="timeline-timestamp"', script)
+        self.assertIn('month: "short"', script)
+        self.assertIn(".timeline-timestamp", stylesheet)

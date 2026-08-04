@@ -513,6 +513,15 @@ function formatDate(timestamp) {
   return new Date(timestamp * 1000).toLocaleString(state.locale === "en" ? "en-US" : "pt-BR", { dateStyle: "short", timeStyle: "short" });
 }
 
+function timelineTimestamp(timestamp) {
+  if (!timestamp) return `<time class="timeline-timestamp"><span>—</span></time>`;
+  const value = new Date(timestamp * 1000);
+  const locale = state.locale === "en" ? "en-US" : "pt-BR";
+  const date = value.toLocaleDateString(locale, { day: "2-digit", month: "short", year: "numeric" });
+  const time = value.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
+  return `<time class="timeline-timestamp" datetime="${value.toISOString()}"><span>${escapeHtml(date)}</span><b>${escapeHtml(time)}</b></time>`;
+}
+
 function formatDuration(seconds) {
   const minutes = Math.floor((seconds || 0) / 60);
   const hours = Math.floor(minutes / 60);
@@ -527,7 +536,15 @@ function historyMarkup(events) {
     "player.death": { pt: "Morreu", en: "Died" },
     "player.permission.changed": { pt: "Permissão alterada", en: "Permission changed" },
   };
-  return `<ol>${events.map((event) => { const payload = event?.payload || {}; return `<li><div><b>${escapeHtml((labels[event?.topic] || {})[state.locale] || event?.topic || "event")}</b><time>${formatDate(event?.timestamp)}</time></div>${payload.cause ? `<small>${escapeHtml(payload.cause)}</small>` : ""}${payload.inferred ? `<small>${state.locale === "pt" ? "Encerramento inferido pelo estado do servidor" : "Inferred from server state"}</small>` : ""}</li>`; }).join("")}</ol>`;
+  return `<ol class="timeline-list">${events.map((event) => {
+    const payload = event?.payload || {};
+    const action = (labels[event?.topic] || {})[state.locale] || event?.topic || "event";
+    const details = [
+      payload.cause ? escapeHtml(payload.cause) : "",
+      payload.inferred ? (state.locale === "pt" ? "Encerramento inferido pelo estado do servidor" : "Inferred from server state") : "",
+    ].filter(Boolean);
+    return `<li class="timeline-item"><span class="timeline-node" aria-hidden="true"></span><div class="timeline-action"><strong>${escapeHtml(action)}</strong>${details.length ? `<small>${details.join(" · ")}</small>` : ""}</div>${timelineTimestamp(event?.timestamp)}</li>`;
+  }).join("")}</ol>`;
 }
 
 function profileMarkup(profile) {

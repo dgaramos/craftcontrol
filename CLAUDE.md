@@ -16,4 +16,5 @@ Key constraints:
 - Keep the UI mobile-first, Minecraft-inspired, bilingual, and understandable to non-specialists.
 - Do not expose arbitrary console commands or weaken the existing allowlists.
 - Never overwrite `.env`, the SQLite database, or world data.
+- Use `craftcontrol backup` and `docs/backup-and-restore.md` for recovery operations. Never perform a live restore; require explicit confirmation and preserve the pre-restore recovery set.
 - Run the quality gate documented in `AGENTS.md` before handoff.

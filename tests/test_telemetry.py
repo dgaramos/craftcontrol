@@ -1,4 +1,5 @@
 import json
+import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
@@ -8,6 +9,13 @@ from minecraft_manager.telemetry import parse_telemetry_line
 
 
 class TelemetryTest(unittest.TestCase):
+    def test_parses_actual_bedrock_content_log_fixture(self) -> None:
+        fixture = Path(__file__).with_name("fixtures") / "bedrock_content_log.txt"
+        envelopes = [parse_telemetry_line(line) for line in fixture.read_text().splitlines()]
+        self.assertEqual([item["type"] for item in envelopes if item], [
+            "telemetry.started", "snapshot.started", "snapshot.player", "snapshot.finished",
+        ])
+
     def test_parses_prefixed_content_log(self) -> None:
         payload = {"schema": 1, "sequence": 7, "type": "snapshot.finished", "timestamp": 1, "player": None, "data": {}}
         line = f"[Scripting][warning]-[BEDROCK_TELEMETRY] {json.dumps(payload)}"
@@ -20,7 +28,8 @@ class TelemetryTest(unittest.TestCase):
 
     def test_snapshot_is_persisted_and_deduplicated(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            repository = StateRepository(Path(directory) / "state.db")
+            path = Path(directory) / "state.db"
+            repository = StateRepository(path)
             repository.initialize()
             repository.observe_player("VonCrush", True, "99")
             event = {"schema": 1, "sequence": 8, "type": "snapshot.player", "timestamp": 1, "player": {"name": "VonCrush"}, "data": {"deaths": 3, "blocksBroken": 42}}
@@ -30,6 +39,9 @@ class TelemetryTest(unittest.TestCase):
             self.assertEqual(profile["deaths_count"], 3)
             self.assertEqual(profile["deaths_source"], "behavior-pack")
             self.assertEqual(profile["telemetry"]["blocksBroken"], 42)
+            with sqlite3.connect(path) as connection:
+                stored = json.loads(connection.execute("SELECT payload FROM telemetry_events").fetchone()[0])
+            self.assertEqual(stored, event)
 
     def test_telemetry_follows_profile_when_xuid_becomes_known(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

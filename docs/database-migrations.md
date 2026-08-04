@@ -25,3 +25,5 @@ docker compose exec craftcontrol python -c 'import sqlite3; connection=sqlite3.c
 If startup reports a migration failure, keep CraftControl stopped and preserve the failed database plus its `-wal` and `-shm` sidecars before restoring the matching file from `data/backups/`. Do not restore while CraftControl is running. The backup is a consistent SQLite copy created through the SQLite backup API, not a raw copy of an open database.
 
 Never lower `user_version` manually. Restore the pre-migration backup or run a documented forward repair migration instead.
+
+Schema version `2` adds bounded structured telemetry payload retention for recovery diagnostics. The migration preserves all existing state, profiles, sessions, history, aggregates, and telemetry deduplication keys; older rows remain valid with a null payload.

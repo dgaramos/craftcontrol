@@ -14,6 +14,7 @@ services:
       CONSOLE_WAIT_SECONDS: "${CONSOLE_WAIT_SECONDS:-1}"
       BOOTSTRAP_OPERATOR: "${BOOTSTRAP_OPERATOR:-VonCrush}"
       RECONCILE_SECONDS: "${RECONCILE_SECONDS:-900}"
+      BACKUP_ROOT: "${BACKUP_ROOT:-/data/backups/coordinated}"
       TZ: "${TZ:-America/Sao_Paulo}"
     ports:
       - "${MANAGER_PORT:-8082}:8082"

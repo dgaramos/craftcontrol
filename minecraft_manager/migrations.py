@@ -53,7 +53,17 @@ def _migration_001_initial_schema(connection: sqlite3.Connection) -> None:
     )
 
 
-MIGRATIONS: Mapping[int, Migration] = {1: _migration_001_initial_schema}
+def _migration_002_retain_telemetry_payloads(connection: sqlite3.Connection) -> None:
+    columns = {row[1] for row in connection.execute("PRAGMA table_info(telemetry_events)")}
+    if "payload" not in columns:
+        connection.execute("ALTER TABLE telemetry_events ADD COLUMN payload TEXT")
+    connection.execute("CREATE INDEX IF NOT EXISTS idx_telemetry_events_received ON telemetry_events(received_at DESC)")
+
+
+MIGRATIONS: Mapping[int, Migration] = {
+    1: _migration_001_initial_schema,
+    2: _migration_002_retain_telemetry_payloads,
+}
 LATEST_SCHEMA_VERSION = max(MIGRATIONS)
 
 

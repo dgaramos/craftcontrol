@@ -116,6 +116,7 @@ The planned homelab hostname is `craftcontrol.lab.home.arpa`; DNS and reverse-pr
 | `CONSOLE_WAIT_SECONDS` | `1` | Delay before reading console responses |
 | `BOOTSTRAP_OPERATOR` | `VonCrush` | Player provisioned once as the initial in-game operator |
 | `RECONCILE_SECONDS` | `900` | Full safety-reconciliation interval |
+| `BACKUP_ROOT` | `/data/backups/coordinated` | Coordinated recovery-set directory |
 | `TZ` | `America/Sao_Paulo` | Container timezone |
 
 The old service name, container name, database filename, Python package, and variables remain supported deliberately. This visual rebrand does not destructively rename persistent paths. Compatibility migrations will be released separately.
@@ -184,7 +185,19 @@ CraftControl state lives in:
 
 The embedded SQLite database uses transactional, sequential migrations tracked by `PRAGMA user_version`. Existing databases receive an immutable SQLite backup under `data/backups/` before the first pending migration; a failed migration rolls back and prevents startup on a partially upgraded schema. See [Database migrations](docs/database-migrations.md).
 
-Back up `manager.db` together with its `-wal` and `-shm` companions when present. Cached settings can be reconstructed; player aliases, sessions, detailed history, and manager-side event evidence cannot always be rebuilt from a world backup.
+Use CraftControl's coordinated backup command instead of copying a live SQLite file or world directory:
+
+```bash
+docker compose exec craftcontrol craftcontrol backup create
+docker compose exec craftcontrol craftcontrol backup list
+docker compose exec craftcontrol craftcontrol backup verify BACKUP_ID
+```
+
+When Bedrock is running, CraftControl holds world saves only for the copy window, creates a consistent SQLite backup, resumes saves even after an error, and writes SHA-256 checksums to a versioned manifest. Recovery sets contain the world, `manager.db`, server configuration, allowlists, permissions, and behavior-pack files. Preview retention with `craftcontrol backup prune --keep 7`; deletion additionally requires `--yes`.
+
+Restore is deliberately offline, refuses to run while Bedrock is active, and creates a pre-restore recovery copy before replacing the world and database. See [Coordinated backup and restore](docs/backup-and-restore.md) for the complete tested runbook. Cached settings can be reconstructed; player aliases, sessions, detailed history, and manager-side event evidence cannot always be rebuilt from a world backup alone.
+
+Telemetry envelopes used for recovery and diagnostics are retained in SQLite with a bounded 10,000-event window. Permanent player history remains separate and is not subject to that operational retention limit.
 
 ## Updating
 

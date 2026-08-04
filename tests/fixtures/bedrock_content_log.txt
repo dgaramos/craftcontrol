@@ -1,0 +1,4 @@
+[2026-08-04 21:08:31:427 INFO] [Scripting] [BEDROCK_TELEMETRY] {"schema":1,"sequence":41,"type":"telemetry.started","timestamp":1785874111427,"player":null,"data":{"version":"0.2.3"}}
+[2026-08-04 21:08:31:431 INFO] [Scripting] [BEDROCK_TELEMETRY] {"schema":1,"sequence":41,"type":"snapshot.started","timestamp":1785874111431,"player":null,"data":{"players":1}}
+[2026-08-04 21:08:31:439 INFO] [Scripting] [BEDROCK_TELEMETRY] {"schema":1,"sequence":41,"type":"snapshot.player","timestamp":1785874111439,"player":{"name":"FixturePlayer"},"data":{"deaths":2,"blocksBroken":10}}
+[2026-08-04 21:08:31:443 INFO] [Scripting] [BEDROCK_TELEMETRY] {"schema":1,"sequence":41,"type":"snapshot.finished","timestamp":1785874111443,"player":null,"data":{"players":1}}

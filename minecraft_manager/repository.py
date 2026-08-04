@@ -299,8 +299,8 @@ class StateRepository:
         changed: list[str] = []
         with self._connect() as connection:
             cursor = connection.execute(
-                "INSERT OR IGNORE INTO telemetry_events(event_key,sequence,topic,received_at) VALUES(?,?,?,?)",
-                (key, sequence, topic, now),
+                "INSERT OR IGNORE INTO telemetry_events(event_key,sequence,topic,received_at,payload) VALUES(?,?,?,?,?)",
+                (key, sequence, topic, now, json.dumps(envelope, ensure_ascii=False, separators=(",", ":"))),
             )
             if cursor.rowcount == 0:
                 return False, []

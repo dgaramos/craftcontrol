@@ -13,6 +13,7 @@ class Settings:
     console_wait_seconds: float = 1.0
     bootstrap_operator: str = ""
     reconcile_seconds: int = 900
+    backup_root: Path = Path("/data/backups/coordinated")
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -23,6 +24,7 @@ class Settings:
             console_wait_seconds=float(os.getenv("CONSOLE_WAIT_SECONDS", "1")),
             bootstrap_operator=os.getenv("BOOTSTRAP_OPERATOR", ""),
             reconcile_seconds=int(os.getenv("RECONCILE_SECONDS", "900")),
+            backup_root=Path(os.getenv("BACKUP_ROOT", "/data/backups/coordinated")),
         )
 
     @property

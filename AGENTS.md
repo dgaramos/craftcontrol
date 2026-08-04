@@ -20,6 +20,8 @@ Before planning, reviewing, or changing this project, read `README.md` and every
 - Do not add browser polling when an event-driven invalidation and targeted reconciliation is sufficient.
 - Keep the manager independent from the exporter and observability stack.
 - Use SQLite for local durable state and schema changes that migrate existing databases without deleting user data.
+- Use the coordinated backup service for live world/database backups. Hold Bedrock saves only during the copy window, resume in `finally`, use SQLite's backup API, and verify checksums before restore.
+- Restores are offline, explicitly confirmed, and must create a pre-restore recovery copy. Never restore `.env` automatically.
 
 The legacy file locations in the preceding rule are compatibility facades during the modular refactor. New domain modules may live under `http/`, `server/`, `players/`, `telemetry/`, `operations/`, and `runtime/`; do not remove a compatibility import until its callers and tests have migrated.
 

@@ -351,3 +351,20 @@ dialog.drawer { position: fixed; inset: auto 0 0; width: min(100%, 680px); max-h
   .fields-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   footer { left: 50%; right: auto; bottom: 14px; width: min(680px, 92vw); transform: translateX(-50%); border: 4px solid #090b09; border-top-color: #4a514b; }
 }
+
+.telemetry-pack-card { display: grid; gap: 1rem; margin-bottom: 1rem; padding: 1.25rem; }
+.telemetry-pack-card h3 { margin: .2rem 0; }
+.telemetry-pack-card p { margin: 0; color: var(--muted); }
+.telemetry-pack-state { display: grid; gap: 1rem; }
+.telemetry-pack-summary { display: flex; align-items: center; gap: .65rem; flex-wrap: wrap; }
+.telemetry-pack-summary strong { font-size: 1.05rem; }
+.telemetry-pack-summary span { padding: .3rem .55rem; background: #f4c95d; color: #211b0a; font-size: .75rem; font-weight: 900; }
+.telemetry-pack-state dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; margin: 0; }
+.telemetry-pack-state dl div { padding: .7rem; background: rgba(0, 0, 0, .12); }
+.telemetry-pack-state dt { color: var(--muted); font-size: .75rem; }
+.telemetry-pack-state dd { margin: .25rem 0 0; font-weight: 900; overflow-wrap: anywhere; }
+.telemetry-pack-actions { display: flex; flex-wrap: wrap; gap: .65rem; }
+@media (min-width: 760px) {
+  .telemetry-pack-card { grid-template-columns: minmax(14rem, .8fr) minmax(24rem, 1.2fr); align-items: start; }
+  .telemetry-pack-state dl { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}

@@ -7,17 +7,19 @@ CraftControl embeds the independently versioned `craftcontrol-telemetry` reposit
 Run commands inside the CraftControl container:
 
 ```bash
-docker compose exec minecraft-bedrock-manager craftcontrol telemetry status
-docker compose exec minecraft-bedrock-manager craftcontrol telemetry install
-docker compose exec minecraft-bedrock-manager craftcontrol telemetry upgrade
-docker compose exec minecraft-bedrock-manager craftcontrol telemetry disable
-docker compose exec minecraft-bedrock-manager craftcontrol telemetry remove --yes
-docker compose exec minecraft-bedrock-manager craftcontrol telemetry rollback --yes
+docker compose exec craftcontrol craftcontrol telemetry status
+docker compose exec craftcontrol craftcontrol telemetry install
+docker compose exec craftcontrol craftcontrol telemetry upgrade
+docker compose exec craftcontrol craftcontrol telemetry disable
+docker compose exec craftcontrol craftcontrol telemetry remove --yes
+docker compose exec craftcontrol craftcontrol telemetry rollback --yes
 ```
 
 Use `--world NAME` when automatic detection cannot identify the intended world. `install` and `upgrade` are the same idempotent reconciliation operation; the different action names make operator intent explicit.
 
 Commands never stop or restart Bedrock. A changed installation returns `"restart_required": true`; restart the Bedrock service only after reviewing the generated backup identifier.
+
+The responsive **Server → Telemetry Pack** panel uses this same installer implementation. It shows the installed and embedded versions, active association, runtime health, last response timestamp, and upgrade availability. Its state-changing controls require confirmation and likewise never restart Bedrock automatically.
 
 ## Safety and persistence
 

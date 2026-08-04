@@ -27,3 +27,9 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn("<h1>CraftControl</h1>", readme)
         self.assertIn("compatibility", readme.casefold())
         self.assertIn("trusted private networks", readme)
+
+    def test_compose_uses_final_product_name(self) -> None:
+        compose = (ROOT / "docker-compose.yml").read_text()
+        self.assertIn("  craftcontrol:\n", compose)
+        self.assertIn("container_name: craftcontrol", compose)
+        self.assertNotIn("minecraft-bedrock-manager", compose)

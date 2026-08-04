@@ -5,12 +5,17 @@ import json
 
 from .schema import GAMERULES, SETTINGS
 from .services import ManagerService
+from .telemetry_installer import TelemetryPackInstaller
 
 api = Blueprint("api", __name__)
 
 
 def service() -> ManagerService:
     return current_app.extensions["manager_service"]
+
+
+def telemetry_installer() -> TelemetryPackInstaller:
+    return TelemetryPackInstaller.bundled(service().files.env_file.parent)
 
 
 @api.get("/")
@@ -74,6 +79,39 @@ def update_config():
 @api.get("/api/status")
 def status():
     return jsonify(service().docker.status())
+
+
+@api.get("/api/telemetry-pack")
+def telemetry_pack_status():
+    try:
+        pack = telemetry_installer().status().to_dict()
+        snapshot = service().state()
+        domain = snapshot.get("domains", {}).get("telemetry", {})
+        values = snapshot.get("telemetry", {})
+        pack["health"] = values.get("status", "waiting")
+        pack["last_topic"] = values.get("last_topic")
+        pack["last_response_at"] = domain.get("observed_at")
+        return jsonify(pack)
+    except (FileNotFoundError, TypeError, ValueError) as error:
+        return jsonify(error=str(error)), 400
+
+
+@api.post("/api/telemetry-pack/<action>")
+def telemetry_pack_action(action: str):
+    try:
+        installer = telemetry_installer()
+        if action in {"install", "upgrade"}:
+            result = installer.install()
+            result["action"] = action
+        elif action == "disable":
+            result = installer.disable()
+        elif action == "rollback":
+            result = installer.rollback()
+        else:
+            return jsonify(error="Ação de telemetria não permitida"), 404
+        return jsonify(result)
+    except (FileNotFoundError, TypeError, ValueError) as error:
+        return jsonify(error=str(error)), 400
 
 
 @api.post("/api/server/<action>")

@@ -86,7 +86,7 @@ Expected default layout:
 ```text
 /mnt/storage/docker/
 ├── minecraft-bedrock/
-└── minecraft-bedrock-manager/   # compatibility path in this release
+└── craftcontrol/
 ```
 
 Create the local configuration and start the service:
@@ -154,11 +154,13 @@ Current structured metrics include:
 The manager remains fully usable when the pack is absent or temporarily unavailable. The embedded **CraftControl Telemetry Pack** integration provides native status, installation, upgrade, disable, removal, backup, and rollback commands:
 
 ```bash
-docker compose exec minecraft-bedrock-manager craftcontrol telemetry status
-docker compose exec minecraft-bedrock-manager craftcontrol telemetry install
+docker compose exec craftcontrol craftcontrol telemetry status
+docker compose exec craftcontrol craftcontrol telemetry install
 ```
 
 Installation is idempotent, writes only to persistent Bedrock data, creates a recoverable backup, and never restarts Bedrock automatically. See [Telemetry Pack integration](docs/telemetry-pack.md) for the complete command and recovery guide.
+
+The **Server → Telemetry Pack** panel exposes the same installer service on mobile and desktop. It reports embedded and installed versions, world association, runtime health, and the timestamp of the latest pack response. Install, upgrade, disable, and rollback actions create a backup first and leave the required Bedrock restart under explicit operator control.
 
 ## Data and backups
 

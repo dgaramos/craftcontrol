@@ -57,6 +57,12 @@ const messages = {
     discardAll: "Descartar todas", applyChanges: "Aplicar alterações", removeChange: "Remover",
     currentValue: "Atual", newValue: "Novo", reviewCount: (count) => `Revisar (${count})`,
     confirmedAt: "Confirmado",
+    telemetryPack: "Telemetry Pack", telemetryPackHelp: "Estatísticas nativas e histórico estruturado do mundo.",
+    installedVersion: "Versão instalada", bundledVersion: "Versão disponível", packHealth: "Saúde", lastResponse: "Última resposta",
+    packActive: "Instalado e ativo", packInactive: "Desativado", packMissing: "Não instalado", upgradeAvailable: "Atualização disponível",
+    installPack: "Instalar", upgradePack: "Atualizar", disablePack: "Desativar", rollbackPack: "Restaurar backup",
+    restartPackNotice: "A alteração foi preparada. Reinicie o servidor Bedrock explicitamente para aplicá-la.",
+    packActionConfirm: "Executar esta ação no Telemetry Pack? Um backup será criado antes da alteração.",
   },
   en: {
     brandKicker: "BEDROCK CONTROL CENTER",
@@ -105,6 +111,12 @@ const messages = {
     discardAll: "Discard all", applyChanges: "Apply changes", removeChange: "Remove",
     currentValue: "Current", newValue: "New", reviewCount: (count) => `Review (${count})`,
     confirmedAt: "Confirmed",
+    telemetryPack: "Telemetry Pack", telemetryPackHelp: "Native statistics and structured world history.",
+    installedVersion: "Installed version", bundledVersion: "Available version", packHealth: "Health", lastResponse: "Last response",
+    packActive: "Installed and active", packInactive: "Disabled", packMissing: "Not installed", upgradeAvailable: "Upgrade available",
+    installPack: "Install", upgradePack: "Upgrade", disablePack: "Disable", rollbackPack: "Restore backup",
+    restartPackNotice: "The change is ready. Explicitly restart the Bedrock server to apply it.",
+    packActionConfirm: "Run this Telemetry Pack action? A backup will be created before the change.",
   },
 };
 
@@ -276,9 +288,34 @@ function render() {
     content.innerHTML = "";
     return;
   }
-  const prefix = state.tab === "world" ? `<button class="section-feature" id="open-time"><span>☀</span><div><strong>${t("timeControls")}</strong><small>${t("timeControlsHint")}</small></div><b>›</b></button>` : "";
+  const prefix = state.tab === "world" ? `<button class="section-feature" id="open-time"><span>☀</span><div><strong>${t("timeControls")}</strong><small>${t("timeControlsHint")}</small></div><b>›</b></button>` : state.tab === "server" ? telemetryPackMarkup() : "";
   renderSettingsGroups(destinationGroups[state.tab] || [], prefix);
   if (state.tab === "world") $("#open-time").onclick = openTimeControls;
+  if (state.tab === "server") loadTelemetryPack();
+}
+
+function telemetryPackMarkup() {
+  return `<section class="telemetry-pack-card block-panel"><div><span class="eyebrow">CRAFTCONTROL</span><h3>${t("telemetryPack")}</h3><p>${t("telemetryPackHelp")}</p></div><div id="telemetry-pack-state" class="telemetry-pack-state">${t("checking")}</div></section>`;
+}
+
+async function loadTelemetryPack() {
+  const target = $("#telemetry-pack-state");
+  if (!target) return;
+  try {
+    const pack = await api("/api/telemetry-pack");
+    const status = pack.installed ? (pack.enabled ? t("packActive") : t("packInactive")) : t("packMissing");
+    const primaryAction = pack.installed ? (pack.upgrade_available ? "upgrade" : null) : "install";
+    target.innerHTML = `<div class="telemetry-pack-summary"><strong>${escapeHtml(status)}</strong>${pack.upgrade_available && pack.installed ? `<span>${t("upgradeAvailable")}</span>` : ""}</div><dl><div><dt>${t("installedVersion")}</dt><dd>${escapeHtml(pack.installed_version || "—")}</dd></div><div><dt>${t("bundledVersion")}</dt><dd>${escapeHtml(pack.source_version)}</dd></div><div><dt>${t("packHealth")}</dt><dd>${escapeHtml(pack.health || "waiting")}</dd></div><div><dt>${t("lastResponse")}</dt><dd>${formatDate(pack.last_response_at)}</dd></div></dl><div class="telemetry-pack-actions">${primaryAction ? `<button data-pack-action="${primaryAction}">${t(primaryAction === "install" ? "installPack" : "upgradePack")}</button>` : ""}${pack.enabled ? `<button class="secondary" data-pack-action="disable">${t("disablePack")}</button>` : ""}<button class="secondary" data-pack-action="rollback">${t("rollbackPack")}</button></div>`;
+    target.querySelectorAll("[data-pack-action]").forEach((button) => button.onclick = async () => {
+      if (!confirm(t("packActionConfirm"))) return;
+      button.disabled = true;
+      try {
+        const result = await api(`/api/telemetry-pack/${button.dataset.packAction}`, { method: "POST" });
+        toast(result.restart_required ? t("restartPackNotice") : t("operationDone"));
+        await loadTelemetryPack();
+      } catch (error) { toast(error.message, true); button.disabled = false; }
+    });
+  } catch (error) { target.textContent = error.message; }
 }
 
 function settingsMarkup(groupNames) {

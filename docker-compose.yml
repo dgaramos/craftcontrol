@@ -1,9 +1,8 @@
 services:
-  minecraft-bedrock-manager:
+  craftcontrol:
     build: .
-    # Compatibility service/container names preserve existing deployments during the CraftControl rebrand.
     image: craftcontrol:0.2.0
-    container_name: minecraft-bedrock-manager
+    container_name: craftcontrol
     labels:
       org.opencontainers.image.title: "CraftControl"
       org.opencontainers.image.description: "Mobile-first Minecraft Bedrock control center"

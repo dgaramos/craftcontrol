@@ -94,3 +94,32 @@ def logout():
     response = jsonify(ok=True)
     response.delete_cookie(COOKIE_NAME, path="/")
     return response
+
+
+@auth_api.get("/api/auth/access")
+@require("security.manage_users")
+def access_list():
+    return jsonify(players=auth_service().access_list())
+
+
+@auth_api.post("/api/auth/access/invite")
+@require("security.manage_users")
+def invite():
+    try:
+        payload = request.get_json(force=True)
+        player = str(payload.get("player", ""))
+        role = str(payload.get("role", "viewer"))
+        token = auth_service().create_invitation(player, role, actor=g.user["id"])
+        return jsonify(player=player, role=role, token=token, expires_in=900)
+    except (AttributeError, TypeError, ValueError) as error:
+        return jsonify(error=str(error)), 400
+
+
+@auth_api.put("/api/auth/access/<path:player>/suspend")
+@require("security.manage_users")
+def suspend(player: str):
+    try:
+        auth_service().suspend(player, g.user["id"])
+        return jsonify(ok=True, player=player, status="suspended")
+    except ValueError as error:
+        return jsonify(error=str(error)), 400

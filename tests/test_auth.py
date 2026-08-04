@@ -71,6 +71,22 @@ class AuthServiceTest(unittest.TestCase):
         with self.assertRaises(PermissionError):
             self.auth.require_capability(viewer, "world.manage")
 
+    def test_owner_can_list_access_and_last_owner_cannot_be_suspended(self) -> None:
+        invitation = self.auth.bootstrap("VonCrush")
+        self.auth.claim("VonCrush", invitation, "ownerpass")
+        access = {item["name"]: item for item in self.auth.access_list()}
+        self.assertEqual(access["VonCrush"]["role"], "owner")
+        with self.assertRaisesRegex(ValueError, "last active owner"):
+            self.auth.suspend("VonCrush", "test-owner")
+
+    def test_suspension_revokes_sessions_without_deleting_player(self) -> None:
+        invitation = self.auth.create_invitation("Nicole", "operator")
+        session, _ = self.auth.claim("Nicole", invitation, "operator1")
+        self.auth.suspend("Nicole", "test-owner")
+        self.assertIsNone(self.auth.authenticate(session))
+        access = {item["name"]: item for item in self.auth.access_list()}
+        self.assertEqual(access["Nicole"]["status"], "suspended")
+
     def test_http_boundary_rejects_anonymous_and_sets_secure_session_cookie(self) -> None:
         invitation = self.auth.create_invitation("Nicole", "viewer")
         app = Flask(__name__)

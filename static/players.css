@@ -84,3 +84,11 @@
   .telemetry-grid { grid-template-columns: repeat(2, 1fr); }
   .death-history dl { grid-template-columns: 1fr; }
 }
+.panel-access { grid-column: 1 / -1; display: grid; gap: 10px; padding: 14px; background: rgba(0,0,0,.18); border: 1px solid #48564d; }
+.panel-access > div:first-child { display: flex; justify-content: space-between; gap: 10px; }
+.panel-access-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.panel-access-actions select { min-height: 42px; padding: 0 10px; background: #111814; color: #fff; border: 1px solid #637469; }
+.access-code { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+.access-code[hidden] { display: none; }
+.access-code code { overflow-wrap: anywhere; padding: 10px; background: #0b100d; color: #c8f7c5; }
+.access-code small { grid-column: 1 / -1; }

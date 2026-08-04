@@ -35,7 +35,9 @@ Generate a recovery code for an observed player:
 docker compose exec craftcontrol craftcontrol auth recover VonCrush
 ```
 
-Generate an invitation from the CLI during the initial release:
+Owners can generate invitations directly from each card in the **Players** screen: choose `viewer`, `operator`, or `owner`, press **Generate access code**, and copy the one-time code. Active accounts instead receive a recovery code. Owners can suspend access, which revokes every active session immediately; the last active owner cannot be suspended or demoted.
+
+The same operations remain available from the CLI for recovery:
 
 ```bash
 docker compose exec craftcontrol craftcontrol auth invite Nicole --role operator

@@ -6,6 +6,7 @@ const state = {
   schema: null, config: {}, gamerules: {}, players: [], online: 0, maxPlayers: 0,
   changes: {}, tab: "home", tabs: ["home", "world", "players", "rules", "server"], status: null, updatedAt: 0, domains: {},
   locale: (localStorage.getItem("craftcontrol-locale") || localStorage.getItem("manager-locale")) === "en" ? "en" : "pt",
+  user: null,
 };
 const $ = (selector) => document.querySelector(selector);
 const content = $("#content");
@@ -391,6 +392,11 @@ async function renderPlayersPanel() {
   try {
     const result = await api("/api/players");
     const list = result.players || [];
+    let access = {};
+    if (state.user?.role === "owner") {
+      const accessResult = await api("/api/auth/access");
+      access = Object.fromEntries((accessResult.players || []).map((item) => [item.name.toLocaleLowerCase(), item]));
+    }
     const container = content.querySelector(".loading-players");
     if (!list.length) {
       container.textContent = t("noHistory");
@@ -404,7 +410,7 @@ async function renderPlayersPanel() {
     const updateList = () => {
       const query = $("#player-search").value.trim().toLocaleLowerCase();
       const filtered = list.filter((player) => (!query || player.name.toLocaleLowerCase().includes(query)) && (activeFilter === "all" || (activeFilter === "online" && player.online) || (activeFilter === "offline" && !player.online) || (activeFilter === "operator" && player.operator)));
-      renderPlayerCards(container, filtered);
+      renderPlayerCards(container, filtered, access);
     };
     $("#player-search").oninput = updateList;
     content.querySelectorAll("[data-player-filter]").forEach((button) => button.onclick = () => {
@@ -425,9 +431,9 @@ function renderPlayerOverview(list) {
   overview.hidden = false;
 }
 
-function renderPlayerCards(container, list) {
+function renderPlayerCards(container, list, access = {}) {
   if (!list.length) { container.innerHTML = `<p class="no-player-results">${t("noPlayersFound")}</p>`; return; }
-  container.innerHTML = list.map((player, index) => `<article class="player-management-card ${player.online ? "is-online" : "is-offline"}"><div class="player-avatar" aria-hidden="true">${escapeHtml(player.name.slice(0, 1).toUpperCase())}</div><div class="player-identity"><strong>${escapeHtml(player.name)}</strong><small>${player.online ? "● " + t("online") : "○ " + t("offline")}</small></div><div class="player-role"><span>${escapeHtml(optionLabel(player.permission || "member"))}</span>${booleanControl(`operator-${index}`, player.operator)}</div><div class="player-stats"><span><b>${player.sessions_count}</b>${t("sessions")}</span><span><b>${formatDuration(player.total_play_seconds)}</b>${t("playTime")}</span><span title="${t("derivedDeaths")}"><b>${player.deaths_count}*</b>${t("deaths")}</span></div><div class="player-dates"><span>${t("firstSeen")}: <b>${formatDate(player.first_seen_at)}</b></span><span>${player.online ? t("connectedSince") : t("lastSeen")}: <b>${formatDate(player.online ? player.connected_at : player.last_seen_at)}</b></span>${player.last_death_at ? `<span>${t("lastDeath")}: <b>${formatDate(player.last_death_at)}</b></span>` : ""}</div><button class="secondary player-history-button" data-player-index="${index}">${t("viewHistory")}</button><div class="player-history" id="player-history-${index}" hidden></div></article>`).join("");
+  container.innerHTML = list.map((player, index) => `<article class="player-management-card ${player.online ? "is-online" : "is-offline"}"><div class="player-avatar" aria-hidden="true">${escapeHtml(player.name.slice(0, 1).toUpperCase())}</div><div class="player-identity"><strong>${escapeHtml(player.name)}</strong><small>${player.online ? "● " + t("online") : "○ " + t("offline")}</small></div><div class="player-role"><span>${escapeHtml(optionLabel(player.permission || "member"))}</span>${booleanControl(`operator-${index}`, player.operator)}</div><div class="player-stats"><span><b>${player.sessions_count}</b>${t("sessions")}</span><span><b>${formatDuration(player.total_play_seconds)}</b>${t("playTime")}</span><span title="${t("derivedDeaths")}"><b>${player.deaths_count}*</b>${t("deaths")}</span></div><div class="player-dates"><span>${t("firstSeen")}: <b>${formatDate(player.first_seen_at)}</b></span><span>${player.online ? t("connectedSince") : t("lastSeen")}: <b>${formatDate(player.online ? player.connected_at : player.last_seen_at)}</b></span>${player.last_death_at ? `<span>${t("lastDeath")}: <b>${formatDate(player.last_death_at)}</b></span>` : ""}</div>${accessMarkup(player, index, access[player.name.toLocaleLowerCase()])}<button class="secondary player-history-button" data-player-index="${index}">${t("viewHistory")}</button><div class="player-history" id="player-history-${index}" hidden></div></article>`).join("");
   container.querySelectorAll(".player-management-card").forEach((card, index) => {
     const player = list[index];
     if (!player.telemetry_updated_at) return;
@@ -442,6 +448,23 @@ function renderPlayerCards(container, list) {
           await api(`/api/players/${encodeURIComponent(player.name)}/operator`, { method: "PUT", body: JSON.stringify({ enabled: event.target.checked }) });
           toast(t("permissionUpdated"));
         } catch (error) { toast(error.message, true); renderPlayersPanel(); }
+      };
+      const invite = container.querySelector(`[data-access-invite="${index}"]`);
+      if (invite) invite.onclick = async () => {
+        const role = container.querySelector(`[data-access-role="${index}"]`).value;
+        try {
+          const result = await api("/api/auth/access/invite", { method: "POST", body: JSON.stringify({ player: player.name, role }) });
+          const output = container.querySelector(`[data-access-code="${index}"]`);
+          output.hidden = false;
+          output.querySelector("code").textContent = result.token;
+          output.querySelector("button").onclick = async () => { await navigator.clipboard.writeText(result.token); toast(state.locale === "pt" ? "Código copiado" : "Code copied"); };
+        } catch (error) { toast(error.message, true); }
+      };
+      const suspend = container.querySelector(`[data-access-suspend="${index}"]`);
+      if (suspend) suspend.onclick = async () => {
+        if (!confirm(state.locale === "pt" ? `Suspender o acesso de ${player.name}?` : `Suspend ${player.name}'s access?`)) return;
+        try { await api(`/api/auth/access/${encodeURIComponent(player.name)}/suspend`, { method: "PUT" }); toast(state.locale === "pt" ? "Acesso suspenso" : "Access suspended"); renderPlayersPanel(); }
+        catch (error) { toast(error.message, true); }
       };
       container.querySelector(`[data-player-index="${index}"]`).onclick = async (event) => {
         const button = event.currentTarget;
@@ -458,6 +481,14 @@ function renderPlayerCards(container, list) {
         } catch (error) { toast(error.message, true); }
       };
   });
+}
+
+function accessMarkup(player, index, account) {
+  if (state.user?.role !== "owner") return "";
+  const label = state.locale === "pt" ? "Acesso ao painel" : "Panel access";
+  const invite = account?.status === "active" ? (state.locale === "pt" ? "Gerar código de recuperação" : "Generate recovery code") : (state.locale === "pt" ? "Gerar código de acesso" : "Generate access code");
+  const status = account?.status && account.status !== "none" ? `${account.role} · ${account.status}` : (state.locale === "pt" ? "Sem acesso" : "No access");
+  return `<section class="panel-access"><div><strong>${label}</strong><small>${escapeHtml(status)}</small></div><div class="panel-access-actions"><select data-access-role="${index}" aria-label="Role"><option value="viewer" ${account?.role === "viewer" ? "selected" : ""}>Viewer</option><option value="operator" ${account?.role === "operator" ? "selected" : ""}>Operator</option><option value="owner" ${account?.role === "owner" ? "selected" : ""}>Owner</option></select><button class="secondary" data-access-invite="${index}" type="button">${invite}</button>${account?.status === "active" ? `<button class="danger" data-access-suspend="${index}" type="button">${state.locale === "pt" ? "Suspender" : "Suspend"}</button>` : ""}</div><div class="access-code" data-access-code="${index}" hidden><code></code><button type="button">${state.locale === "pt" ? "Copiar" : "Copy"}</button><small>${state.locale === "pt" ? "Este código aparece apenas uma vez e expira em 15 minutos." : "This code is shown once and expires in 15 minutes."}</small></div></section>`;
 }
 
 function formatDate(timestamp) {
@@ -729,5 +760,5 @@ document.querySelectorAll("[data-server]").forEach((button) => button.onclick = 
 });
 
 requireSession().then((user) => {
-  if (user) boot().catch((error) => toast(error.message, true));
+  if (user) { state.user = user; boot().catch((error) => toast(error.message, true)); }
 }).catch((error) => toast(error.message, true));

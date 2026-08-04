@@ -84,8 +84,9 @@ class AuthService:
             identity = self._resolve_identity(connection, player)
             connection.execute(
                 "INSERT INTO panel_accounts(identity,role,status,created_at,updated_at) VALUES(?,?,'invited',?,?) "
-                "ON CONFLICT(identity) DO UPDATE SET role=excluded.role,status=CASE WHEN panel_accounts.status='active' "
-                "THEN panel_accounts.status ELSE 'invited' END,updated_at=excluded.updated_at",
+                "ON CONFLICT(identity) DO UPDATE SET role=CASE WHEN panel_accounts.status='active' THEN panel_accounts.role "
+                "ELSE excluded.role END,status=CASE WHEN panel_accounts.status='active' THEN panel_accounts.status "
+                "ELSE 'invited' END,updated_at=excluded.updated_at",
                 (identity, role, now, now),
             )
             connection.execute("DELETE FROM panel_invitations WHERE identity=? AND used_at IS NULL", (identity,))
@@ -114,6 +115,11 @@ class AuthService:
             if not invitation or invitation[2] is not None or float(invitation[1]) < now:
                 self._audit(connection, identity, "auth.claim", identity, "denied", {})
                 raise ValueError("invalid or expired invitation")
+            current = connection.execute("SELECT role,status FROM panel_accounts WHERE identity=?", (identity,)).fetchone()
+            if current and current[0] == "owner" and current[1] == "active" and invitation[0] != "owner":
+                owners = connection.execute("SELECT count(*) FROM panel_accounts WHERE role='owner' AND status='active'").fetchone()[0]
+                if owners <= 1:
+                    raise ValueError("cannot demote the last active owner")
             connection.execute("UPDATE panel_invitations SET used_at=? WHERE token_hash=?", (now, self._token_hash(token)))
             connection.execute(
                 "UPDATE panel_accounts SET role=?,status='active',password_hash=?,updated_at=? WHERE identity=?",
@@ -172,6 +178,35 @@ class AuthService:
         if token:
             with self._connect() as connection:
                 connection.execute("UPDATE panel_sessions SET revoked_at=? WHERE token_hash=?", (time.time(), self._token_hash(token)))
+
+    def access_list(self) -> list[dict[str, Any]]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT p.identity,p.current_name,a.role,a.status,a.updated_at,"
+                "(SELECT count(*) FROM panel_sessions s WHERE s.identity=p.identity AND s.revoked_at IS NULL "
+                "AND s.absolute_expires_at>?) FROM player_profiles p LEFT JOIN panel_accounts a ON a.identity=p.identity "
+                "ORDER BY p.online DESC,p.last_seen_at DESC",
+                (time.time(),),
+            ).fetchall()
+        return [{
+            "id": hashlib.sha256(row[0].encode()).hexdigest()[:24], "name": row[1],
+            "role": row[2], "status": row[3] or "none", "updated_at": row[4], "active_sessions": row[5],
+        } for row in rows]
+
+    def suspend(self, player: str, actor: str) -> None:
+        now = time.time()
+        with self._connect() as connection:
+            identity = self._resolve_identity(connection, player)
+            account = connection.execute("SELECT role,status FROM panel_accounts WHERE identity=?", (identity,)).fetchone()
+            if not account:
+                raise ValueError("player has no panel access")
+            if account[0] == "owner" and account[1] == "active":
+                owners = connection.execute("SELECT count(*) FROM panel_accounts WHERE role='owner' AND status='active'").fetchone()[0]
+                if owners <= 1:
+                    raise ValueError("cannot suspend the last active owner")
+            connection.execute("UPDATE panel_accounts SET status='suspended',updated_at=? WHERE identity=?", (now, identity))
+            connection.execute("UPDATE panel_sessions SET revoked_at=? WHERE identity=? AND revoked_at IS NULL", (now, identity))
+            self._audit(connection, actor, "auth.access.suspended", identity, "success", {})
 
     def require_capability(self, user: dict[str, Any], capability: str) -> None:
         capabilities = set(user.get("capabilities", []))

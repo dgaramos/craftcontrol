@@ -19,7 +19,7 @@ Consumers must ignore lines without the exact prefix, reject unsupported schema 
 | `player` | Player name or `null`; no XUID is emitted |
 | `data` | Topic-specific payload |
 
-`telemetry.started` and `snapshot.started` include a `storage` object with the independently versioned persisted-state status. Consumers must treat `persistenceBlocked: true` as degraded even when a snapshot reaches `snapshot.finished`.
+`telemetry.started` and `snapshot.started` include a `storage` object with the independently versioned persisted-state status and a `capabilities` map. Each capability contains `supported` and may include a bounded startup error. Consumers must treat `persistenceBlocked: true` as degraded even when a snapshot reaches `snapshot.finished`, and must label metrics from unsupported capabilities as unavailable rather than zero.
 
 Protocol `schema` and pack `storageVersion` are intentionally independent. Storage version `2` shards players into separate world dynamic properties without changing protocol schema `1`; a storage migration does not require a wire-protocol version change when the emitted envelope contract remains compatible.
 

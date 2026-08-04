@@ -11,8 +11,9 @@ from .repository import StateRepository
 from .runtime import EventRuntime
 from .schema import GAMERULES
 from .services import ManagerService
-from .players import PlayerService
+from .players import PlayerService, SQLitePlayerRepository
 from .telemetry_service import TelemetryService
+from .telemetry_repository import SQLiteTelemetryRepository
 
 
 def compose_manager(settings: Settings) -> ManagerService:
@@ -22,8 +23,8 @@ def compose_manager(settings: Settings) -> ManagerService:
     bedrock = BedrockClient(settings.container, list(GAMERULES), settings.console_wait_seconds)
     containers = DockerOperations(settings.container, settings.project)
     broker = EventBroker(repository)
-    players = PlayerService(repository, files, bedrock, broker, settings.bootstrap_operator)
-    telemetry = TelemetryService(repository, broker)
+    players = PlayerService(SQLitePlayerRepository(repository), files, bedrock, broker, settings.bootstrap_operator)
+    telemetry = TelemetryService(SQLiteTelemetryRepository(repository), broker)
     manager = ManagerService(
         repository=repository,
         files=files,

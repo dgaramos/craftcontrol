@@ -12,11 +12,11 @@ import time
 from collections.abc import Callable
 from typing import Any
 
-from .ports import EventPublisher, StateStore
+from .ports import EventPublisher, TelemetryStore
 
 
 class TelemetryService:
-    def __init__(self, repository: StateStore, events: EventPublisher) -> None:
+    def __init__(self, repository: TelemetryStore, events: EventPublisher) -> None:
         self.repository = repository
         self.events = events
         self._lock = threading.RLock()

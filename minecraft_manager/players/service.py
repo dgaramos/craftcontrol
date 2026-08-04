@@ -4,7 +4,7 @@ import hashlib
 import time
 from typing import Any
 
-from ..ports import EventPublisher, ServerConfiguration, ServerConsole, StateStore
+from ..ports import EventPublisher, PlayerStore, ServerConfiguration, ServerConsole
 
 
 class PlayerService:
@@ -12,7 +12,7 @@ class PlayerService:
 
     def __init__(
         self,
-        repository: StateStore,
+        repository: PlayerStore,
         files: ServerConfiguration,
         console: ServerConsole,
         events: EventPublisher,

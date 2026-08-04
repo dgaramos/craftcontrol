@@ -46,3 +46,6 @@ class SQLitePlayerRepository:
 
     def block_analytics(self, limit: int = 10) -> dict[str, Any]:
         return self.database.block_analytics(limit)
+
+    def combat_analytics(self, limit: int = 10) -> dict[str, Any]:
+        return self.database.combat_analytics(limit)

@@ -263,6 +263,9 @@ class ManagerService:
     def block_analytics(self, limit: int = 10) -> dict[str, Any]:
         return self.player_service.blocks(limit)
 
+    def combat_analytics(self, limit: int = 10) -> dict[str, Any]:
+        return self.player_service.combat(limit)
+
     def set_player_operator(self, player: str, enabled: bool) -> None:
         self.player_service.set_operator(player, enabled)
 

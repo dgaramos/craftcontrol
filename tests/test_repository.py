@@ -169,3 +169,42 @@ class StateRepositoryTest(unittest.TestCase):
             self.assertEqual(result["rankings"]["ores"]["diamond"][0]["value"], 5)
             self.assertEqual(result["top_broken"][0], {"block": "minecraft:deepslate_diamond_ore", "count": 5})
             self.assertNotIn("private-", str(result))
+
+    def test_combat_analytics_has_complete_zero_state(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = StateRepository(Path(directory) / "state.db")
+            repository.initialize()
+            result = repository.combat_analytics()
+            self.assertEqual(result["totals"], {"deaths": 0, "player_kills": 0, "mob_kills": 0, "damage_dealt": 0, "damage_taken": 0})
+            self.assertEqual(result["breakdowns"], {"causes": [], "opponents": [], "projectiles": []})
+            self.assertEqual(result["pvp"], [])
+            self.assertEqual(result["players"], [])
+
+    def test_combat_analytics_aggregates_snapshots_and_structured_deaths(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = StateRepository(Path(directory) / "state.db")
+            repository.initialize()
+            repository.observe_player("VonCrush", True, "private-99")
+            repository.observe_player("Nicole", True, "private-456")
+            repository.ingest_telemetry({
+                "schema": 1, "sequence": 1, "type": "snapshot.player", "timestamp": 1,
+                "player": {"name": "VonCrush"},
+                "data": {"deaths": 1, "playerKills": 2, "mobKills": 8, "damageDealt": 42.5, "damageTaken": 12},
+            })
+            repository.ingest_telemetry({
+                "schema": 1, "sequence": 2, "type": "snapshot.player", "timestamp": 2,
+                "player": {"name": "Nicole"},
+                "data": {"deaths": 3, "playerKills": 1, "mobKills": 4, "damageDealt": 20, "damageTaken": 30},
+            })
+            repository.ingest_telemetry({
+                "schema": 1, "sequence": 3, "type": "entity.died", "timestamp": 3,
+                "player": {"name": "Nicole"},
+                "data": {"victim": "Nicole", "killer": "VonCrush", "killerType": "minecraft:player", "projectileType": "minecraft:arrow", "cause": "projectile"},
+            })
+            result = repository.combat_analytics()
+            self.assertEqual(result["totals"]["mob_kills"], 12)
+            self.assertEqual(result["totals"]["damage_dealt"], 62.5)
+            self.assertEqual(result["rankings"]["player_kills"][0]["player"]["name"], "VonCrush")
+            self.assertEqual(result["breakdowns"]["causes"][0], {"key": "projectile", "count": 1})
+            self.assertEqual(result["pvp"][0]["attacker"]["name"], "VonCrush")
+            self.assertNotIn("private-", str(result))

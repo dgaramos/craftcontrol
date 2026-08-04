@@ -5,7 +5,7 @@ import { requireSession } from "./js/auth.js?v=1";
 const state = {
   schema: null, config: {}, gamerules: {}, players: [], online: 0, maxPlayers: 0,
   changes: {}, tab: "home", tabs: ["home", "world", "players", "analytics", "rules", "server"], status: null, updatedAt: 0, domains: {},
-  analytics: { kind: "all", player: "", source: "all", search: "", days: 0, page: 1, rankingCategory: "activity", rankingMetric: "play_time", blocksMode: "mining", selectedOre: "diamond" },
+  analytics: { kind: "all", player: "", source: "all", search: "", days: 0, page: 1, rankingCategory: "activity", rankingMetric: "play_time", blocksMode: "mining", selectedOre: "diamond", combatMetric: "mob_kills" },
   locale: (localStorage.getItem("craftcontrol-locale") || localStorage.getItem("manager-locale")) === "en" ? "en" : "pt",
   user: null,
 };
@@ -58,7 +58,7 @@ const messages = {
     deathHistory: "Histórico de mortes", noDeaths: "Nenhuma morte detalhada registrada.", deathCause: "Causa", killedBy: "Responsável", projectile: "Projétil", telemetrySource: "Behavior pack",
     home: "Início", world: "Mundo", players: "Jogadores", analytics: "Dados", rules: "Regras", settings: "Servidor",
     analyticsTitle: "Atividade do servidor", analyticsHelp: "A história compartilhada de quem entrou, saiu, morreu ou teve permissões alteradas.",
-    activityView: "Atividade", deathsView: "Mortes", rankingsView: "Rankings", blocksView: "Blocos", eventFilter: "Evento", playerFilter: "Jogador", periodFilter: "Período", sourceFilter: "Origem", detailFilter: "Causa ou responsável", detailFilterHint: "Ex.: zombie, lava…",
+    activityView: "Atividade", deathsView: "Mortes", rankingsView: "Rankings", blocksView: "Blocos", combatView: "Combate", eventFilter: "Evento", playerFilter: "Jogador", periodFilter: "Período", sourceFilter: "Origem", detailFilter: "Causa ou responsável", detailFilterHint: "Ex.: zombie, lava…",
     everyEvent: "Todos os eventos", joinsOnly: "Entradas", leavesOnly: "Saídas", permissionsOnly: "Permissões", respawnsOnly: "Respawns", dimensionsOnly: "Dimensões",
     everyPlayer: "Todos os jogadores", lifetime: "Desde o início", last7Days: "Últimos 7 dias", last30Days: "Últimos 30 dias",
     everySource: "Todas as fontes", structuredSource: "Telemetry Pack", serverSource: "Servidor e manager",
@@ -68,6 +68,7 @@ const messages = {
     categoryActivity: "Atividade", categoryCombat: "Combate", categoryBuilding: "Blocos", categoryExploration: "Exploração", rankPlayTime: "Tempo jogado", rankSessions: "Sessões", rankLongestSession: "Maior sessão", rankDeaths: "Mortes", rankPlayerKills: "Jogadores eliminados", rankMobKills: "Criaturas eliminadas", rankBlocksBroken: "Blocos quebrados", rankBlocksPlaced: "Blocos colocados", rankDamageDealt: "Dano causado", rankDamageTaken: "Dano recebido", rankDistance: "Distância", rankDimensions: "Dimensões",
     blocksTitle: "Mineração e construção", blocksHelp: "Descubra o que o mundo consumiu, quem mais minerou e quem mais construiu.", miningView: "Mineração", buildingView: "Construção", oresTitle: "Minérios encontrados", topBlocks: "Blocos mais frequentes", favoriteBlocks: "Favoritos dos jogadores", miners: "Mineradores", builders: "Construtores", noBlockData: "Ainda não há blocos registrados pelo Telemetry Pack.", blocksTelemetryHint: "Os números começam a contar após a instalação do Telemetry Pack.", broken: "Quebrados", placed: "Colocados", oreRanking: "Ranking do minério",
     oreDiamond: "Diamante", oreIron: "Ferro", oreGold: "Ouro", oreCopper: "Cobre", oreCoal: "Carvão", oreRedstone: "Redstone", oreLapis: "Lápis-lazúli", oreEmerald: "Esmeralda", oreQuartz: "Quartzo", oreAncient_debris: "Detritos ancestrais",
+    combatTitle: "Combate do servidor", combatHelp: "Mortes, eliminações e dano acumulado com a evidência disponível no mundo.", combatEmptyHelp: "Os painéis permanecem visíveis e começam a preencher quando o Telemetry Pack observar combate.", combatDeaths: "Mortes", combatPlayerKills: "Eliminações PvP", combatMobKills: "Criaturas eliminadas", combatDamageDealt: "Dano causado", combatDamageTaken: "Dano recebido", combatRankings: "Ranking de combate", deathCauses: "Causas de morte", lethalOpponents: "Responsáveis pelas mortes", projectiles: "Projéteis", pvpDuels: "Confrontos PvP", combatProfiles: "Resumo por jogador", noCombatEvidence: "Nenhuma evidência registrada ainda.", telemetryWaiting: "Aguardando telemetria", observedDeaths: "Mortes estruturadas observadas",
     worldIntro: "Configuração do mundo", rulesIntro: "Comportamento do jogo", serverIntro: "Infraestrutura do servidor",
     pendingChanges: "ALTERAÇÕES PENDENTES", reviewChanges: "Revisar alterações",
     pendingHelp: "Estas configurações serão salvas e o servidor será reiniciado somente quando você aplicar.",
@@ -130,7 +131,7 @@ const messages = {
     deathHistory: "Death history", noDeaths: "No detailed deaths recorded.", deathCause: "Cause", killedBy: "Killed by", projectile: "Projectile", telemetrySource: "Behavior pack",
     home: "Home", world: "World", players: "Players", analytics: "Data", rules: "Rules", settings: "Server",
     analyticsTitle: "Server activity", analyticsHelp: "The shared history of players joining, leaving, dying, or receiving permission changes.",
-    activityView: "Activity", deathsView: "Deaths", rankingsView: "Rankings", blocksView: "Blocks", eventFilter: "Event", playerFilter: "Player", periodFilter: "Period", sourceFilter: "Source", detailFilter: "Cause or responsible", detailFilterHint: "E.g. zombie, lava…",
+    activityView: "Activity", deathsView: "Deaths", rankingsView: "Rankings", blocksView: "Blocks", combatView: "Combat", eventFilter: "Event", playerFilter: "Player", periodFilter: "Period", sourceFilter: "Source", detailFilter: "Cause or responsible", detailFilterHint: "E.g. zombie, lava…",
     everyEvent: "All events", joinsOnly: "Joins", leavesOnly: "Leaves", permissionsOnly: "Permissions", respawnsOnly: "Respawns", dimensionsOnly: "Dimensions",
     everyPlayer: "All players", lifetime: "All time", last7Days: "Last 7 days", last30Days: "Last 30 days",
     everySource: "All sources", structuredSource: "Telemetry Pack", serverSource: "Server and manager",
@@ -140,6 +141,7 @@ const messages = {
     categoryActivity: "Activity", categoryCombat: "Combat", categoryBuilding: "Blocks", categoryExploration: "Exploration", rankPlayTime: "Play time", rankSessions: "Sessions", rankLongestSession: "Longest session", rankDeaths: "Deaths", rankPlayerKills: "Player kills", rankMobKills: "Mob kills", rankBlocksBroken: "Blocks broken", rankBlocksPlaced: "Blocks placed", rankDamageDealt: "Damage dealt", rankDamageTaken: "Damage taken", rankDistance: "Distance", rankDimensions: "Dimensions",
     blocksTitle: "Mining and building", blocksHelp: "See what the world consumed, who mined the most, and who built the most.", miningView: "Mining", buildingView: "Building", oresTitle: "Ores discovered", topBlocks: "Most frequent blocks", favoriteBlocks: "Player favorites", miners: "Miners", builders: "Builders", noBlockData: "The Telemetry Pack has not recorded any blocks yet.", blocksTelemetryHint: "Counters start after the Telemetry Pack is installed.", broken: "Broken", placed: "Placed", oreRanking: "Ore ranking",
     oreDiamond: "Diamond", oreIron: "Iron", oreGold: "Gold", oreCopper: "Copper", oreCoal: "Coal", oreRedstone: "Redstone", oreLapis: "Lapis lazuli", oreEmerald: "Emerald", oreQuartz: "Quartz", oreAncient_debris: "Ancient debris",
+    combatTitle: "Server combat", combatHelp: "Deaths, kills, and accumulated damage backed by the evidence available in the world.", combatEmptyHelp: "Panels remain visible and begin filling when the Telemetry Pack observes combat.", combatDeaths: "Deaths", combatPlayerKills: "PvP kills", combatMobKills: "Mobs defeated", combatDamageDealt: "Damage dealt", combatDamageTaken: "Damage taken", combatRankings: "Combat ranking", deathCauses: "Death causes", lethalOpponents: "Responsible for deaths", projectiles: "Projectiles", pvpDuels: "PvP encounters", combatProfiles: "Player summaries", noCombatEvidence: "No evidence has been recorded yet.", telemetryWaiting: "Waiting for telemetry", observedDeaths: "Observed structured deaths",
     worldIntro: "World configuration", rulesIntro: "Game behavior", serverIntro: "Server infrastructure",
     pendingChanges: "PENDING CHANGES", reviewChanges: "Review changes",
     pendingHelp: "These settings are saved and the server restarts only after you apply them.",
@@ -683,7 +685,7 @@ async function openAnalyticsPlayer(publicId) {
 }
 
 function analyticsViewSwitch(active) {
-  return `<div class="analytics-view-switch"><button data-analytics-view="all" class="${!['deaths', 'rankings', 'blocks'].includes(active) ? "active" : ""}" type="button">☷ ${t("activityView")}</button><button data-analytics-view="deaths" class="death ${active === "deaths" ? "active" : ""}" type="button">☠ ${t("deathsView")}</button><button data-analytics-view="rankings" class="ranking ${active === "rankings" ? "active" : ""}" type="button">♛ ${t("rankingsView")}</button><button data-analytics-view="blocks" class="blocks ${active === "blocks" ? "active" : ""}" type="button">▦ ${t("blocksView")}</button></div>`;
+  return `<div class="analytics-view-switch"><button data-analytics-view="all" class="${!['deaths', 'rankings', 'blocks', 'combat'].includes(active) ? "active" : ""}" type="button">☷ ${t("activityView")}</button><button data-analytics-view="deaths" class="death ${active === "deaths" ? "active" : ""}" type="button">☠ ${t("deathsView")}</button><button data-analytics-view="rankings" class="ranking ${active === "rankings" ? "active" : ""}" type="button">♛ ${t("rankingsView")}</button><button data-analytics-view="blocks" class="blocks ${active === "blocks" ? "active" : ""}" type="button">▦ ${t("blocksView")}</button><button data-analytics-view="combat" class="combat ${active === "combat" ? "active" : ""}" type="button">⚔ ${t("combatView")}</button></div>`;
 }
 
 const rankingDefinitions = {
@@ -785,6 +787,40 @@ async function renderBlocksPanel() {
   await load();
 }
 
+const combatDefinitions = {
+  mob_kills: { label: "combatMobKills", format: "number" },
+  player_kills: { label: "combatPlayerKills", format: "number" },
+  deaths: { label: "combatDeaths", format: "number" },
+  damage_dealt: { label: "combatDamageDealt", format: "decimal" },
+  damage_taken: { label: "combatDamageTaken", format: "decimal" },
+};
+
+function combatBreakdown(title, entries, icon) {
+  return `<section class="combat-breakdown block-panel"><div class="ranking-section-title"><span class="eyebrow">${icon} LIFETIME</span><h3>${title}</h3></div>${entries.length ? `<ol>${entries.map((entry, index) => `<li><b>${index + 1}</b><span>${escapeHtml(blockName(entry.key))}</span><strong>${formatRankingValue(entry.count, "number")}</strong></li>`).join("")}</ol>` : `<div class="combat-zero"><span>${icon}</span><p>${t("noCombatEvidence")}</p></div>`}</section>`;
+}
+
+async function renderCombatPanel() {
+  const analytics = state.analytics;
+  content.innerHTML = `<div class="combat-screen">${analyticsViewSwitch("combat")}<header class="combat-hero block-panel"><div><span class="eyebrow">COMBAT LOG</span><h2>${t("combatTitle")}</h2><p>${t("combatHelp")}</p></div><button id="combat-refresh" class="secondary" type="button">↻ ${t("refreshData")}</button></header><div id="combat-content"><div class="analytics-loading">${t("checking")}</div></div></div>`;
+  bindAnalyticsViewSwitch();
+  const load = async () => {
+    const target = $("#combat-content");
+    target.innerHTML = `<div class="analytics-loading">${t("checking")}</div>`;
+    try {
+      const result = await api("/api/analytics/combat?limit=10");
+      const definition = combatDefinitions[analytics.combatMetric] || combatDefinitions.mob_kills;
+      const ranking = result.rankings?.[analytics.combatMetric] || [];
+      const totals = result.totals || {};
+      const breakdowns = result.breakdowns || {};
+      target.innerHTML = `<section class="combat-summary">${Object.entries(combatDefinitions).map(([key, item]) => `<article><small>${t(item.label)}</small><b>${formatRankingValue(totals[key], item.format)}</b><span>${key === "deaths" ? "☠" : key.includes("damage") ? "♥" : "⚔"}</span></article>`).join("")}</section><p class="combat-empty-note">${t("combatEmptyHelp")} <small>${t("updated")} ${formatDate(result.generated_at)}</small></p><div class="combat-metric-picker">${Object.entries(combatDefinitions).map(([key, item]) => `<button data-combat-metric="${key}" class="${analytics.combatMetric === key ? "active" : ""}" type="button">${t(item.label)}</button>`).join("")}</div><div class="combat-main-grid">${playerBlockRanking(ranking, `${t("combatRankings")}: ${t(definition.label)}`)}<section class="pvp-panel block-panel"><div class="ranking-section-title"><span class="eyebrow">⚔ ${t("observedDeaths")}</span><h3>${t("pvpDuels")}</h3></div>${(result.pvp || []).length ? `<ol>${result.pvp.map((duel) => `<li><button data-combat-player="${escapeHtml(duel.attacker.id)}" type="button">${escapeHtml(duel.attacker.name)}</button><span>→</span><button data-combat-player="${escapeHtml(duel.victim.id)}" type="button">${escapeHtml(duel.victim.name)}</button><b>${duel.count}</b></li>`).join("")}</ol>` : `<div class="combat-zero"><span>⚔</span><p>${t("noCombatEvidence")}</p></div>`}</section></div><div class="combat-breakdown-grid">${combatBreakdown(t("deathCauses"), breakdowns.causes || [], "☠")}${combatBreakdown(t("lethalOpponents"), breakdowns.opponents || [], "♞")}${combatBreakdown(t("projectiles"), breakdowns.projectiles || [], "➶")}</div><section class="combat-profiles block-panel"><div class="ranking-section-title"><span class="eyebrow">PLAYERS</span><h3>${t("combatProfiles")}</h3></div><div>${(result.players || []).map((item) => `<button data-combat-player="${escapeHtml(item.player.id)}" type="button"><strong>${escapeHtml(item.player.name)}</strong><span>${t("combatMobKills")} <b>${formatRankingValue(item.mob_kills, "number")}</b></span><span>${t("combatPlayerKills")} <b>${formatRankingValue(item.player_kills, "number")}</b></span><span>${t("combatDeaths")} <b>${formatRankingValue(item.deaths, "number")}</b></span><small>${item.telemetry_available ? `${t("sourceStructured")} · ${t("updated")} ${formatDate(item.updated_at)}` : t("telemetryWaiting")}</small></button>`).join("") || `<div class="combat-zero"><span>◇</span><p>${t("noCombatEvidence")}</p></div>`}</div></section>`;
+      target.querySelectorAll("[data-block-player], [data-combat-player]").forEach((button) => button.onclick = () => { const id = button.dataset.blockPlayer || button.dataset.combatPlayer; if (id) openAnalyticsPlayer(id); });
+      target.querySelectorAll("[data-combat-metric]").forEach((button) => button.onclick = () => { analytics.combatMetric = button.dataset.combatMetric; load(); });
+    } catch (error) { target.innerHTML = `<div class="analytics-empty"><p>${escapeHtml(error.message)}</p></div>`; }
+  };
+  $("#combat-refresh").onclick = load;
+  await load();
+}
+
 async function renderAnalyticsPanel() {
   const filters = state.analytics;
   if (filters.kind === "rankings") {
@@ -793,6 +829,10 @@ async function renderAnalyticsPanel() {
   }
   if (filters.kind === "blocks") {
     await renderBlocksPanel();
+    return;
+  }
+  if (filters.kind === "combat") {
+    await renderCombatPanel();
     return;
   }
   content.innerHTML = `<div class="analytics-screen">${analyticsViewSwitch(filters.kind)}<header class="analytics-hero block-panel"><div><span class="eyebrow">CRAFTCONTROL ANALYTICS</span><h2>${t("analyticsTitle")}</h2><p>${t("analyticsHelp")}</p></div><button id="analytics-refresh" class="secondary" type="button">↻ ${t("refreshData")}</button></header><section class="analytics-filters block-panel"><label><span>${t("eventFilter")}</span><select id="analytics-kind" ${filters.kind === "deaths" ? "disabled" : ""}><option value="all">${t("everyEvent")}</option><option value="joins">${t("joinsOnly")}</option><option value="leaves">${t("leavesOnly")}</option><option value="respawns">${t("respawnsOnly")}</option><option value="dimensions">${t("dimensionsOnly")}</option><option value="permissions">${t("permissionsOnly")}</option></select></label><label><span>${t("playerFilter")}</span><select id="analytics-player"><option value="">${t("everyPlayer")}</option></select></label><label><span>${t("periodFilter")}</span><select id="analytics-days"><option value="0">${t("lifetime")}</option><option value="7">${t("last7Days")}</option><option value="30">${t("last30Days")}</option></select></label><label><span>${t("sourceFilter")}</span><select id="analytics-source"><option value="all">${t("everySource")}</option><option value="structured">${t("structuredSource")}</option><option value="server">${t("serverSource")}</option></select></label><label><span>${t("detailFilter")}</span><input id="analytics-search" type="search" maxlength="64" value="${escapeHtml(filters.search)}" placeholder="${t("detailFilterHint")}"></label></section><div id="analytics-results" class="analytics-results"><div class="analytics-loading">${t("checking")}</div></div><dialog id="analytics-death-dialog" class="analytics-death-dialog"><div class="drawer-header"><div><span class="eyebrow">${t("deathDetails")}</span><h2></h2></div><button class="drawer-close" type="button" aria-label="${t("close")}">×</button></div><div class="analytics-death-content"></div></dialog></div>`;

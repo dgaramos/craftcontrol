@@ -85,3 +85,6 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn('class="ranking-podium', script)
         self.assertIn("rankingsTitle", script)
         self.assertIn(".podium-place.rank-1", stylesheet)
+        self.assertIn('data-analytics-view="combat"', script)
+        self.assertIn("combatEmptyHelp", script)
+        self.assertIn(".combat-zero", stylesheet)

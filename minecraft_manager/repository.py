@@ -600,3 +600,74 @@ class StateRepository:
             },
             "players": players,
         }
+
+    def combat_analytics(self, limit: int = 10) -> dict[str, Any]:
+        profiles = self.player_profiles()
+        known = {profile["name"].casefold(): {"id": profile["id"], "name": profile["name"]} for profile in profiles}
+        players = []
+        for profile in profiles:
+            stats = profile.get("telemetry", {}) if profile.get("telemetry_updated_at") else {}
+            players.append({
+                "player": {"id": profile["id"], "name": profile["name"]},
+                "deaths": int(profile.get("deaths_count", 0)),
+                "player_kills": int(stats.get("playerKills", 0)),
+                "mob_kills": int(stats.get("mobKills", 0)),
+                "damage_dealt": float(stats.get("damageDealt", 0)),
+                "damage_taken": float(stats.get("damageTaken", 0)),
+                "telemetry_available": bool(profile.get("telemetry_updated_at")),
+                "updated_at": profile.get("telemetry_updated_at") or profile.get("last_seen_at"),
+            })
+
+        causes: dict[str, int] = {}
+        opponents: dict[str, int] = {}
+        projectiles: dict[str, int] = {}
+        pvp: dict[tuple[str, str], int] = {}
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT p.current_name,h.payload FROM player_history h "
+                "JOIN player_profiles p ON p.identity=h.identity "
+                "WHERE h.topic='player.death' AND h.source='behavior-pack'"
+            ).fetchall()
+        for victim, raw_payload in rows:
+            payload = json.loads(raw_payload)
+            cause = payload.get("cause")
+            killer_name = payload.get("killer")
+            killer_type = payload.get("killerType")
+            projectile = payload.get("projectileType")
+            if isinstance(cause, str) and cause: causes[cause] = causes.get(cause, 0) + 1
+            opponent = killer_name or killer_type
+            if isinstance(opponent, str) and opponent: opponents[opponent] = opponents.get(opponent, 0) + 1
+            if isinstance(projectile, str) and projectile: projectiles[projectile] = projectiles.get(projectile, 0) + 1
+            if isinstance(killer_name, str) and killer_name:
+                pair = (killer_name, victim)
+                pvp[pair] = pvp.get(pair, 0) + 1
+
+        def ranking(field: str) -> list[dict[str, Any]]:
+            entries = [{"player": item["player"], "value": item[field], "updated_at": item["updated_at"]} for item in players if item[field] > 0]
+            return sorted(entries, key=lambda entry: (-entry["value"], entry["player"]["name"].casefold()))[:limit]
+
+        def top(values: dict[str, int]) -> list[dict[str, Any]]:
+            return [{"key": key, "count": count} for key, count in sorted(values.items(), key=lambda item: (-item[1], item[0].casefold()))[:limit]]
+
+        duels = []
+        for (attacker, victim), count in sorted(pvp.items(), key=lambda item: (-item[1], item[0][0].casefold(), item[0][1].casefold()))[:limit]:
+            duels.append({
+                "attacker": known.get(attacker.casefold(), {"id": "", "name": attacker}),
+                "victim": known.get(victim.casefold(), {"id": "", "name": victim}),
+                "count": count,
+            })
+
+        return {
+            "generated_at": time.time(), "period": "lifetime",
+            "totals": {
+                "deaths": sum(item["deaths"] for item in players),
+                "player_kills": sum(item["player_kills"] for item in players),
+                "mob_kills": sum(item["mob_kills"] for item in players),
+                "damage_dealt": round(sum(item["damage_dealt"] for item in players), 1),
+                "damage_taken": round(sum(item["damage_taken"] for item in players), 1),
+            },
+            "breakdowns": {"causes": top(causes), "opponents": top(opponents), "projectiles": top(projectiles)},
+            "pvp": duels,
+            "rankings": {field: ranking(field) for field in ("deaths", "player_kills", "mob_kills", "damage_dealt", "damage_taken")},
+            "players": players,
+        }

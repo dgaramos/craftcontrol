@@ -42,3 +42,11 @@ The current snapshots are lifetime aggregates. Seven-day, thirty-day, and custom
 Incremental `block.broken` and `block.placed` events update both the lifetime counter and the corresponding bounded per-type map. The next authoritative snapshot reconciles those values after downtime or a detected sequence gap. The repository limits each type map to 128 entries and the public endpoint emits only top lists, favorites, aggregate ore totals, opaque player IDs, Gamertags, and observation timestamps; it never exposes XUIDs or the complete persistence envelope.
 
 The responsive Blocks view offers two task-focused modes. Mining presents ore cards and a selected per-ore leaderboard, while Building emphasizes placed block types and builders. All values remain explicitly lifetime-only because the pack does not yet persist time buckets.
+
+## Combat
+
+`GET /api/analytics/combat` combines authoritative lifetime snapshot counters with the bounded structured death history already stored by CraftControl. Snapshot evidence provides player kills, mob kills, damage dealt, and damage taken. The best available profile death count may come from a snapshot or clearly labeled derived server evidence. Structured death rows supply bounded breakdowns for cause, responsible entity or player, projectile, and observed PvP encounters.
+
+The Combat view always renders its complete information architecture, including when every value is zero. Zero-valued summary cards, explanatory empty panels, and per-player telemetry status distinguish “nothing observed yet” from a broken or unavailable screen. Rankings omit zero-valued entries but retain their labeled container and empty explanation.
+
+Current pack snapshots do not retain kills by mob type, so CraftControl does not claim favorite creature targets. Per-hit events are intentionally not persisted: only aggregate damage is reconciled by snapshots, avoiding high-frequency permanent logging. Like the other snapshot-backed views, Combat is lifetime-only until durable daily buckets exist.

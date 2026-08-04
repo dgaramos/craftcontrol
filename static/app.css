@@ -175,7 +175,10 @@ main { width: min(940px, 100%); margin: 0 auto; padding: 2px 13px 24px; }
 .hero.offline h2 { color: var(--danger); }
 .hero.offline .shield { background: linear-gradient(135deg, #8d3931, #5b1d19); box-shadow: inset 3px 3px 0 #d56359, 4px 5px 0 #080a08; }
 
-.players-card { padding: 10px; }
+.players-card { position: relative; display: block; min-height: 0; padding: 10px 34px 10px 10px; text-align: left; text-shadow: none; }
+.players-card:hover { border-top-color: var(--grass-light); border-left-color: var(--grass-light); background: #172018; }
+.players-card-arrow { position: absolute; right: 11px; top: 50%; color: var(--grass-light); font-size: 1.8rem; transform: translateY(-50%); }
+.players-card:active .players-card-arrow { transform: translateY(calc(-50% + 3px)); }
 .player-count { display: flex; align-items: center; gap: 9px; }
 .pixel-icon { color: var(--grass-light); font-size: 1.4rem; }
 .players-card strong, .players-card small { display: block; }

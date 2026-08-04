@@ -130,6 +130,14 @@ def players():
     return jsonify(players=service().players())
 
 
+@api.get("/api/players/profile/<path:identity>")
+def player_profile(identity: str):
+    profile = service().player_profile(identity)
+    if profile is None:
+        return jsonify(error="Jogador não encontrado"), 404
+    return jsonify(profile)
+
+
 @api.put("/api/players/<player>/operator")
 def player_operator(player: str):
     try:

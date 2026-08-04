@@ -17,8 +17,12 @@ The manager provides a focused graphical interface for common server settings, l
 - Review drawer for queued persistent changes, with per-item removal before applying and restarting
 - Persistent server settings managed through the Bedrock project's `.env` file
 - Live gamerule updates without editing files or opening a console
-- Current container status and cached online-player list
-- Dedicated online-player screen with operator access toggles and one-time bootstrap operator provisioning
+- Current container status and event-driven online-player presence
+- Permanent player profiles with first/last seen, session count, play time, deaths, and event history
+- Player screen with online/offline status, permission, current session, first/last seen, last death, aliases, operator toggles, session history, event timeline, and one-time bootstrap operator provisioning
+- Player roster overview, name search, and all/online/offline/operator filters
+- Optional Bedrock Telemetry behavior-pack integration for authoritative deaths, kills, blocks, damage, distance, and dimensions
+- Clickable online-player overview widget that opens the complete roster and individual histories
 - Manual state refresh from the web interface
 - One-tap shortcuts for day, night, and clear weather
 - Dedicated time and weather workspace with all Bedrock time presets, exact ticks, time advancement, queries, automatic cycles, weather types, and day-count reset
@@ -72,6 +76,8 @@ The manager uses one Gunicorn worker with multiple threads so the in-process ref
 
 The manager maintains its own event and reconciliation pipeline. It does not depend on the custom exporter, Prometheus, Grafana, or `mc-monitor`; observability services may be unavailable without affecting management operations.
 
+The optional `minecraft-bedrock-telemetry` behavior pack extends player profiles without becoming a hard dependency. The manager validates `[BEDROCK_TELEMETRY]` schema-1 records, deduplicates incremental events, stores authoritative snapshots in SQLite, and requests a full snapshot through the existing Bedrock stdin connection after manager or pack startup. When the pack is absent, existing presence, sessions, permissions, and derived death parsing continue to work.
+
 ```text
 Bedrock log stream ------+
                          |
@@ -86,7 +92,8 @@ Manager operations ------+              +--> targeted updates  +--> SSE --> brow
 
 | Signal | Action | Bedrock queries |
 | --- | --- | ---: |
-| Player connected or disconnected | Update the cached player set directly from the log | 0 |
+| Player connected or disconnected | Update presence, profile, session, and permanent history directly from the log | 0 |
+| Recognized player death | Increment the derived death counter and append the raw event to permanent history | 0 |
 | Recognized gamerule activity | Query only the named gamerule or rules | 1 per affected rule |
 | Permission activity | Mark the permissions domain as changed | 0 |
 | Container start or restart | Run a full reconciliation | One batched session |
@@ -133,6 +140,12 @@ The internal broker uses topics such as:
 ```text
 player.connected
 player.disconnected
+player.death
+player.permission.changed
+telemetry.telemetry.started
+telemetry.snapshot.started
+telemetry.snapshot.player
+telemetry.snapshot.finished
 gamerule.invalidated
 permissions.invalidated
 server.start
@@ -146,7 +159,7 @@ stream.logs.connected
 stream.logs.disconnected
 ```
 
-Events are committed to SQLite before being delivered to connected clients. The latest 2,000 events are retained. In-memory subscriber queues are bounded; if a slow browser misses events, reconnect replay or the next state snapshot restores consistency.
+Operational events are committed to SQLite before being delivered to connected clients. The latest 2,000 broker events are retained. Player history is stored separately and is not affected by this rolling limit. In-memory subscriber queues are bounded; if a slow browser misses events, reconnect replay or the next state snapshot restores consistency.
 
 ### Recovery behavior
 
@@ -154,7 +167,14 @@ Events are committed to SQLite before being delivered to connected clients. The 
 - **Manager starts while Bedrock is offline:** the last snapshot remains available and a failed reconciliation is recorded; Docker and log stream supervisors retry with exponential backoff.
 - **Bedrock starts or restarts:** the Docker lifecycle event triggers a full reconciliation.
 - **Log or Docker stream disconnects:** a persistent event records the failure and the supervisor reconnects with a 2-to-60-second exponential backoff.
-- **Duplicate player events:** updates are idempotent because the cache is reconstructed as a keyed player set.
+- **Duplicate player events:** presence transitions are idempotent; repeated connect messages do not create additional sessions.
+- **Abrupt server stop:** Docker `die` or `destroy` events mark remaining players offline and close their sessions as inferred.
+- **Manager downtime:** startup reconciliation compares the persisted roster with the current Bedrock player list and closes stale sessions.
+- **Gamertag changes:** XUID is the internal identity and aliases remain associated with the same profile. XUIDs are not exposed by the public state endpoint.
+- **Duplicate death lines:** short-window fingerprints prevent log reconnects from incrementing the same death twice.
+- **Telemetry replay:** `(sequence, topic, player)` identities make behavior-pack events idempotent; duplicate snapshot lines are ignored.
+- **Telemetry gaps or manager restart:** the manager sends `scriptevent bedrock_telemetry:sync full` directly through the Bedrock stdin attachment and treats the returned per-player snapshots as authoritative.
+- **Behavior pack unavailable:** the last structured snapshot remains visible with its update timestamp, while ordinary manager functions remain independent.
 - **Event bursts:** affected gamerules enter a deduplicated queue with a two-second debounce; the refresh lock serializes targeted and full reconciliation without dropping later rule names.
 - **Unrecognized or externally edited state:** the 15-minute safety reconciliation and manual Refresh button remain the final consistency fallback.
 
@@ -257,7 +277,7 @@ Gamerules and quick actions are validated against fixed allowlists and sent to t
 
 The **Day** and **Night** buttons only set the current world time. They do not enable or disable the daylight cycle; use the corresponding gamerule for that behavior.
 
-## State refresh and online players
+## Player profiles, sessions, and history
 
 The manager keeps a small SQLite cache at:
 
@@ -265,9 +285,23 @@ The manager keeps a small SQLite cache at:
 ./data/manager.db
 ```
 
-The cache stores the last observed settings, gamerules, player names, player count, and refresh timestamp. It is populated on startup and updated when the **Refresh** button is pressed.
+The database stores cached server state plus permanent player profiles, aliases, sessions, and history. A disconnected player is never removed: their status changes to offline, `last_seen_at` is updated, and the open session is closed. The Players screen lists everyone observed by the manager, provides search and presence/role filters, summarizes the roster, and opens individual session and event histories. Public responses use an opaque profile identifier and never expose the player's XUID.
 
-Online players are derived from the Bedrock console response when available, with a connection/disconnection log parser as a fallback. As a result, player presence is a recently observed state rather than a guaranteed real-time session registry.
+Online players are updated immediately from connection/disconnection log events and periodically reconciled with the Bedrock console. Connected-session time is calculated live and committed when the session closes. Container termination closes any remaining session with an `inferred` marker so an abrupt stop does not leave players permanently online.
+
+### Death counters
+
+Death tracking currently parses Bedrock death messages for players already known to the manager. Each accepted event stores the original log line, parsed cause, source, timestamp, and `derived: true`. A fingerprint deduplicates the same line when the Docker log stream reconnects.
+
+This counter is intentionally presented as derived rather than authoritative: message wording can change across Bedrock versions or languages, and deaths that occur while the manager is unavailable may not be observed. Keep the `showdeathmessages` gamerule enabled for this integration. A future optional behavior pack can emit structured death events through the Bedrock Script API when fully authoritative victim, cause, and killer data is required. The manager otherwise remains independent of behavior packs and the Prometheus exporter.
+
+Statistics such as blocks mined, distance traveled, inventory, and achievements are not inferred from ordinary server logs and require world-side instrumentation.
+
+### Structured behavior-pack statistics
+
+When the optional telemetry pack is installed and Bedrock content logging is enabled, the player detail view adds authoritative player kills, mob kills, blocks broken and placed, damage dealt and received, sampled distance, and dimensions visited. Structured death totals replace the derived log counter; the UI keeps the asterisk only while it is using the fallback parser.
+
+The integration requires `CONTENT_LOG_CONSOLE_OUTPUT_ENABLED=true` on the `itzg/minecraft-bedrock-server` container. It does not require Microsoft's `emit-server-telemetry` setting, outbound networking, the Prometheus exporter, or experimental Script APIs.
 
 ## Container operations
 
@@ -307,7 +341,7 @@ The manager does not store Minecraft world data. The Bedrock world's files remai
 /mnt/storage/docker/minecraft-bedrock/data/
 ```
 
-Only the manager's disposable state cache lives in `./data/manager.db`. Backing up this database is optional because the service can reconstruct its state from the Bedrock project and server.
+The manager database lives in `./data/manager.db`. Cached server settings can be reconstructed, but player profiles, session durations, aliases, permission history, and derived death history cannot be fully rebuilt after the original logs disappear. Back up this database if player history matters to you.
 
 World backup and restore procedures must be performed against the Minecraft Bedrock project, not this manager repository.
 
@@ -324,8 +358,9 @@ The browser uses a small JSON API:
 | `GET` | `/api/events` | Receive persisted and live state notifications over SSE |
 | `PUT` | `/api/config` | Validate and save persistent settings |
 | `PUT` | `/api/gamerules/<rule>` | Change an allowlisted gamerule |
-| `GET` | `/api/players` | List currently online players and manager-known operator state |
-| `PUT` | `/api/players/<name>/operator` | Grant or revoke operator access for an online player |
+| `GET` | `/api/players` | List every known player with presence, aggregate sessions, play time, deaths, and operator state |
+| `GET` | `/api/players/profile/<identity>` | Read one player's aliases, recent sessions, aggregate status, and permanent event timeline; the opaque identity must not be interpreted by clients |
+| `PUT` | `/api/players/<name>/operator` | Grant or revoke operator access for a known player |
 | `POST` | `/api/world/<action>` | Run an allowlisted world shortcut |
 | `POST` | `/api/time/<action>` | Run a validated time, cycle, query, or weather operation |
 | `POST` | `/api/server/<action>` | Start, stop, restart, or apply the server |
@@ -376,6 +411,14 @@ docker compose logs --tail=200 minecraft-bedrock-manager
 
 Press **Refresh** while players are connected. The manager queries the console and scans recent connection logs, so a newly recreated Bedrock container may have limited history.
 
+### A death is missing or counted incorrectly
+
+Confirm that the `showdeathmessages` gamerule is enabled and inspect the Bedrock log wording. Death statistics are derived from recognized messages and are not authoritative. Keep the original line when reporting a parser issue so a sanitized regression fixture can be added. Replayed identical lines are deduplicated in a short time window.
+
+### Player history must be backed up
+
+Stop or quiesce writes to the manager database, then copy `./data/manager.db` together with its `-wal` and `-shm` companions when present. A future release will provide a coordinated backup/export operation; copying only the world does not preserve manager-side player history.
+
 ### Changes are saved but not active
 
 Persistent settings require the Bedrock container to be recreated. Use **Save changes** in the interface or recreate the server from its Compose project.
@@ -405,7 +448,9 @@ docker compose config --quiet
 - Authelia integration and trusted-proxy configuration
 - CSRF protection
 - Restricted Docker socket proxy or minimal operations gateway
-- Improved player-session tracking
+- Player search, filters, pagination, and detailed session views
+- Coordinated backup, restore, and export for durable player history
+- Optional behavior-pack integration for authoritative structured player statistics
 - Allowlist and operator management
 - Backup and restore controls for the Bedrock world
 - Audit log for configuration and lifecycle changes

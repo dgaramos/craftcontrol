@@ -50,6 +50,16 @@ class BedrockClient:
         finally:
             client.close()
 
+    def request_telemetry_snapshot(self) -> None:
+        import docker as docker_sdk
+
+        client = docker_sdk.from_env()
+        try:
+            container = client.containers.get(self.container_name)
+            self._write(container, "scriptevent bedrock_telemetry:sync full\n")
+        finally:
+            client.close()
+
     @staticmethod
     def _write(container: Any, commands: str) -> None:
         channel = container.attach_socket(params={"stdin": 1, "stream": 1, "stdout": 0, "stderr": 0})

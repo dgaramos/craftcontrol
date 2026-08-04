@@ -1,18 +1,27 @@
 from __future__ import annotations
 
 import re
+import json
 import threading
 import time
 from typing import TYPE_CHECKING, Any
 
 from .events import EventBroker
 from .schema import GAMERULES
+from .telemetry import PREFIX as TELEMETRY_PREFIX, parse_telemetry_line
 
 if TYPE_CHECKING:
     from .services import ManagerService
 
 
 class EventRuntime:
+    DEATH_PHRASES = (
+        "was slain by", "was shot by", "was killed by", "was blown up by", "was fireballed by",
+        "drowned", "fell from", "hit the ground", "burned to death", "went up in flames",
+        "tried to swim in lava", "suffocated", "starved to death", "was pricked to death",
+        "was struck by lightning", "froze to death", "was impaled by", "was squashed by",
+        "died", "foi morto", "morreu", "afogou", "caiu de", "queimou", "tentou nadar em lava",
+    )
     def __init__(self, service: "ManagerService", broker: EventBroker, container: str, reconcile_seconds: int = 900) -> None:
         self.service = service
         self.broker = broker
@@ -45,6 +54,7 @@ class EventRuntime:
                 container = client.containers.get(self.container)
                 self.broker.publish("stream.logs.connected", "docker-logs")
                 threading.Timer(3, lambda: self.service.refresh_async(reason="log-stream-connected")).start()
+                threading.Timer(5, lambda: self.service.request_telemetry_snapshot_async("log-stream-connected")).start()
                 for raw in container.logs(stream=True, follow=True, since=int(time.time()) - 2):
                     if self._stop.is_set():
                         return
@@ -59,6 +69,14 @@ class EventRuntime:
                     client.close()
 
     def _handle_log(self, line: str) -> None:
+        if TELEMETRY_PREFIX in line:
+            try:
+                envelope = parse_telemetry_line(line)
+                if envelope:
+                    self.service.telemetry_event(envelope)
+            except (ValueError, json.JSONDecodeError) as error:
+                self.broker.publish("telemetry.event.rejected", "bedrock-log", {"error": str(error)[:240]})
+            return
         connected = re.search(r"Player connected:\s*([^,]+),\s*xuid:\s*([^,\s]+)", line, re.IGNORECASE)
         disconnected = re.search(r"Player disconnected:\s*([^,]+),\s*xuid:\s*([^,\s]+)", line, re.IGNORECASE)
         if connected:
@@ -71,6 +89,10 @@ class EventRuntime:
             self.service.player_event(name, False, xuid)
             self.broker.publish("player.disconnected", "bedrock-log", {"player": name})
             return
+        death = self._parse_death(line)
+        if death:
+            self.service.player_death_event(*death, line)
+            return
         if self.service.refreshing:
             return
         lowered = line.lower()
@@ -82,6 +104,19 @@ class EventRuntime:
         if re.search(r"\b(op|deop|permission)\b", lowered):
             self.broker.publish("permissions.invalidated", "bedrock-log")
             threading.Timer(2, self.service.refresh_permissions).start()
+
+    def _parse_death(self, line: str) -> tuple[str, str] | None:
+        lowered = line.casefold()
+        if not any(phrase in lowered for phrase in self.DEATH_PHRASES):
+            return None
+        profiles = self.service.players()
+        matches = [item["name"] for item in profiles if re.search(rf"(?<![\w]){re.escape(item['name'])}(?![\w])", line, re.IGNORECASE)]
+        if not matches:
+            return None
+        player = min(matches, key=lambda name: line.casefold().find(name.casefold()))
+        text = re.sub(r"^.*?\b(INFO|WARN|ERROR)\]\s*", "", line, flags=re.IGNORECASE).strip()
+        cause = text[len(player):].strip(" :-") if text.casefold().startswith(player.casefold()) else text
+        return player, cause[:240] or "unknown"
 
     def _docker_events(self) -> None:
         import docker as docker_sdk
@@ -98,6 +133,10 @@ class EventRuntime:
                     self.broker.publish(f"server.{action}", "docker-events", {"container_id": event.get("id", "")})
                     if action in {"start", "restart"}:
                         self.service.refresh_async(reason=f"docker.{action}")
+                    elif action in {"die", "destroy"}:
+                        closed = self.service.repository.close_online_sessions(f"docker.{action}")
+                        if closed:
+                            self.broker.publish("state.changed", "docker-events", {"domains": ["players", "player_profiles"], "players": closed})
             except Exception as error:
                 self.broker.publish("stream.docker.disconnected", "docker-events", {"error": str(error)[:240]})
                 self._stop.wait(backoff)

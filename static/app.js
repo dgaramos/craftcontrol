@@ -35,6 +35,16 @@ const messages = {
     queryUnavailable: "O servidor não retornou um valor legível.",
     onlinePlayers: "Jogadores online", operatorAccess: "Operador", operatorHelp: "Pode usar comandos administrativos dentro do jogo.",
     noOnlinePlayers: "Nenhum jogador online no momento.", permissionUpdated: "Permissão atualizada",
+    allPlayers: "Todos os jogadores", playerHistoryHelp: "Ficha permanente de todos que já passaram pelo servidor.",
+    offline: "Offline", sessions: "Sessões", playTime: "Tempo jogado", deaths: "Mortes", firstSeen: "Primeiro acesso",
+    lastSeen: "Último acesso", viewHistory: "Ver histórico", hideHistory: "Ocultar histórico", noHistory: "Nenhum evento registrado.",
+    historyUnavailable: "O servidor não retornou uma ficha válida para este jogador.",
+    totalPlayers: "Jogadores", offlinePlayers: "Offline", totalDeaths: "Mortes registradas", totalPlayTime: "Tempo acumulado",
+    searchPlayers: "Buscar jogador", filterAll: "Todos", filterOnline: "Online", filterOffline: "Offline", filterOperators: "Operadores",
+    connectedSince: "Conectado desde", lastDeath: "Última morte", permission: "Permissão", aliases: "Nomes conhecidos",
+    recentSessions: "Sessões recentes", activeSession: "Em andamento", normalExit: "Saída normal", inferredExit: "Encerramento inferido",
+    derivedDeaths: "Contagem derivada das mensagens do servidor", noPlayersFound: "Nenhum jogador corresponde aos filtros.",
+    telemetryStats: "Estatísticas do mundo", authoritative: "Dados estruturados pelo behavior pack", playerKills: "Jogadores eliminados", mobKills: "Criaturas eliminadas", blocksBroken: "Blocos quebrados", blocksPlaced: "Blocos colocados", damageDealt: "Dano causado", damageTaken: "Dano recebido", distanceTraveled: "Distância percorrida", dimensionsVisited: "Dimensões visitadas",
     home: "Início", world: "Mundo", players: "Jogadores", rules: "Regras", settings: "Servidor",
     worldIntro: "Configuração do mundo", rulesIntro: "Comportamento do jogo", serverIntro: "Infraestrutura do servidor",
     pendingChanges: "ALTERAÇÕES PENDENTES", reviewChanges: "Revisar alterações",
@@ -71,6 +81,16 @@ const messages = {
     queryUnavailable: "The server did not return a readable value.",
     onlinePlayers: "Online players", operatorAccess: "Operator", operatorHelp: "Can use administrative commands in the game.",
     noOnlinePlayers: "No players are online right now.", permissionUpdated: "Permission updated",
+    allPlayers: "All players", playerHistoryHelp: "Permanent profile for everyone who has joined the server.",
+    offline: "Offline", sessions: "Sessions", playTime: "Play time", deaths: "Deaths", firstSeen: "First seen",
+    lastSeen: "Last seen", viewHistory: "View history", hideHistory: "Hide history", noHistory: "No events recorded.",
+    historyUnavailable: "The server did not return a valid profile for this player.",
+    totalPlayers: "Players", offlinePlayers: "Offline", totalDeaths: "Recorded deaths", totalPlayTime: "Combined play time",
+    searchPlayers: "Search players", filterAll: "All", filterOnline: "Online", filterOffline: "Offline", filterOperators: "Operators",
+    connectedSince: "Connected since", lastDeath: "Last death", permission: "Permission", aliases: "Known names",
+    recentSessions: "Recent sessions", activeSession: "In progress", normalExit: "Normal exit", inferredExit: "Inferred closure",
+    derivedDeaths: "Count derived from server messages", noPlayersFound: "No players match the filters.",
+    telemetryStats: "World statistics", authoritative: "Structured by the behavior pack", playerKills: "Player kills", mobKills: "Mob kills", blocksBroken: "Blocks broken", blocksPlaced: "Blocks placed", damageDealt: "Damage dealt", damageTaken: "Damage taken", distanceTraveled: "Distance traveled", dimensionsVisited: "Dimensions visited",
     home: "Home", world: "World", players: "Players", rules: "Rules", settings: "Server",
     worldIntro: "World configuration", rulesIntro: "Game behavior", serverIntro: "Server infrastructure",
     pendingChanges: "PENDING CHANGES", reviewChanges: "Review changes",
@@ -305,7 +325,7 @@ function bindSettingFields(groupNames) {
 }
 
 async function renderPlayersPanel() {
-  content.innerHTML = `<div class="players-screen block-panel"><h3>${t("onlinePlayers")}</h3><p>${t("operatorHelp")}</p><div class="loading-players">${t("checking")}</div></div><div class="accordion-list">${settingsMarkup(["Jogadores"])}</div>`;
+  content.innerHTML = `<div class="players-screen block-panel"><h3>${t("allPlayers")}</h3><p>${t("playerHistoryHelp")}</p><div id="player-overview" class="player-overview" hidden></div><div class="player-toolbar" hidden><input id="player-search" type="search" placeholder="${t("searchPlayers")}" autocomplete="off"><div class="player-filters"><button class="active" data-player-filter="all">${t("filterAll")}</button><button data-player-filter="online">${t("filterOnline")}</button><button data-player-filter="offline">${t("filterOffline")}</button><button data-player-filter="operator">${t("filterOperators")}</button></div></div><div class="loading-players">${t("checking")}</div></div><div class="accordion-list">${settingsMarkup(["Jogadores"])}</div>`;
   bindSegmentedControls();
   bindSettingFields(["Jogadores"]);
   try {
@@ -313,13 +333,49 @@ async function renderPlayersPanel() {
     const list = result.players || [];
     const container = content.querySelector(".loading-players");
     if (!list.length) {
-      container.textContent = t("noOnlinePlayers");
+      container.textContent = t("noHistory");
       return;
     }
+    renderPlayerOverview(list);
+    const toolbar = content.querySelector(".player-toolbar");
+    toolbar.hidden = false;
     container.className = "player-management-list";
-    container.innerHTML = list.map((player) => `<article class="player-management-card"><div class="player-avatar" aria-hidden="true">${escapeHtml(player.name.slice(0, 1).toUpperCase())}</div><div><strong>${escapeHtml(player.name)}</strong><small>● ${t("online")}</small></div><div class="player-role"><span>${t("operatorAccess")}</span>${booleanControl(`operator-${player.name.replace(/[^a-z0-9]/gi, "-")}`, player.operator)}</div></article>`).join("");
-    list.forEach((player) => {
-      const id = `operator-${player.name.replace(/[^a-z0-9]/gi, "-")}`;
+    let activeFilter = "all";
+    const updateList = () => {
+      const query = $("#player-search").value.trim().toLocaleLowerCase();
+      const filtered = list.filter((player) => (!query || player.name.toLocaleLowerCase().includes(query)) && (activeFilter === "all" || (activeFilter === "online" && player.online) || (activeFilter === "offline" && !player.online) || (activeFilter === "operator" && player.operator)));
+      renderPlayerCards(container, filtered);
+    };
+    $("#player-search").oninput = updateList;
+    content.querySelectorAll("[data-player-filter]").forEach((button) => button.onclick = () => {
+      activeFilter = button.dataset.playerFilter;
+      content.querySelectorAll("[data-player-filter]").forEach((item) => item.classList.toggle("active", item === button));
+      updateList();
+    });
+    updateList();
+  } catch (error) { const loading = content.querySelector(".loading-players"); if (loading) loading.textContent = error.message; else toast(error.message, true); }
+}
+
+function renderPlayerOverview(list) {
+  const overview = $("#player-overview");
+  const online = list.filter((player) => player.online).length;
+  const deaths = list.reduce((total, player) => total + Number(player.deaths_count || 0), 0);
+  const seconds = list.reduce((total, player) => total + Number(player.total_play_seconds || 0), 0);
+  overview.innerHTML = `<span><b>${list.length}</b>${t("totalPlayers")}</span><span><b>${online}</b>${t("online")}</span><span><b>${deaths}</b>${t("totalDeaths")}</span><span><b>${formatDuration(seconds)}</b>${t("totalPlayTime")}</span>`;
+  overview.hidden = false;
+}
+
+function renderPlayerCards(container, list) {
+  if (!list.length) { container.innerHTML = `<p class="no-player-results">${t("noPlayersFound")}</p>`; return; }
+  container.innerHTML = list.map((player, index) => `<article class="player-management-card ${player.online ? "is-online" : "is-offline"}"><div class="player-avatar" aria-hidden="true">${escapeHtml(player.name.slice(0, 1).toUpperCase())}</div><div class="player-identity"><strong>${escapeHtml(player.name)}</strong><small>${player.online ? "● " + t("online") : "○ " + t("offline")}</small></div><div class="player-role"><span>${escapeHtml(optionLabel(player.permission || "member"))}</span>${booleanControl(`operator-${index}`, player.operator)}</div><div class="player-stats"><span><b>${player.sessions_count}</b>${t("sessions")}</span><span><b>${formatDuration(player.total_play_seconds)}</b>${t("playTime")}</span><span title="${t("derivedDeaths")}"><b>${player.deaths_count}*</b>${t("deaths")}</span></div><div class="player-dates"><span>${t("firstSeen")}: <b>${formatDate(player.first_seen_at)}</b></span><span>${player.online ? t("connectedSince") : t("lastSeen")}: <b>${formatDate(player.online ? player.connected_at : player.last_seen_at)}</b></span>${player.last_death_at ? `<span>${t("lastDeath")}: <b>${formatDate(player.last_death_at)}</b></span>` : ""}</div><button class="secondary player-history-button" data-player-index="${index}">${t("viewHistory")}</button><div class="player-history" id="player-history-${index}" hidden></div></article>`).join("");
+  container.querySelectorAll(".player-management-card").forEach((card, index) => {
+    const player = list[index];
+    if (!player.telemetry_updated_at) return;
+    card.classList.add("has-telemetry");
+    card.querySelector(".player-identity small").insertAdjacentHTML("afterend", `<small class="telemetry-badge">◆ ${t("authoritative")}</small>`);
+  });
+  list.forEach((player, index) => {
+      const id = `operator-${index}`;
       $(`#${id}`).onchange = async (event) => {
         updateToggleLabel(event.target);
         try {
@@ -327,8 +383,57 @@ async function renderPlayersPanel() {
           toast(t("permissionUpdated"));
         } catch (error) { toast(error.message, true); renderPlayersPanel(); }
       };
-    });
-  } catch (error) { content.querySelector(".loading-players").textContent = error.message; }
+      container.querySelector(`[data-player-index="${index}"]`).onclick = async (event) => {
+        const button = event.currentTarget;
+        const history = $(`#player-history-${index}`);
+        if (!history.hidden) { history.hidden = true; button.textContent = t("viewHistory"); return; }
+        try {
+          const result = await api(`/api/players/profile/${encodeURIComponent(player.id)}`);
+          const profile = result?.profile || result;
+          if (!profile || !Array.isArray(profile.history)) throw new Error(t("historyUnavailable"));
+          history.innerHTML = profileMarkup(profile);
+          history.insertAdjacentHTML("afterbegin", telemetryMarkup(profile));
+          history.hidden = false;
+          button.textContent = t("hideHistory");
+        } catch (error) { toast(error.message, true); }
+      };
+  });
+}
+
+function formatDate(timestamp) {
+  if (!timestamp) return "—";
+  return new Date(timestamp * 1000).toLocaleString(state.locale === "en" ? "en-US" : "pt-BR", { dateStyle: "short", timeStyle: "short" });
+}
+
+function formatDuration(seconds) {
+  const minutes = Math.floor((seconds || 0) / 60);
+  const hours = Math.floor(minutes / 60);
+  return hours ? `${hours}h ${minutes % 60}m` : `${minutes}m`;
+}
+
+function historyMarkup(events) {
+  if (!events.length) return `<p>${t("noHistory")}</p>`;
+  const labels = {
+    "player.connected": { pt: "Entrou no servidor", en: "Joined the server" },
+    "player.disconnected": { pt: "Saiu do servidor", en: "Left the server" },
+    "player.death": { pt: "Morreu", en: "Died" },
+    "player.permission.changed": { pt: "Permissão alterada", en: "Permission changed" },
+  };
+  return `<ol>${events.map((event) => { const payload = event?.payload || {}; return `<li><div><b>${escapeHtml((labels[event?.topic] || {})[state.locale] || event?.topic || "event")}</b><time>${formatDate(event?.timestamp)}</time></div>${payload.cause ? `<small>${escapeHtml(payload.cause)}</small>` : ""}${payload.inferred ? `<small>${state.locale === "pt" ? "Encerramento inferido pelo estado do servidor" : "Inferred from server state"}</small>` : ""}</li>`; }).join("")}</ol>`;
+}
+
+function profileMarkup(profile) {
+  const aliases = (profile.aliases || []).filter((name) => name !== profile.name);
+  const sessions = Array.isArray(profile.sessions) ? profile.sessions : [];
+  return `<div class="profile-facts"><span><small>${t("permission")}</small><b>${escapeHtml(optionLabel(profile.permission || "member"))}</b></span><span><small>${t("lastDeath")}</small><b>${formatDate(profile.last_death_at)}</b></span><span><small>${t("aliases")}</small><b>${aliases.length ? aliases.map(escapeHtml).join(" · ") : "—"}</b></span></div><section class="session-history"><h4>${t("recentSessions")}</h4>${sessions.length ? `<ol>${sessions.map((session) => `<li><div><b>${formatDate(session.connected_at)}</b><time>${session.active ? t("activeSession") : formatDuration(session.duration_seconds)}</time></div><small>${session.active ? t("connectedSince") : session.inferred ? t("inferredExit") : t("normalExit")}${session.close_reason ? ` · ${escapeHtml(session.close_reason)}` : ""}</small></li>`).join("")}</ol>` : `<p>${t("noHistory")}</p>`}</section><section class="event-history"><h4>${state.locale === "pt" ? "Linha do tempo" : "Timeline"}</h4>${historyMarkup(profile.history || [])}</section>`;
+}
+
+function telemetryMarkup(profile) {
+  if (!profile.telemetry_updated_at) return "";
+  const stats = profile.telemetry || {};
+  const dimensions = Object.keys(stats.dimensions || {}).length;
+  const items = [["playerKills", stats.playerKills], ["mobKills", stats.mobKills], ["blocksBroken", stats.blocksBroken], ["blocksPlaced", stats.blocksPlaced], ["damageDealt", Number(stats.damageDealt || 0).toFixed(1)], ["damageTaken", Number(stats.damageTaken || 0).toFixed(1)], ["distanceTraveled", `${Math.round(stats.distance || 0)} m`], ["dimensionsVisited", dimensions]];
+  return `<section class="telemetry-profile"><h4>${t("telemetryStats")}</h4><small>◆ ${t("authoritative")} · ${t("updated")} ${formatDate(profile.telemetry_updated_at)}</small><div class="telemetry-grid">${items.map(([label, value]) => `<span><b>${value || 0}</b>${t(label)}</span>`).join("")}</div></section>`;
 }
 
 function renderTimePanel() {
@@ -484,6 +589,15 @@ function openTimeControls() {
 }
 
 $("#time-controls").onclick = openTimeControls;
+
+function openPlayers() {
+  state.tab = "__players__";
+  renderTabs();
+  render();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+$("#open-players").onclick = openPlayers;
 
 $("#refresh").onclick = async () => {
   try {

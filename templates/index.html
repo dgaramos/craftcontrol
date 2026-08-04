@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#101311">
     <title>MalavaziRamos · Gerenciador</title>
-    <link rel="stylesheet" href="/static/app.css?v=10">
-    <link rel="stylesheet" href="/static/players.css?v=10">
+    <link rel="stylesheet" href="/static/app.css?v=11">
+    <link rel="stylesheet" href="/static/players.css?v=15">
   </head>
   <body>
     <header class="topbar">
@@ -30,11 +30,12 @@
             <div class="shield" aria-hidden="true">✓</div>
             <div><span class="eyebrow" data-i18n="worldState">ESTADO DO MUNDO</span><h2 id="server-state-title">Consultando servidor</h2></div>
           </div>
-          <div class="overview-item players-card">
+          <button id="open-players" class="overview-item players-card" type="button" aria-label="Abrir jogadores e históricos">
             <div class="player-count"><span class="pixel-icon" aria-hidden="true">♟</span><strong id="players-summary">0 jogadores online</strong></div>
             <div id="players-list">Ninguém conectado</div>
             <small id="updated-at">Aguardando atualização</small>
-          </div>
+            <span class="players-card-arrow" aria-hidden="true">›</span>
+          </button>
           <button id="time-controls" class="overview-item time-launch" type="button"><span aria-hidden="true">☀</span><b data-i18n="timeControls">Tempo e clima</b><small data-i18n="timeControlsHint">Horário, ciclos e clima</small></button>
         </div>
       </section>
@@ -62,6 +63,6 @@
       <div class="dialog-actions"><button data-server="start" data-i18n="start">Iniciar</button><button data-server="restart" data-i18n="restart">Reiniciar</button><button data-server="stop" class="danger" data-i18n="stop">Parar</button></div>
       <button id="close-dialog" class="secondary wide" data-i18n="close">Fechar</button>
     </dialog>
-    <script src="/static/app.js?v=10"></script>
+    <script src="/static/app.js?v=15"></script>
   </body>
 </html>

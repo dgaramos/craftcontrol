@@ -3,6 +3,7 @@ from __future__ import annotations
 import threading
 import re
 import time
+import hashlib
 from typing import Any
 
 from .bedrock import BedrockClient
@@ -84,9 +85,10 @@ class ManagerService:
                 self.repository.store("gamerules", gamerules, "bedrock-console")
             if maximum == 0:
                 maximum = int(env_values.get("MAX_PLAYERS") or properties.get("max-players") or 0)
-            self.repository.replace("players", {name: "online" for name in players}, "bedrock-console")
             if xuids:
                 self.repository.store("known_players", xuids, "bedrock-log")
+            self.repository.reconcile_online_players(players, xuids, "bedrock-console")
+            self.repository.replace("players", {name: "online" for name in players}, "bedrock-console")
             self.repository.store("server", {"online": str(online), "max_players": str(maximum)}, "bedrock-console")
             self.refresh_permissions(publish=False)
             self._bootstrap_operator(players)
@@ -145,8 +147,42 @@ class ManagerService:
         self.repository.replace("players", {name: "online" for name in players.values()}, "bedrock-log")
         if xuid:
             self.repository.store("known_players", {player: xuid}, "bedrock-log")
+        self.repository.observe_player(player, connected, xuid, "bedrock-log")
         self.repository.store("server", {"online": str(len(players))}, "bedrock-log")
         self.broker.publish("state.changed", "bedrock-log", {"domains": ["players", "server"]})
+
+    def player_death_event(self, player: str, cause: str, raw: str) -> bool:
+        fingerprint = hashlib.sha256(f"{raw}|{int(time.time() / 3)}".encode()).hexdigest()
+        inserted = self.repository.record_player_death(player, cause, raw, "bedrock-log", fingerprint)
+        if inserted:
+            self.broker.publish("player.death", "bedrock-log", {"player": player, "cause": cause, "derived": True})
+            self.broker.publish("state.changed", "bedrock-log", {"domains": ["player_profiles"], "player": player})
+        return inserted
+
+    def telemetry_event(self, envelope: dict[str, Any]) -> None:
+        accepted, players = self.repository.ingest_telemetry(envelope)
+        if not accepted:
+            return
+        topic = envelope["type"]
+        self.repository.store("telemetry", {
+            "status": "syncing" if topic == "snapshot.started" else "connected",
+            "schema": str(envelope["schema"]), "sequence": str(envelope["sequence"]),
+            "last_topic": topic,
+        }, "behavior-pack")
+        self.broker.publish(f"telemetry.{topic}", "behavior-pack", {"players": players, "sequence": envelope["sequence"]})
+        if players or topic in {"snapshot.finished", "telemetry.started"}:
+            self.broker.publish("state.changed", "behavior-pack", {"domains": ["telemetry", "player_profiles"], "players": players})
+        if topic == "telemetry.started":
+            self.request_telemetry_snapshot_async("pack-started")
+
+    def request_telemetry_snapshot_async(self, reason: str) -> None:
+        def request() -> None:
+            try:
+                self.bedrock.request_telemetry_snapshot()
+                self.broker.publish("telemetry.snapshot.requested", reason)
+            except Exception as error:
+                self.broker.publish("telemetry.snapshot.failed", reason, {"error": str(error)[:240]})
+        threading.Thread(target=request, name="telemetry-sync", daemon=True).start()
 
     def refresh_permissions(self, publish: bool = True) -> None:
         known = self.state().get("known_players", {})
@@ -161,6 +197,7 @@ class ManagerService:
             name = names_by_xuid.get(str(item["xuid"]))
             if name:
                 values[name.casefold()] = str(item["permission"])
+                self.repository.set_player_permission(name, str(item["permission"]), "permissions.json")
         self.repository.replace("permissions", values, "permissions.json")
         if publish:
             self.broker.publish("state.changed", "permissions.json", {"domains": ["permissions"]})
@@ -199,13 +236,15 @@ class ManagerService:
         self.repository.store("bootstrap", {"operator": "done"}, "manager")
 
     def players(self) -> list[dict[str, Any]]:
-        snapshot = self.state()
-        permissions = snapshot.get("permissions", {})
-        return [{"name": name, "online": True, "operator": permissions.get(name.casefold()) == "operator"} for name in snapshot["players"]]
+        return self.repository.player_profiles()
+
+    def player_profile(self, identity: str) -> dict[str, Any] | None:
+        return self.repository.player_profile(identity)
 
     def set_player_operator(self, player: str, enabled: bool) -> None:
         self.bedrock.set_operator(player, enabled)
         self.repository.store("permissions", {player.casefold(): "operator" if enabled else "member"}, "manager")
+        self.repository.set_player_permission(player, "operator" if enabled else "member", "manager")
         self.broker.publish("state.changed", "manager", {"domains": ["permissions"], "player": player})
 
     def time_action(self, action: str, payload: Any) -> dict[str, Any]:

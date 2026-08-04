@@ -64,6 +64,22 @@ class TimeActionsTest(unittest.TestCase):
     def test_operator_access_can_be_enabled_and_disabled(self) -> None:
         self.service.set_player_operator("VonCrush", True)
         self.assertEqual(self.bedrock.commands[-1], ["op", "VonCrush"])
-        self.assertTrue(self.service.players() == [])
+        self.assertEqual(self.service.players()[0]["name"], "VonCrush")
+        self.assertTrue(self.service.players()[0]["operator"])
         self.service.set_player_operator("VonCrush", False)
         self.assertEqual(self.bedrock.commands[-1], ["deop", "VonCrush"])
+
+    def test_player_disconnect_preserves_profile_and_closes_session(self) -> None:
+        self.service.player_event("Nicole", True, "123")
+        self.service.player_event("Nicole", False, "123")
+        profile = self.service.players()[0]
+        self.assertEqual(profile["name"], "Nicole")
+        self.assertFalse(profile["online"])
+        self.assertEqual(profile["sessions_count"], 1)
+
+    def test_death_counter_is_deduplicated(self) -> None:
+        self.service.player_event("Nicole", True, "123")
+        raw = "[INFO] Nicole was slain by Zombie"
+        self.assertTrue(self.service.player_death_event("Nicole", "was slain by Zombie", raw))
+        self.assertFalse(self.service.player_death_event("Nicole", "was slain by Zombie", raw))
+        self.assertEqual(self.service.players()[0]["deaths_count"], 1)

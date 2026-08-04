@@ -79,3 +79,6 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn('data-analytics-view="deaths"', script)
         self.assertIn("@media (max-width: 480px)", stylesheet)
         self.assertIn("analytics.css", template)
+        self.assertIn('data-analytics-player=', script)
+        self.assertIn('id="analytics-death-dialog"', script)
+        self.assertIn("respawnsOnly", script)

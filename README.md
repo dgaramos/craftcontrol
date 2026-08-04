@@ -15,7 +15,7 @@ Bedrock Dedicated Server is powerful, but routine administration still means rem
 - **Purposeful controls:** toggles, segmented choices, contextual explanations, and a review drawer instead of a wall of raw fields.
 - **Live world management:** gamerules, time, weather, operators, and safe server lifecycle actions.
 - **Durable player profiles:** presence, aliases, sessions, play time, permissions, deaths, and event history survive disconnects and manager restarts.
-- **Global activity analytics:** filter joins, leaves, deaths, and permission changes by player, period, source, cause, or responsible entity.
+- **Global activity analytics:** follow joins, leaves, respawns, dimension changes, deaths, and permission changes live; filter by player, period, source, cause, or responsible entity.
 - **Optional world telemetry:** the companion behavior pack adds authoritative kills, blocks, damage, distance, dimensions, and structured death events.
 - **Independent operation:** CraftControl does not require Prometheus, Grafana, Loki, the custom exporter, or the behavior pack.
 - **Bilingual and responsive:** the complete interface works in Portuguese and English on phones, tablets, Steam Deck, and desktop browsers.
@@ -218,10 +218,12 @@ Without the behavior pack, death messages are parsed from server logs and explic
 
 The **Data** workspace provides two global views backed by permanent player history:
 
-- **Activity** combines joins, leaves, deaths, and permission changes.
+- **Activity** combines joins, leaves, respawns, dimension changes, deaths, and permission changes. New durable events refresh the active view through SSE without browser polling.
 - **Deaths** focuses on cause, responsible entity or player, projectile, dimension, and coordinates when that evidence exists.
 
 Both views support player, lifetime/7-day/30-day, source, event-type, and free-text detail filters. Results are paginated server-side and every item identifies whether it came from the structured Telemetry Pack or server/manager evidence. When a structured and derived death describe the same player within the same short window, the interface prefers the structured event while retaining the raw derived evidence privately in SQLite. XUIDs and raw log lines never leave the repository layer.
+
+Player names in the global feed open the permanent player profile and return to the same analytics filters. Death entries offer a focused detail dialog so cause, killer, projectile, dimension, coordinates, source, and timestamp remain readable on a phone.
 
 Snapshots can recover aggregate totals after downtime, but they cannot recreate every missed historical event. Empty states and source labels preserve that distinction instead of presenting missing details as zero.
 

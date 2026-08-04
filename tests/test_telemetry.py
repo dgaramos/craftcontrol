@@ -69,6 +69,27 @@ class TelemetryTest(unittest.TestCase):
             self.assertEqual(deaths[0]["payload"]["killerType"], "minecraft:zombie")
             self.assertIsNotNone(profile["last_death_at"])
 
+    def test_respawn_and_dimension_change_are_saved_in_player_history(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = StateRepository(Path(directory) / "state.db")
+            repository.initialize()
+            repository.observe_player("VonCrush", True, "99")
+            repository.ingest_telemetry({
+                "schema": 1, "sequence": 1, "type": "player.respawned", "timestamp": 1,
+                "player": {"name": "VonCrush"}, "data": {},
+            })
+            repository.ingest_telemetry({
+                "schema": 1, "sequence": 2, "type": "player.dimension.changed", "timestamp": 2,
+                "player": {"name": "VonCrush"},
+                "data": {"from": "minecraft:overworld", "to": "minecraft:nether"},
+            })
+            activity = repository.player_activity("all", "", "structured", "", 0, 1, 25)
+            self.assertEqual(activity["summary"]["respawns"], 1)
+            self.assertEqual(activity["summary"]["dimensions"], 1)
+            dimension = next(event for event in activity["events"] if event["topic"] == "player.dimension.changed")
+            self.assertEqual(dimension["details"]["from_dimension"], "minecraft:overworld")
+            self.assertEqual(dimension["details"]["to_dimension"], "minecraft:nether")
+
     def test_new_snapshot_at_same_sequence_replaces_authoritative_totals(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             repository = StateRepository(Path(directory) / "state.db")

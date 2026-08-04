@@ -59,11 +59,11 @@ const messages = {
     home: "Início", world: "Mundo", players: "Jogadores", analytics: "Dados", rules: "Regras", settings: "Servidor",
     analyticsTitle: "Atividade do servidor", analyticsHelp: "A história compartilhada de quem entrou, saiu, morreu ou teve permissões alteradas.",
     activityView: "Atividade", deathsView: "Mortes", eventFilter: "Evento", playerFilter: "Jogador", periodFilter: "Período", sourceFilter: "Origem", detailFilter: "Causa ou responsável", detailFilterHint: "Ex.: zombie, lava…",
-    everyEvent: "Todos os eventos", joinsOnly: "Entradas", leavesOnly: "Saídas", permissionsOnly: "Permissões",
+    everyEvent: "Todos os eventos", joinsOnly: "Entradas", leavesOnly: "Saídas", permissionsOnly: "Permissões", respawnsOnly: "Respawns", dimensionsOnly: "Dimensões",
     everyPlayer: "Todos os jogadores", lifetime: "Desde o início", last7Days: "Últimos 7 dias", last30Days: "Últimos 30 dias",
     everySource: "Todas as fontes", structuredSource: "Telemetry Pack", serverSource: "Servidor e manager",
     activityEmpty: "Nenhum evento corresponde a estes filtros.", eventCount: (count) => `${count} eventos`, pageCount: (page, pages) => `Página ${page} de ${pages}`,
-    previous: "Anterior", next: "Próxima", refreshData: "Atualizar dados", sourceStructured: "Estruturado", sourceServer: "Evidência do servidor",
+    previous: "Anterior", next: "Próxima", refreshData: "Atualizar dados", sourceStructured: "Estruturado", sourceServer: "Evidência do servidor", deathDetails: "Detalhes da morte", viewDetails: "Ver detalhes", fromDimension: "Origem", toDimension: "Destino",
     worldIntro: "Configuração do mundo", rulesIntro: "Comportamento do jogo", serverIntro: "Infraestrutura do servidor",
     pendingChanges: "ALTERAÇÕES PENDENTES", reviewChanges: "Revisar alterações",
     pendingHelp: "Estas configurações serão salvas e o servidor será reiniciado somente quando você aplicar.",
@@ -127,11 +127,11 @@ const messages = {
     home: "Home", world: "World", players: "Players", analytics: "Data", rules: "Rules", settings: "Server",
     analyticsTitle: "Server activity", analyticsHelp: "The shared history of players joining, leaving, dying, or receiving permission changes.",
     activityView: "Activity", deathsView: "Deaths", eventFilter: "Event", playerFilter: "Player", periodFilter: "Period", sourceFilter: "Source", detailFilter: "Cause or responsible", detailFilterHint: "E.g. zombie, lava…",
-    everyEvent: "All events", joinsOnly: "Joins", leavesOnly: "Leaves", permissionsOnly: "Permissions",
+    everyEvent: "All events", joinsOnly: "Joins", leavesOnly: "Leaves", permissionsOnly: "Permissions", respawnsOnly: "Respawns", dimensionsOnly: "Dimensions",
     everyPlayer: "All players", lifetime: "All time", last7Days: "Last 7 days", last30Days: "Last 30 days",
     everySource: "All sources", structuredSource: "Telemetry Pack", serverSource: "Server and manager",
     activityEmpty: "No events match these filters.", eventCount: (count) => `${count} events`, pageCount: (page, pages) => `Page ${page} of ${pages}`,
-    previous: "Previous", next: "Next", refreshData: "Refresh data", sourceStructured: "Structured", sourceServer: "Server evidence",
+    previous: "Previous", next: "Next", refreshData: "Refresh data", sourceStructured: "Structured", sourceServer: "Server evidence", deathDetails: "Death details", viewDetails: "View details", fromDimension: "From", toDimension: "To",
     worldIntro: "World configuration", rulesIntro: "Game behavior", serverIntro: "Server infrastructure",
     pendingChanges: "PENDING CHANGES", reviewChanges: "Review changes",
     pendingHelp: "These settings are saved and the server restarts only after you apply them.",
@@ -480,7 +480,7 @@ function renderPlayerCards(container, list, access = {}) {
   });
 }
 
-async function renderPlayerDetail(player, account) {
+async function renderPlayerDetail(player, account, back = renderPlayersPanel) {
   content.innerHTML = `<div class="player-detail-loading">${t("checking")}</div>`;
   try {
     const result = await api(`/api/players/profile/${encodeURIComponent(player.id)}`);
@@ -489,12 +489,13 @@ async function renderPlayerDetail(player, account) {
     const gameTitle = state.locale === "pt" ? "Permissão no Minecraft" : "Minecraft permission";
     const panelTitle = state.locale === "pt" ? "Acesso ao CraftControl" : "CraftControl access";
     content.innerHTML = `<div class="player-detail-screen"><button id="back-to-players" class="secondary player-back" type="button">← ${state.locale === "pt" ? "Todos os jogadores" : "All players"}</button><header class="player-detail-hero block-panel"><div class="player-avatar large" aria-hidden="true">${escapeHtml(profile.name.slice(0, 1).toUpperCase())}</div><div><span class="eyebrow">${profile.online ? t("online") : t("offline")}</span><h2>${escapeHtml(profile.name)}</h2><p>${profile.online ? `${t("connectedSince")} ${formatDate(profile.connected_at)}` : `${t("lastSeen")} ${formatDate(profile.last_seen_at)}`}</p></div></header><div class="player-detail-stats">${[[t("playTime"), formatDuration(profile.total_play_seconds)], [t("sessions"), profile.sessions_count], [t("deaths"), profile.deaths_count], [t("firstSeen"), formatDate(profile.first_seen_at)]].map(([label, value]) => `<span><small>${label}</small><b>${value}</b></span>`).join("")}</div><div class="player-admin-grid"><section class="player-admin-card block-panel"><span class="admin-scope game-scope">MINECRAFT</span><h3>${gameTitle}</h3><p>${state.locale === "pt" ? "Controla comandos administrativos dentro do jogo. Não concede acesso ao painel." : "Controls administrative commands in-game. It does not grant panel access."}</p><div class="permission-choice"><div><strong>${profile.operator ? (state.locale === "pt" ? "Operador" : "Operator") : (state.locale === "pt" ? "Membro" : "Member")}</strong><small>${profile.operator ? t("operatorHelp") : (state.locale === "pt" ? "Joga normalmente, sem comandos administrativos." : "Regular play without administrative commands.")}</small></div>${booleanControl("detail-operator", profile.operator)}</div></section>${panelAccessDetailMarkup(profile, account, panelTitle)}</div>${telemetryMarkup(profile)}<div class="player-history-grid">${profileMarkup(profile)}</div></div>`;
-    $("#back-to-players").onclick = renderPlayersPanel;
+    if (back === renderAnalyticsPanel) $("#back-to-players").textContent = `← ${state.locale === "pt" ? "Voltar aos dados" : "Back to data"}`;
+    $("#back-to-players").onclick = back;
     const operator = $("#detail-operator");
     if (operator) operator.onchange = async (event) => {
       updateToggleLabel(event.target);
       try { await api(`/api/players/${encodeURIComponent(profile.name)}/operator`, { method: "PUT", body: JSON.stringify({ enabled: event.target.checked }) }); toast(t("permissionUpdated")); }
-      catch (error) { toast(error.message, true); renderPlayerDetail(player, account); }
+      catch (error) { toast(error.message, true); renderPlayerDetail(player, account, back); }
     };
     bindPlayerAccess(profile, account);
   } catch (error) { content.innerHTML = `<p class="no-player-results">${escapeHtml(error.message)}</p>`; }
@@ -618,6 +619,8 @@ function analyticsEventPresentation(event) {
   const definitions = {
     "player.connected": { icon: "↘", pt: "Entrou no servidor", en: "Joined the server", tone: "join" },
     "player.disconnected": { icon: "↗", pt: "Saiu do servidor", en: "Left the server", tone: "leave" },
+    "player.respawned": { icon: "✦", pt: "Renasceu", en: "Respawned", tone: "respawn" },
+    "player.dimension.changed": { icon: "◈", pt: "Mudou de dimensão", en: "Changed dimension", tone: "dimension" },
     "player.death": { icon: "☠", pt: "Morreu", en: "Died", tone: "death" },
     "player.permission.changed": { icon: "◆", pt: "Permissão alterada", en: "Permission changed", tone: "permission" },
   };
@@ -632,6 +635,8 @@ function analyticsEventDetails(event) {
   if (details.projectile) items.push([t("projectile"), String(details.projectile).replace(/^minecraft:/, "")]);
   if (details.permission) items.push([t("permission"), optionLabel(details.permission)]);
   if (details.dimension) items.push([state.locale === "pt" ? "Dimensão" : "Dimension", String(details.dimension).replace(/^minecraft:/, "")]);
+  if (details.from_dimension) items.push([t("fromDimension"), String(details.from_dimension).replace(/^minecraft:/, "")]);
+  if (details.to_dimension) items.push([t("toDimension"), String(details.to_dimension).replace(/^minecraft:/, "")]);
   const coordinates = details.coordinates || {};
   if (Object.keys(coordinates).length) items.push([state.locale === "pt" ? "Coordenadas" : "Coordinates", [coordinates.x, coordinates.y, coordinates.z].filter((value) => value !== undefined).join(", ")]);
   if (details.inferred) items.push([state.locale === "pt" ? "Observação" : "Note", t("inferredExit")]);
@@ -640,16 +645,38 @@ function analyticsEventDetails(event) {
 
 function analyticsEventsMarkup(events) {
   if (!events.length) return `<div class="analytics-empty"><span>◇</span><p>${t("activityEmpty")}</p></div>`;
-  return `<ol class="analytics-event-list">${events.map((event) => {
+  return `<ol class="analytics-event-list">${events.map((event, index) => {
     const presentation = analyticsEventPresentation(event);
     const source = event.source === "behavior-pack" ? t("sourceStructured") : t("sourceServer");
-    return `<li class="analytics-event tone-${presentation.tone}"><span class="analytics-event-icon" aria-hidden="true">${presentation.icon}</span><div class="analytics-event-main"><div class="analytics-event-title"><div><strong>${escapeHtml(event.player?.name || "—")}</strong><span>${escapeHtml(presentation[state.locale])}</span></div><b class="analytics-source ${event.source === "behavior-pack" ? "structured" : "server"}">${escapeHtml(source)}</b></div>${analyticsEventDetails(event)}</div>${timelineTimestamp(event.timestamp)}</li>`;
+    return `<li class="analytics-event tone-${presentation.tone}"><span class="analytics-event-icon" aria-hidden="true">${presentation.icon}</span><div class="analytics-event-main"><div class="analytics-event-title"><div><button class="analytics-player-link" data-analytics-player="${escapeHtml(event.player?.id || "")}" type="button">${escapeHtml(event.player?.name || "—")}</button><span>${escapeHtml(presentation[state.locale])}</span></div><b class="analytics-source ${event.source === "behavior-pack" ? "structured" : "server"}">${escapeHtml(source)}</b></div>${analyticsEventDetails(event)}${event.topic === "player.death" ? `<button class="analytics-detail-button" data-death-detail="${index}" type="button">${t("viewDetails")} ›</button>` : ""}</div>${timelineTimestamp(event.timestamp)}</li>`;
   }).join("")}</ol>`;
+}
+
+function showDeathDetails(event) {
+  const dialog = $("#analytics-death-dialog");
+  const presentation = analyticsEventPresentation(event);
+  dialog.querySelector("h2").textContent = `${presentation.icon} ${event.player?.name || "—"}`;
+  dialog.querySelector(".analytics-death-content").innerHTML = `<p>${escapeHtml(presentation[state.locale])}</p>${analyticsEventDetails(event)}<div class="analytics-death-meta"><span>${event.source === "behavior-pack" ? t("sourceStructured") : t("sourceServer")}</span>${timelineTimestamp(event.timestamp)}</div>`;
+  dialog.showModal();
+}
+
+async function openAnalyticsPlayer(publicId) {
+  try {
+    const roster = await api("/api/players");
+    const player = (roster.players || []).find((item) => item.id === publicId);
+    if (!player) throw new Error(t("historyUnavailable"));
+    let account;
+    if (state.user?.role === "owner") {
+      const access = await api("/api/auth/access");
+      account = (access.players || []).find((item) => item.name.toLocaleLowerCase() === player.name.toLocaleLowerCase());
+    }
+    await renderPlayerDetail(player, account, renderAnalyticsPanel);
+  } catch (error) { toast(error.message, true); }
 }
 
 async function renderAnalyticsPanel() {
   const filters = state.analytics;
-  content.innerHTML = `<div class="analytics-screen"><header class="analytics-hero block-panel"><div><span class="eyebrow">CRAFTCONTROL ANALYTICS</span><h2>${t("analyticsTitle")}</h2><p>${t("analyticsHelp")}</p></div><button id="analytics-refresh" class="secondary" type="button">↻ ${t("refreshData")}</button></header><div class="analytics-view-switch"><button data-analytics-view="all" class="${filters.kind !== "deaths" ? "active" : ""}" type="button">☷ ${t("activityView")}</button><button data-analytics-view="deaths" class="${filters.kind === "deaths" ? "active death" : "death"}" type="button">☠ ${t("deathsView")}</button></div><section class="analytics-filters block-panel"><label><span>${t("eventFilter")}</span><select id="analytics-kind" ${filters.kind === "deaths" ? "disabled" : ""}><option value="all">${t("everyEvent")}</option><option value="joins">${t("joinsOnly")}</option><option value="leaves">${t("leavesOnly")}</option><option value="permissions">${t("permissionsOnly")}</option></select></label><label><span>${t("playerFilter")}</span><select id="analytics-player"><option value="">${t("everyPlayer")}</option></select></label><label><span>${t("periodFilter")}</span><select id="analytics-days"><option value="0">${t("lifetime")}</option><option value="7">${t("last7Days")}</option><option value="30">${t("last30Days")}</option></select></label><label><span>${t("sourceFilter")}</span><select id="analytics-source"><option value="all">${t("everySource")}</option><option value="structured">${t("structuredSource")}</option><option value="server">${t("serverSource")}</option></select></label><label><span>${t("detailFilter")}</span><input id="analytics-search" type="search" maxlength="64" value="${escapeHtml(filters.search)}" placeholder="${t("detailFilterHint")}"></label></section><div id="analytics-results" class="analytics-results"><div class="analytics-loading">${t("checking")}</div></div></div>`;
+  content.innerHTML = `<div class="analytics-screen"><header class="analytics-hero block-panel"><div><span class="eyebrow">CRAFTCONTROL ANALYTICS</span><h2>${t("analyticsTitle")}</h2><p>${t("analyticsHelp")}</p></div><button id="analytics-refresh" class="secondary" type="button">↻ ${t("refreshData")}</button></header><div class="analytics-view-switch"><button data-analytics-view="all" class="${filters.kind !== "deaths" ? "active" : ""}" type="button">☷ ${t("activityView")}</button><button data-analytics-view="deaths" class="${filters.kind === "deaths" ? "active death" : "death"}" type="button">☠ ${t("deathsView")}</button></div><section class="analytics-filters block-panel"><label><span>${t("eventFilter")}</span><select id="analytics-kind" ${filters.kind === "deaths" ? "disabled" : ""}><option value="all">${t("everyEvent")}</option><option value="joins">${t("joinsOnly")}</option><option value="leaves">${t("leavesOnly")}</option><option value="respawns">${t("respawnsOnly")}</option><option value="dimensions">${t("dimensionsOnly")}</option><option value="permissions">${t("permissionsOnly")}</option></select></label><label><span>${t("playerFilter")}</span><select id="analytics-player"><option value="">${t("everyPlayer")}</option></select></label><label><span>${t("periodFilter")}</span><select id="analytics-days"><option value="0">${t("lifetime")}</option><option value="7">${t("last7Days")}</option><option value="30">${t("last30Days")}</option></select></label><label><span>${t("sourceFilter")}</span><select id="analytics-source"><option value="all">${t("everySource")}</option><option value="structured">${t("structuredSource")}</option><option value="server">${t("serverSource")}</option></select></label><label><span>${t("detailFilter")}</span><input id="analytics-search" type="search" maxlength="64" value="${escapeHtml(filters.search)}" placeholder="${t("detailFilterHint")}"></label></section><div id="analytics-results" class="analytics-results"><div class="analytics-loading">${t("checking")}</div></div><dialog id="analytics-death-dialog" class="analytics-death-dialog"><div class="drawer-header"><div><span class="eyebrow">${t("deathDetails")}</span><h2></h2></div><button class="drawer-close" type="button" aria-label="${t("close")}">×</button></div><div class="analytics-death-content"></div></dialog></div>`;
   const applyFilterValues = () => {
     $("#analytics-kind").value = filters.kind === "deaths" ? "all" : filters.kind;
     $("#analytics-days").value = String(filters.days);
@@ -667,7 +694,9 @@ async function renderAnalyticsPanel() {
       playerSelect.innerHTML = `<option value="">${t("everyPlayer")}</option>${options}`;
       playerSelect.value = filters.player;
       const summary = result.summary || {};
-      target.innerHTML = `<div class="analytics-summary"><span><small>${t("joinsOnly")}</small><b>${summary.joins || 0}</b></span><span><small>${t("leavesOnly")}</small><b>${summary.leaves || 0}</b></span><span class="death"><small>${t("deathsView")}</small><b>${summary.deaths || 0}</b></span><span><small>${t("permissionsOnly")}</small><b>${summary.permissions || 0}</b></span></div><div class="analytics-result-meta"><b>${t("eventCount", result.total)}</b><span>${t("pageCount", result.page, result.pages)}</span></div>${analyticsEventsMarkup(result.events || [])}<div class="analytics-pagination"><button id="analytics-previous" class="secondary" type="button" ${result.page <= 1 ? "disabled" : ""}>← ${t("previous")}</button><button id="analytics-next" class="secondary" type="button" ${result.page >= result.pages ? "disabled" : ""}>${t("next")} →</button></div>`;
+      target.innerHTML = `<div class="analytics-summary"><span><small>${t("joinsOnly")}</small><b>${summary.joins || 0}</b></span><span><small>${t("leavesOnly")}</small><b>${summary.leaves || 0}</b></span><span><small>${t("respawnsOnly")}</small><b>${summary.respawns || 0}</b></span><span><small>${t("dimensionsOnly")}</small><b>${summary.dimensions || 0}</b></span><span class="death"><small>${t("deathsView")}</small><b>${summary.deaths || 0}</b></span><span><small>${t("permissionsOnly")}</small><b>${summary.permissions || 0}</b></span></div><div class="analytics-result-meta"><b>${t("eventCount", result.total)}</b><span>${t("pageCount", result.page, result.pages)}</span></div>${analyticsEventsMarkup(result.events || [])}<div class="analytics-pagination"><button id="analytics-previous" class="secondary" type="button" ${result.page <= 1 ? "disabled" : ""}>← ${t("previous")}</button><button id="analytics-next" class="secondary" type="button" ${result.page >= result.pages ? "disabled" : ""}>${t("next")} →</button></div>`;
+      target.querySelectorAll("[data-analytics-player]").forEach((button) => button.onclick = () => openAnalyticsPlayer(button.dataset.analyticsPlayer));
+      target.querySelectorAll("[data-death-detail]").forEach((button) => button.onclick = () => showDeathDetails((result.events || [])[Number(button.dataset.deathDetail)]));
       $("#analytics-previous").onclick = () => { filters.page -= 1; reload(); window.scrollTo({ top: 0, behavior: "smooth" }); };
       $("#analytics-next").onclick = () => { filters.page += 1; reload(); window.scrollTo({ top: 0, behavior: "smooth" }); };
     } catch (error) { target.innerHTML = `<div class="analytics-empty"><p>${escapeHtml(error.message)}</p></div>`; }
@@ -683,6 +712,7 @@ async function renderAnalyticsPanel() {
   $("#analytics-days").onchange = (event) => { filters.days = Number(event.target.value); filters.page = 1; reload(); };
   $("#analytics-search").onchange = (event) => { filters.search = event.target.value.trim(); filters.page = 1; reload(); };
   $("#analytics-refresh").onclick = reload;
+  $("#analytics-death-dialog .drawer-close").onclick = () => $("#analytics-death-dialog").close();
   await reload();
 }
 

@@ -82,7 +82,7 @@ class PlayerService:
         return self.repository.player_profile(identity)
 
     def activity(self, kind: str, player: str, source: str, search: str, days: int, page: int, page_size: int) -> dict[str, Any]:
-        if kind not in {"all", "deaths", "joins", "leaves", "permissions"}:
+        if kind not in {"all", "deaths", "joins", "leaves", "permissions", "respawns", "dimensions"}:
             raise ValueError("invalid activity kind")
         if source not in {"all", "structured", "server"}:
             raise ValueError("invalid activity source")

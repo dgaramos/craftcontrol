@@ -318,7 +318,7 @@ class StateRepository:
                     (identity, json.dumps(envelope["data"], ensure_ascii=False), sequence, now),
                 )
                 changed.append(player)
-            elif topic in {"block.broken", "block.placed", "player.dimension.changed", "entity.died"}:
+            elif topic in {"block.broken", "block.placed", "player.respawned", "player.dimension.changed", "entity.died"}:
                 changed.extend(self._apply_telemetry_delta(connection, envelope, now))
         return True, changed
 
@@ -352,6 +352,17 @@ class StateRepository:
                 self._record_player_history(
                     connection, identity, "player.death", "behavior-pack", data, now,
                     f"telemetry:{envelope['sequence']}:death:{identity}",
+                )
+            elif topic in {"player.respawned", "player.dimension.changed"}:
+                if not connection.execute("SELECT 1 FROM player_profiles WHERE identity=?", (identity,)).fetchone():
+                    connection.execute(
+                        "INSERT INTO player_profiles(identity,current_name,first_seen_at,last_seen_at) VALUES(?,?,?,?)",
+                        (identity, name, now, now),
+                    )
+                connection.execute("UPDATE player_profiles SET last_seen_at=? WHERE identity=?", (now, identity))
+                self._record_player_history(
+                    connection, identity, topic, "behavior-pack", data, now,
+                    f"telemetry:{envelope['sequence']}:{topic}:{identity}",
                 )
         return list(dict.fromkeys(names))
 
@@ -388,11 +399,13 @@ class StateRepository:
         days: int = 0, page: int = 1, page_size: int = 25,
     ) -> dict[str, Any]:
         topics = {
-            "all": ("player.connected", "player.disconnected", "player.death", "player.permission.changed"),
+            "all": ("player.connected", "player.disconnected", "player.respawned", "player.dimension.changed", "player.death", "player.permission.changed"),
             "deaths": ("player.death",),
             "joins": ("player.connected",),
             "leaves": ("player.disconnected",),
             "permissions": ("player.permission.changed",),
+            "respawns": ("player.respawned",),
+            "dimensions": ("player.dimension.changed",),
         }[kind]
         conditions = [f"h.topic IN ({','.join('?' for _ in topics)})"]
         parameters: list[Any] = list(topics)
@@ -448,6 +461,8 @@ class StateRepository:
                     "killer": payload.get("killer") or payload.get("killerType"),
                     "projectile": payload.get("projectileType"),
                     "dimension": payload.get("dimension"),
+                    "from_dimension": payload.get("from"),
+                    "to_dimension": payload.get("to"),
                     "permission": payload.get("permission"),
                     "inferred": bool(payload.get("inferred")),
                     "reason": payload.get("reason"),
@@ -463,5 +478,7 @@ class StateRepository:
                 "leaves": counts.get("player.disconnected", 0),
                 "deaths": counts.get("player.death", 0),
                 "permissions": counts.get("player.permission.changed", 0),
+                "respawns": counts.get("player.respawned", 0),
+                "dimensions": counts.get("player.dimension.changed", 0),
             },
         }

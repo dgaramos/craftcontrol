@@ -4,7 +4,7 @@ CraftControl's Data workspace reads durable `player_history` records. It does no
 
 ## Views and filters
 
-The Activity view includes joins, leaves, deaths, and Minecraft permission changes. The Deaths view restricts the same durable query to deaths. Filters support:
+The Activity view includes joins, leaves, respawns, dimension changes, deaths, and Minecraft permission changes. The Deaths view restricts the same durable query to deaths. Filters support:
 
 - event type;
 - current Gamertag or a preserved alias;
@@ -20,6 +20,8 @@ The endpoint is `GET /api/analytics/activity`. Query parameters are `kind`, `pla
 The repository maps private identities to opaque public IDs and current names. It emits an explicit set of detail fields and never returns XUIDs or raw log evidence. Coordinates appear only when a structured death event supplies them.
 
 Log-derived deaths remain stored as evidence. If a structured death for the same identity occurs within ten seconds, global analytics suppresses the derived duplicate and presents the richer structured event without deleting either database record.
+
+Respawns and dimension changes are emitted by the optional Telemetry Pack and persisted idempotently using the world sequence in their event key. The internal broker publishes a targeted state change after ingestion; while Data is open, the browser's existing SSE connection refreshes the view without a polling loop. Player links resolve through opaque public IDs, and death details remain inside a focused responsive dialog.
 
 ## Consistency limitations
 

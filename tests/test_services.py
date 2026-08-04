@@ -1,5 +1,6 @@
 import tempfile
 import unittest
+import json
 from pathlib import Path
 
 from minecraft_manager.files import ServerFiles
@@ -20,6 +21,13 @@ class FakeBedrock:
 
     def set_operator(self, player: str, enabled: bool) -> None:
         self.commands.append(["op" if enabled else "deop", player])
+
+    def request_telemetry_snapshot(self) -> str:
+        payloads = (
+            {"schema": 1, "sequence": 12, "type": "snapshot.started", "timestamp": 1, "player": None, "data": {"players": 0}},
+            {"schema": 1, "sequence": 12, "type": "snapshot.finished", "timestamp": 1, "player": None, "data": {}},
+        )
+        return "\n".join(f"[Scripting] [BEDROCK_TELEMETRY] {json.dumps(payload)}" for payload in payloads)
 
 
 class FakeDocker:
@@ -83,3 +91,13 @@ class TimeActionsTest(unittest.TestCase):
         self.assertTrue(self.service.player_death_event("Nicole", "was slain by Zombie", raw))
         self.assertFalse(self.service.player_death_event("Nicole", "was slain by Zombie", raw))
         self.assertEqual(self.service.players()[0]["deaths_count"], 1)
+
+    def test_snapshot_response_is_ingested_without_log_stream(self) -> None:
+        self.service.request_telemetry_snapshot_async("test")
+        import time
+        deadline = time.time() + 2
+        while time.time() < deadline and not self.service.state().get("telemetry"):
+            time.sleep(0.01)
+        telemetry = self.service.state()["telemetry"]
+        self.assertEqual(telemetry["status"], "connected")
+        self.assertEqual(telemetry["sequence"], "12")

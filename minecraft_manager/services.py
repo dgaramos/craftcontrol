@@ -14,6 +14,7 @@ from .repository import StateRepository
 from .schema import GAMERULES, PROPERTY_NAMES, SETTINGS, validate_value
 from .events import EventBroker
 from .runtime import EventRuntime
+from .telemetry import PREFIX as TELEMETRY_PREFIX, parse_telemetry_line
 
 
 class ManagerService:
@@ -178,8 +179,17 @@ class ManagerService:
     def request_telemetry_snapshot_async(self, reason: str) -> None:
         def request() -> None:
             try:
-                self.bedrock.request_telemetry_snapshot()
+                logs = self.bedrock.request_telemetry_snapshot()
+                accepted = 0
+                for line in logs.splitlines():
+                    if TELEMETRY_PREFIX not in line:
+                        continue
+                    envelope = parse_telemetry_line(line)
+                    if envelope:
+                        self.telemetry_event(envelope)
+                        accepted += 1
                 self.broker.publish("telemetry.snapshot.requested", reason)
+                self.broker.publish("telemetry.snapshot.read", reason, {"envelopes": accepted})
             except Exception as error:
                 self.broker.publish("telemetry.snapshot.failed", reason, {"error": str(error)[:240]})
         threading.Thread(target=request, name="telemetry-sync", daemon=True).start()

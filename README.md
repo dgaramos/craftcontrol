@@ -411,6 +411,10 @@ docker compose logs --tail=200 minecraft-bedrock-manager
 
 Press **Refresh** while players are connected. The manager queries the console and scans recent connection logs, so a newly recreated Bedrock container may have limited history.
 
+### Behavior-pack telemetry remains unavailable
+
+The manager requests a full telemetry snapshot when its Bedrock log stream connects. It consumes events continuously from that stream and also reads the snapshot response directly as a recovery path. Duplicate envelopes are safe: schema and sequence identifiers make ingestion idempotent. A completed empty snapshot is valid when nobody is online; a player must join at least once after the pack is active before the pack can report that player's structured statistics.
+
 ### A death is missing or counted incorrectly
 
 Confirm that the `showdeathmessages` gamerule is enabled and inspect the Bedrock log wording. Death statistics are derived from recognized messages and are not authoritative. Keep the original line when reporting a parser issue so a sanitized regression fixture can be added. Replayed identical lines are deduplicated in a short time window.

@@ -59,7 +59,7 @@ class EventRuntime:
                     if self._stop.is_set():
                         return
                     self._handle_log(raw.decode("utf-8", errors="replace").strip())
-                backoff = 2
+                raise RuntimeError("Bedrock log stream ended")
             except Exception as error:
                 self.broker.publish("stream.logs.disconnected", "docker-logs", {"error": str(error)[:240]})
                 self._stop.wait(backoff)

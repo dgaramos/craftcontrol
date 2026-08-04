@@ -50,13 +50,16 @@ class BedrockClient:
         finally:
             client.close()
 
-    def request_telemetry_snapshot(self) -> None:
+    def request_telemetry_snapshot(self) -> str:
         import docker as docker_sdk
 
         client = docker_sdk.from_env()
         try:
             container = client.containers.get(self.container_name)
+            since = int(time.time()) - 1
             self._write(container, "scriptevent bedrock_telemetry:sync full\n")
+            time.sleep(self.console_wait_seconds)
+            return container.logs(since=since, tail=250).decode("utf-8", errors="replace")
         finally:
             client.close()
 

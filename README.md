@@ -178,6 +178,8 @@ CraftControl state lives in:
 ./data/manager.db
 ```
 
+The embedded SQLite database uses transactional, sequential migrations tracked by `PRAGMA user_version`. Existing databases receive an immutable SQLite backup under `data/backups/` before the first pending migration; a failed migration rolls back and prevents startup on a partially upgraded schema. See [Database migrations](docs/database-migrations.md).
+
 Back up `manager.db` together with its `-wal` and `-shm` companions when present. Cached settings can be reconstructed; player aliases, sessions, detailed history, and manager-side event evidence cannot always be rebuilt from a world backup.
 
 ## Updating

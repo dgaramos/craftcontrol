@@ -7,6 +7,12 @@ import time
 from typing import Any
 import json
 import hashlib
+import logging
+
+from .migrations import LATEST_SCHEMA_VERSION, run_migrations, schema_version
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class StateRepository:
@@ -14,51 +20,36 @@ class StateRepository:
         self.path = path
 
     def initialize(self) -> None:
-        with self._connect() as connection:
-            connection.execute(
-                "CREATE TABLE IF NOT EXISTS state (kind TEXT, key TEXT, value TEXT, updated_at REAL, "
-                "source TEXT, PRIMARY KEY(kind,key))"
-            )
-            columns = {row[1] for row in connection.execute("PRAGMA table_info(state)")}
-            if "changed_at" not in columns:
-                connection.execute("ALTER TABLE state ADD COLUMN changed_at REAL")
-                connection.execute("UPDATE state SET changed_at = updated_at WHERE changed_at IS NULL")
-            connection.execute(
-                "CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT, topic TEXT NOT NULL, "
-                "created_at REAL NOT NULL, source TEXT NOT NULL, payload TEXT NOT NULL)"
-            )
-            connection.execute(
-                "CREATE TABLE IF NOT EXISTS player_profiles (identity TEXT PRIMARY KEY, xuid TEXT UNIQUE, "
-                "current_name TEXT NOT NULL, first_seen_at REAL NOT NULL, last_seen_at REAL NOT NULL, "
-                "online INTEGER NOT NULL DEFAULT 0, connected_at REAL, sessions_count INTEGER NOT NULL DEFAULT 0, "
-                "total_play_seconds REAL NOT NULL DEFAULT 0, deaths_count INTEGER NOT NULL DEFAULT 0, "
-                "last_death_at REAL, permission TEXT NOT NULL DEFAULT 'member')"
-            )
-            connection.execute(
-                "CREATE TABLE IF NOT EXISTS player_aliases (identity TEXT NOT NULL, name TEXT NOT NULL, "
-                "first_seen_at REAL NOT NULL, last_seen_at REAL NOT NULL, PRIMARY KEY(identity,name))"
-            )
-            connection.execute(
-                "CREATE TABLE IF NOT EXISTS player_sessions (id INTEGER PRIMARY KEY AUTOINCREMENT, "
-                "identity TEXT NOT NULL, connected_at REAL NOT NULL, disconnected_at REAL, duration_seconds REAL, "
-                "close_reason TEXT, inferred INTEGER NOT NULL DEFAULT 0)"
-            )
-            connection.execute(
-                "CREATE TABLE IF NOT EXISTS player_history (id INTEGER PRIMARY KEY AUTOINCREMENT, "
-                "identity TEXT NOT NULL, topic TEXT NOT NULL, occurred_at REAL NOT NULL, source TEXT NOT NULL, "
-                "payload TEXT NOT NULL, event_key TEXT UNIQUE)"
-            )
-            connection.execute("CREATE INDEX IF NOT EXISTS idx_player_history_identity ON player_history(identity,occurred_at DESC)")
-            connection.execute("CREATE INDEX IF NOT EXISTS idx_player_sessions_identity ON player_sessions(identity,connected_at DESC)")
-            connection.execute(
-                "CREATE TABLE IF NOT EXISTS player_telemetry (identity TEXT PRIMARY KEY, stats TEXT NOT NULL, "
-                "sequence INTEGER NOT NULL, updated_at REAL NOT NULL)"
-            )
-            connection.execute(
-                "CREATE TABLE IF NOT EXISTS telemetry_events (event_key TEXT PRIMARY KEY, sequence INTEGER NOT NULL, "
-                "topic TEXT NOT NULL, received_at REAL NOT NULL)"
-            )
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        existing_database = self.path.is_file() and self.path.stat().st_size > 0
+        connection = sqlite3.connect(self.path)
+        try:
+            before = schema_version(connection)
+            if existing_database and before < LATEST_SCHEMA_VERSION:
+                self._backup_before_migration(connection, before)
+            after = run_migrations(connection)
             connection.execute("PRAGMA journal_mode=WAL")
+            LOGGER.info("database schema ready version=%s migrated_from=%s", after, before)
+        finally:
+            connection.close()
+
+    def database_schema_version(self) -> int:
+        with self._connect() as connection:
+            return schema_version(connection)
+
+    def _backup_before_migration(self, connection: sqlite3.Connection, version: int) -> Path:
+        directory = self.path.parent / "backups"
+        directory.mkdir(parents=True, exist_ok=True)
+        destination = directory / f"{self.path.name}.pre-v{version}.bak"
+        if destination.exists():
+            return destination
+        backup = sqlite3.connect(destination)
+        try:
+            connection.backup(backup)
+        finally:
+            backup.close()
+        LOGGER.info("database migration backup created path=%s", destination)
+        return destination
 
     @contextmanager
     def _connect(self):

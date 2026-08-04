@@ -4,7 +4,8 @@ import { requireSession } from "./js/auth.js?v=1";
 
 const state = {
   schema: null, config: {}, gamerules: {}, players: [], online: 0, maxPlayers: 0,
-  changes: {}, tab: "home", tabs: ["home", "world", "players", "rules", "server"], status: null, updatedAt: 0, domains: {},
+  changes: {}, tab: "home", tabs: ["home", "world", "players", "analytics", "rules", "server"], status: null, updatedAt: 0, domains: {},
+  analytics: { kind: "all", player: "", source: "all", search: "", days: 0, page: 1 },
   locale: (localStorage.getItem("craftcontrol-locale") || localStorage.getItem("manager-locale")) === "en" ? "en" : "pt",
   user: null,
 };
@@ -55,7 +56,14 @@ const messages = {
     derivedDeaths: "Contagem derivada das mensagens do servidor", noPlayersFound: "Nenhum jogador corresponde aos filtros.",
     telemetryStats: "Estatísticas do mundo", authoritative: "Dados estruturados pelo behavior pack", playerKills: "Jogadores eliminados", mobKills: "Criaturas eliminadas", blocksBroken: "Blocos quebrados", blocksPlaced: "Blocos colocados", damageDealt: "Dano causado", damageTaken: "Dano recebido", distanceTraveled: "Distância percorrida", dimensionsVisited: "Dimensões visitadas",
     deathHistory: "Histórico de mortes", noDeaths: "Nenhuma morte detalhada registrada.", deathCause: "Causa", killedBy: "Responsável", projectile: "Projétil", telemetrySource: "Behavior pack",
-    home: "Início", world: "Mundo", players: "Jogadores", rules: "Regras", settings: "Servidor",
+    home: "Início", world: "Mundo", players: "Jogadores", analytics: "Dados", rules: "Regras", settings: "Servidor",
+    analyticsTitle: "Atividade do servidor", analyticsHelp: "A história compartilhada de quem entrou, saiu, morreu ou teve permissões alteradas.",
+    activityView: "Atividade", deathsView: "Mortes", eventFilter: "Evento", playerFilter: "Jogador", periodFilter: "Período", sourceFilter: "Origem", detailFilter: "Causa ou responsável", detailFilterHint: "Ex.: zombie, lava…",
+    everyEvent: "Todos os eventos", joinsOnly: "Entradas", leavesOnly: "Saídas", permissionsOnly: "Permissões",
+    everyPlayer: "Todos os jogadores", lifetime: "Desde o início", last7Days: "Últimos 7 dias", last30Days: "Últimos 30 dias",
+    everySource: "Todas as fontes", structuredSource: "Telemetry Pack", serverSource: "Servidor e manager",
+    activityEmpty: "Nenhum evento corresponde a estes filtros.", eventCount: (count) => `${count} eventos`, pageCount: (page, pages) => `Página ${page} de ${pages}`,
+    previous: "Anterior", next: "Próxima", refreshData: "Atualizar dados", sourceStructured: "Estruturado", sourceServer: "Evidência do servidor",
     worldIntro: "Configuração do mundo", rulesIntro: "Comportamento do jogo", serverIntro: "Infraestrutura do servidor",
     pendingChanges: "ALTERAÇÕES PENDENTES", reviewChanges: "Revisar alterações",
     pendingHelp: "Estas configurações serão salvas e o servidor será reiniciado somente quando você aplicar.",
@@ -116,7 +124,14 @@ const messages = {
     derivedDeaths: "Count derived from server messages", noPlayersFound: "No players match the filters.",
     telemetryStats: "World statistics", authoritative: "Structured by the behavior pack", playerKills: "Player kills", mobKills: "Mob kills", blocksBroken: "Blocks broken", blocksPlaced: "Blocks placed", damageDealt: "Damage dealt", damageTaken: "Damage taken", distanceTraveled: "Distance traveled", dimensionsVisited: "Dimensions visited",
     deathHistory: "Death history", noDeaths: "No detailed deaths recorded.", deathCause: "Cause", killedBy: "Killed by", projectile: "Projectile", telemetrySource: "Behavior pack",
-    home: "Home", world: "World", players: "Players", rules: "Rules", settings: "Server",
+    home: "Home", world: "World", players: "Players", analytics: "Data", rules: "Rules", settings: "Server",
+    analyticsTitle: "Server activity", analyticsHelp: "The shared history of players joining, leaving, dying, or receiving permission changes.",
+    activityView: "Activity", deathsView: "Deaths", eventFilter: "Event", playerFilter: "Player", periodFilter: "Period", sourceFilter: "Source", detailFilter: "Cause or responsible", detailFilterHint: "E.g. zombie, lava…",
+    everyEvent: "All events", joinsOnly: "Joins", leavesOnly: "Leaves", permissionsOnly: "Permissions",
+    everyPlayer: "All players", lifetime: "All time", last7Days: "Last 7 days", last30Days: "Last 30 days",
+    everySource: "All sources", structuredSource: "Telemetry Pack", serverSource: "Server and manager",
+    activityEmpty: "No events match these filters.", eventCount: (count) => `${count} events`, pageCount: (page, pages) => `Page ${page} of ${pages}`,
+    previous: "Previous", next: "Next", refreshData: "Refresh data", sourceStructured: "Structured", sourceServer: "Server evidence",
     worldIntro: "World configuration", rulesIntro: "Game behavior", serverIntro: "Server infrastructure",
     pendingChanges: "PENDING CHANGES", reviewChanges: "Review changes",
     pendingHelp: "These settings are saved and the server restarts only after you apply them.",
@@ -302,6 +317,10 @@ function render() {
   }
   if (state.tab === "__players__") {
     renderPlayersPanel();
+    return;
+  }
+  if (state.tab === "analytics") {
+    renderAnalyticsPanel();
     return;
   }
   if (state.tab === "home") {
@@ -595,6 +614,78 @@ function telemetryMarkup(profile) {
   return `<section class="telemetry-profile"><h4>${t("telemetryStats")}</h4><small>◆ ${t("authoritative")} · ${t("updated")} ${formatDate(profile.telemetry_updated_at)}</small><div class="telemetry-grid">${items.map(([label, value]) => `<span><b>${value || 0}</b>${t(label)}</span>`).join("")}</div></section>`;
 }
 
+function analyticsEventPresentation(event) {
+  const definitions = {
+    "player.connected": { icon: "↘", pt: "Entrou no servidor", en: "Joined the server", tone: "join" },
+    "player.disconnected": { icon: "↗", pt: "Saiu do servidor", en: "Left the server", tone: "leave" },
+    "player.death": { icon: "☠", pt: "Morreu", en: "Died", tone: "death" },
+    "player.permission.changed": { icon: "◆", pt: "Permissão alterada", en: "Permission changed", tone: "permission" },
+  };
+  return definitions[event.topic] || { icon: "•", pt: event.topic, en: event.topic, tone: "default" };
+}
+
+function analyticsEventDetails(event) {
+  const details = event.details || {};
+  const items = [];
+  if (details.cause) items.push([t("deathCause"), details.cause]);
+  if (details.killer) items.push([t("killedBy"), String(details.killer).replace(/^minecraft:/, "")]);
+  if (details.projectile) items.push([t("projectile"), String(details.projectile).replace(/^minecraft:/, "")]);
+  if (details.permission) items.push([t("permission"), optionLabel(details.permission)]);
+  if (details.dimension) items.push([state.locale === "pt" ? "Dimensão" : "Dimension", String(details.dimension).replace(/^minecraft:/, "")]);
+  const coordinates = details.coordinates || {};
+  if (Object.keys(coordinates).length) items.push([state.locale === "pt" ? "Coordenadas" : "Coordinates", [coordinates.x, coordinates.y, coordinates.z].filter((value) => value !== undefined).join(", ")]);
+  if (details.inferred) items.push([state.locale === "pt" ? "Observação" : "Note", t("inferredExit")]);
+  return items.length ? `<dl class="analytics-event-details">${items.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join("")}</dl>` : "";
+}
+
+function analyticsEventsMarkup(events) {
+  if (!events.length) return `<div class="analytics-empty"><span>◇</span><p>${t("activityEmpty")}</p></div>`;
+  return `<ol class="analytics-event-list">${events.map((event) => {
+    const presentation = analyticsEventPresentation(event);
+    const source = event.source === "behavior-pack" ? t("sourceStructured") : t("sourceServer");
+    return `<li class="analytics-event tone-${presentation.tone}"><span class="analytics-event-icon" aria-hidden="true">${presentation.icon}</span><div class="analytics-event-main"><div class="analytics-event-title"><div><strong>${escapeHtml(event.player?.name || "—")}</strong><span>${escapeHtml(presentation[state.locale])}</span></div><b class="analytics-source ${event.source === "behavior-pack" ? "structured" : "server"}">${escapeHtml(source)}</b></div>${analyticsEventDetails(event)}</div>${timelineTimestamp(event.timestamp)}</li>`;
+  }).join("")}</ol>`;
+}
+
+async function renderAnalyticsPanel() {
+  const filters = state.analytics;
+  content.innerHTML = `<div class="analytics-screen"><header class="analytics-hero block-panel"><div><span class="eyebrow">CRAFTCONTROL ANALYTICS</span><h2>${t("analyticsTitle")}</h2><p>${t("analyticsHelp")}</p></div><button id="analytics-refresh" class="secondary" type="button">↻ ${t("refreshData")}</button></header><div class="analytics-view-switch"><button data-analytics-view="all" class="${filters.kind !== "deaths" ? "active" : ""}" type="button">☷ ${t("activityView")}</button><button data-analytics-view="deaths" class="${filters.kind === "deaths" ? "active death" : "death"}" type="button">☠ ${t("deathsView")}</button></div><section class="analytics-filters block-panel"><label><span>${t("eventFilter")}</span><select id="analytics-kind" ${filters.kind === "deaths" ? "disabled" : ""}><option value="all">${t("everyEvent")}</option><option value="joins">${t("joinsOnly")}</option><option value="leaves">${t("leavesOnly")}</option><option value="permissions">${t("permissionsOnly")}</option></select></label><label><span>${t("playerFilter")}</span><select id="analytics-player"><option value="">${t("everyPlayer")}</option></select></label><label><span>${t("periodFilter")}</span><select id="analytics-days"><option value="0">${t("lifetime")}</option><option value="7">${t("last7Days")}</option><option value="30">${t("last30Days")}</option></select></label><label><span>${t("sourceFilter")}</span><select id="analytics-source"><option value="all">${t("everySource")}</option><option value="structured">${t("structuredSource")}</option><option value="server">${t("serverSource")}</option></select></label><label><span>${t("detailFilter")}</span><input id="analytics-search" type="search" maxlength="64" value="${escapeHtml(filters.search)}" placeholder="${t("detailFilterHint")}"></label></section><div id="analytics-results" class="analytics-results"><div class="analytics-loading">${t("checking")}</div></div></div>`;
+  const applyFilterValues = () => {
+    $("#analytics-kind").value = filters.kind === "deaths" ? "all" : filters.kind;
+    $("#analytics-days").value = String(filters.days);
+    $("#analytics-source").value = filters.source;
+  };
+  applyFilterValues();
+  const reload = async () => {
+    const target = $("#analytics-results");
+    target.innerHTML = `<div class="analytics-loading">${t("checking")}</div>`;
+    try {
+      const query = new URLSearchParams({ kind: filters.kind, player: filters.player, source: filters.source, search: filters.search, days: String(filters.days), page: String(filters.page), page_size: "25" });
+      const [result, roster] = await Promise.all([api(`/api/analytics/activity?${query}`), api("/api/players")]);
+      const playerSelect = $("#analytics-player");
+      const options = (roster.players || []).map((player) => `<option value="${escapeHtml(player.name)}">${escapeHtml(player.name)}</option>`).join("");
+      playerSelect.innerHTML = `<option value="">${t("everyPlayer")}</option>${options}`;
+      playerSelect.value = filters.player;
+      const summary = result.summary || {};
+      target.innerHTML = `<div class="analytics-summary"><span><small>${t("joinsOnly")}</small><b>${summary.joins || 0}</b></span><span><small>${t("leavesOnly")}</small><b>${summary.leaves || 0}</b></span><span class="death"><small>${t("deathsView")}</small><b>${summary.deaths || 0}</b></span><span><small>${t("permissionsOnly")}</small><b>${summary.permissions || 0}</b></span></div><div class="analytics-result-meta"><b>${t("eventCount", result.total)}</b><span>${t("pageCount", result.page, result.pages)}</span></div>${analyticsEventsMarkup(result.events || [])}<div class="analytics-pagination"><button id="analytics-previous" class="secondary" type="button" ${result.page <= 1 ? "disabled" : ""}>← ${t("previous")}</button><button id="analytics-next" class="secondary" type="button" ${result.page >= result.pages ? "disabled" : ""}>${t("next")} →</button></div>`;
+      $("#analytics-previous").onclick = () => { filters.page -= 1; reload(); window.scrollTo({ top: 0, behavior: "smooth" }); };
+      $("#analytics-next").onclick = () => { filters.page += 1; reload(); window.scrollTo({ top: 0, behavior: "smooth" }); };
+    } catch (error) { target.innerHTML = `<div class="analytics-empty"><p>${escapeHtml(error.message)}</p></div>`; }
+  };
+  content.querySelectorAll("[data-analytics-view]").forEach((button) => button.onclick = () => {
+    filters.kind = button.dataset.analyticsView;
+    filters.page = 1;
+    renderAnalyticsPanel();
+  });
+  [["analytics-kind", "kind"], ["analytics-player", "player"], ["analytics-source", "source"]].forEach(([id, key]) => {
+    $(`#${id}`).onchange = (event) => { filters[key] = event.target.value; filters.page = 1; reload(); };
+  });
+  $("#analytics-days").onchange = (event) => { filters.days = Number(event.target.value); filters.page = 1; reload(); };
+  $("#analytics-search").onchange = (event) => { filters.search = event.target.value.trim(); filters.page = 1; reload(); };
+  $("#analytics-refresh").onclick = reload;
+  await reload();
+}
+
 function renderTimePanel() {
   const presets = ["sunrise", "day", "noon", "sunset", "night", "midnight"];
   const presetIcons = { sunrise: "🌅", day: "☀", noon: "◉", sunset: "🌇", night: "☾", midnight: "✦" };
@@ -654,7 +745,7 @@ function bindTimePanel() {
 }
 
 function renderTabs() {
-  const icons = { home: "⌂", world: "◆", players: "♟", rules: "☷", server: "⚙" };
+  const icons = { home: "⌂", world: "◆", players: "♟", analytics: "▥", rules: "☷", server: "⚙" };
   const activeDestination = state.tab === "__time__" ? "world" : state.tab === "__players__" ? "players" : state.tab;
   $("#tabs").innerHTML = state.tabs.map((tab) => `<button class="${tab === activeDestination ? "active" : ""}" data-tab="${tab}"><i>${icons[tab]}</i><span>${t(tab === "server" ? "settings" : tab)}</span></button>`).join("");
   $("#tabs").querySelectorAll("button").forEach((button) => button.onclick = () => {

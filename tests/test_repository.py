@@ -57,3 +57,63 @@ class StateRepositoryTest(unittest.TestCase):
             public_id = repository.player_profiles()[0]["id"]
             self.assertNotIn("123", public_id)
             self.assertIsNotNone(repository.player_profile(public_id))
+
+    def test_global_activity_is_filtered_paginated_and_sanitized(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = StateRepository(Path(directory) / "state.db")
+            repository.initialize()
+            repository.observe_player("VonCrush", True, "private-xuid")
+            repository.observe_player("VonCrush", False, "private-xuid")
+            repository.record_player_death(
+                "VonCrush", "was slain by Zombie", "private raw log evidence", "bedrock-log", "death-1",
+            )
+            repository.set_player_permission("VonCrush", "operator")
+
+            first = repository.player_activity("all", "VonCrush", "all", "", 0, 1, 2)
+            self.assertEqual(first["total"], 4)
+            self.assertEqual(first["pages"], 2)
+            self.assertEqual(len(first["events"]), 2)
+            serialized = str(first)
+            self.assertNotIn("private-xuid", serialized)
+            self.assertNotIn("private raw log evidence", serialized)
+
+            deaths = repository.player_activity("deaths", "", "server", "", 0, 1, 25)
+            self.assertEqual(deaths["total"], 1)
+            self.assertEqual(deaths["summary"]["deaths"], 1)
+            self.assertEqual(deaths["events"][0]["details"]["cause"], "was slain by Zombie")
+            searched = repository.player_activity("deaths", "", "all", "zombie", 0, 1, 25)
+            self.assertEqual(searched["total"], 1)
+
+    def test_global_activity_distinguishes_structured_deaths(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = StateRepository(Path(directory) / "state.db")
+            repository.initialize()
+            repository.observe_player("Nicole", True, "456")
+            repository.ingest_telemetry({
+                "schema": 1, "sequence": 1, "type": "entity.died", "timestamp": 1,
+                "player": {"name": "Nicole"},
+                "data": {"victim": "Nicole", "killerType": "minecraft:zombie", "cause": "entityAttack"},
+            })
+            structured = repository.player_activity("deaths", "", "structured", "", 0, 1, 25)
+            self.assertEqual(structured["total"], 1)
+            self.assertEqual(structured["events"][0]["source"], "behavior-pack")
+            self.assertEqual(structured["events"][0]["details"]["killer"], "minecraft:zombie")
+
+    def test_global_activity_prefers_structured_death_without_deleting_derived_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "state.db"
+            repository = StateRepository(path)
+            repository.initialize()
+            repository.observe_player("Nicole", True, "456")
+            repository.record_player_death("Nicole", "died", "raw evidence", "bedrock-log", "derived")
+            repository.ingest_telemetry({
+                "schema": 1, "sequence": 2, "type": "entity.died", "timestamp": 1,
+                "player": {"name": "Nicole"},
+                "data": {"victim": "Nicole", "killerType": "minecraft:zombie", "cause": "entityAttack"},
+            })
+            result = repository.player_activity("deaths", "", "all", "", 0, 1, 25)
+            self.assertEqual(result["total"], 1)
+            self.assertEqual(result["events"][0]["source"], "behavior-pack")
+            import sqlite3
+            with sqlite3.connect(path) as connection:
+                self.assertEqual(connection.execute("SELECT count(*) FROM player_history WHERE topic='player.death'").fetchone()[0], 2)

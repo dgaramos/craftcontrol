@@ -382,3 +382,86 @@ class StateRepository:
             "close_reason": row[4], "inferred": bool(row[5]), "active": row[2] is None,
         } for row in sessions]
         return profile
+
+    def player_activity(
+        self, kind: str = "all", player: str = "", source: str = "all", search: str = "",
+        days: int = 0, page: int = 1, page_size: int = 25,
+    ) -> dict[str, Any]:
+        topics = {
+            "all": ("player.connected", "player.disconnected", "player.death", "player.permission.changed"),
+            "deaths": ("player.death",),
+            "joins": ("player.connected",),
+            "leaves": ("player.disconnected",),
+            "permissions": ("player.permission.changed",),
+        }[kind]
+        conditions = [f"h.topic IN ({','.join('?' for _ in topics)})"]
+        parameters: list[Any] = list(topics)
+        conditions.append(
+            "(h.topic!='player.death' OR h.source='behavior-pack' OR NOT EXISTS "
+            "(SELECT 1 FROM player_history structured WHERE structured.identity=h.identity "
+            "AND structured.topic='player.death' AND structured.source='behavior-pack' "
+            "AND abs(structured.occurred_at-h.occurred_at)<=10))"
+        )
+        if player:
+            conditions.append(
+                "(lower(p.current_name)=lower(?) OR EXISTS "
+                "(SELECT 1 FROM player_aliases a WHERE a.identity=h.identity AND lower(a.name)=lower(?)))"
+            )
+            parameters.extend((player, player))
+        if source == "structured":
+            conditions.append("h.source='behavior-pack'")
+        elif source == "server":
+            conditions.append("h.source!='behavior-pack'")
+        if search:
+            conditions.append("(lower(p.current_name) LIKE ? OR lower(h.payload) LIKE ?)")
+            pattern = f"%{search.casefold()}%"
+            parameters.extend((pattern, pattern))
+        if days:
+            conditions.append("h.occurred_at>=?")
+            parameters.append(time.time() - days * 86400)
+        where = " AND ".join(conditions)
+        offset = (page - 1) * page_size
+        with self._connect() as connection:
+            total = int(connection.execute(
+                f"SELECT count(*) FROM player_history h JOIN player_profiles p ON p.identity=h.identity WHERE {where}",
+                parameters,
+            ).fetchone()[0])
+            rows = connection.execute(
+                "SELECT h.id,h.topic,h.occurred_at,h.source,h.payload,h.identity,p.current_name "
+                f"FROM player_history h JOIN player_profiles p ON p.identity=h.identity WHERE {where} "
+                "ORDER BY h.occurred_at DESC,h.id DESC LIMIT ? OFFSET ?",
+                (*parameters, page_size, offset),
+            ).fetchall()
+            summary_rows = connection.execute(
+                "SELECT h.topic,count(*) FROM player_history h JOIN player_profiles p ON p.identity=h.identity "
+                f"WHERE {where} GROUP BY h.topic", parameters,
+            ).fetchall()
+        events = []
+        for row in rows:
+            payload = json.loads(row[4])
+            location = payload.get("location") if isinstance(payload.get("location"), dict) else {}
+            events.append({
+                "id": row[0], "topic": row[1], "timestamp": row[2], "source": row[3],
+                "player": {"id": self._public_player_id(row[5]), "name": row[6]},
+                "details": {
+                    "cause": payload.get("cause"),
+                    "killer": payload.get("killer") or payload.get("killerType"),
+                    "projectile": payload.get("projectileType"),
+                    "dimension": payload.get("dimension"),
+                    "permission": payload.get("permission"),
+                    "inferred": bool(payload.get("inferred")),
+                    "reason": payload.get("reason"),
+                    "coordinates": {key: location.get(key) for key in ("x", "y", "z") if location.get(key) is not None},
+                },
+            })
+        counts = {row[0]: int(row[1]) for row in summary_rows}
+        return {
+            "events": events, "page": page, "page_size": page_size, "total": total,
+            "pages": max(1, (total + page_size - 1) // page_size),
+            "summary": {
+                "joins": counts.get("player.connected", 0),
+                "leaves": counts.get("player.disconnected", 0),
+                "deaths": counts.get("player.death", 0),
+                "permissions": counts.get("player.permission.changed", 0),
+            },
+        }

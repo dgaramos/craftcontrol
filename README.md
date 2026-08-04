@@ -15,6 +15,7 @@ Bedrock Dedicated Server is powerful, but routine administration still means rem
 - **Purposeful controls:** toggles, segmented choices, contextual explanations, and a review drawer instead of a wall of raw fields.
 - **Live world management:** gamerules, time, weather, operators, and safe server lifecycle actions.
 - **Durable player profiles:** presence, aliases, sessions, play time, permissions, deaths, and event history survive disconnects and manager restarts.
+- **Global activity analytics:** filter joins, leaves, deaths, and permission changes by player, period, source, cause, or responsible entity.
 - **Optional world telemetry:** the companion behavior pack adds authoritative kills, blocks, damage, distance, dimensions, and structured death events.
 - **Independent operation:** CraftControl does not require Prometheus, Grafana, Loki, the custom exporter, or the behavior pack.
 - **Bilingual and responsive:** the complete interface works in Portuguese and English on phones, tablets, Steam Deck, and desktop browsers.
@@ -30,6 +31,7 @@ The five primary destinations are intentionally task-oriented:
 | Home | Server health, online players, freshness, and common destinations |
 | World | World identity, generation, view distance, time, weather, and cycles |
 | Players | Permanent profiles, sessions, operators, history, and telemetry |
+| Data | Global Activity and Deaths views with filters, provenance, and pagination |
 | Rules | Gameplay, interface, mobs, drops, commands, fire, TNT, and regeneration |
 | Server | Packs, network, compression, threads, and container lifecycle |
 
@@ -212,6 +214,17 @@ The Players workspace uses a compact roster so presence, Minecraft permission, a
 
 Without the behavior pack, death messages are parsed from server logs and explicitly shown as derived data. With structured telemetry active, new death events are stored with the cause, killer entity or player, and projectile when Bedrock supplies them. Aggregate snapshots recover totals but cannot reconstruct details for older events.
 
+## Activity and death analytics
+
+The **Data** workspace provides two global views backed by permanent player history:
+
+- **Activity** combines joins, leaves, deaths, and permission changes.
+- **Deaths** focuses on cause, responsible entity or player, projectile, dimension, and coordinates when that evidence exists.
+
+Both views support player, lifetime/7-day/30-day, source, event-type, and free-text detail filters. Results are paginated server-side and every item identifies whether it came from the structured Telemetry Pack or server/manager evidence. When a structured and derived death describe the same player within the same short window, the interface prefers the structured event while retaining the raw derived evidence privately in SQLite. XUIDs and raw log lines never leave the repository layer.
+
+Snapshots can recover aggregate totals after downtime, but they cannot recreate every missed historical event. Empty states and source labels preserve that distinction instead of presenting missing details as zero.
+
 ## Optional telemetry pack
 
 The companion Bedrock behavior pack runs inside the world and emits schema-versioned JSON through content logs. CraftControl consumes incremental events and requests authoritative snapshots after startup, reconnects, manual refreshes, and recovery.
@@ -295,6 +308,7 @@ When development and deployment use separate directories, copy the source while 
 | `GET` | `/api/players` | Permanent player roster |
 | `GET` | `/api/players/profile/<id>` | One opaque player profile and history |
 | `PUT` | `/api/players/<name>/operator` | Grant or revoke in-game operator status |
+| `GET` | `/api/analytics/activity` | Filtered and paginated global activity/death history |
 | `PUT` | `/api/config` | Validate and queue persistent configuration |
 | `PUT` | `/api/gamerules/<rule>` | Apply an allowlisted gamerule |
 | `POST` | `/api/world/<action>` | Run an allowlisted world shortcut |

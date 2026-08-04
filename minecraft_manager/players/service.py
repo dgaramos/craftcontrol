@@ -81,6 +81,19 @@ class PlayerService:
     def profile(self, identity: str) -> dict[str, Any] | None:
         return self.repository.player_profile(identity)
 
+    def activity(self, kind: str, player: str, source: str, search: str, days: int, page: int, page_size: int) -> dict[str, Any]:
+        if kind not in {"all", "deaths", "joins", "leaves", "permissions"}:
+            raise ValueError("invalid activity kind")
+        if source not in {"all", "structured", "server"}:
+            raise ValueError("invalid activity source")
+        if days not in {0, 7, 30}:
+            raise ValueError("invalid activity period")
+        if page < 1 or page_size < 1 or page_size > 50:
+            raise ValueError("invalid pagination")
+        if len(player) > 64 or len(search) > 64:
+            raise ValueError("invalid activity filter")
+        return self.repository.player_activity(kind, player.strip(), source, search.strip(), days, page, page_size)
+
     def set_operator(self, player: str, enabled: bool) -> None:
         self.console.set_operator(player, enabled)
         permission = "operator" if enabled else "member"

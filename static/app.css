@@ -106,7 +106,7 @@ button:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
 
 nav {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 5px;
   position: sticky;
   top: 73px;

@@ -68,3 +68,14 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn('class="session-period"', script)
         self.assertIn("session.disconnected_at", script)
         self.assertIn(".session-item.is-inferred", stylesheet)
+
+    def test_analytics_has_dedicated_bilingual_mobile_workspace(self) -> None:
+        script = (ROOT / "static" / "app.js").read_text()
+        stylesheet = (ROOT / "static" / "analytics.css").read_text()
+        template = (ROOT / "templates" / "index.html").read_text()
+        self.assertIn('tabs: ["home", "world", "players", "analytics"', script)
+        self.assertIn("Atividade do servidor", script)
+        self.assertIn("Server activity", script)
+        self.assertIn('data-analytics-view="deaths"', script)
+        self.assertIn("@media (max-width: 480px)", stylesheet)
+        self.assertIn("analytics.css", template)

@@ -37,3 +37,6 @@ class SQLitePlayerRepository:
 
     def player_profile(self, public_id: str, history_limit: int = 100, session_limit: int = 50) -> dict[str, Any] | None:
         return self.database.player_profile(public_id, history_limit, session_limit)
+
+    def player_activity(self, kind: str, player: str, source: str, search: str, days: int, page: int, page_size: int) -> dict[str, Any]:
+        return self.database.player_activity(kind, player, source, search, days, page, page_size)

@@ -190,7 +190,7 @@ class StateRepositoryTest(unittest.TestCase):
             repository.ingest_telemetry({
                 "schema": 1, "sequence": 1, "type": "snapshot.player", "timestamp": 1,
                 "player": {"name": "VonCrush"},
-                "data": {"deaths": 1, "playerKills": 2, "mobKills": 8, "damageDealt": 42.5, "damageTaken": 12},
+                "data": {"deaths": 1, "playerKills": 2, "mobKills": 8, "damageDealt": 42.5, "damageTaken": 12, "killsByType": {"minecraft:zombie": 6, "minecraft:skeleton": 2}},
             })
             repository.ingest_telemetry({
                 "schema": 1, "sequence": 2, "type": "snapshot.player", "timestamp": 2,
@@ -208,6 +208,9 @@ class StateRepositoryTest(unittest.TestCase):
             self.assertEqual(result["rankings"]["player_kills"][0]["player"]["name"], "VonCrush")
             self.assertEqual(result["breakdowns"]["causes"][0], {"key": "projectile", "count": 1})
             self.assertEqual(result["pvp"][0]["attacker"]["name"], "VonCrush")
+            self.assertEqual(result["top_targets"][0], {"target": "minecraft:zombie", "kills": 6})
+            von = next(item for item in result["players"] if item["player"]["name"] == "VonCrush")
+            self.assertEqual(von["favorite_target"]["target"], "minecraft:zombie")
             self.assertNotIn("private-", str(result))
 
     def test_exploration_analytics_has_complete_zero_state(self) -> None:
@@ -215,7 +218,7 @@ class StateRepositoryTest(unittest.TestCase):
             repository = StateRepository(Path(directory) / "state.db")
             repository.initialize()
             result = repository.exploration_analytics()
-            self.assertEqual(result["totals"], {"distance": 0, "dimensions": 0, "dimension_visits": 0, "play_seconds": 0, "sessions": 0})
+            self.assertEqual(result["totals"], {"distance": 0, "dimensions": 0, "dimension_visits": 0, "play_seconds": 0, "sessions": 0, "active_seconds": 0})
             self.assertEqual(result["dimensions"], [])
             self.assertEqual(result["transitions"], [])
             self.assertEqual(result["players"], [])
@@ -231,7 +234,7 @@ class StateRepositoryTest(unittest.TestCase):
             repository.ingest_telemetry({
                 "schema": 1, "sequence": 1, "type": "snapshot.player", "timestamp": 1,
                 "player": {"name": "VonCrush"},
-                "data": {"distance": 120.5, "dimensions": {"minecraft:overworld": 3, "minecraft:nether": 2}},
+                "data": {"distance": 120.5, "dimensions": {"minecraft:overworld": 3, "minecraft:nether": 2}, "distanceByDimension": {"minecraft:overworld": 80.5, "minecraft:nether": 40}, "activeTimeByDimension": {"minecraft:overworld": 60, "minecraft:nether": 30}, "firstDimensionVisitAt": {"minecraft:overworld": 1000000000000}, "lastDimensionVisitAt": {"minecraft:overworld": 1000000005000}},
             })
             repository.ingest_telemetry({
                 "schema": 1, "sequence": 2, "type": "snapshot.player", "timestamp": 2,
@@ -246,7 +249,12 @@ class StateRepositoryTest(unittest.TestCase):
             self.assertEqual(result["totals"]["distance"], 200.5)
             self.assertEqual(result["totals"]["play_seconds"], 180)
             self.assertEqual(result["totals"]["dimensions"], 2)
-            self.assertEqual(result["dimensions"][0], {"dimension": "minecraft:overworld", "visits": 4})
+            self.assertEqual(result["dimensions"][0]["dimension"], "minecraft:overworld")
+            self.assertEqual(result["dimensions"][0]["visits"], 4)
+            self.assertEqual(result["dimensions"][0]["distance"], 80.5)
+            self.assertEqual(result["dimensions"][0]["active_seconds"], 60)
+            self.assertEqual(result["dimensions"][0]["first_seen_at"], 1000000000)
+            self.assertEqual(result["totals"]["active_seconds"], 90)
             self.assertEqual(result["rankings"]["distance"][0]["player"]["name"], "VonCrush")
             self.assertEqual(result["transitions"][0]["to"], "minecraft:nether")
             self.assertNotIn("private-", str(result))

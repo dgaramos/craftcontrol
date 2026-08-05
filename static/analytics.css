@@ -210,11 +210,12 @@
 .exploration-ranking li button, .journey-panel li button { min-height: 0; padding: 0; overflow: hidden; color: var(--grass-light); text-align: left; text-overflow: ellipsis; white-space: nowrap; background: transparent; border: 0; box-shadow: none; text-shadow: none; }
 .exploration-ranking li strong { color: #8bd8f5; }
 .dimension-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin-top: 12px; }
-.dimension-cards article { display: grid; justify-items: center; gap: 4px; min-height: 126px; padding: 13px; text-align: center; background: #10191d; border: 2px solid #294956; }
+.dimension-cards article { display: grid; justify-items: center; gap: 4px; min-height: 190px; padding: 13px; text-align: center; background: #10191d; border: 2px solid #294956; }
 .dimension-cards article > span { color: #67c4e5; font-size: 1.6rem; }
 .dimension-cards article strong { color: var(--text); font-size: .67rem; text-transform: capitalize; }
 .dimension-cards article b { color: #8bd8f5; font-size: 1rem; }
 .dimension-cards article small { color: var(--muted); font-size: .53rem; text-transform: uppercase; }
+.dimension-cards article em { margin-top: 5px; color: #718a95; font-size: .48rem; font-style: normal; line-height: 1.5; }
 .exploration-zero { display: grid; place-items: center; align-content: center; min-height: 132px; padding: 16px; color: #69828d; text-align: center; }
 .exploration-zero > span { color: #315b6d; font-size: 1.8rem; }
 .exploration-zero p { margin: 9px 0 0; font-size: .66rem; }

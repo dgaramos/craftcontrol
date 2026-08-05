@@ -684,8 +684,16 @@ class StateRepository:
         profiles = self.player_profiles()
         known = {profile["name"].casefold(): {"id": profile["id"], "name": profile["name"]} for profile in profiles}
         players = []
+        target_totals: dict[str, int] = {}
         for profile in profiles:
             stats = profile.get("telemetry", {}) if profile.get("telemetry_updated_at") else {}
+            raw_targets = stats.get("killsByType") if isinstance(stats.get("killsByType"), dict) else {}
+            targets = {str(name): int(count) for name, count in raw_targets.items() if str(name).startswith("minecraft:") and isinstance(count, (int, float)) and count > 0}
+            for name, count in targets.items(): target_totals[name] = target_totals.get(name, 0) + count
+            favorite_target = None
+            if targets:
+                name, count = min(targets.items(), key=lambda item: (-item[1], item[0]))
+                favorite_target = {"target": name, "kills": count}
             players.append({
                 "player": {"id": profile["id"], "name": profile["name"]},
                 "deaths": int(profile.get("deaths_count", 0)),
@@ -693,6 +701,7 @@ class StateRepository:
                 "mob_kills": int(stats.get("mobKills", 0)),
                 "damage_dealt": float(stats.get("damageDealt", 0)),
                 "damage_taken": float(stats.get("damageTaken", 0)),
+                "kills_by_type": targets, "favorite_target": favorite_target,
                 "telemetry_available": bool(profile.get("telemetry_updated_at")),
                 "updated_at": profile.get("telemetry_updated_at") or profile.get("last_seen_at"),
             })
@@ -746,6 +755,7 @@ class StateRepository:
                 "damage_taken": round(sum(item["damage_taken"] for item in players), 1),
             },
             "breakdowns": {"causes": top(causes), "opponents": top(opponents), "projectiles": top(projectiles)},
+            "top_targets": [{"target": key, "kills": count} for key, count in sorted(target_totals.items(), key=lambda item: (-item[1], item[0]))[:limit]],
             "pvp": duels,
             "rankings": {field: ranking(field) for field in ("deaths", "player_kills", "mob_kills", "damage_dealt", "damage_taken")},
             "players": players,
@@ -755,6 +765,10 @@ class StateRepository:
         profiles = self.player_profiles()
         players = []
         dimension_totals: dict[str, int] = {}
+        dimension_distance: dict[str, float] = {}
+        dimension_active: dict[str, float] = {}
+        dimension_first: dict[str, float] = {}
+        dimension_last: dict[str, float] = {}
         for profile in profiles:
             telemetry = profile.get("telemetry", {}) if profile.get("telemetry_updated_at") else {}
             raw_dimensions = telemetry.get("dimensions") if isinstance(telemetry.get("dimensions"), dict) else {}
@@ -762,17 +776,31 @@ class StateRepository:
                 str(name): int(count) for name, count in raw_dimensions.items()
                 if str(name).startswith("minecraft:") and isinstance(count, (int, float)) and count > 0
             }
+            def numeric_map(field: str) -> dict[str, float]:
+                value = telemetry.get(field) if isinstance(telemetry.get(field), dict) else {}
+                return {str(name): float(amount) for name, amount in value.items() if str(name).startswith("minecraft:") and isinstance(amount, (int, float)) and amount >= 0}
+            distances = numeric_map("distanceByDimension")
+            active_times = numeric_map("activeTimeByDimension")
+            first_visits = {name: value / 1000 if value > 100_000_000_000 else value for name, value in numeric_map("firstDimensionVisitAt").items()}
+            last_visits = {name: value / 1000 if value > 100_000_000_000 else value for name, value in numeric_map("lastDimensionVisitAt").items()}
             for name, count in dimensions.items(): dimension_totals[name] = dimension_totals.get(name, 0) + count
+            for name, value in distances.items(): dimension_distance[name] = dimension_distance.get(name, 0) + value
+            for name, value in active_times.items(): dimension_active[name] = dimension_active.get(name, 0) + value
+            for name, value in first_visits.items(): dimension_first[name] = min(dimension_first.get(name, value), value)
+            for name, value in last_visits.items(): dimension_last[name] = max(dimension_last.get(name, value), value)
             favorite = None
-            if dimensions:
-                name, count = min(dimensions.items(), key=lambda item: (-item[1], item[0]))
-                favorite = {"dimension": name, "visits": count}
+            candidates = set(dimensions) | set(distances) | set(active_times)
+            if candidates:
+                name = min(candidates, key=lambda item: (-active_times.get(item, 0), -distances.get(item, 0), -dimensions.get(item, 0), item))
+                favorite = {"dimension": name, "visits": dimensions.get(name, 0), "distance": distances.get(name, 0), "active_seconds": active_times.get(name, 0)}
             players.append({
                 "player": {"id": profile["id"], "name": profile["name"]},
                 "distance": float(telemetry.get("distance", 0)),
                 "dimensions": dimensions,
                 "dimension_count": len(dimensions),
                 "favorite_dimension": favorite,
+                "distance_by_dimension": distances, "active_time_by_dimension": active_times,
+                "active_seconds": sum(active_times.values()),
                 "play_seconds": int(profile.get("total_play_seconds", 0)),
                 "sessions": int(profile.get("sessions_count", 0)),
                 "first_seen_at": profile.get("first_seen_at"),
@@ -799,7 +827,12 @@ class StateRepository:
                 "from": payload.get("from"), "to": payload.get("to"), "timestamp": occurred_at,
             })
 
-        dimensions = [{"dimension": name, "visits": count} for name, count in sorted(dimension_totals.items(), key=lambda item: (-item[1], item[0]))]
+        all_dimensions = set(dimension_totals) | set(dimension_distance) | set(dimension_active)
+        dimensions = [{
+            "dimension": name, "visits": dimension_totals.get(name, 0),
+            "distance": round(dimension_distance.get(name, 0), 1), "active_seconds": round(dimension_active.get(name, 0), 1),
+            "first_seen_at": dimension_first.get(name), "last_seen_at": dimension_last.get(name),
+        } for name in sorted(all_dimensions, key=lambda item: (-dimension_active.get(item, 0), -dimension_distance.get(item, 0), item))]
         return {
             "generated_at": time.time(), "period": "lifetime",
             "totals": {
@@ -808,9 +841,10 @@ class StateRepository:
                 "dimension_visits": sum(dimension_totals.values()),
                 "play_seconds": sum(item["play_seconds"] for item in players),
                 "sessions": sum(item["sessions"] for item in players),
+                "active_seconds": round(sum(item["active_seconds"] for item in players), 1),
             },
             "dimensions": dimensions, "transitions": transitions,
-            "rankings": {field: ranking(field) for field in ("distance", "dimension_count", "play_seconds", "sessions")},
+            "rankings": {field: ranking(field) for field in ("distance", "dimension_count", "play_seconds", "sessions", "active_seconds")},
             "players": players,
         }
 

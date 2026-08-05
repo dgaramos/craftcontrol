@@ -241,11 +241,11 @@ The companion Bedrock behavior pack runs inside the world and emits schema-versi
 Current structured metrics include:
 
 - joins, leaves, respawns, and first/last observation;
-- deaths, player kills, mob kills, causes, and projectiles;
+- deaths, player kills, mob kills, causes, projectiles, and bounded kills by creature type;
 - blocks broken and placed, including bounded per-type totals;
 - damage dealt and received;
-- sampled horizontal distance;
-- dimensions visited.
+- sampled horizontal distance and active movement time by dimension;
+- dimensions visited with first and last observation timestamps.
 
 The manager remains fully usable when the pack is absent or temporarily unavailable. The embedded **CraftControl Telemetry Pack** integration provides native status, installation, upgrade, disable, removal, backup, and rollback commands:
 

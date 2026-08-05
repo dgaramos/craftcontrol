@@ -1,6 +1,6 @@
 import { world } from "@minecraft/server";
-import { PLAYER_STATE_PREFIX, STATE_BACKUP_KEY, STATE_BACKUP_V1_KEY, STATE_KEY, emptyState, playerKey, playerStateKey } from "./model.js";
-import { migrateState, validateMeta, validatePlayerShard } from "./migrations.js";
+import { PLAYER_BACKUP_V2_PREFIX, PLAYER_STATE_PREFIX, STATE_BACKUP_KEY, STATE_BACKUP_V1_KEY, STATE_BACKUP_V2_KEY, STATE_KEY, emptyState, playerKey, playerStateKey } from "./model.js";
+import { migrateShardedV2, migrateState, validateMeta, validatePlayerShard } from "./migrations.js";
 import { STORAGE_VERSION } from "./versions.js";
 
 let state;
@@ -38,8 +38,12 @@ function persistMigration(raw, result) {
     serialize({ storageVersion: STORAGE_VERSION, sequence: result.state.sequence, key, player }),
   ]);
   const meta = serialize({ storageVersion: STORAGE_VERSION, sequence: result.state.sequence });
-  const backupKey = result.migratedFrom === 0 ? STATE_BACKUP_KEY : STATE_BACKUP_V1_KEY;
+  const backupKey = result.migratedFrom === 0 ? STATE_BACKUP_KEY : result.migratedFrom === 1 ? STATE_BACKUP_V1_KEY : STATE_BACKUP_V2_KEY;
   if (typeof world.getDynamicProperty(backupKey) !== "string") world.setDynamicProperty(backupKey, raw);
+  for (const [id, value] of result.backups || []) {
+    const backupId = `${PLAYER_BACKUP_V2_PREFIX}${id.slice(PLAYER_STATE_PREFIX.length)}`;
+    if (typeof world.getDynamicProperty(backupId) !== "string") world.setDynamicProperty(backupId, value);
+  }
   for (const [id, value] of shards) {
     world.setDynamicProperty(id, value);
     if (world.getDynamicProperty(id) !== value) throw new Error(`failed to verify player shard: ${id}`);
@@ -56,6 +60,14 @@ export function loadState() {
     const parsed = JSON.parse(raw);
     if (parsed?.storageVersion === STORAGE_VERSION) {
       state = loadShardedState(parsed);
+    } else if (parsed?.storageVersion === 2) {
+      if (typeof world.getDynamicPropertyIds !== "function") throw new Error("dynamic property discovery is unavailable");
+      const shards = world.getDynamicPropertyIds().filter((item) => item.startsWith(PLAYER_STATE_PREFIX)).map((id) => [id, world.getDynamicProperty(id)]).filter(([, value]) => typeof value === "string");
+      const result = migrateShardedV2(parsed, shards);
+      state = result.state;
+      persistMigration(raw, result);
+      migration = { status: "migrated", storageVersion: STORAGE_VERSION, migratedFrom: 2 };
+      console.warn(`[BEDROCK_TELEMETRY_MIGRATION] storage 2 -> ${STORAGE_VERSION} complete`);
     } else {
       const result = migrateState(parsed);
       state = result.state;

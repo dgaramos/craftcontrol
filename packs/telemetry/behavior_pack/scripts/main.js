@@ -1,5 +1,5 @@
 import { system, world } from "@minecraft/server";
-import { ensurePlayer, horizontalDistance, incrementMap, round } from "./model.js";
+import { ensurePlayer, horizontalDistance, incrementMap, observeDimension, round } from "./model.js";
 import { flush, loadState, mutatePlayer, storageStatus } from "./store.js";
 import { publish, publishSnapshot } from "./transport.js";
 import { capabilitySnapshot, startMovementSampling, subscribeScriptEvents, subscribeWorldEvent } from "./capabilities.js";
@@ -27,7 +27,7 @@ subscribeWorldEvent("playerLeave", "playerLeaves", (event) => {
 
 subscribeWorldEvent("playerSpawn", "playerRespawns", (event) => {
   const player = event.player;
-  update(player.name, () => {});
+  update(player.name, (stats) => observeDimension(stats, player.dimension.id, Date.now()));
   positions.set(player.id, { ...player.location, dimension: player.dimension.id });
   if (!event.initialSpawn) publish("player.respawned", player.name);
 });
@@ -39,7 +39,10 @@ subscribeWorldEvent("entityDie", "deathsAndKills", (event) => {
   if (victim) update(victim, (stats) => { stats.deaths += 1; });
   if (killer) update(killer, (stats) => {
     if (victim) stats.playerKills += 1;
-    else stats.mobKills += 1;
+    else {
+      stats.mobKills += 1;
+      incrementMap(stats.killsByType, event.deadEntity.typeId);
+    }
   });
   if (victim || killer) publish("entity.died", victim, {
     victim: victim || null,
@@ -77,7 +80,7 @@ subscribeWorldEvent("playerPlaceBlock", "blocksPlaced", (event) => {
 });
 
 subscribeWorldEvent("playerDimensionChange", "dimensionChanges", (event) => {
-  update(event.player.name, (stats) => incrementMap(stats.dimensions, event.toDimension.id, 1, 8));
+  update(event.player.name, (stats) => observeDimension(stats, event.toDimension.id, Date.now(), true));
   positions.set(event.player.id, { ...event.toLocation, dimension: event.toDimension.id });
   publish("player.dimension.changed", event.player.name, { from: event.fromDimension.id, to: event.toDimension.id });
 });
@@ -94,13 +97,19 @@ startMovementSampling(() => {
     if (!previous || previous.dimension !== current.dimension) continue;
     const distance = horizontalDistance(previous, current);
     if (distance <= 0 || distance > 128) continue;
-    update(player.name, (stats) => { stats.distance = round(stats.distance + distance); });
+    update(player.name, (stats) => {
+      stats.distance = round(stats.distance + distance);
+      incrementMap(stats.distanceByDimension, current.dimension, distance, 8);
+      stats.distanceByDimension[current.dimension] = round(stats.distanceByDimension[current.dimension]);
+      incrementMap(stats.activeTimeByDimension, current.dimension, 5, 8);
+      observeDimension(stats, current.dimension, Date.now());
+    });
   }
   flush();
 }, 100);
 
 system.runTimeout(() => {
   loadState();
-  publish("telemetry.started", null, { version: "0.2.3", product: "CraftControl Telemetry Pack", storage: storageStatus(), capabilities: capabilitySnapshot() });
+  publish("telemetry.started", null, { version: "0.3.0", product: "CraftControl Telemetry Pack", storage: storageStatus(), capabilities: capabilitySnapshot() });
   publishSnapshot();
 }, 1);

@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { getMockDynamicProperty, setMockDynamicProperty } from "@minecraft/server";
 import { STATE_KEY, playerStateKey } from "../behavior_pack/scripts/model.js";
 
-setMockDynamicProperty(STATE_KEY, JSON.stringify({ storageVersion: 2, sequence: 7 }));
+setMockDynamicProperty(STATE_KEY, JSON.stringify({ storageVersion: 3, sequence: 7 }));
 setMockDynamicProperty(playerStateKey("voncrush"), JSON.stringify({
-  storageVersion: 2,
+  storageVersion: 3,
   sequence: 9,
   key: "voncrush",
   player: { name: "VonCrush", deaths: 5, blocksBroken: 20 },

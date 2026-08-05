@@ -4,20 +4,20 @@
     "name": "CraftControl Telemetry Pack",
     "description": "Passive structured Bedrock telemetry for CraftControl",
     "uuid": "8c916948-76c6-4aa5-91e0-97671dfd3830",
-    "version": [0, 2, 3],
+    "version": [0, 3, 0],
     "min_engine_version": [1, 21, 100]
   },
   "modules": [
     {
       "type": "data",
       "uuid": "57ae222e-bfec-4f7d-a113-16cb6fe69ad5",
-      "version": [0, 2, 3]
+      "version": [0, 3, 0]
     },
     {
       "type": "script",
       "language": "javascript",
       "uuid": "0bd1c5d7-ab3d-4a18-b2d2-5a546eb73834",
-      "version": [0, 2, 3],
+      "version": [0, 3, 0],
       "entry": "scripts/main.js"
     }
   ],

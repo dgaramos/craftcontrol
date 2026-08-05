@@ -11,11 +11,11 @@ The pack observes stable Bedrock Script API events, maintains aggregate statisti
 
 - Player joins, leaves, respawns, and dimensions visited
 - Player deaths, damage cause, killer, victim type, and projectile type when available
-- Player and mob kills
+- Player and mob kills, including bounded kill totals by creature type
 - Blocks broken and placed, including bounded per-block-type totals
 - Damage dealt and received
-- Horizontal distance traveled, sampled every five seconds
-- First and last observation timestamps
+- Horizontal distance and active movement time by dimension, sampled every five seconds
+- First and last player and dimension observation timestamps
 - Aggregate snapshots for recovery and reconciliation
 
 The pack does not collect chat, inventory contents, coordinates in log events, IP addresses, or XUIDs. Xbox achievements are not available as a reliable general-purpose Script API telemetry source.
@@ -95,7 +95,7 @@ The runtime integration test loads the production `main.js` through a determinis
 The package command creates:
 
 ```text
-dist/craftcontrol-telemetry-0.2.3.mcpack
+dist/craftcontrol-telemetry-0.3.0.mcpack
 ```
 
 Packaging uses sorted paths, normalized timestamps, and stripped ZIP metadata so the standalone repository and CraftControl subtree produce byte-equivalent artifacts from the same commit.
@@ -150,6 +150,12 @@ Migration failures never fall back to writable empty state. Persistence is block
 ## Runtime capabilities
 
 Release `0.2.3` probes stable Bedrock event signals before subscribing. Joins, leaves, respawns, deaths and kills, damage, broken and placed blocks, dimension changes, movement sampling, and snapshot requests are reported independently. A missing or throwing optional signal produces one `[BEDROCK_TELEMETRY_CAPABILITY]` warning and leaves the rest of the pack running. `telemetry.started` and `snapshot.started` include the complete capability map so consumers never present an unavailable metric as silently authoritative.
+
+## Storage v3 and richer aggregates
+
+Release `0.3.0` adds bounded `killsByType`, `distanceByDimension`, `activeTimeByDimension`, `firstDimensionVisitAt`, and `lastDimensionVisitAt` maps. Storage schema v3 migrates every v2 player shard independently, fills the new maps without changing existing counters, preserves the v2 metadata and each original shard under dedicated backup properties, writes upgraded shards first, and commits metadata last. New metrics begin at zero because their historical distribution cannot be reconstructed from lifetime totals.
+
+Active time means sampled movement time, not total online time: a player contributes five seconds to the current dimension only when the movement sampler observes a valid non-teleport horizontal displacement. This deliberately avoids claiming AFK or stationary time as active play.
 
 ## Performance and limitations
 

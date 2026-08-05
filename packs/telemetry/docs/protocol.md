@@ -21,7 +21,7 @@ Consumers must ignore lines without the exact prefix, reject unsupported schema 
 
 `telemetry.started` and `snapshot.started` include a `storage` object with the independently versioned persisted-state status and a `capabilities` map. Each capability contains `supported` and may include a bounded startup error. Consumers must treat `persistenceBlocked: true` as degraded even when a snapshot reaches `snapshot.finished`, and must label metrics from unsupported capabilities as unavailable rather than zero.
 
-Protocol `schema` and pack `storageVersion` are intentionally independent. Storage version `2` shards players into separate world dynamic properties without changing protocol schema `1`; a storage migration does not require a wire-protocol version change when the emitted envelope contract remains compatible.
+Protocol `schema` and pack `storageVersion` are intentionally independent. Storage version `2` introduced per-player shards. Storage version `3` adds bounded creature-kill and per-dimension movement/time/visit maps while preserving protocol schema `1`; a storage migration does not require a wire-protocol version change when the emitted envelope contract remains compatible.
 
 ## Topics
 
@@ -40,3 +40,5 @@ Protocol `schema` and pack `storageVersion` are intentionally independent. Stora
 Send `/scriptevent bedrock_telemetry:sync full` from the dedicated-server console to request a full snapshot. The message body is reserved for future filters.
 
 Damage and movement are aggregated in the snapshot rather than logged for every sample. State is flushed every five seconds and immediately before a requested snapshot. Consumers must reconcile from snapshots after either process restarts.
+
+Snapshot player data in pack `0.3.0` adds `killsByType`, `distanceByDimension`, `activeTimeByDimension`, `firstDimensionVisitAt`, and `lastDimensionVisitAt`. Type and dimension maps are bounded. Visit timestamps are Unix epoch milliseconds as produced by the Bedrock JavaScript runtime.

@@ -22,7 +22,7 @@
       </div>
       <div class="top-actions">
         <div id="identity" hidden></div>
-        <button id="language" class="language-button" type="button" aria-label="Switch language">EN</button>
+        <label class="language-picker" for="language"><span data-i18n="language">Idioma</span><select id="language" aria-label="Idioma"><option value="pt">Português</option><option value="en">English</option><option value="es">Español</option></select></label>
         <button id="refresh" class="icon-button" title="Atualizar estado"><b><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-refresh"></use></svg></b><span data-i18n="refresh">Atualizar</span></button>
       </div>
     </header>
@@ -70,6 +70,6 @@
       <div class="dialog-actions"><button data-server="start" data-i18n="start">Iniciar</button><button data-server="restart" data-i18n="restart">Reiniciar</button><button data-server="stop" class="danger" data-i18n="stop">Parar</button></div>
       <button id="close-dialog" class="secondary wide" data-i18n="close">Fechar</button>
     </dialog>
-    <script type="module" src="/static/app.js?v=41"></script>
+    <script type="module" src="/static/app.js?v=43"></script>
   </body>
 </html>

@@ -1,12 +1,12 @@
 import { api } from "./js/api.js?v=1";
 import { connectEventStream } from "./js/events.js";
-import { requireSession } from "./js/auth.js?v=1";
+import { requireSession } from "./js/auth.js?v=2";
 
 const state = {
   schema: null, config: {}, gamerules: {}, players: [], online: 0, maxPlayers: 0,
   changes: {}, tab: "home", tabs: ["home", "world", "players", "analytics", "rules", "server"], status: null, updatedAt: 0, domains: {},
   analytics: { kind: "all", player: "", source: "all", search: "", days: 0, page: 1, rankingCategory: "activity", rankingMetric: "play_time", blocksMode: "mining", selectedOre: "diamond", combatMetric: "mob_kills", explorationMetric: "distance", periodDays: 30, periodMetric: "play_seconds" },
-  locale: (localStorage.getItem("craftcontrol-locale") || localStorage.getItem("manager-locale")) === "en" ? "en" : "pt",
+  locale: ["pt", "en", "es"].includes(localStorage.getItem("craftcontrol-locale") || localStorage.getItem("manager-locale")) ? (localStorage.getItem("craftcontrol-locale") || localStorage.getItem("manager-locale")) : "pt",
   user: null,
 };
 const $ = (selector) => document.querySelector(selector);
@@ -17,6 +17,7 @@ window.addEventListener("pageshow", () => requestAnimationFrame(() => window.scr
 
 const messages = {
   pt: {
+    language: "Idioma",
     brandKicker: "CENTRAL BEDROCK",
     refresh: "Atualizar", worldState: "ESTADO DO MUNDO", quickActions: "Ações rápidas",
     day: "Dia", night: "Noite", clearWeather: "Clima limpo", server: "Servidor",
@@ -95,6 +96,7 @@ const messages = {
     craftControlImage: "Imagem CraftControl", activeSince: "Ativa desde", packObserved: "Pack observado", packInstalledAt: "Arquivos atualizados em",
   },
   en: {
+    language: "Language",
     brandKicker: "BEDROCK CONTROL CENTER",
     refresh: "Refresh", worldState: "WORLD STATE", quickActions: "Quick actions",
     day: "Day", night: "Night", clearWeather: "Clear weather", server: "Server",
@@ -174,23 +176,48 @@ const messages = {
   },
 };
 
+messages.es = {
+  ...messages.en,
+  language: "Idioma", brandKicker: "CENTRAL DE CONTROL BEDROCK", refresh: "Actualizar", worldState: "ESTADO DEL MUNDO", quickActions: "Acciones rápidas",
+  day: "Día", night: "Noche", clearWeather: "Clima despejado", server: "Servidor", saveChanges: "Guardar cambios", control: "CONTROL", serverOperation: "Operación del servidor",
+  restartNotice: "Los cambios persistentes se aplican al guardar y reiniciar.", start: "Iniciar", restart: "Reiniciar", stop: "Detener", close: "Cerrar",
+  checking: "Comprobando…", online: "En línea", stopped: "Detenido", serverOnline: "Servidor en línea", serverStopped: "Servidor detenido", playersOnline: "jugadores en línea", nobody: "Nadie conectado",
+  awaiting: "Esperando actualización", updated: "Actualizado", enabled: "Activado", disabled: "Desactivado", unknown: "Sin consultar", immediate: "Aplicación inmediata", restartRequired: "Se aplica al guardar y reiniciar",
+  saved: "Guardado. Aplicando en el servidor…", serverUpdated: "Servidor actualizado", noChanges: "No hay cambios pendientes", querying: "Consultando el servidor…", stateUpdated: "Estado actualizado", worldUpdated: "Mundo actualizado", operationDone: "Operación completada",
+  confirmAction: (action) => `¿${action} el servidor?`, saveCount: (count) => `Guardar (${count})`, fieldUpdated: (label) => `${label} actualizado`,
+  timeControls: "Hora y clima", timeControlsHint: "Hora, ciclos y clima", timeOfDay: "Hora del mundo", sunrise: "Amanecer", noon: "Mediodía", sunset: "Atardecer", midnight: "Medianoche", exactTime: "Hora exacta", exactTimeHelp: "Define un valor entre 0 y 24000 ticks.", setTime: "Definir hora", advanceTime: "Avanzar el tiempo", addTime: "Avanzar", cycles: "Ciclos automáticos", daylightCycle: "Ciclo de día y noche", weatherCycle: "Ciclo climático", timeQueries: "Consultar reloj", days: "Días jugados", queryResult: "Resultado", weatherTitle: "Clima", clear: "Despejado", rain: "Lluvia", thunder: "Tormenta", setWeather: "Aplicar clima", queryWeather: "Consultar clima",
+  onlinePlayers: "Jugadores en línea", operatorAccess: "Operador", noOnlinePlayers: "No hay jugadores en línea.", permissionUpdated: "Permiso actualizado", allPlayers: "Todos los jugadores", offline: "Desconectado", sessions: "Sesiones", playTime: "Tiempo jugado", deaths: "Muertes", firstSeen: "Primera conexión", lastSeen: "Última conexión", viewHistory: "Ver historial", hideHistory: "Ocultar historial", noHistory: "No hay eventos registrados.", totalPlayers: "Jugadores", totalDeaths: "Muertes registradas", totalPlayTime: "Tiempo acumulado", searchPlayers: "Buscar jugador", filterAll: "Todos", filterOnline: "En línea", filterOffline: "Desconectados", filterOperators: "Operadores", connectedSince: "Conectado desde", lastDeath: "Última muerte", permission: "Permiso", aliases: "Nombres conocidos", recentSessions: "Sesiones recientes", normalExit: "Salida normal", inferredExit: "Cierre inferido", noPlayersFound: "Ningún jugador coincide con los filtros.",
+  telemetryStats: "Estadísticas del mundo", authoritative: "Datos estructurados por el behavior pack", playerKills: "Jugadores eliminados", mobKills: "Criaturas eliminadas", blocksBroken: "Bloques rotos", blocksPlaced: "Bloques colocados", damageDealt: "Daño causado", damageTaken: "Daño recibido", distanceTraveled: "Distancia recorrida", dimensionsVisited: "Dimensiones visitadas", deathHistory: "Historial de muertes", noDeaths: "No hay muertes detalladas registradas.", deathCause: "Causa", killedBy: "Responsable", projectile: "Proyectil",
+  home: "Inicio", world: "Mundo", players: "Jugadores", analytics: "Datos", rules: "Reglas", settings: "Servidor", analyticsTitle: "Actividad del servidor", analyticsHelp: "El historial compartido de entradas, salidas, muertes y cambios de permisos.", activityView: "Actividad", deathsView: "Muertes", rankingsView: "Clasificaciones", blocksView: "Bloques", combatView: "Combate", explorationView: "Exploración", trendsView: "Períodos", eventFilter: "Evento", playerFilter: "Jugador", periodFilter: "Período", sourceFilter: "Origen", everyEvent: "Todos los eventos", joinsOnly: "Entradas", leavesOnly: "Salidas", permissionsOnly: "Permisos", dimensionsOnly: "Dimensiones", everyPlayer: "Todos los jugadores", lifetime: "Desde el inicio", last7Days: "Últimos 7 días", last30Days: "Últimos 30 días", everySource: "Todos los orígenes", activityEmpty: "Ningún evento coincide con estos filtros.", eventCount: (count) => `${count} eventos`, pageCount: (page, pages) => `Página ${page} de ${pages}`, previous: "Anterior", next: "Siguiente", refreshData: "Actualizar datos", deathDetails: "Detalles de la muerte", viewDetails: "Ver detalles",
+  rankingsTitle: "Clasificaciones y récords", leaderboard: "Clasificación", records: "Récords del servidor", noRankingData: "Todavía no hay datos para esta categoría.", categoryActivity: "Actividad", categoryCombat: "Combate", categoryBuilding: "Bloques", categoryExploration: "Exploración", rankPlayTime: "Tiempo jugado", rankSessions: "Sesiones", rankDeaths: "Muertes", rankBlocksBroken: "Bloques rotos", rankBlocksPlaced: "Bloques colocados", rankDistance: "Distancia", rankDimensions: "Dimensiones",
+  blocksTitle: "Minería y construcción", blocksHelp: "Descubre qué consumió el mundo, quién minó más y quién construyó más.", miningView: "Minería", buildingView: "Construcción", oresTitle: "Minerales encontrados", topBlocks: "Bloques más frecuentes", favoriteBlocks: "Favoritos de los jugadores", miners: "Mineros", builders: "Constructores", noBlockData: "Todavía no hay bloques registrados por el Telemetry Pack.", broken: "Rotos", placed: "Colocados", oreRanking: "Clasificación del mineral",
+  combatTitle: "Combate del servidor", combatDeaths: "Muertes", combatPlayerKills: "Eliminaciones JcJ", combatMobKills: "Criaturas eliminadas", combatDamageDealt: "Daño causado", combatDamageTaken: "Daño recibido", combatRankings: "Clasificación de combate", deathCauses: "Causas de muerte", lethalOpponents: "Responsables de las muertes", projectiles: "Proyectiles", noCombatEvidence: "Todavía no hay evidencias registradas.", telemetryWaiting: "Esperando telemetría", favoriteTargets: "Criaturas favoritas", targetKills: "eliminaciones",
+  explorationTitle: "Exploración del mundo", distanceTraveled: "Distancia recorrida", dimensionsDiscovered: "Dimensiones descubiertas", dimensionVisits: "Visitas a dimensiones", explorationSessions: "Sesiones", explorerRanking: "Clasificación de exploradores", recentJourneys: "Viajes recientes", noExplorationEvidence: "Todavía no hay viajes registrados.", favoriteDimension: "Dimensión favorita", visitCount: "visitas",
+  trendsTitle: "Historial por período", sevenDays: "7 días", thirtyDays: "30 días", periodRanking: "Clasificación del período", activityCalendar: "Calendario de actividad", sessionHeatmap: "Horarios de juego", mostActiveDay: "Día más activo", noPeriodData: "Todavía no hay actividad registrada en este período.", dailyPlayers: "Jugadores activos", dailyBlocks: "Bloques", dailyKills: "Eliminaciones", lessActive: "Menos", moreActive: "Más", weekdayShort: ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"],
+  worldIntro: "Configuración del mundo", rulesIntro: "Comportamiento del juego", serverIntro: "Infraestructura del servidor", pendingChanges: "CAMBIOS PENDIENTES", reviewChanges: "Revisar cambios", pendingHelp: "Estas configuraciones se guardarán y el servidor solo se reiniciará cuando las apliques.", discardAll: "Descartar todos", applyChanges: "Aplicar cambios", removeChange: "Quitar", currentValue: "Actual", newValue: "Nuevo", reviewCount: (count) => `Revisar (${count})`, confirmedAt: "Confirmado",
+  telemetryPackHelp: "Estadísticas nativas e historial estructurado del mundo.", installedVersion: "Versión instalada", bundledVersion: "Versión disponible", packHealth: "Estado", lastResponse: "Última respuesta", packActive: "Instalado y activo", packInactive: "Desactivado", packMissing: "No instalado", upgradeAvailable: "Actualización disponible", installPack: "Instalar", upgradePack: "Actualizar", disablePack: "Desactivar", rollbackPack: "Restaurar copia", healthy: "Saludable", syncing: "Sincronizando", degraded: "Degradado", waiting: "Esperando", craftControlImage: "Imagen de CraftControl", activeSince: "Activa desde", packObserved: "Pack observado", packInstalledAt: "Archivos actualizados el",
+};
+
 const groups = {
   Geral: "General", Mundo: "World", Jogadores: "Players", Packs: "Packs", Rede: "Network",
   Avançado: "Advanced", Interface: "Interface", Jogabilidade: "Gameplay",
   "Tempo e clima": "Time and weather", Criaturas: "Mobs", Drops: "Drops", Comandos: "Commands",
 };
 const optionNames = {
-  survival: { pt: "Sobrevivência", en: "Survival" }, creative: { pt: "Criativo", en: "Creative" },
-  adventure: { pt: "Aventura", en: "Adventure" }, peaceful: { pt: "Pacífico", en: "Peaceful" },
-  easy: { pt: "Fácil", en: "Easy" }, normal: { pt: "Normal", en: "Normal" }, hard: { pt: "Difícil", en: "Hard" },
-  DEFAULT: { pt: "Normal", en: "Default" }, FLAT: { pt: "Plano", en: "Flat" }, LEGACY: { pt: "Legado", en: "Legacy" },
-  visitor: { pt: "Visitante", en: "Visitor" }, member: { pt: "Membro", en: "Member" }, operator: { pt: "Operador", en: "Operator" },
+  survival: { pt: "Sobrevivência", en: "Survival", es: "Supervivencia" }, creative: { pt: "Criativo", en: "Creative", es: "Creativo" },
+  adventure: { pt: "Aventura", en: "Adventure", es: "Aventura" }, peaceful: { pt: "Pacífico", en: "Peaceful", es: "Pacífico" },
+  easy: { pt: "Fácil", en: "Easy", es: "Fácil" }, normal: { pt: "Normal", en: "Normal", es: "Normal" }, hard: { pt: "Difícil", en: "Hard", es: "Difícil" },
+  DEFAULT: { pt: "Normal", en: "Default", es: "Predeterminado" }, FLAT: { pt: "Plano", en: "Flat", es: "Plano" }, LEGACY: { pt: "Legado", en: "Legacy", es: "Heredado" },
+  visitor: { pt: "Visitante", en: "Visitor", es: "Visitante" }, member: { pt: "Membro", en: "Member", es: "Miembro" }, operator: { pt: "Operador", en: "Operator", es: "Operador" },
 };
 
 function t(key, ...args) {
-  const value = messages[state.locale][key];
+  const value = messages[state.locale]?.[key] ?? messages.en[key] ?? key;
   return typeof value === "function" ? value(...args) : value;
 }
+
+function localeTag() { return { pt: "pt-BR", en: "en-US", es: "es-ES" }[state.locale]; }
+function localized(pt, en, es = en) { return state.locale === "pt" ? pt : state.locale === "es" ? es : en; }
 
 function can(capability) {
   const capabilities = state.user?.capabilities || [];
@@ -204,17 +231,18 @@ function escapeHtml(value) {
 }
 
 function fieldLabel(definition) {
-  return state.locale === "en" ? definition.label_en : definition.label;
+  return state.locale === "pt" ? definition.label : definition[`label_${state.locale}`] || definition.label_en;
 }
 
 function fieldDescription(definition) {
-  return state.locale === "en" ? definition.description_en : definition.description;
+  return state.locale === "pt" ? definition.description : definition[`description_${state.locale}`] || definition.description_en;
 }
 
 function groupLabel(group) {
   if (group === "__time__") return t("timeControls");
   if (group === "__players__") return t("onlinePlayers");
-  return state.locale === "en" ? (groups[group] || group) : group;
+  const spanishGroups = { Geral: "General", Mundo: "Mundo", Jogadores: "Jugadores", Packs: "Packs", Rede: "Red", Avançado: "Avanzado", Interface: "Interfaz", Jogabilidade: "Jugabilidad", "Tempo e clima": "Hora y clima", Criaturas: "Criaturas", Drops: "Botín", Comandos: "Comandos" };
+  return state.locale === "pt" ? group : state.locale === "es" ? (spanishGroups[group] || group) : (groups[group] || group);
 }
 
 const destinationGroups = {
@@ -395,7 +423,7 @@ function settingsMarkup(groupNames) {
     const live = Object.entries(state.schema.gamerules).filter(([, definition]) => definition.group === group);
     if (!persistent.length && !live.length) return "";
     const domain = persistent.length ? state.domains.settings : state.domains.gamerules;
-    const observed = domain?.observed_at ? `${t("confirmedAt")} ${new Date(domain.observed_at * 1000).toLocaleTimeString(state.locale === "en" ? "en-US" : "pt-BR")}` : t("unknown");
+    const observed = domain?.observed_at ? `${t("confirmedAt")} ${new Date(domain.observed_at * 1000).toLocaleTimeString(localeTag())}` : t("unknown");
     return `<details class="settings-accordion" ${index === 0 ? "open" : ""}><summary><span>${escapeHtml(groupLabel(group))}<small>${escapeHtml(observed)}</small></span><b>${persistent.length + live.length}</b></summary><div class="card">${persistent.map(([key, definition]) => inputFor(key, definition, Object.hasOwn(state.changes, key) ? state.changes[key] : state.config[key])).join("")}${live.map(([key, definition]) => inputFor(key, definition, state.gamerules[key], true)).join("")}</div></details>`;
   }).join("");
 }
@@ -565,13 +593,13 @@ function bindPlayerAccess(profile, account) {
 
 function formatDate(timestamp) {
   if (!timestamp) return "—";
-  return new Date(timestamp * 1000).toLocaleString(state.locale === "en" ? "en-US" : "pt-BR", { dateStyle: "short", timeStyle: "short" });
+  return new Date(timestamp * 1000).toLocaleString(localeTag(), { dateStyle: "short", timeStyle: "short" });
 }
 
 function timelineTimestamp(timestamp) {
   if (!timestamp) return `<time class="timeline-timestamp"><span>—</span></time>`;
   const value = new Date(timestamp * 1000);
-  const locale = state.locale === "en" ? "en-US" : "pt-BR";
+  const locale = localeTag();
   const date = value.toLocaleDateString(locale, { day: "2-digit", month: "short", year: "numeric" });
   const time = value.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
   return `<time class="timeline-timestamp" datetime="${value.toISOString()}"><span>${escapeHtml(date)}</span><b>${escapeHtml(time)}</b></time>`;
@@ -605,7 +633,7 @@ function historyMarkup(events) {
 function sessionMoment(timestamp) {
   if (!timestamp) return "—";
   const value = new Date(timestamp * 1000);
-  const locale = state.locale === "en" ? "en-US" : "pt-BR";
+  const locale = localeTag();
   const date = value.toLocaleDateString(locale, { day: "2-digit", month: "short", year: "numeric" });
   const time = value.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
   return `<time datetime="${value.toISOString()}"><span>${escapeHtml(date)}</span><b>${escapeHtml(time)}</b></time>`;
@@ -747,9 +775,9 @@ const rankingDefinitions = {
 
 function formatRankingValue(value, format) {
   if (format === "duration") return formatDuration(Number(value));
-  if (format === "distance") return `${Math.round(Number(value || 0)).toLocaleString(state.locale === "en" ? "en-US" : "pt-BR")} m`;
-  if (format === "decimal") return Number(value || 0).toLocaleString(state.locale === "en" ? "en-US" : "pt-BR", { maximumFractionDigits: 1 });
-  return Number(value || 0).toLocaleString(state.locale === "en" ? "en-US" : "pt-BR");
+  if (format === "distance") return `${Math.round(Number(value || 0)).toLocaleString(localeTag())} m`;
+  if (format === "decimal") return Number(value || 0).toLocaleString(localeTag(), { maximumFractionDigits: 1 });
+  return Number(value || 0).toLocaleString(localeTag());
 }
 
 function bindAnalyticsViewSwitch() {
@@ -794,12 +822,26 @@ const blockLabels = {
   deepslate_coal_ore: ["Minério de carvão em ardósia", "Deepslate coal ore"], deepslate_iron_ore: ["Minério de ferro em ardósia", "Deepslate iron ore"], deepslate_copper_ore: ["Minério de cobre em ardósia", "Deepslate copper ore"], deepslate_gold_ore: ["Minério de ouro em ardósia", "Deepslate gold ore"], deepslate_redstone_ore: ["Minério de redstone em ardósia", "Deepslate redstone ore"], deepslate_lapis_ore: ["Minério de lápis-lazúli em ardósia", "Deepslate lapis ore"], deepslate_diamond_ore: ["Minério de diamante em ardósia", "Deepslate diamond ore"], deepslate_emerald_ore: ["Minério de esmeralda em ardósia", "Deepslate emerald ore"],
   water: ["Água", "Water"], flowing_water: ["Água corrente", "Flowing water"], lava: ["Lava", "Lava"], flowing_lava: ["Lava corrente", "Flowing lava"], torch: ["Tocha", "Torch"], crafting_table: ["Bancada de trabalho", "Crafting table"], furnace: ["Fornalha", "Furnace"], chest: ["Baú", "Chest"],
   overworld: ["Mundo superior", "Overworld"], nether: ["Nether", "Nether"], the_end: ["End", "The End"],
+  acacia_leaves: ["Folhas de acácia", "Acacia leaves"], acacia_sapling: ["Muda de acácia", "Acacia sapling"], acacia_trapdoor: ["Alçapão de acácia", "Acacia trapdoor"],
+  andesite: ["Andesito", "Andesite"], bed: ["Cama", "Bed"], birch_door: ["Porta de bétula", "Birch door"], birch_fence: ["Cerca de bétula", "Birch fence"], birch_fence_gate: ["Portão de cerca de bétula", "Birch fence gate"], birch_leaves: ["Folhas de bétula", "Birch leaves"], birch_pressure_plate: ["Placa de pressão de bétula", "Birch pressure plate"], birch_sapling: ["Muda de bétula", "Birch sapling"],
+  brown_wool: ["Lã marrom", "Brown wool"], bush: ["Arbusto", "Bush"], carrots: ["Cenouras", "Carrots"], cobblestone_wall: ["Muro de pedregulho", "Cobblestone wall"], composter: ["Composteira", "Composter"],
+  diorite: ["Diorito", "Diorite"], fence_gate: ["Portão de cerca", "Fence gate"], firefly_bush: ["Arbusto de vaga-lumes", "Firefly bush"], granite: ["Granito", "Granite"], jungle_fence_gate: ["Portão de cerca da selva", "Jungle fence gate"], ladder: ["Escada de mão", "Ladder"], leaf_litter: ["Folhiço", "Leaf litter"], melon_stem: ["Caule de melancia", "Melon stem"],
+  oak_leaves: ["Folhas de carvalho", "Oak leaves"], oak_sapling: ["Muda de carvalho", "Oak sapling"], oak_stairs: ["Escadas de carvalho", "Oak stairs"], peony: ["Peônia", "Peony"], potatoes: ["Batatas", "Potatoes"], reeds: ["Cana-de-açúcar", "Sugar cane"], short_grass: ["Grama baixa", "Short grass"], stone_stairs: ["Escadas de pedra", "Stone stairs"], stripped_birch_log: ["Tronco de bétula descascado", "Stripped birch log"], tall_grass: ["Grama alta", "Tall grass"], trapdoor: ["Alçapão", "Trapdoor"], trip_wire: ["Fio de armadilha", "Tripwire"], vine: ["Trepadeiras", "Vines"], wheat: ["Trigo", "Wheat"], wildflowers: ["Flores silvestres", "Wildflowers"], wooden_door: ["Porta de madeira", "Wooden door"],
 };
 
-const blockWordLabels = { polished: "polida", bricks: "tijolos", brick: "tijolo", stairs: "escadas", slab: "laje", wall: "muro", leaves: "folhas", log: "tronco", wood: "madeira", planks: "tábuas", stripped: "descascado", mossy: "musgoso", white: "branco", black: "preto", red: "vermelho", blue: "azul", green: "verde", yellow: "amarelo", brown: "marrom", gray: "cinza", light: "claro", concrete: "concreto", wool: "lã", terracotta: "terracota" };
+const blockWordLabels = { polished: "polido", bricks: "tijolos", brick: "tijolo", stairs: "escadas", slab: "laje", wall: "muro", leaves: "folhas", leaf: "folha", litter: "folhiço", log: "tronco", wood: "madeira", planks: "tábuas", stripped: "descascado", mossy: "musgoso", sapling: "muda", door: "porta", trapdoor: "alçapão", fence: "cerca", gate: "portão", pressure: "pressão", plate: "placa", stem: "caule", bush: "arbusto", flowers: "flores", grass: "grama", white: "branco", black: "preto", red: "vermelho", blue: "azul", green: "verde", yellow: "amarelo", brown: "marrom", gray: "cinza", light: "claro", concrete: "concreto", wool: "lã", terracotta: "terracota", stone: "pedra", cobblestone: "pedregulho", deepslate: "ardósia profunda", oak: "carvalho", birch: "bétula", spruce: "pinheiro", jungle: "selva", acacia: "acácia", cherry: "cerejeira", mangrove: "mangue", dark: "escuro" };
+const blockLabelsEs = {
+  stone: "Piedra", cobblestone: "Adoquín", deepslate: "Pizarra profunda", cobbled_deepslate: "Pizarra profunda rocosa", dirt: "Tierra", grass_block: "Bloque de césped", sand: "Arena", red_sand: "Arena roja", gravel: "Grava", clay: "Arcilla",
+  oak_log: "Tronco de roble", birch_log: "Tronco de abedul", spruce_log: "Tronco de abeto", jungle_log: "Tronco de jungla", acacia_log: "Tronco de acacia", dark_oak_log: "Tronco de roble oscuro", mangrove_log: "Tronco de mangle", cherry_log: "Tronco de cerezo",
+  oak_planks: "Tablones de roble", birch_planks: "Tablones de abedul", spruce_planks: "Tablones de abeto", jungle_planks: "Tablones de jungla", acacia_planks: "Tablones de acacia", dark_oak_planks: "Tablones de roble oscuro", mangrove_planks: "Tablones de mangle", cherry_planks: "Tablones de cerezo",
+  glass: "Cristal", glass_pane: "Panel de cristal", netherrack: "Netherrack", soul_sand: "Arena de almas", obsidian: "Obsidiana", bedrock: "Roca madre", coal_ore: "Mena de carbón", iron_ore: "Mena de hierro", copper_ore: "Mena de cobre", gold_ore: "Mena de oro", redstone_ore: "Mena de redstone", lapis_ore: "Mena de lapislázuli", diamond_ore: "Mena de diamante", emerald_ore: "Mena de esmeralda", nether_quartz_ore: "Mena de cuarzo del Nether", ancient_debris: "Escombros ancestrales",
+  water: "Agua", flowing_water: "Agua fluyendo", lava: "Lava", flowing_lava: "Lava fluyendo", torch: "Antorcha", crafting_table: "Mesa de trabajo", furnace: "Horno", chest: "Cofre", overworld: "Supramundo", nether: "Nether", the_end: "El End",
+  acacia_leaves: "Hojas de acacia", acacia_sapling: "Brote de acacia", acacia_trapdoor: "Trampilla de acacia", andesite: "Andesita", bed: "Cama", birch_door: "Puerta de abedul", birch_fence: "Valla de abedul", birch_fence_gate: "Puerta de valla de abedul", birch_leaves: "Hojas de abedul", birch_pressure_plate: "Placa de presión de abedul", birch_sapling: "Brote de abedul", brown_wool: "Lana marrón", bush: "Arbusto", carrots: "Zanahorias", cobblestone_wall: "Muro de adoquín", composter: "Compostador", diorite: "Diorita", fence_gate: "Puerta de valla", firefly_bush: "Arbusto de luciérnagas", granite: "Granito", jungle_fence_gate: "Puerta de valla de jungla", ladder: "Escalera de mano", leaf_litter: "Hojarasca", melon_stem: "Tallo de sandía", oak_leaves: "Hojas de roble", oak_sapling: "Brote de roble", oak_stairs: "Escaleras de roble", peony: "Peonía", potatoes: "Patatas", reeds: "Caña de azúcar", short_grass: "Hierba corta", stone_stairs: "Escaleras de piedra", stripped_birch_log: "Tronco de abedul sin corteza", tall_grass: "Hierba alta", trapdoor: "Trampilla", trip_wire: "Hilo de trampa", vine: "Enredaderas", wheat: "Trigo", wildflowers: "Flores silvestres", wooden_door: "Puerta de madera",
+};
 
 function blockName(identifier) {
   const raw = String(identifier || "—").replace(/^minecraft:/, "");
+  if (state.locale === "es" && blockLabelsEs[raw]) return blockLabelsEs[raw];
   const known = blockLabels[raw];
   if (known) return known[state.locale === "pt" ? 0 : 1];
   const words = raw.split("_");
@@ -819,7 +861,7 @@ function blockIconName(identifier) {
   if (/sand|gravel/.test(raw)) return "sand";
   if (/log|stem|wood/.test(raw)) return "log";
   if (/planks|slab|stairs|fence|door|trapdoor/.test(raw)) return "planks";
-  if (/leaves|vine/.test(raw)) return "leaves";
+  if (/leaves|leaf|vine|sapling|bush|flower|grass|wheat|carrot|potato|reeds|stem/.test(raw)) return "leaves";
   if (/glass|ice/.test(raw)) return "glass";
   if (/stone|andesite|granite|diorite|obsidian|netherrack|brick|concrete|terracotta|bedrock/.test(raw)) return "stone";
   if (/ore/.test(raw)) return "ore";
@@ -876,7 +918,8 @@ function gameIcon(value, kind = "entity", label = "") {
   const accessible = label ? ` role="img" aria-label="${escapeHtml(label)}"` : " aria-hidden=\"true\"";
   return `<svg class="mob-icon mob-icon-${safeIcon}" viewBox="0 0 24 24"${accessible}><use href="/static/craftcontrol-mobs.svg#mob-${safeIcon}"></use></svg>`;
 }
-function gameLabel(value, kind = "entity") { const term = gameTerm(value, kind); return term[state.locale === "pt" ? 1 : 2]; }
+const gameLabelsEs = { zombie: "Zombi", skeleton: "Esqueleto", creeper: "Creeper", spider: "Araña", drowned: "Ahogado", cow: "Vaca", pig: "Cerdo", sheep: "Oveja", chicken: "Gallina", player: "Jugador", arrow: "Flecha", trident: "Tridente", zombie_villager_v2: "Aldeano zombi", enderman: "Enderman", blaze: "Blaze", ghast: "Ghast", witch: "Bruja", entityAttack: "Ataque de criatura", entityExplosion: "Explosión de criatura", blockExplosion: "Explosión de bloque", projectile: "Proyectil", fall: "Caída", fire: "Fuego", fireTick: "Quemadura", lava: "Lava", drowning: "Ahogamiento", suffocation: "Asfixia", starvation: "Hambre", void: "Vacío", magic: "Magia", wither: "Wither", freezing: "Congelación", lightning: "Rayo" };
+function gameLabel(value, kind = "entity") { const raw = String(value || "—").replace(/^minecraft:/, ""); if (state.locale === "es" && gameLabelsEs[raw]) return gameLabelsEs[raw]; const term = gameTerm(value, kind); return term[state.locale === "pt" ? 1 : 2]; }
 function gameTermMarkup(value, kind = "entity") {
   const label = gameLabel(value, kind);
   return `<span class="game-term">${gameIcon(value, kind)}<span>${escapeHtml(label)}</span></span>`;
@@ -1008,7 +1051,7 @@ const periodDefinitions = {
 };
 
 function calendarDate(day) {
-  return new Date(`${day}T12:00:00`).toLocaleDateString(state.locale === "en" ? "en-US" : "pt-BR", { day: "2-digit", month: "short" });
+  return new Date(`${day}T12:00:00`).toLocaleDateString(localeTag(), { day: "2-digit", month: "short" });
 }
 
 async function renderTrendsPanel() {
@@ -1185,7 +1228,7 @@ function showPlayers(snapshot) {
   if (snapshot.updated_at !== undefined) state.updatedAt = snapshot.updated_at || 0;
   $("#players-summary").textContent = `${state.online} / ${state.maxPlayers || "?"} ${t("playersOnline")}`;
   $("#players-list").textContent = state.players.length ? state.players.join(" · ") : t("nobody");
-  $("#updated-at").textContent = state.updatedAt ? `${t("updated")} ${new Date(state.updatedAt * 1000).toLocaleTimeString(state.locale === "en" ? "en-US" : "pt-BR")}` : t("awaiting");
+  $("#updated-at").textContent = state.updatedAt ? `${t("updated")} ${new Date(state.updatedAt * 1000).toLocaleTimeString(localeTag())}` : t("awaiting");
 }
 
 function updateBrand() {
@@ -1195,10 +1238,10 @@ function updateBrand() {
 }
 
 function applyLocale() {
-  document.documentElement.lang = state.locale === "en" ? "en" : "pt-BR";
+  document.documentElement.lang = localeTag();
   document.querySelectorAll("[data-i18n]").forEach((element) => { element.textContent = t(element.dataset.i18n); });
-  $("#language").textContent = state.locale === "pt" ? "EN" : "PT";
-  $("#language").setAttribute("aria-label", state.locale === "pt" ? "Switch to English" : "Mudar para português");
+  $("#language").value = state.locale;
+  $("#language").setAttribute("aria-label", t("language"));
   renderTabs();
   render();
   updateSaveLabel();
@@ -1244,8 +1287,8 @@ function connectEvents() {
   });
 }
 
-$("#language").onclick = () => {
-  state.locale = state.locale === "pt" ? "en" : "pt";
+$("#language").onchange = (event) => {
+  state.locale = ["pt", "en", "es"].includes(event.target.value) ? event.target.value : "pt";
   localStorage.setItem("craftcontrol-locale", state.locale);
   applyLocale();
 };

@@ -62,7 +62,10 @@ button { cursor: pointer; }
 .release-tags { display: flex; gap: 5px; margin-top: 5px; }
 .release-tags span { padding: 2px 5px; color: #bcefff; font-size: .48rem; font-weight: 900; letter-spacing: .04em; background: #13272d; border: 1px solid #31515a; text-shadow: none; }
 .top-actions { display: flex; align-items: stretch; gap: 7px; }
-.language-button { min-width: 48px; padding: 7px 9px; color: var(--grass-light); font-size: .74rem; letter-spacing: .08em; }
+.language-picker { display: grid; gap: 2px; min-width: 112px; padding: 5px 8px; color: var(--muted); background: #111713; border: 1px solid #455249; }
+.language-picker > span { font-size: .48rem; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+.language-picker select { width: 100%; padding: 0 18px 0 0; color: var(--grass-light); background: transparent; border: 0; outline: 0; font-size: .72rem; font-weight: 900; cursor: pointer; }
+.language-picker option { color: var(--text); background: var(--stone-dark); }
 .block-logo {
   width: 48px;
   height: 48px;

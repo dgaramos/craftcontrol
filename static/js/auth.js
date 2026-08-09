@@ -1,9 +1,10 @@
 import { api } from "./api.js?v=1";
 
-const locale = () => (localStorage.getItem("craftcontrol-locale") === "en" ? "en" : "pt");
+const locale = () => ["pt", "en", "es"].includes(localStorage.getItem("craftcontrol-locale")) ? localStorage.getItem("craftcontrol-locale") : "pt";
 const copy = {
   pt: { title: "Entrar no CraftControl", player: "Gamertag", password: "Senha", login: "Entrar", claim: "Primeiro acesso ou convite", token: "Código de convite", choose: "Escolha uma senha com pelo menos 8 caracteres", activate: "Ativar acesso", back: "Voltar ao login", logout: "Sair" },
   en: { title: "Sign in to CraftControl", player: "Gamertag", password: "Password", login: "Sign in", claim: "First access or invitation", token: "Invitation code", choose: "Choose a password with at least 8 characters", activate: "Activate access", back: "Back to sign in", logout: "Sign out" },
+  es: { title: "Entrar en CraftControl", player: "Gamertag", password: "Contraseña", login: "Entrar", claim: "Primer acceso o invitación", token: "Código de invitación", choose: "Elige una contraseña de al menos 8 caracteres", activate: "Activar acceso", back: "Volver al inicio de sesión", logout: "Salir" },
 };
 
 export async function requireSession() {

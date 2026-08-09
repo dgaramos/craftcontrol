@@ -6,20 +6,21 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+FRONTEND = ROOT / "apps" / "frontend"
 
 
 class CraftControlBrandTest(unittest.TestCase):
     def test_template_uses_product_brand_and_dynamic_instance_name(self) -> None:
-        template = (ROOT / "templates" / "index.html").read_text()
+        template = (FRONTEND / "templates" / "index.html").read_text()
         self.assertIn("<title>CraftControl", template)
         self.assertIn("craftcontrol-mark.svg", template)
         self.assertIn('id="instance-name"', template)
         self.assertNotIn("MalavaziRamos · Gerenciador", template)
 
     def test_brand_assets_are_valid(self) -> None:
-        root = element_tree.parse(ROOT / "static" / "craftcontrol-mark.svg").getroot()
+        root = element_tree.parse(FRONTEND / "static" / "craftcontrol-mark.svg").getroot()
         self.assertTrue(root.tag.endswith("svg"))
-        manifest = json.loads((ROOT / "static" / "site.webmanifest").read_text())
+        manifest = json.loads((FRONTEND / "static" / "site.webmanifest").read_text())
         self.assertEqual(manifest["name"], "CraftControl")
         self.assertEqual(manifest["icons"][0]["src"], "/static/craftcontrol-mark.svg")
 
@@ -36,7 +37,7 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertNotIn("minecraft-bedrock-manager", compose)
 
     def test_player_workspace_separates_roster_profile_and_permission_scopes(self) -> None:
-        script = (ROOT / "static" / "app.js").read_text()
+        script = (FRONTEND / "static" / "app.js").read_text()
         self.assertIn('class="player-roster-row', script)
         self.assertIn('class="player-detail-screen"', script)
         self.assertIn("Minecraft permission", script)
@@ -45,8 +46,8 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn("Somente leitura", script)
 
     def test_player_profile_consolidates_authoritative_individual_analytics(self) -> None:
-        script = (ROOT / "static" / "app.js").read_text()
-        stylesheet = (ROOT / "static" / "players.css").read_text()
+        script = (FRONTEND / "static" / "app.js").read_text()
+        stylesheet = (FRONTEND / "static" / "players.css").read_text()
         self.assertIn('class="player-data-workspace"', script)
         self.assertIn("stats.killsByType", script)
         self.assertIn("stats.brokenByType", script)
@@ -60,26 +61,26 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn(".player-record-drawer", stylesheet)
 
     def test_browser_api_attaches_session_bound_csrf_header(self) -> None:
-        api_script = (ROOT / "static" / "js" / "api.js").read_text()
-        app_script = (ROOT / "static" / "app.js").read_text()
-        auth_script = (ROOT / "static" / "js" / "auth.js").read_text()
+        api_script = (FRONTEND / "static" / "js" / "api.js").read_text()
+        app_script = (FRONTEND / "static" / "app.js").read_text()
+        auth_script = (FRONTEND / "static" / "js" / "auth.js").read_text()
         self.assertIn('headers["X-CSRF-Token"] = csrfToken', api_script)
         self.assertIn('typeof data.csrf_token === "string"', api_script)
         self.assertIn('./js/api.js?v=1', app_script)
         self.assertIn('./api.js?v=1', auth_script)
 
     def test_player_timeline_separates_action_from_localized_timestamp(self) -> None:
-        script = (ROOT / "static" / "app.js").read_text()
-        stylesheet = (ROOT / "static" / "players.css").read_text()
+        script = (FRONTEND / "static" / "app.js").read_text()
+        stylesheet = (FRONTEND / "static" / "players.css").read_text()
         self.assertIn('class="timeline-action"', script)
         self.assertIn('class="timeline-timestamp"', script)
         self.assertIn('month: "short"', script)
         self.assertIn(".timeline-timestamp", stylesheet)
 
     def test_deaths_localize_game_terms_and_separate_source_from_timestamp(self) -> None:
-        script = (ROOT / "static" / "app.js").read_text()
-        stylesheet = (ROOT / "static" / "players.css").read_text()
-        template = (ROOT / "templates" / "index.html").read_text()
+        script = (FRONTEND / "static" / "app.js").read_text()
+        stylesheet = (FRONTEND / "static" / "players.css").read_text()
+        template = (FRONTEND / "templates" / "index.html").read_text()
         self.assertIn('entityExplosion: ["creeper", "Explosão de criatura", "Entity explosion"]', script)
         self.assertIn('skeleton: ["skeleton", "Esqueleto", "Skeleton"]', script)
         self.assertIn('/static/craftcontrol-mobs.svg#mob-', script)
@@ -88,7 +89,7 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn('id="release-tags"', template)
 
     def test_original_creature_icon_pack_has_expected_pixel_art_symbols(self) -> None:
-        root = element_tree.parse(ROOT / "static" / "craftcontrol-mobs.svg").getroot()
+        root = element_tree.parse(FRONTEND / "static" / "craftcontrol-mobs.svg").getroot()
         symbols = {node.attrib.get("id") for node in root.iter() if node.tag.endswith("symbol")}
         expected = {
             "mob-unknown", "mob-zombie", "mob-drowned", "mob-skeleton", "mob-creeper",
@@ -99,8 +100,8 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertTrue(expected.issubset(symbols))
 
     def test_custom_ui_and_block_sprites_cover_core_interface_semantics(self) -> None:
-        ui_root = element_tree.parse(ROOT / "static" / "craftcontrol-ui.svg").getroot()
-        block_root = element_tree.parse(ROOT / "static" / "craftcontrol-blocks.svg").getroot()
+        ui_root = element_tree.parse(FRONTEND / "static" / "craftcontrol-ui.svg").getroot()
+        block_root = element_tree.parse(FRONTEND / "static" / "craftcontrol-blocks.svg").getroot()
         ui_symbols = {node.attrib.get("id") for node in ui_root.iter() if node.tag.endswith("symbol")}
         block_symbols = {node.attrib.get("id") for node in block_root.iter() if node.tag.endswith("symbol")}
         self.assertTrue({
@@ -115,8 +116,8 @@ class CraftControlBrandTest(unittest.TestCase):
         }.issubset(block_symbols))
 
     def test_interface_uses_custom_icons_and_bilingual_block_labels(self) -> None:
-        script = (ROOT / "static" / "app.js").read_text()
-        template = (ROOT / "templates" / "index.html").read_text()
+        script = (FRONTEND / "static" / "app.js").read_text()
+        template = (FRONTEND / "templates" / "index.html").read_text()
         self.assertIn('stone: ["Pedra", "Stone"]', script)
         self.assertIn('diamond_ore: ["Minério de diamante", "Diamond ore"]', script)
         self.assertIn('cobblestone_wall: ["Muro de pedregulho", "Cobblestone wall"]', script)
@@ -126,7 +127,10 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn('reeds: ["Cana-de-açúcar", "Sugar cane"]', script)
         self.assertIn('cobblestone: "Adoquín"', script)
         self.assertIn('leaf_litter: "Hojarasca"', script)
-        self.assertIn('value="es">Español', template)
+        self.assertIn('data-locale="es"', template)
+        self.assertIn('ui-flag-br', template)
+        self.assertIn('ui-flag-us', template)
+        self.assertIn('ui-flag-es', template)
         self.assertIn('messages.es = {', script)
         self.assertIn("function blockTermMarkup", script)
         self.assertIn("/static/craftcontrol-blocks.svg#block-", script)
@@ -137,8 +141,8 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIsNone(legacy_icons.search(template))
 
     def test_recent_sessions_have_distinct_state_duration_and_period_layout(self) -> None:
-        script = (ROOT / "static" / "app.js").read_text()
-        stylesheet = (ROOT / "static" / "players.css").read_text()
+        script = (FRONTEND / "static" / "app.js").read_text()
+        stylesheet = (FRONTEND / "static" / "players.css").read_text()
         self.assertIn('class="session-state"', script)
         self.assertIn('class="session-duration"', script)
         self.assertIn('class="session-period"', script)
@@ -146,9 +150,9 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn(".session-item.is-inferred", stylesheet)
 
     def test_analytics_has_dedicated_bilingual_mobile_workspace(self) -> None:
-        script = (ROOT / "static" / "app.js").read_text()
-        stylesheet = (ROOT / "static" / "analytics.css").read_text()
-        template = (ROOT / "templates" / "index.html").read_text()
+        script = (FRONTEND / "static" / "app.js").read_text()
+        stylesheet = (FRONTEND / "static" / "analytics.css").read_text()
+        template = (FRONTEND / "templates" / "index.html").read_text()
         self.assertIn('tabs: ["home", "world", "players", "analytics"', script)
         self.assertIn("Atividade do servidor", script)
         self.assertIn("Server activity", script)

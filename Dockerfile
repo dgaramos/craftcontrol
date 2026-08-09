@@ -9,8 +9,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY app.py wsgi.py ./
 COPY minecraft_manager ./minecraft_manager
-COPY static ./static
-COPY templates ./templates
+COPY apps ./apps
 COPY packs ./packs
 COPY bin/craftcontrol /usr/local/bin/craftcontrol
 RUN chmod 755 /usr/local/bin/craftcontrol

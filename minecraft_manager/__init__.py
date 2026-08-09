@@ -17,7 +17,11 @@ def create_app(settings: Settings | None = None, service: ManagerService | None 
 
     settings = settings or Settings.from_env()
     service = service or compose_manager(settings)
-    app = Flask(__name__, template_folder="../templates", static_folder="../static")
+    app = Flask(
+        __name__,
+        template_folder="../apps/frontend/templates",
+        static_folder="../apps/frontend/static",
+    )
     app.config["APP_NAME"] = "CraftControl"
     app.extensions["manager_service"] = service
     install_auth(app, AuthService(settings.database), settings.auth_mode, settings.auth_cookie_secure)

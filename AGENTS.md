@@ -53,9 +53,9 @@ Run these checks before handing off changes:
 ```bash
 python -m unittest discover -s tests -v
 python -m compileall -q minecraft_manager app.py wsgi.py
-node --check static/app.js
-node --check static/js/api.js
-node --check static/js/events.js
+node --check apps/frontend/static/app.js
+node --check apps/frontend/static/js/api.js
+node --check apps/frontend/static/js/events.js
 docker compose config --quiet
 git diff --check
 ```

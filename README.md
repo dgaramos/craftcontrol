@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="static/craftcontrol-mark.svg" width="112" alt="CraftControl logo">
+  <img src="apps/frontend/static/craftcontrol-mark.svg" width="112" alt="CraftControl logo">
   <h1>CraftControl</h1>
   <p><strong>A mobile-first control center for Minecraft Bedrock servers.</strong></p>
   <p>Manage worlds, players, rules, time, weather, permissions, and structured gameplay statistics without living in a server console.</p>
@@ -376,7 +376,7 @@ Run the complete quality gate:
 ```bash
 python -m unittest discover -s tests -v
 python -m compileall -q minecraft_manager app.py wsgi.py
-node --check static/app.js
+node --check apps/frontend/static/app.js
 docker compose config --quiet
 git diff --check
 ```

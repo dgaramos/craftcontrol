@@ -22,7 +22,7 @@
       </div>
       <div class="top-actions">
         <div id="identity" hidden></div>
-        <label class="language-picker" for="language"><span data-i18n="language">Idioma</span><select id="language" aria-label="Idioma"><option value="pt">Português</option><option value="en">English</option><option value="es">Español</option></select></label>
+        <div id="language-picker" class="language-picker"><button id="language" type="button" aria-haspopup="listbox" aria-expanded="false"><svg class="language-flag" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=2#ui-flag-br"></use></svg><span>Português</span><b aria-hidden="true">▾</b></button><div id="language-menu" role="listbox" hidden><button type="button" role="option" data-locale="pt"><svg class="language-flag" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=2#ui-flag-br"></use></svg>Português</button><button type="button" role="option" data-locale="en"><svg class="language-flag" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=2#ui-flag-us"></use></svg>English</button><button type="button" role="option" data-locale="es"><svg class="language-flag" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=2#ui-flag-es"></use></svg>Español</button></div></div>
         <button id="refresh" class="icon-button" title="Atualizar estado"><b><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-refresh"></use></svg></b><span data-i18n="refresh">Atualizar</span></button>
       </div>
     </header>
@@ -70,6 +70,6 @@
       <div class="dialog-actions"><button data-server="start" data-i18n="start">Iniciar</button><button data-server="restart" data-i18n="restart">Reiniciar</button><button data-server="stop" class="danger" data-i18n="stop">Parar</button></div>
       <button id="close-dialog" class="secondary wide" data-i18n="close">Fechar</button>
     </dialog>
-    <script type="module" src="/static/app.js?v=43"></script>
+    <script type="module" src="/static/app.js?v=44"></script>
   </body>
 </html>

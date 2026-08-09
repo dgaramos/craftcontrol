@@ -1240,8 +1240,12 @@ function updateBrand() {
 function applyLocale() {
   document.documentElement.lang = localeTag();
   document.querySelectorAll("[data-i18n]").forEach((element) => { element.textContent = t(element.dataset.i18n); });
-  $("#language").value = state.locale;
+  const languageNames = { pt: "Português", en: "English", es: "Español" };
+  const languageFlags = { pt: "br", en: "us", es: "es" };
+  $("#language span").textContent = languageNames[state.locale];
+  $("#language use").setAttribute("href", `/static/craftcontrol-ui.svg?v=2#ui-flag-${languageFlags[state.locale]}`);
   $("#language").setAttribute("aria-label", t("language"));
+  document.querySelectorAll("[data-locale]").forEach((option) => option.setAttribute("aria-selected", String(option.dataset.locale === state.locale)));
   renderTabs();
   render();
   updateSaveLabel();
@@ -1287,11 +1291,21 @@ function connectEvents() {
   });
 }
 
-$("#language").onchange = (event) => {
-  state.locale = ["pt", "en", "es"].includes(event.target.value) ? event.target.value : "pt";
-  localStorage.setItem("craftcontrol-locale", state.locale);
-  applyLocale();
+$("#language").onclick = () => {
+  const menu = $("#language-menu");
+  menu.hidden = !menu.hidden;
+  $("#language").setAttribute("aria-expanded", String(!menu.hidden));
 };
+document.querySelectorAll("[data-locale]").forEach((option) => option.onclick = () => {
+  state.locale = ["pt", "en", "es"].includes(option.dataset.locale) ? option.dataset.locale : "pt";
+  localStorage.setItem("craftcontrol-locale", state.locale);
+  $("#language-menu").hidden = true;
+  $("#language").setAttribute("aria-expanded", "false");
+  applyLocale();
+});
+document.addEventListener("click", (event) => {
+  if (!event.target.closest("#language-picker")) { $("#language-menu").hidden = true; $("#language").setAttribute("aria-expanded", "false"); }
+});
 
 function openTimeControls() {
   state.tab = "__time__";

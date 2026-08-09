@@ -62,10 +62,13 @@ button { cursor: pointer; }
 .release-tags { display: flex; gap: 5px; margin-top: 5px; }
 .release-tags span { padding: 2px 5px; color: #bcefff; font-size: .48rem; font-weight: 900; letter-spacing: .04em; background: #13272d; border: 1px solid #31515a; text-shadow: none; }
 .top-actions { display: flex; align-items: stretch; gap: 7px; }
-.language-picker { display: grid; gap: 2px; min-width: 112px; padding: 5px 8px; color: var(--muted); background: #111713; border: 1px solid #455249; }
-.language-picker > span { font-size: .48rem; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
-.language-picker select { width: 100%; padding: 0 18px 0 0; color: var(--grass-light); background: transparent; border: 0; outline: 0; font-size: .72rem; font-weight: 900; cursor: pointer; }
-.language-picker option { color: var(--text); background: var(--stone-dark); }
+.language-picker { position: relative; min-width: 126px; }
+.language-picker > button, .language-picker [role="option"] { display: flex; align-items: center; gap: 7px; width: 100%; padding: 7px 9px; color: var(--grass-light); background: #111713; border: 1px solid #455249; font-size: .72rem; font-weight: 900; white-space: nowrap; }
+.language-picker > button b { margin-left: auto; color: var(--muted); }
+.language-picker [role="listbox"] { position: absolute; top: calc(100% + 5px); right: 0; z-index: 20; width: 100%; padding: 3px; background: #0b100d; border: 1px solid #526157; box-shadow: var(--pixel-shadow); }
+.language-picker [role="option"] { color: var(--text); border-color: transparent; }
+.language-picker [role="option"]:hover, .language-picker [role="option"][aria-selected="true"] { color: var(--grass-light); background: #1b291f; border-color: #3d6637; }
+.language-flag { width: 24px; height: 24px; flex: 0 0 24px; image-rendering: pixelated; }
 .block-logo {
   width: 48px;
   height: 48px;

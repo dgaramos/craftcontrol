@@ -19,3 +19,4 @@ Key constraints:
 - Never overwrite `.env`, the SQLite database, or world data.
 - Use `craftcontrol backup` and `docs/backup-and-restore.md` for recovery operations. Never perform a live restore; require explicit confirmation and preserve the pre-restore recovery set.
 - Run the quality gate documented in `AGENTS.md` before handoff.
+- Use Conventional Commits for every commit: `type(scope): imperative summary`. Verify the final subject before pushing; never publish a non-conforming message for later cleanup.

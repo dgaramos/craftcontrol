@@ -61,3 +61,10 @@ git diff --check
 ```
 
 Update tests and the English `README.md` whenever public behavior, persistence, recovery rules, configuration, or API contracts change.
+
+## Git history
+
+- Every commit message must follow Conventional Commits: `type(scope): imperative summary`.
+- Use an established type such as `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `build`, `ci`, or `chore`; choose a short domain scope when it adds clarity, such as `telemetry`, `auth`, `players`, or `ui`.
+- Mark breaking changes with `!` and explain them in the commit body or a `BREAKING CHANGE:` footer.
+- Before pushing, verify the final commit subject with `git show -s --format=%s HEAD`. Do not publish a non-conforming commit and plan to repair it later.

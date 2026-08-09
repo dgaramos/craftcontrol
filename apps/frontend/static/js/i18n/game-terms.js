@@ -66,6 +66,12 @@ export function createGameTerms({ getLocale, escapeHtml }) {
     return `<span class="block-term">${blockIcon(identifier)}<span>${escapeHtml(label)}</span></span>`;
   }
 
+  function dimensionName(identifier) {
+    const name = blockName(identifier);
+    if (String(identifier || "").replace(/^minecraft:/, "") !== "the_end") return name;
+    return getLocale() === "pt" ? "O End" : getLocale() === "es" ? "El End" : "The End";
+  }
+
   function uiIcon(name, label = "", className = "") {
     const safeName = /^[a-z0-9-]+$/.test(name) ? name : "blocks";
     const accessible = label ? ` role="img" aria-label="${escapeHtml(label)}"` : " aria-hidden=\"true\"";
@@ -112,5 +118,5 @@ export function createGameTerms({ getLocale, escapeHtml }) {
     return `<span class="game-term">${gameIcon(value, kind)}<span>${escapeHtml(label)}</span></span>`;
   }
 
-  return { blockTermMarkup, blockIcon, gameTermMarkup, gameIcon, gameLabel, uiIcon };
+  return { blockTermMarkup, blockIcon, dimensionName, gameTermMarkup, gameIcon, gameLabel, uiIcon };
 }

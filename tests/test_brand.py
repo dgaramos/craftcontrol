@@ -131,6 +131,14 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn(".death-source", stylesheet)
         self.assertIn('id="release-tags"', template)
 
+    def test_players_and_analytics_receive_localized_dimension_names(self) -> None:
+        script = (FRONTEND / "static" / "app.js").read_text()
+        terms = (FRONTEND / "static" / "js" / "i18n" / "game-terms.js").read_text()
+        self.assertIn("function dimensionName(identifier)", terms)
+        self.assertIn("blockIcon, dimensionName, gameTermMarkup", script)
+        self.assertIn("blockTermMarkup, dimensionName, formatRankingValue", script)
+        self.assertIn("formatDuration, dimensionName, localeTag", script)
+
     def test_original_creature_icon_pack_has_expected_pixel_art_symbols(self) -> None:
         root = element_tree.parse(FRONTEND / "static" / "craftcontrol-mobs.svg").getroot()
         symbols = {node.attrib.get("id") for node in root.iter() if node.tag.endswith("symbol")}
@@ -177,7 +185,7 @@ class CraftControlBrandTest(unittest.TestCase):
         nginx = (FRONTEND / "nginx.conf").read_text()
         self.assertIn('fetch("/version.json", { cache: "no-store" })', server)
         self.assertIn("UI v", server)
-        self.assertIn("CRAFTCONTROL_FRONTEND_VERSION=0.1.8", dockerfile)
+        self.assertIn("CRAFTCONTROL_FRONTEND_VERSION=0.1.9", dockerfile)
         self.assertIn("/version.json", nginx)
 
     def test_world_rules_server_and_auth_have_feature_boundaries(self) -> None:

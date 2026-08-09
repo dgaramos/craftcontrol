@@ -290,7 +290,7 @@ function formatRankingValue(value, format) {
   return Number(value || 0).toLocaleString(localeTag());
 }
 
-const { blockTermMarkup, blockIcon, gameTermMarkup, gameIcon, gameLabel, uiIcon } = createGameTerms({ getLocale: () => state.locale, escapeHtml });
+const { blockTermMarkup, blockIcon, dimensionName, gameTermMarkup, gameIcon, gameLabel, uiIcon } = createGameTerms({ getLocale: () => state.locale, escapeHtml });
 function oreLabel(ore) {
   return t(`ore${ore.charAt(0).toUpperCase()}${ore.slice(1)}`);
 }

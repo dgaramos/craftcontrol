@@ -78,6 +78,7 @@ class DeploymentSafetyTest(unittest.TestCase):
         self.assertIn('sha256sum "$ENV_FILE"', script)
         self.assertIn('sha256sum "$DATABASE_FILE"', script)
         self.assertIn("/api/auth/me", script)
+        self.assertNotIn("| grep -q", script)
 
 
 if __name__ == "__main__":

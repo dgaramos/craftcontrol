@@ -15,5 +15,10 @@
 .auth-error { min-height: 1.4em; margin: 0; color: #ffaaa3; }
 #identity { display: flex; align-items: center; gap: 8px; }
 #identity small { text-transform: uppercase; color: #91aa98; }
-#identity button { min-height: 38px; }
-@media (max-width: 620px) { #identity span, #identity small { display: none; } }
+#identity button { display: inline-flex; align-items: center; min-height: 38px; }
+@media (max-width: 620px) {
+  #identity { gap: 0; }
+  #identity > span, #identity > small, #identity button > span { display: none; }
+  #identity button { width: 44px; min-width: 44px; min-height: 44px; padding: 6px; justify-content: center; }
+  #identity button .cc-icon { width: 24px; height: 24px; margin: 0; }
+}

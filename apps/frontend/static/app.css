@@ -352,6 +352,24 @@ dialog.drawer { position: fixed; inset: auto 0 0; width: min(100%, 680px); max-h
 .spinning b { animation: spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+@media (max-width: 620px) {
+  .topbar { min-height: 60px; gap: 6px; padding: 8px max(8px, env(safe-area-inset-left)); }
+  .brand { flex: 1 1 auto; gap: 8px; }
+  .block-logo { width: 38px; height: 38px; }
+  .brand-copy > .eyebrow, .instance-line > #instance-name, .instance-line > span:nth-child(2), .release-tags { display: none; }
+  .brand-copy h1 { max-width: none; font-size: 1.02rem; }
+  .instance-line { margin-top: 1px; }
+  .top-actions { flex: 0 0 auto; gap: 4px; align-items: center; }
+  .language-picker { min-width: 44px; }
+  .language-picker > button { width: 44px; min-height: 44px; padding: 6px; justify-content: center; }
+  .language-picker > button span, .language-picker > button b { display: none; }
+  .language-picker [role="listbox"] { width: 164px; }
+  .icon-button { width: 44px; min-width: 44px; min-height: 44px; padding: 5px; }
+  .icon-button b { display: grid; place-items: center; }
+  .icon-button b .cc-icon { margin: 0; }
+  nav { top: 60px; }
+}
+
 @media (max-width: 520px) {
   .icon-button span { display: none; }
   .field { grid-template-columns: minmax(0, 1fr); }

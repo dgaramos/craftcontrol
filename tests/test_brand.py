@@ -121,12 +121,24 @@ class CraftControlBrandTest(unittest.TestCase):
             "ui-home", "ui-world", "ui-players", "ui-data", "ui-rules", "ui-server",
             "ui-refresh", "ui-save", "ui-warning", "ui-activity", "ui-deaths",
             "ui-rankings", "ui-blocks", "ui-combat", "ui-exploration", "ui-periods",
+            "ui-logout",
         }.issubset(ui_symbols))
         self.assertTrue({
             "block-unknown", "block-stone", "block-deepslate", "block-dirt", "block-grass",
             "block-log", "block-planks", "block-diamond", "block-iron", "block-gold",
             "block-redstone", "block-lapis", "block-emerald", "block-ancient-debris",
         }.issubset(block_symbols))
+
+    def test_mobile_topbar_prioritizes_status_and_icon_actions(self) -> None:
+        stylesheet = (FRONTEND / "static" / "app.css").read_text()
+        auth_stylesheet = (FRONTEND / "static" / "auth.css").read_text()
+        auth_script = (FRONTEND / "static" / "js" / "auth.js").read_text()
+        self.assertIn("@media (max-width: 620px)", stylesheet)
+        self.assertIn(".release-tags { display: none; }", stylesheet)
+        self.assertIn('.language-picker > button span, .language-picker > button b { display: none; }', stylesheet)
+        self.assertIn("nav { top: 60px; }", stylesheet)
+        self.assertIn("#identity button > span { display: none; }", auth_stylesheet)
+        self.assertIn("#ui-logout", auth_script)
 
     def test_interface_uses_custom_icons_and_bilingual_block_labels(self) -> None:
         script = (FRONTEND / "static" / "app.js").read_text()

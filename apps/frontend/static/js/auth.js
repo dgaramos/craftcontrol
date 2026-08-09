@@ -27,7 +27,8 @@ function showIdentity(user) {
   const container = document.querySelector("#identity");
   if (!container) return;
   container.hidden = false;
-  container.innerHTML = `<span>${escape(user.name)}</span><small>${escape(user.role)}</small><button id="logout" type="button">${copy[locale()].logout}</button>`;
+  const logoutLabel = copy[locale()].logout;
+  container.innerHTML = `<span>${escape(user.name)}</span><small>${escape(user.role)}</small><button id="logout" type="button" aria-label="${logoutLabel}" title="${logoutLabel}"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=4#ui-logout"></use></svg><span>${logoutLabel}</span></button>`;
   document.querySelector("#logout").onclick = async () => { await api("/api/auth/logout", { method: "POST" }); window.location.reload(); };
 }
 

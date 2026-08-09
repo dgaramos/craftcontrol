@@ -122,7 +122,7 @@ The planned homelab hostname is `craftcontrol.lab.home.arpa`; DNS and reverse-pr
 | `AUTH_MODE` | `local` | Built-in authentication; `disabled` is LAN recovery compatibility only |
 | `AUTH_COOKIE_SECURE` | `true` | Send panel session cookies over HTTPS only |
 | `TZ` | `America/Sao_Paulo` | Container timezone |
-| `CRAFTCONTROL_VERSION` | `0.2.9` | Release tag displayed for the active CraftControl image |
+| `CRAFTCONTROL_VERSION` | `0.2.10` | Release tag displayed for the active CraftControl image |
 
 The old service name, container name, database filename, Python package, and variables remain supported deliberately. This visual rebrand does not destructively rename persistent paths. Compatibility migrations will be released separately.
 

@@ -61,4 +61,13 @@ Bedrock canaries. `--check` performs the non-mutating preflight only.
    retaining the characterization manifest as a migration guard.
 5. Generate frontend API declarations and validate representative backend
    responses against the published schemas.
-6. Build, deploy, health-check, and roll back both images independently.
+6. Run frontend, backend, contract, and integration quality gates independently.
+7. Build, deploy, health-check, and roll back both images independently.
+
+## Independent quality gates
+
+`bin/check-frontend`, `bin/check-backend`, `bin/check-contracts`, and
+`bin/check-integration` partition the test suite by ownership. `bin/check` is
+the local umbrella gate and also checks patch whitespace. GitHub Actions and
+Gitea Actions execute the four boundaries as separate jobs with fail-fast
+disabled, so one failure does not hide results from the other applications.

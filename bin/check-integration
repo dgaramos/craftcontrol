@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly ROOT="$(git rev-parse --show-toplevel)"
+readonly PYTHON="${PYTHON:-python}"
+cd "$ROOT"
+
+bash -n bin/deploy-craftcontrol
+docker compose config --quiet
+"$PYTHON" -m unittest tests.test_architecture tests.test_deployment -v
+echo "integration gate: ok"

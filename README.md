@@ -416,6 +416,18 @@ apps/backend/minecraft_manager/
 
 The modular migration is incremental and preserves public endpoints, SQLite data, environment variables, and deployment paths. See [Architecture](docs/architecture.md) for system context, dependency rules, dependency injection, event consistency, deliberate non-goals, and the target module layout.
 
+Quality checks follow the deployment boundaries and can run independently:
+
+```bash
+bin/check-frontend
+bin/check-backend
+bin/check-contracts
+bin/check-integration
+```
+
+`bin/check` runs the complete local gate. GitHub Actions and Gitea Actions run
+the four gates as independent jobs so a failure identifies the owning boundary.
+
 ## Roadmap
 
 The immediate direction is:

@@ -51,15 +51,12 @@ The legacy file locations in the preceding rule are compatibility facades during
 Run these checks before handing off changes:
 
 ```bash
-python -m unittest discover -s tests -v
-python -m compileall -q apps/backend/minecraft_manager apps/backend/app.py apps/backend/wsgi.py app.py wsgi.py
-node --check apps/frontend/static/app.js
-node --check apps/frontend/static/js/api.js
-node --check apps/frontend/static/js/events.js
-python packages/contracts/generate_types.py --check
-docker compose config --quiet
-git diff --check
+bin/check
 ```
+
+The same checks are independently runnable as `bin/check-frontend`,
+`bin/check-backend`, `bin/check-contracts`, and `bin/check-integration`. Keep a
+test in exactly one gate unless a boundary invariant deliberately spans gates.
 
 Update tests and the English `README.md` whenever public behavior, persistence, recovery rules, configuration, or API contracts change.
 

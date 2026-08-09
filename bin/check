@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+for gate in frontend backend contracts integration; do
+  "bin/check-$gate"
+done
+
+git diff --check
+echo "complete quality gate: ok"

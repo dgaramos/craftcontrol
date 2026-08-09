@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly ROOT="$(git rev-parse --show-toplevel)"
+readonly PYTHON="${PYTHON:-python}"
+cd "$ROOT"
+
+"$PYTHON" -m json.tool packages/contracts/openapi.json >/dev/null
+"$PYTHON" packages/contracts/generate_types.py --check
+"$PYTHON" -m unittest tests.test_http_surface tests.test_openapi -v
+echo "contracts gate: ok"

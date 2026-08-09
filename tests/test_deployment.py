@@ -6,6 +6,18 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class DeploymentSafetyTest(unittest.TestCase):
+    def test_quality_gates_are_partitioned_and_automated(self) -> None:
+        gates = ["frontend", "backend", "contracts", "integration"]
+        for gate in gates:
+            script = ROOT / "bin" / f"check-{gate}"
+            self.assertTrue(script.is_file())
+            self.assertIn(f"{gate} gate: ok", script.read_text())
+        umbrella = (ROOT / "bin" / "check").read_text()
+        self.assertIn("frontend backend contracts integration", umbrella)
+        for workflow in (ROOT / ".github" / "workflows" / "quality.yml", ROOT / ".gitea" / "workflows" / "quality.yml"):
+            self.assertTrue(workflow.is_file())
+            self.assertIn("gate: [frontend, backend, contracts, integration]", workflow.read_text())
+
     def test_compose_mounts_explicit_application_boundaries(self) -> None:
         compose = (ROOT / "docker-compose.yml").read_text()
         self.assertIn("./apps/frontend/static:/app/apps/frontend/static:ro", compose)

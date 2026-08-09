@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly ROOT="$(git rev-parse --show-toplevel)"
+readonly PYTHON="${PYTHON:-python}"
+cd "$ROOT"
+
+while IFS= read -r source; do
+  node --check "$source"
+done < <(rg --files apps/frontend/static -g '*.js' | sort)
+
+"$PYTHON" -m unittest tests.test_brand -v
+echo "frontend gate: ok"

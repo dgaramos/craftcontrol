@@ -45,15 +45,15 @@ Phone, tablet, or desktop
           | HTTP :8082 — trusted LAN only
           v
 ┌────────────────────────────────────────────┐
-│                CraftControl                │
-│                                            │
-│ Flask API ─ Service layer ─ Event runtime  │
-│     │             │              │         │
-│     │             │              └─ SSE    │
-│     │             └─ SQLite player state   │
-│     └─ validated HTTP operations           │
+│ Frontend · Nginx · static/read-only        │
+│ UI assets ─ same-origin /api + SSE proxy   │
+└────────────────────┬───────────────────────┘
+                     │ private Compose network
+┌────────────────────▼───────────────────────┐
+│ Backend · Flask modular monolith           │
+│ HTTP ─ use cases ─ runtime ─ SQLite        │
 └───────────────┬────────────────────────────┘
-                │ Docker socket + project mount
+                │ restricted operations + project mount
                 v
       itzg/minecraft-bedrock-server
                 │
@@ -91,12 +91,12 @@ Expected default layout:
 └── craftcontrol/
 ```
 
-Create the local configuration and start the service:
+Create the local configuration and start both services:
 
 ```bash
 cp .env.example .env
-docker compose up -d --build
-docker compose ps
+docker compose -f docker-compose.split.yml up -d --build
+docker compose -f docker-compose.split.yml ps
 ```
 
 Open the interface from a device on the same network:
@@ -105,13 +105,13 @@ Open the interface from a device on the same network:
 http://HOST_IP:8082
 ```
 
-The planned homelab hostname is `craftcontrol.lab.home.arpa`; DNS and reverse-proxy configuration remain external to this release.
+The homelab deployment is available at `craftcontrol.lab.home.arpa`; DNS and reverse-proxy configuration remain external to CraftControl.
 
 ## Configuration
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `MANAGER_PORT` | `8082` | Compatibility host port for the web interface |
+| `MANAGER_PORT` | `8082` | Public frontend port for the web interface |
 | `MINECRAFT_CONTAINER` | `minecraft-bedrock` | Bedrock container managed by CraftControl |
 | `MINECRAFT_PROJECT` | `/minecraft-project` | Bedrock Compose project inside CraftControl |
 | `DATABASE_PATH` | `/data/manager.db` | Existing SQLite state and player-history database |
@@ -160,7 +160,7 @@ Authorization is enforced by the API; hiding a control in the browser is not tre
 The player must have joined the server at least once. Generate the one-time bootstrap code:
 
 ```bash
-docker compose exec craftcontrol craftcontrol auth bootstrap --player VonCrush
+docker compose -f docker-compose.split.yml exec craftcontrol-backend craftcontrol auth bootstrap --player VonCrush
 ```
 
 On the login screen, open **First access or invitation**, enter the Gamertag and code, then choose a password containing 8–128 characters. The bootstrap code expires after 30 minutes and can create only the first active owner.
@@ -181,10 +181,10 @@ The CLI provides break-glass equivalents:
 
 ```bash
 # Invite an observed player
-docker compose exec craftcontrol craftcontrol auth invite Nicole --role operator
+docker compose -f docker-compose.split.yml exec craftcontrol-backend craftcontrol auth invite Nicole --role operator
 
 # Reset an active account's password without changing its existing role
-docker compose exec craftcontrol craftcontrol auth recover VonCrush
+docker compose -f docker-compose.split.yml exec craftcontrol-backend craftcontrol auth recover VonCrush
 ```
 
 Tokens are displayed once. Avoid putting them in screenshots, tickets, shared logs, or shell history. Password change and user-controlled revocation of other sessions are planned; until then, use a recovery code to replace a forgotten password and owner suspension to revoke access.
@@ -255,8 +255,8 @@ Block changes are coalesced per player into five-second incremental batches to l
 The manager remains fully usable when the pack is absent or temporarily unavailable. The embedded **CraftControl Telemetry Pack** integration provides native status, installation, upgrade, disable, removal, backup, and rollback commands:
 
 ```bash
-docker compose exec craftcontrol craftcontrol telemetry status
-docker compose exec craftcontrol craftcontrol telemetry install
+docker compose -f docker-compose.split.yml exec craftcontrol-backend craftcontrol telemetry status
+docker compose -f docker-compose.split.yml exec craftcontrol-backend craftcontrol telemetry install
 ```
 
 Installation is idempotent, writes only to persistent Bedrock data, creates a recoverable backup, and never restarts Bedrock automatically. See [Telemetry Pack integration](docs/telemetry-pack.md) for the complete command and recovery guide.
@@ -290,9 +290,9 @@ The embedded SQLite database uses transactional, sequential migrations tracked b
 Use CraftControl's coordinated backup command instead of copying a live SQLite file or world directory:
 
 ```bash
-docker compose exec craftcontrol craftcontrol backup create
-docker compose exec craftcontrol craftcontrol backup list
-docker compose exec craftcontrol craftcontrol backup verify BACKUP_ID
+docker compose -f docker-compose.split.yml exec craftcontrol-backend craftcontrol backup create
+docker compose -f docker-compose.split.yml exec craftcontrol-backend craftcontrol backup list
+docker compose -f docker-compose.split.yml exec craftcontrol-backend craftcontrol backup verify BACKUP_ID
 ```
 
 When Bedrock is running, CraftControl holds world saves only for the copy window, creates a consistent SQLite backup, resumes saves even after an error, and writes SHA-256 checksums to a versioned manifest. Recovery sets contain the world, `manager.db`, server configuration, allowlists, permissions, and behavior-pack files. Preview retention with `craftcontrol backup prune --keep 7`; deletion additionally requires `--yes`.
@@ -303,15 +303,18 @@ Telemetry envelopes used for recovery and diagnostics are retained in SQLite wit
 
 ## Updating
 
-Production deployments must use the guarded workflow from a clean `main`
-checkout. It anchors every Compose operation to the production project,
-verifies the live data and Bedrock mounts before creating a coordinated backup,
-preserves `.env` and SQLite checksums during synchronization, and runs health,
-frontend, authentication, CLI, and Bedrock canaries:
+Production uses two independently deployable services pinned by `versions.env`.
+Deployments must run from clean, published `main`; backend changes create and
+verify a coordinated world/SQLite backup before replacement:
 
 ```bash
-bin/deploy-craftcontrol --check
-bin/deploy-craftcontrol
+bin/deploy-craftcontrol-release --check
+bin/deploy-craftcontrol-release
+
+# Component-only releases and explicit rollback
+bin/deploy-craftcontrol-frontend
+bin/deploy-craftcontrol-backend
+bin/deploy-craftcontrol-release --rollback FRONTEND_VERSION BACKEND_VERSION
 ```
 
 The default production root is `/mnt/storage/docker/craftcontrol`. An explicit
@@ -430,7 +433,7 @@ bin/check-integration
 `bin/check` runs the complete local gate. GitHub Actions and Gitea Actions run
 the four gates as independent jobs so a failure identifies the owning boundary.
 
-### Split-image preview
+### Independent frontend and backend
 
 The migration now produces independent `craftcontrol-frontend:0.1.1` and
 `craftcontrol-backend:0.1.0` images through `docker-compose.split.yml`. The
@@ -445,18 +448,16 @@ docker compose -f docker-compose.split.yml build
 bin/check-split-runtime
 ```
 
-The split Compose file currently publishes the preview on port `18082` to avoid
-colliding with production. It is not yet the supported production deployment;
-continue using `bin/deploy-craftcontrol` until authenticated session/CSRF,
-persistent-state, rollback, and production cutover canaries are complete.
+The split Compose file is the production topology and publishes the frontend on
+port `8082`. The backend is reachable only through the private Compose network.
+The former combined image remains a rollback artifact, not the active runtime.
 
 `versions.env` pins the tested frontend/backend release pair. The frontend
 image publishes its running version at `/version.json`, which the interface
 shows separately from the backend and Telemetry Pack versions. Once the split
-topology is promoted, `bin/deploy-craftcontrol-frontend` will build and replace
+`bin/deploy-craftcontrol-frontend` builds and replaces
 only the frontend; `--check` performs its preflight and `--rollback VERSION`
-selects an already available frontend image. The command deliberately refuses
-to run against the current compatibility topology and proves the backend
+selects an already available frontend image. The command proves the backend
 container identity remains unchanged while the frontend stays isolated from
 all persistent mounts.
 
@@ -465,8 +466,8 @@ coordinated world/database backup before replacing only the backend, validates
 the persistent mounts and SQLite integrity, and proves the frontend container
 was not recreated. `bin/deploy-craftcontrol-release` applies the pinned backend
 and frontend pair in order; it also supports a coordinated rollback with
-explicit frontend and backend versions. All split deployment commands remain
-guarded until the split production topology is deliberately activated.
+explicit frontend and backend versions. The one-time cutover and emergency
+compatibility rollback are implemented by `bin/cutover-craftcontrol-split`.
 
 ## Roadmap
 

@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly SUFFIX="$$"
+readonly NETWORK="craftcontrol-auth-canary-$SUFFIX"
+readonly VOLUME="craftcontrol-auth-canary-$SUFFIX"
+readonly BACKEND="craftcontrol-auth-backend-$SUFFIX"
+readonly FRONTEND="craftcontrol-auth-frontend-$SUFFIX"
+readonly PORT="18083"
+readonly COOKIE_FILE="$(mktemp)"
+source "$(git rev-parse --show-toplevel)/versions.env"
+
+cleanup() {
+  docker rm -f "$FRONTEND" "$BACKEND" >/dev/null 2>&1 || true
+  docker volume rm "$VOLUME" >/dev/null 2>&1 || true
+  docker network rm "$NETWORK" >/dev/null 2>&1 || true
+  rm -f "$COOKIE_FILE"
+}
+trap cleanup EXIT
+
+run_backend() {
+  docker run -d --rm --name "$BACKEND" --network "$NETWORK" --network-alias craftcontrol-backend \
+    -e AUTH_MODE=local -e AUTH_COOKIE_SECURE=false -e DATABASE_PATH=/data/manager.db \
+    -e MINECRAFT_PROJECT=/tmp -e BACKUP_ROOT=/data/backups -e MINECRAFT_CONTAINER=missing-canary-bedrock \
+    -v "$VOLUME:/data" "craftcontrol-backend:$CRAFTCONTROL_BACKEND_VERSION" >/dev/null
+}
+wait_healthy() {
+  for _ in $(seq 1 30); do
+    [[ "$(docker inspect "$1" --format '{{.State.Health.Status}}' 2>/dev/null || true)" == "healthy" ]] && return 0
+    sleep 1
+  done
+  return 1
+}
+
+docker network create "$NETWORK" >/dev/null
+docker volume create "$VOLUME" >/dev/null
+run_backend
+docker run -d --rm --name "$FRONTEND" --network "$NETWORK" -p "127.0.0.1:$PORT:8080" \
+  --read-only --tmpfs /var/cache/nginx --tmpfs /var/run --tmpfs /tmp \
+  "craftcontrol-frontend:$CRAFTCONTROL_FRONTEND_VERSION" >/dev/null
+wait_healthy "$BACKEND"
+wait_healthy "$FRONTEND"
+
+docker exec "$BACKEND" python -c \
+  'import sqlite3,time; c=sqlite3.connect("/data/manager.db"); now=time.time(); c.execute("INSERT INTO player_profiles(identity,current_name,first_seen_at,last_seen_at) VALUES(?,?,?,?)", ("canary","Canary",now,now)); c.commit()'
+token="$(docker exec "$BACKEND" craftcontrol auth bootstrap --player Canary | python -c 'import json,sys; print(json.load(sys.stdin)["token"])')"
+claim="$(curl -fsS -c "$COOKIE_FILE" -H 'Content-Type: application/json' -H "Origin: http://127.0.0.1:$PORT" \
+  --data "{\"player\":\"Canary\",\"token\":\"$token\",\"password\":\"canary-password\"}" \
+  "http://127.0.0.1:$PORT/api/auth/claim")"
+csrf="$(python -c 'import json,sys; print(json.load(sys.stdin)["csrf_token"])' <<<"$claim")"
+curl -fsS -b "$COOKIE_FILE" "http://127.0.0.1:$PORT/api/auth/me" | grep 'Canary' >/dev/null
+
+docker rm -f "$BACKEND" >/dev/null
+run_backend
+wait_healthy "$BACKEND"
+sleep 11
+curl -fsS -b "$COOKIE_FILE" "http://127.0.0.1:$PORT/api/auth/me" | grep 'Canary' >/dev/null
+sse_headers="$(timeout 3 curl -sS -D - -o /dev/null -b "$COOKIE_FILE" "http://127.0.0.1:$PORT/api/events" || true)"
+grep -qi 'content-type: text/event-stream' <<<"$sse_headers"
+grep -qi 'x-accel-buffering: no' <<<"$sse_headers"
+curl -fsS -b "$COOKIE_FILE" -H "Origin: http://127.0.0.1:$PORT" -H "X-CSRF-Token: $csrf" \
+  -X POST "http://127.0.0.1:$PORT/api/auth/logout" >/dev/null
+[[ "$(curl -sS -o /dev/null -w '%{http_code}' -b "$COOKIE_FILE" "http://127.0.0.1:$PORT/api/auth/me")" == "401" ]]
+
+echo "split authenticated canary: ok"

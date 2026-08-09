@@ -1,6 +1,6 @@
 # CraftControl Architecture
 
-CraftControl has a modular-monolith backend for operating one Minecraft Bedrock Dedicated Server and a separate browser application boundary. It combines domain-oriented modules, layered use cases, ports and adapters at external boundaries, and an internal event-driven runtime. The current compatibility image still deploys both applications together; the target packages the frontend and backend as independently deployable services behind one public origin.
+CraftControl has a modular-monolith backend for operating one Minecraft Bedrock Dedicated Server and an independently deployable browser frontend. The two services share one public origin through a private same-origin proxy boundary.
 
 ## Current system context
 
@@ -10,17 +10,14 @@ Phone / tablet / desktop
           | HTTP + Server-Sent Events
           v
 ┌────────────────────────────────────────────┐
-│                CraftControl                │
-│                                            │
-│ HTTP routes -> application services        │
-│                         |                  │
-│             repositories and adapters      │
-│                         |                  │
-│       SQLite / Docker / files / console    │
-│                                            │
-│ logs + Docker events -> runtime -> broker  │
-│                                  |         │
-│                                  `-> SSE   │
+│ Frontend: Nginx + static browser app       │
+│ public origin; /api and SSE reverse proxy  │
+└────────────────────┬───────────────────────┘
+                     │ private network
+┌────────────────────▼───────────────────────┐
+│ Backend: Flask modular monolith            │
+│ routes -> use cases -> ports -> adapters   │
+│ runtime -> SQLite / Docker / files / SSE   │
 └────────────────────┬───────────────────────┘
                      |
                      v
@@ -58,11 +55,12 @@ links temporarily preserve local tooling. Existing public APIs, database
 tables, environment variables, world data, and deployment paths remain
 compatible during refactoring.
 
-The split-image preview turns those source boundaries into two runtime images.
+The split-image production topology turns those source boundaries into two runtime images.
 The frontend is a stateless Nginx origin and `/api/*` proxy; the backend remains
 one modular-monolith process and is the only service allowed to access durable
-state or privileged infrastructure. The production deployment remains on the
-compatibility image until cutover and rollback canaries pass.
+state or privileged infrastructure. Each image has an independent version,
+deploy command, health check, and rollback target; `versions.env` pins a tested
+compatibility pair.
 
 ## Dependency direction
 

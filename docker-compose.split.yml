@@ -44,7 +44,7 @@ services:
       craftcontrol-backend:
         condition: service_healthy
     ports:
-      - "${CRAFTCONTROL_SPLIT_PORT:-18082}:8080"
+      - "${CRAFTCONTROL_SPLIT_PORT:-8082}:8080"
     read_only: true
     tmpfs:
       - /var/cache/nginx

@@ -9,6 +9,8 @@ bash -n bin/deploy-craftcontrol
 bash -n bin/deploy-craftcontrol-frontend
 bash -n bin/deploy-craftcontrol-backend
 bash -n bin/deploy-craftcontrol-release
+bash -n bin/check-split-auth
+bash -n bin/cutover-craftcontrol-split
 docker compose config --quiet
 docker compose --file docker-compose.split.yml config --quiet
 docker compose --file docker-compose.split.yml build

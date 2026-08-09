@@ -1,0 +1,20 @@
+#!/usr/bin/env python3
+import json
+import sqlite3
+import sys
+
+connection = sqlite3.connect(sys.argv[1])
+tables = [
+    "player_profiles", "player_aliases", "player_sessions", "player_history",
+    "player_telemetry", "telemetry_events", "panel_accounts", "panel_invitations",
+    "panel_sessions", "audit_log", "player_daily",
+]
+result = {"schema": connection.execute("PRAGMA user_version").fetchone()[0], "integrity": connection.execute("PRAGMA quick_check").fetchone()[0]}
+result["rows"] = {table: connection.execute(f'SELECT count(*) FROM "{table}"').fetchone()[0] for table in tables}
+result["profiles"] = connection.execute(
+    "SELECT count(*),coalesce(sum(sessions_count),0),coalesce(sum(total_play_seconds),0),coalesce(sum(deaths_count),0) FROM player_profiles"
+).fetchone()
+result["daily"] = connection.execute(
+    "SELECT coalesce(sum(play_seconds),0),coalesce(sum(sessions),0),coalesce(sum(deaths),0),coalesce(sum(mob_kills),0),coalesce(sum(blocks_broken),0),coalesce(sum(blocks_placed),0) FROM player_daily"
+).fetchone()
+print(json.dumps(result, sort_keys=True, separators=(",", ":")))

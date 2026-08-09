@@ -59,6 +59,20 @@ class DeploymentSafetyTest(unittest.TestCase):
         self.assertIn("CRAFTCONTROL_RELEASE_PAIR", script)
         self.assertIn("--rollback FRONTEND_VERSION BACKEND_VERSION", script)
 
+    def test_cutover_proves_auth_csrf_sse_and_persistent_state(self) -> None:
+        canary = (ROOT / "bin" / "check-split-auth").read_text()
+        cutover = (ROOT / "bin" / "cutover-craftcontrol-split").read_text()
+        snapshot = (ROOT / "bin" / "craftcontrol-state-snapshot").read_text()
+        self.assertIn("/api/auth/claim", canary)
+        self.assertIn("X-CSRF-Token", canary)
+        self.assertIn('docker rm -f "$BACKEND"', canary)
+        self.assertIn("content-type: text/event-stream", canary)
+        self.assertIn("craftcontrol backup verify", cutover)
+        self.assertIn("persistent-state invariants changed", cutover)
+        self.assertIn("compatibility service restored", cutover)
+        self.assertIn("--rollback", cutover)
+        self.assertIn("PRAGMA quick_check", snapshot)
+
     def test_compose_mounts_explicit_application_boundaries(self) -> None:
         compose = (ROOT / "docker-compose.yml").read_text()
         self.assertIn("./apps/frontend/static:/app/apps/frontend/static:ro", compose)

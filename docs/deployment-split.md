@@ -1,6 +1,6 @@
 # Frontend/backend deployment split
 
-CraftControl is migrating from one image to two independently deployable images
+CraftControl runs as two independently deployable images
 inside the same repository and Compose project. The target preserves one public
 origin: the frontend serves the browser application and proxies `/api/*`,
 including `/api/events`, to the backend over the private Compose network.
@@ -16,7 +16,7 @@ The backend now lives under `apps/backend/` and contains the Python package,
 entry points, dependencies, SQLite, authentication and CSRF enforcement, the
 SSE stream, Bedrock and Docker adapters, telemetry ingestion, pack lifecycle,
 and coordinated backups. Root entry points and package links remain temporary
-compatibility facades. Only the future backend service may receive persistent
+compatibility facades. Only the backend service may receive persistent
 or privileged mounts.
 
 `packages/contracts/openapi.json` is the canonical OpenAPI 3.1 description of
@@ -39,18 +39,15 @@ responses are validated against the same published schemas.
   frontend service.
 - Version, deploy, health-check, and roll back frontend and backend separately.
 - Pin a tested frontend/backend compatibility pair for coordinated releases.
-- Preserve the single-service deployment until independent backup, rollback,
-  authentication, SSE, and state-preservation canaries pass.
+- Retain the former single-service image only as a tested emergency rollback.
 
 ## Guarded deployment
 
-`bin/deploy-craftcontrol` is the only supported production update entrypoint.
-It uses an explicit Compose project directory and file, refuses a dirty or
-non-`main` source checkout, validates the live `/data` and
-`/minecraft-project` mount sources before backup, verifies the coordinated
-backup, synchronizes only tracked files, proves `.env` and SQLite checksums were
-preserved, and exercises frontend, API, anonymous authentication, CLI, and
-Bedrock canaries. `--check` performs the non-mutating preflight only.
+`bin/deploy-craftcontrol-release` is the coordinated production entrypoint;
+the frontend and backend commands deploy one component. All refuse dirty or
+unpublished source, validate the active split topology, and run boundary-aware
+canaries. Backend replacement and rollback always create a verified coordinated
+backup first.
 
 ## Phase sequence
 
@@ -62,10 +59,12 @@ Bedrock canaries. `--check` performs the non-mutating preflight only.
 5. Generate frontend API declarations and validate representative backend
    responses against the published schemas.
 6. Run frontend, backend, contract, and integration quality gates independently.
-7. Build, deploy, health-check, and roll back both images independently. The
+7. Complete: build, deploy, health-check, and roll back both images independently. The
    pinned release pair, guarded frontend/backend deploy and rollback commands,
-   and coordinated release command are implemented. Production cutover still
-   waits for the phase-eight state, session, CSRF, SSE, and rollback canaries.
+   and coordinated release command are implemented.
+8. Complete: authenticated session continuity, CSRF, SSE, backup, SQLite
+   invariants, automatic failure recovery, and explicit compatibility rollback
+   are enforced by the cutover workflow.
 
 ## Independent quality gates
 
@@ -75,7 +74,7 @@ the local umbrella gate and also checks patch whitespace. GitHub Actions and
 Gitea Actions execute the four boundaries as separate jobs with fail-fast
 disabled, so one failure does not hide results from the other applications.
 
-## Split-image preview
+## Split-image production topology
 
 `apps/frontend/Dockerfile` builds a static, read-only Nginx image. It owns the
 public origin and forwards `/api/*` to `craftcontrol-backend` on the private
@@ -87,8 +86,8 @@ leave the frontend pinned to an obsolete container address.
 `apps/backend/Dockerfile` contains the Flask application, OpenAPI contracts,
 Telemetry Pack, and operations CLI, but no frontend files. In
 `docker-compose.split.yml`, only this service receives SQLite, Bedrock, backup,
-and Docker access; it has no host-published port. The preview frontend uses port
-`18082`, keeping the current production service untouched.
+and Docker access; it has no host-published port. The production frontend uses port
+`8082`; the backend has no host-published port.
 
 `bin/check-split-runtime` starts both images against disposable container-local
 state, checks the index and static assets, proxies health and authentication,

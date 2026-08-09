@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly EXPECTED_DEPLOY_ROOT="/mnt/storage/docker/craftcontrol"
+SOURCE_ROOT="$(realpath "$(git rev-parse --show-toplevel)")"
+DEPLOY_ROOT="$(realpath "${CRAFTCONTROL_DEPLOY_ROOT:-$EXPECTED_DEPLOY_ROOT}")"
+ACTION="${1:-deploy}"
+[[ "$ACTION" == "--check" || "$ACTION" == "--rollback" || "$ACTION" == "deploy" ]] || { echo "usage: bin/cutover-craftcontrol-split [--check | --rollback]" >&2; exit 2; }
+readonly SOURCE_ROOT DEPLOY_ROOT ACTION
+readonly LEGACY_COMPOSE="$DEPLOY_ROOT/docker-compose.yml"
+readonly SPLIT_COMPOSE="$DEPLOY_ROOT/docker-compose.split.yml"
+readonly DATABASE_FILE="$DEPLOY_ROOT/data/manager.db"
+readonly SNAPSHOT_TOOL="$SOURCE_ROOT/bin/craftcontrol-state-snapshot"
+
+fail() { echo "split cutover refused: $*" >&2; exit 1; }
+legacy() { docker compose --project-directory "$DEPLOY_ROOT" -f "$LEGACY_COMPOSE" "$@"; }
+split() { docker compose --project-directory "$DEPLOY_ROOT" -f "$SPLIT_COMPOSE" "$@"; }
+wait_health() {
+  for _ in $(seq 1 45); do
+    [[ "$(docker inspect "$1" --format '{{.State.Health.Status}}' 2>/dev/null || true)" == "healthy" ]] && return 0
+    sleep 2
+  done
+  return 1
+}
+published_main() {
+  [[ "$(git -C "$SOURCE_ROOT" branch --show-current)" == "main" ]] || fail "source checkout must be on main"
+  [[ -z "$(git -C "$SOURCE_ROOT" status --porcelain)" ]] || fail "source checkout is not clean"
+  local revision="$(git -C "$SOURCE_ROOT" rev-parse HEAD)"
+  for remote in github origin; do
+    [[ "$(git -C "$SOURCE_ROOT" ls-remote "$remote" refs/heads/main | awk '{print $1}')" == "$revision" ]] || fail "$remote/main does not match source"
+  done
+}
+validate_state() {
+  local before="$1" after="$2"
+  python - "$before" "$after" <<'PY'
+import json,sys
+before,after=map(json.loads,sys.argv[1:])
+assert before["integrity"] == after["integrity"] == "ok"
+assert before["schema"] == after["schema"]
+for key,value in before["rows"].items(): assert after["rows"][key] >= value, (key,value,after["rows"][key])
+for group in ("profiles","daily"):
+    for old,new in zip(before[group],after[group]): assert new >= old, (group,old,new)
+PY
+}
+split_canaries() {
+  curl -fsS http://127.0.0.1:8082/ | grep 'CraftControl' >/dev/null
+  curl -fsS http://127.0.0.1:8082/version.json | grep "\"version\":\"$CRAFTCONTROL_FRONTEND_VERSION\"" >/dev/null
+  curl -fsS http://127.0.0.1:8082/api/health >/dev/null
+  [[ "$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:8082/api/auth/me)" == "401" ]]
+  local headers="$(timeout 3 curl -sS -D - -o /dev/null http://127.0.0.1:8082/api/events || true)"
+  grep -qi 'content-type: text/event-stream' <<<"$headers"
+  grep -qi 'x-accel-buffering: no' <<<"$headers"
+}
+
+[[ "$DEPLOY_ROOT" == "$EXPECTED_DEPLOY_ROOT" || -n "${CRAFTCONTROL_DEPLOY_ROOT:-}" ]] || fail "unexpected deploy root"
+[[ "$SOURCE_ROOT" != "$DEPLOY_ROOT" ]] || fail "source and deploy roots must differ"
+published_main
+source "$SOURCE_ROOT/versions.env"
+export CRAFTCONTROL_FRONTEND_VERSION CRAFTCONTROL_BACKEND_VERSION CRAFTCONTROL_RELEASE_PAIR MANAGER_PORT=8082 CRAFTCONTROL_SPLIT_PORT=8082
+
+if [[ "$ACTION" == "--check" ]]; then
+  docker inspect craftcontrol >/dev/null 2>&1 || fail "compatibility service is not active"
+  [[ ! -e /tmp/craftcontrol-cutover.lock ]] || fail "another cutover is active"
+  docker compose -f "$SOURCE_ROOT/docker-compose.split.yml" config --quiet
+  echo "split cutover preflight: ok pair=$CRAFTCONTROL_RELEASE_PAIR"
+  exit 0
+fi
+
+if [[ "$ACTION" == "--rollback" ]]; then
+  docker inspect craftcontrol-frontend craftcontrol-backend >/dev/null 2>&1 || fail "split topology is not active"
+  backup="$(split exec -T craftcontrol-backend craftcontrol backup create)"
+  backup_id="$(python -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<<"$backup")"
+  split exec -T craftcontrol-backend craftcontrol backup verify "$backup_id" >/dev/null
+  split down
+  legacy up -d craftcontrol
+  wait_health craftcontrol || fail "compatibility service did not recover"
+  curl -fsS http://127.0.0.1:8082/api/health >/dev/null
+  echo "split rollback complete: backup=$backup_id"
+  exit 0
+fi
+
+touch /tmp/craftcontrol-cutover.lock
+trap 'rm -f /tmp/craftcontrol-cutover.lock' EXIT
+docker inspect craftcontrol >/dev/null 2>&1 || fail "compatibility service is not active"
+git -C "$SOURCE_ROOT" ls-files -z | rsync -a --from0 --exclude=/minecraft_manager --exclude=/requirements.txt --files-from=- "$SOURCE_ROOT/" "$DEPLOY_ROOT/"
+split config --quiet
+split build
+"$SOURCE_ROOT/bin/check-split-auth"
+backup="$(legacy exec -T craftcontrol craftcontrol backup create)"
+backup_id="$(python -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<<"$backup")"
+legacy exec -T craftcontrol craftcontrol backup verify "$backup_id" >/dev/null
+before="$($SNAPSHOT_TOOL "$DATABASE_FILE")"
+
+legacy stop craftcontrol
+if ! split up -d; then
+  split down >/dev/null 2>&1 || true
+  legacy start craftcontrol
+  fail "split services failed to start; compatibility service restored"
+fi
+if ! wait_health craftcontrol-backend || ! wait_health craftcontrol-frontend || ! split_canaries; then
+  split down >/dev/null 2>&1 || true
+  legacy start craftcontrol
+  fail "split canaries failed; compatibility service restored"
+fi
+after="$($SNAPSHOT_TOOL "$DATABASE_FILE")"
+validate_state "$before" "$after" || { split down; legacy start craftcontrol; fail "persistent-state invariants changed; compatibility service restored"; }
+[[ "$(docker inspect minecraft-bedrock --format '{{.State.Health.Status}}')" == "healthy" ]] || fail "Bedrock is not healthy"
+legacy rm -f craftcontrol >/dev/null
+echo "split cutover complete: pair=$CRAFTCONTROL_RELEASE_PAIR backup=$backup_id"

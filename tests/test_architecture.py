@@ -2,6 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from minecraft_manager import frontend_root
 from minecraft_manager.events import EventBroker
 from minecraft_manager.files import ServerFiles
 from minecraft_manager.players import PlayerService
@@ -17,6 +18,11 @@ class FakeConsole:
 
 
 class ArchitectureTest(unittest.TestCase):
+    def test_frontend_path_resolves_in_source_and_packaged_image_layouts(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        self.assertEqual(frontend_root(root / "apps" / "backend" / "minecraft_manager"), root / "apps" / "frontend")
+        self.assertEqual(frontend_root(Path("/app/minecraft_manager")), Path("/app/apps/frontend"))
+
     def test_frontend_and_backend_have_explicit_application_boundaries(self) -> None:
         root = Path(__file__).resolve().parents[1]
         self.assertTrue((root / "apps" / "frontend" / "static" / "app.js").is_file())

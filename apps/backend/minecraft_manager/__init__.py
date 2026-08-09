@@ -1,12 +1,21 @@
 from __future__ import annotations
 
 from flask import Flask
+from pathlib import Path
 
 from .config import Settings
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .services import ManagerService
+
+
+def frontend_root(package_root: Path | None = None) -> Path:
+    """Resolve frontend assets in both the monorepo and packaged image layouts."""
+    package_root = package_root or Path(__file__).resolve().parent
+    if package_root.parent.name == "backend":
+        return package_root.parent.parent / "frontend"
+    return package_root.parent / "apps" / "frontend"
 
 
 def create_app(settings: Settings | None = None, service: ManagerService | None = None) -> Flask:
@@ -17,10 +26,11 @@ def create_app(settings: Settings | None = None, service: ManagerService | None 
 
     settings = settings or Settings.from_env()
     service = service or compose_manager(settings)
+    frontend = frontend_root()
     app = Flask(
         __name__,
-        template_folder="../../frontend/templates",
-        static_folder="../../frontend/static",
+        template_folder=str(frontend / "templates"),
+        static_folder=str(frontend / "static"),
     )
     app.config["APP_NAME"] = "CraftControl"
     app.extensions["manager_service"] = service

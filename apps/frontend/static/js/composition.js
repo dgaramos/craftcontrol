@@ -1,21 +1,21 @@
-import { api } from "./api.js?v=1";
+import { api } from "./api.js?v=2";
 import { connectEventStream } from "./events.js";
 import { requireSession } from "./auth.js?v=4";
-import { state } from "./core/state.js?v=1";
-import { $, escapeHtml } from "./core/dom.js?v=1";
-import { connectInvalidation } from "./core/invalidation.js?v=1";
-import { createNavigation } from "./core/navigation.js?v=1";
-import { toast } from "./components/feedback.js?v=1";
-import { formatDate as formatLocalizedDate, formatDuration, timelineTimestamp as localizedTimelineTimestamp } from "./components/time.js?v=1";
-import { createAnalyticsFeature } from "./features/analytics/index.js?v=1";
-import { createPlayersFeature } from "./features/players/index.js?v=1";
-import { createWorldFeature } from "./features/world/index.js?v=1";
-import { createRulesFeature } from "./features/rules/index.js?v=1";
-import { createServerFeature } from "./features/server/index.js?v=1";
-import { startAuthenticatedApplication } from "./features/auth/bootstrap.js?v=1";
-import { createSettingsFeature } from "./features/settings/index.js?v=1";
-import { createI18n } from "./i18n/index.js?v=1";
-import { createGameTerms } from "./i18n/game-terms.js?v=1";
+import { state } from "./core/state.js?v=2";
+import { $, escapeHtml } from "./core/dom.js?v=2";
+import { connectInvalidation } from "./core/invalidation.js?v=2";
+import { createNavigation } from "./core/navigation.js?v=2";
+import { toast } from "./components/feedback.js?v=2";
+import { formatDate as formatLocalizedDate, formatDuration, timelineTimestamp as localizedTimelineTimestamp } from "./components/time.js?v=2";
+import { createAnalyticsFeature } from "./features/analytics/index.js?v=2";
+import { createPlayersFeature } from "./features/players/index.js?v=2";
+import { createWorldFeature } from "./features/world/index.js?v=2";
+import { createRulesFeature } from "./features/rules/index.js?v=2";
+import { createServerFeature } from "./features/server/index.js?v=2";
+import { startAuthenticatedApplication } from "./features/auth/bootstrap.js?v=2";
+import { createSettingsFeature } from "./features/settings/index.js?v=2";
+import { createI18n } from "./i18n/index.js?v=2";
+import { createGameTerms } from "./i18n/game-terms.js?v=2";
 
 export function startApplication() {
   const content = $("#content");

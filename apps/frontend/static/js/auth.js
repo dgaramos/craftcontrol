@@ -1,4 +1,4 @@
-import { api } from "./api.js?v=1";
+import { api } from "./api.js?v=2";
 
 const locale = () => ["pt", "en", "es"].includes(localStorage.getItem("craftcontrol-locale")) ? localStorage.getItem("craftcontrol-locale") : "pt";
 const copy = {

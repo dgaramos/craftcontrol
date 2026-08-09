@@ -3,6 +3,8 @@ import { readFile } from "node:fs/promises";
 import { connectInvalidation } from "../static/js/core/invalidation.js";
 import { createNavigation } from "../static/js/core/navigation.js";
 import { createI18n } from "../static/js/i18n/index.js";
+import { createGameTerms } from "../static/js/i18n/game-terms.js";
+import { createPlayerTelemetry } from "../static/js/features/players/telemetry.js";
 
 global.window = { scrollTo: () => {} };
 
@@ -36,6 +38,25 @@ locale = "en";
 assert.equal(i18n.t("players"), "Players");
 locale = "es";
 assert.equal(i18n.t("players"), "Jugadores");
+
+const gameTerms = createGameTerms({ getLocale: () => "pt", escapeHtml: (value) => String(value) });
+const playerTelemetry = createPlayerTelemetry({
+  state: { locale: "pt" },
+  t: (key) => key,
+  escapeHtml: (value) => String(value),
+  gameTermMarkup: gameTerms.gameTermMarkup,
+  blockTermMarkup: gameTerms.blockTermMarkup,
+  dimensionName: gameTerms.dimensionName,
+  formatRankingValue: (value) => String(value),
+  uiIcon: () => "",
+  gameIcon: () => "",
+  formatDate: () => "agora",
+});
+assert.match(playerTelemetry.playerDataMarkup({
+  name: "Alex",
+  telemetry_updated_at: 1,
+  telemetry: { dimensions: { overworld: 3 } },
+}), /Mundo superior/);
 
 let listener;
 let loads = 0;

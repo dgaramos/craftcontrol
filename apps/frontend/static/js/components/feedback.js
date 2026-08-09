@@ -1,4 +1,4 @@
-import { $ } from "../core/dom.js?v=1";
+import { $ } from "../core/dom.js?v=2";
 
 export function toast(message, error = false) {
   const element = $("#toast");

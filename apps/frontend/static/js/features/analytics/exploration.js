@@ -7,10 +7,6 @@ const explorationDefinitions = {
   active_seconds: { label: "activeMovementTime", format: "duration" },
 };
 
-function dimensionName(identifier) {
-  return blockName(identifier).replace("the end", state.locale === "pt" ? "o End" : "The End");
-}
-
 function explorationRanking(entries, definition) {
   return `<section class="exploration-ranking block-panel"><div class="ranking-section-title"><span class="eyebrow">LIFETIME</span><h3>${t("explorerRanking")}: ${t(definition.label)}</h3></div>${entries.length ? `<ol>${entries.map((entry, index) => `<li><b>${index + 1}</b><button data-exploration-player="${escapeHtml(entry.player.id)}" type="button">${escapeHtml(entry.player.name)}</button><strong>${formatRankingValue(entry.value, definition.format)}</strong></li>`).join("")}</ol>` : `<div class="exploration-zero"><span>${uiIcon("exploration")}</span><p>${t("noExplorationEvidence")}</p></div>`}</section>`;
 }
@@ -38,4 +34,3 @@ return async function renderExplorationPanel() {
 }
 
 }
-

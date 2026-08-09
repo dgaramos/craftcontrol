@@ -7,6 +7,10 @@ import { toast } from "./js/components/feedback.js?v=1";
 import { formatDate as formatLocalizedDate, formatDuration, timelineTimestamp as localizedTimelineTimestamp } from "./js/components/time.js?v=1";
 import { createAnalyticsFeature } from "./js/features/analytics/index.js?v=1";
 import { createPlayersFeature } from "./js/features/players/index.js?v=1";
+import { createWorldFeature } from "./js/features/world/index.js?v=1";
+import { createRulesFeature } from "./js/features/rules/index.js?v=1";
+import { createServerFeature } from "./js/features/server/index.js?v=1";
+import { startAuthenticatedApplication } from "./js/features/auth/bootstrap.js?v=1";
 
 const content = $("#content");
 
@@ -237,13 +241,6 @@ function groupLabel(group) {
   return state.locale === "pt" ? group : state.locale === "es" ? (spanishGroups[group] || group) : (groups[group] || group);
 }
 
-const destinationGroups = {
-  world: ["Geral", "Mundo"],
-  players: ["Jogadores"],
-  rules: ["Interface", "Jogabilidade", "Tempo e clima", "Criaturas", "Drops", "Comandos"],
-  server: ["Packs", "Rede", "Avançado"],
-};
-
 function optionLabel(option) {
   return optionNames[option]?.[state.locale] || option;
 }
@@ -344,7 +341,7 @@ function render() {
   if (!state.schema) return;
   $("#hero").hidden = state.tab !== "home";
   if (state.tab === "__time__") {
-    renderTimePanel();
+    getWorldFeature().renderTimePanel();
     return;
   }
   if (state.tab === "__players__") {
@@ -359,56 +356,9 @@ function render() {
     content.innerHTML = "";
     return;
   }
-  const prefix = state.tab === "world" ? `<button class="section-feature" id="open-time"><span>${uiIcon("sun")}</span><div><strong>${t("timeControls")}</strong><small>${t("timeControlsHint")}</small></div><b>›</b></button>` : state.tab === "server" ? telemetryPackMarkup() : "";
-  renderSettingsGroups(destinationGroups[state.tab] || [], prefix);
-  if (state.tab === "world") $("#open-time").onclick = openTimeControls;
-  if (state.tab === "server") loadTelemetryPack();
-}
-
-function telemetryPackMarkup() {
-  return `<section class="telemetry-pack-card block-panel"><div><span class="eyebrow">CRAFTCONTROL</span><h3>${t("telemetryPack")}</h3><p>${t("telemetryPackHelp")}</p></div><div id="telemetry-pack-state" class="telemetry-pack-state">${t("checking")}</div></section>`;
-}
-
-async function loadTelemetryPack() {
-  const target = $("#telemetry-pack-state");
-  if (!target) return;
-  try {
-    const pack = await api("/api/telemetry-pack");
-    renderReleaseTags(pack);
-    const status = pack.installed ? (pack.enabled ? t("packActive") : t("packInactive")) : t("packMissing");
-    const primaryAction = pack.installed ? (pack.upgrade_available ? "upgrade" : null) : "install";
-    const health = t(pack.health) || pack.health || t("waiting");
-    const storageState = pack.storage_status === "migrated" ? t("migrated") : pack.storage_status === "not-required" ? t("notRequired") : pack.storage_status || "—";
-    const capabilityEntries = Object.entries(pack.capabilities || {});
-    const capabilityState = pack.capability_status === "limited" ? t("capabilityLimited") : capabilityEntries.length ? t("capabilityFull") : t("unknown");
-    const capabilityMarkup = capabilityEntries.length ? `<section class="capability-panel"><div><strong>${t("capabilities")}</strong><small>${escapeHtml(capabilityState)} · ${pack.capabilities_supported}/${pack.capabilities_total}</small></div><ul>${capabilityEntries.map(([name, value]) => `<li class="${value.supported ? "supported" : "unavailable"}"><span>${uiIcon(value.supported ? "check" : "close")}</span>${escapeHtml(t(name) || name)}</li>`).join("")}</ul></section>` : "";
-    target.innerHTML = `<div class="release-version-grid"><article><small>${t("craftControlImage")}</small><strong>v${escapeHtml(pack.application?.version || "—")}</strong><span>${t("activeSince")} ${formatDate(pack.application?.started_at)}</span></article><article><small>BEHAVIOR PACK</small><strong>v${escapeHtml(pack.runtime_version || pack.installed_version || "—")}</strong><span>${t("packInstalledAt")} ${formatDate(pack.installed_updated_at)}</span></article></div><div class="telemetry-pack-summary"><strong>${escapeHtml(status)}</strong><span class="health-${escapeHtml(pack.health || "waiting")}">${escapeHtml(health)}</span>${pack.upgrade_available && pack.installed ? `<span>${t("upgradeAvailable")}</span>` : ""}</div><dl><div><dt>${t("installedVersion")}</dt><dd>${escapeHtml(pack.installed_version || "—")}</dd></div><div><dt>${t("packObserved")}</dt><dd>${escapeHtml(pack.runtime_version || "—")}</dd></div><div><dt>${t("bundledVersion")}</dt><dd>${escapeHtml(pack.source_version)}</dd></div><div><dt>${t("storageVersion")}</dt><dd>${escapeHtml(pack.storage_version || "—")}</dd></div><div><dt>${t("storageStatus")}</dt><dd>${escapeHtml(storageState)}</dd></div><div><dt>${t("telemetrySequence")}</dt><dd>${escapeHtml(pack.sequence || "—")}</dd></div><div><dt>${t("lastResponse")}</dt><dd>${formatDate(pack.last_response_at)}</dd></div><div><dt>${t("lastSnapshot")}</dt><dd>${formatDate(pack.last_snapshot_at)}</dd></div><div><dt>${t("detectedGaps")}</dt><dd>${escapeHtml(pack.gap_count || 0)}</dd></div><div><dt>${t("missingEvents")}</dt><dd>${escapeHtml(pack.missing_events || 0)}</dd></div><div><dt>${t("packHealth")}</dt><dd>${escapeHtml(health)}</dd></div></dl>${capabilityMarkup}${pack.last_error ? `<p class="telemetry-pack-error">${escapeHtml(pack.last_error)}</p>` : ""}<div class="telemetry-pack-actions">${primaryAction ? `<button data-pack-action="${primaryAction}">${t(primaryAction === "install" ? "installPack" : "upgradePack")}</button>` : ""}${pack.enabled ? `<button class="secondary" data-pack-action="disable">${t("disablePack")}</button>` : ""}<button class="secondary" data-pack-action="rollback">${t("rollbackPack")}</button></div>`;
-    target.querySelectorAll("[data-pack-action]").forEach((button) => button.onclick = async () => {
-      if (!confirm(t("packActionConfirm"))) return;
-      button.disabled = true;
-      try {
-        const result = await api(`/api/telemetry-pack/${button.dataset.packAction}`, { method: "POST" });
-        toast(result.restart_required ? t("restartPackNotice") : t("operationDone"));
-        await loadTelemetryPack();
-      } catch (error) { toast(error.message, true); button.disabled = false; }
-    });
-  } catch (error) { target.textContent = error.message; }
-}
-
-function renderReleaseTags(pack) {
-  const target = $("#release-tags");
-  if (!target) return;
-  const frontendTag = state.frontendVersion ? `<span>UI v${escapeHtml(state.frontendVersion)}</span>` : "";
-  target.innerHTML = `${frontendTag}<span title="${escapeHtml(`${t("craftControlImage")} · ${t("activeSince")} ${formatDate(pack.application?.started_at)}`)}">API v${escapeHtml(pack.application?.version || "—")}</span><span title="${escapeHtml(`${t("packObserved")} · ${t("updated")} ${formatDate(pack.last_response_at)}`)}">PACK v${escapeHtml(pack.runtime_version || pack.installed_version || "—")}</span>`;
-}
-
-async function loadFrontendVersion() {
-  try {
-    const response = await fetch("/version.json", { cache: "no-store" });
-    if (!response.ok) return;
-    const release = await response.json();
-    if (release.service === "frontend" && typeof release.version === "string") state.frontendVersion = release.version;
-  } catch (_) { /* The compatibility image has no independent frontend version. */ }
+  if (state.tab === "world") getWorldFeature().renderWorld();
+  else if (state.tab === "rules") getRulesFeature().renderRules();
+  else if (state.tab === "server") getServerFeature().renderServer();
 }
 
 function settingsMarkup(groupNames) {
@@ -465,6 +415,25 @@ function bindSettingFields(groupNames) {
       }
     });
   });
+}
+
+let worldFeature = null;
+let rulesFeature = null;
+let serverFeature = null;
+
+function getWorldFeature() {
+  if (!worldFeature) worldFeature = createWorldFeature({ state, content, t, api, $, uiIcon, booleanControl, updateToggleLabel, toast, renderSettingsGroups, renderTabs });
+  return worldFeature;
+}
+
+function getRulesFeature() {
+  if (!rulesFeature) rulesFeature = createRulesFeature({ renderSettingsGroups });
+  return rulesFeature;
+}
+
+function getServerFeature() {
+  if (!serverFeature) serverFeature = createServerFeature({ state, content, t, api, $, escapeHtml, uiIcon, formatDate, toast, renderSettingsGroups });
+  return serverFeature;
 }
 
 function formatDate(timestamp) {
@@ -663,64 +632,6 @@ async function renderAnalyticsPanel() {
   await analyticsFeature.render();
 }
 
-function renderTimePanel() {
-  const presets = ["sunrise", "day", "noon", "sunset", "night", "midnight"];
-  const presetIcons = { sunrise: "sun", day: "sun", noon: "sun", sunset: "sun", night: "moon", midnight: "moon" };
-  content.innerHTML = `
-    <div class="time-screen">
-      <section class="time-card block-panel"><h3>${t("timeOfDay")}</h3><p>${state.locale === "pt" ? "Escolha um momento predefinido do ciclo completo." : "Choose a preset from the complete daylight cycle."}</p><div class="time-presets">${presets.map((preset) => `<button type="button" data-time-preset="${preset}"><span>${uiIcon(presetIcons[preset])}</span>${t(preset)}</button>`).join("")}</div></section>
-      <section class="time-card block-panel"><h3>${t("exactTime")}</h3><p>${t("exactTimeHelp")}</p><div class="command-row"><input id="exact-time" type="number" min="0" max="24000" value="0"><button type="button" id="set-exact-time">${t("setTime")}</button></div><h3 class="subheading">${t("advanceTime")}</h3><p>${t("advanceTimeHelp")}</p><div class="command-row"><input id="add-time" type="number" min="1" max="240000" value="1000"><button type="button" id="add-time-button">${t("addTime")}</button></div></section>
-      <section class="time-card block-panel"><h3>${t("cycles")}</h3><div class="cycle-row"><div><strong>${t("daylightCycle")}</strong><small>${state.locale === "pt" ? "Desative para congelar o horário atual." : "Disable to freeze the current time."}</small></div>${booleanControl("time-daylight-cycle", state.gamerules.dodaylightcycle)}</div><div class="cycle-row"><div><strong>${t("weatherCycle")}</strong><small>${state.locale === "pt" ? "Desative para manter o clima escolhido." : "Disable to keep the selected weather."}</small></div>${booleanControl("time-weather-cycle", state.gamerules.doweathercycle)}</div></section>
-      <section class="time-card block-panel"><h3>${t("weatherTitle")}</h3><p>${state.locale === "pt" ? "Escolha o clima e, se quiser, uma duração em ticks." : "Choose the weather and optionally set a duration in ticks."}</p><div class="weather-options"><button data-weather="clear">${uiIcon("sun")} ${t("clear")}</button><button data-weather="rain">${uiIcon("rain")} ${t("rain")}</button><button data-weather="thunder">${uiIcon("thunder")} ${t("thunder")}</button></div><input id="weather-duration" type="number" min="1" max="1000000" placeholder="${t("duration")}"><button id="weather-query" class="secondary wide">${t("queryWeather")}</button></section>
-      <section class="time-card block-panel"><h3>${t("timeQueries")}</h3><div class="query-buttons"><button data-time-query="daytime">${t("daytime")}</button><button data-time-query="gametime">${t("gametime")}</button><button data-time-query="day">${t("days")}</button></div><output id="time-query-result">${t("queryResult")}: —</output></section>
-      <section class="time-card danger-zone block-panel"><h3>${t("resetDays")}</h3><p>${t("resetDaysHelp")}</p><button id="reset-days" class="danger wide">${t("resetDays")}</button></section>
-    </div>`;
-  bindTimePanel();
-}
-
-async function runTimeAction(action, payload = {}) {
-  const result = await api(`/api/time/${action}`, { method: "POST", body: JSON.stringify(payload) });
-  toast(t("timeUpdated"));
-  return result;
-}
-
-function bindTimePanel() {
-  content.querySelectorAll("[data-time-preset]").forEach((button) => button.onclick = async () => {
-    try { await runTimeAction("preset", { value: button.dataset.timePreset }); } catch (error) { toast(error.message, true); }
-  });
-  $("#set-exact-time").onclick = async () => {
-    try { await runTimeAction("set", { value: $("#exact-time").value }); } catch (error) { toast(error.message, true); }
-  };
-  $("#add-time-button").onclick = async () => {
-    try { await runTimeAction("add", { value: $("#add-time").value }); } catch (error) { toast(error.message, true); }
-  };
-  [["time-daylight-cycle", "dodaylightcycle"], ["time-weather-cycle", "doweathercycle"]].forEach(([id, rule]) => {
-    $(`#${id}`).onchange = async (event) => {
-      updateToggleLabel(event.target);
-      try {
-        await api(`/api/gamerules/${rule}`, { method: "PUT", body: JSON.stringify({ value: event.target.checked }) });
-        state.gamerules[rule] = String(event.target.checked);
-      } catch (error) { toast(error.message, true); renderTimePanel(); }
-    };
-  });
-  content.querySelectorAll("[data-weather]").forEach((button) => button.onclick = async () => {
-    try { await runTimeAction("weather", { value: button.dataset.weather, duration: $("#weather-duration").value }); } catch (error) { toast(error.message, true); }
-  });
-  $("#weather-query").onclick = async () => {
-    try { const result = await runTimeAction("weather-query"); $("#time-query-result").textContent = `${t("queryResult")}: ${t(result.value) || result.value}`; } catch (error) { toast(error.message, true); }
-  };
-  content.querySelectorAll("[data-time-query]").forEach((button) => button.onclick = async () => {
-    try {
-      const result = await runTimeAction("query", { value: button.dataset.timeQuery });
-      $("#time-query-result").textContent = `${t("queryResult")}: ${result.value ?? t("queryUnavailable")}`;
-    } catch (error) { toast(error.message, true); }
-  });
-  $("#reset-days").onclick = async () => {
-    if (!confirm(t("resetDaysConfirm"))) return;
-    try { await runTimeAction("reset-days"); } catch (error) { toast(error.message, true); }
-  };
-}
-
 function renderTabs() {
   const icons = { home: "home", world: "world", players: "players", analytics: "data", rules: "rules", server: "server" };
   const activeDestination = state.tab === "__time__" ? "world" : state.tab === "__players__" ? "players" : state.tab;
@@ -785,7 +696,7 @@ async function loadState() {
 }
 
 async function boot() {
-  const [schema, snapshot, status, releases] = await Promise.all([api("/api/schema"), api("/api/state"), api("/api/status"), api("/api/telemetry-pack").catch(() => ({})), loadFrontendVersion()]);
+  const [schema, snapshot, status, releases] = await Promise.all([api("/api/schema"), api("/api/state"), api("/api/status"), api("/api/telemetry-pack").catch(() => ({})), getServerFeature().loadFrontendVersion()]);
   state.schema = schema;
   state.config = snapshot.settings || {};
   state.gamerules = snapshot.gamerules || {};
@@ -793,7 +704,7 @@ async function boot() {
   updateBrand();
   showPlayers(snapshot);
   setStatus(status);
-  renderReleaseTags(releases);
+  getServerFeature().renderReleaseTags(releases);
   applyLocale();
   connectEvents();
 }
@@ -827,14 +738,7 @@ document.addEventListener("click", (event) => {
   if (!event.target.closest("#language-picker")) { $("#language-menu").hidden = true; $("#language").setAttribute("aria-expanded", "false"); }
 });
 
-function openTimeControls() {
-  state.tab = "__time__";
-  renderTabs();
-  render();
-  window.scrollTo({ top: 0, behavior: "smooth" });
-}
-
-$("#time-controls").onclick = openTimeControls;
+$("#time-controls").onclick = () => getWorldFeature().openTimeControls();
 
 function openPlayers() {
   state.tab = "__players__";
@@ -899,6 +803,4 @@ document.querySelectorAll("[data-server]").forEach((button) => button.onclick = 
   } catch (error) { toast(error.message, true); }
 });
 
-requireSession().then((user) => {
-  if (user) { state.user = user; boot().catch((error) => toast(error.message, true)); }
-}).catch((error) => toast(error.message, true));
+startAuthenticatedApplication({ requireSession, state, boot, toast });

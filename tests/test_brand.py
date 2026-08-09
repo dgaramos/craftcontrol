@@ -171,12 +171,31 @@ class CraftControlBrandTest(unittest.TestCase):
 
     def test_split_frontend_reports_its_own_release_version(self) -> None:
         script = (FRONTEND / "static" / "app.js").read_text()
+        server = (FRONTEND / "static" / "js" / "features" / "server" / "index.js").read_text()
         dockerfile = (FRONTEND / "Dockerfile").read_text()
         nginx = (FRONTEND / "nginx.conf").read_text()
-        self.assertIn('fetch("/version.json", { cache: "no-store" })', script)
-        self.assertIn("UI v", script)
-        self.assertIn("CRAFTCONTROL_FRONTEND_VERSION=0.1.6", dockerfile)
+        self.assertIn('fetch("/version.json", { cache: "no-store" })', server)
+        self.assertIn("UI v", server)
+        self.assertIn("CRAFTCONTROL_FRONTEND_VERSION=0.1.7", dockerfile)
         self.assertIn("/version.json", nginx)
+
+    def test_world_rules_server_and_auth_have_feature_boundaries(self) -> None:
+        script = (FRONTEND / "static" / "app.js").read_text()
+        expectations = {
+            "world/index.js": "createWorldFeature",
+            "rules/index.js": "createRulesFeature",
+            "server/index.js": "createServerFeature",
+            "auth/bootstrap.js": "startAuthenticatedApplication",
+        }
+        for relative, factory in expectations.items():
+            module = (FRONTEND / "static" / "js" / "features" / relative).read_text()
+            self.assertIn(f"function {factory}", module)
+        self.assertIn("getWorldFeature().renderWorld()", script)
+        self.assertIn("getRulesFeature().renderRules()", script)
+        self.assertIn("getServerFeature().renderServer()", script)
+        self.assertNotIn("function renderTimePanel", script)
+        self.assertNotIn("function loadTelemetryPack", script)
+        self.assertNotIn("requireSession().then", script)
 
     def test_frontend_core_owns_shared_state_and_dom_primitives(self) -> None:
         script = (FRONTEND / "static" / "app.js").read_text()

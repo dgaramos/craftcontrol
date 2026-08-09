@@ -17,6 +17,14 @@ class FakeConsole:
 
 
 class ArchitectureTest(unittest.TestCase):
+    def test_frontend_and_backend_have_explicit_application_boundaries(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        self.assertTrue((root / "apps" / "frontend" / "static" / "app.js").is_file())
+        self.assertTrue((root / "apps" / "backend" / "minecraft_manager" / "composition.py").is_file())
+        self.assertEqual((root / "minecraft_manager").resolve(), (root / "apps" / "backend" / "minecraft_manager").resolve())
+        compose = (root / "docker-compose.yml").read_text()
+        self.assertIn("./apps/backend/minecraft_manager:/app/minecraft_manager:ro", compose)
+
     def test_player_use_cases_accept_injected_boundary_adapters(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

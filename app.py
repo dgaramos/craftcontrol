@@ -1,9 +1,5 @@
-"""Compatibility entry point for local Flask tooling.
+"""Compatibility entry point for local Flask tooling."""
 
-Production loads ``wsgi:app``. Application code lives in the
-``minecraft_manager`` package.
-"""
+from apps.backend.app import app
 
-from minecraft_manager import create_app
-
-app = create_app()
+__all__ = ["app"]

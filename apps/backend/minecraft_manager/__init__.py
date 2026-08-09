@@ -19,8 +19,8 @@ def create_app(settings: Settings | None = None, service: ManagerService | None 
     service = service or compose_manager(settings)
     app = Flask(
         __name__,
-        template_folder="../apps/frontend/templates",
-        static_folder="../apps/frontend/static",
+        template_folder="../../frontend/templates",
+        static_folder="../../frontend/static",
     )
     app.config["APP_NAME"] = "CraftControl"
     app.extensions["manager_service"] = service

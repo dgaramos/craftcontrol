@@ -375,7 +375,7 @@ Run the complete quality gate:
 
 ```bash
 python -m unittest discover -s tests -v
-python -m compileall -q minecraft_manager app.py wsgi.py
+python -m compileall -q apps/backend/minecraft_manager apps/backend/app.py apps/backend/wsgi.py app.py wsgi.py
 node --check apps/frontend/static/app.js
 docker compose config --quiet
 git diff --check
@@ -384,7 +384,7 @@ git diff --check
 The application is a modular monolith with layered use cases, explicit dependency injection, ports and adapters at meaningful external boundaries, and an internal event-driven runtime. Production dependencies are assembled manually in `composition.py`; no service locator or dependency-injection framework is required.
 
 ```text
-minecraft_manager/
+apps/backend/minecraft_manager/
 ├── composition.py  # production composition root
 ├── ports.py        # structural boundary contracts
 ├── http/           # HTTP mapping grouped by domain

@@ -6,7 +6,7 @@ Key constraints:
 
 - This is Minecraft Bedrock, not Java Edition.
 - The service targets a trusted homelab LAN and manages `itzg/minecraft-bedrock-server`.
-- Preserve the layered Python package; do not collapse the application into `app.py`.
+- Preserve the layered Python package under `apps/backend/minecraft_manager/`; do not collapse the application into `app.py`.
 - Read and follow `docs/architecture.md`. CraftControl is a modular monolith with layered use cases, meaningful ports and adapters, and an internal event-driven runtime.
 - Use constructor injection and manual composition. Define replaceable boundaries with `typing.Protocol`; do not introduce a DI container, service locator, or one interface per class.
 - Keep dependencies directed from HTTP to application services to ports/adapters. Runtime code must not reach through services into repositories.

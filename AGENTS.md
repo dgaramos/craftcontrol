@@ -14,7 +14,7 @@ Before planning, reviewing, or changing this project, read `README.md` and every
 - Keep CraftControl a modular monolith: organize by domain, retain layered use cases inside modules, and use ports/adapters only at meaningful persistence and infrastructure boundaries.
 - Inject dependencies through constructors and assemble production implementations in the composition root. Use `typing.Protocol` for replaceable boundaries; do not add a DI framework, service locator, or redundant interface for every concrete service.
 - Runtime supervisors must call application-facing ports and must never reach through a service to its repository or adapter.
-- Keep HTTP mapping in `minecraft_manager/routes.py`, orchestration in `services.py`, event ingestion in `runtime.py`, persistence in `repository.py`, and Bedrock/Docker/filesystem concerns in their adapters.
+- Keep HTTP mapping in `apps/backend/minecraft_manager/routes.py`, orchestration in `services.py`, event ingestion in `runtime.py`, persistence in `repository.py`, and Bedrock/Docker/filesystem concerns in their adapters.
 - Preserve the internal event broker, persisted operational events, SSE browser updates, targeted refreshes, and periodic full reconciliation.
 - Keep one Gunicorn worker unless the process-local broker and runtime supervisors are redesigned for multiple workers.
 - Do not add browser polling when an event-driven invalidation and targeted reconciliation is sufficient.
@@ -52,7 +52,7 @@ Run these checks before handing off changes:
 
 ```bash
 python -m unittest discover -s tests -v
-python -m compileall -q minecraft_manager app.py wsgi.py
+python -m compileall -q apps/backend/minecraft_manager apps/backend/app.py apps/backend/wsgi.py app.py wsgi.py
 node --check apps/frontend/static/app.js
 node --check apps/frontend/static/js/api.js
 node --check apps/frontend/static/js/events.js

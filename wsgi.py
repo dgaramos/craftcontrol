@@ -1,3 +1,5 @@
-from minecraft_manager import create_app
+"""Compatibility entry point for the legacy ``wsgi:app`` target."""
 
-app = create_app()
+from apps.backend.wsgi import app
+
+__all__ = ["app"]

@@ -5,10 +5,10 @@ RUN apk add --no-cache docker-cli docker-cli-compose \
     && adduser -S -G manager manager
 
 WORKDIR /app
-COPY requirements.txt .
+COPY apps/backend/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
-COPY app.py wsgi.py ./
-COPY minecraft_manager ./minecraft_manager
+COPY apps/backend/app.py apps/backend/wsgi.py ./
+COPY apps/backend/minecraft_manager ./minecraft_manager
 COPY apps ./apps
 COPY packs ./packs
 COPY bin/craftcontrol /usr/local/bin/craftcontrol

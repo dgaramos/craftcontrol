@@ -1,6 +1,6 @@
 # CraftControl Architecture
 
-CraftControl is a modular monolith for operating one Minecraft Bedrock Dedicated Server. It combines domain-oriented modules, layered use cases, ports and adapters at external boundaries, and an internal event-driven runtime. It intentionally remains one deployable web application: the Bedrock server and the optional Telemetry Pack are the only other runtime boundaries.
+CraftControl has a modular-monolith backend for operating one Minecraft Bedrock Dedicated Server and a separate browser application boundary. It combines domain-oriented modules, layered use cases, ports and adapters at external boundaries, and an internal event-driven runtime. The current compatibility image still deploys both applications together; the target packages the frontend and backend as independently deployable services behind one public origin.
 
 ## Current system context
 
@@ -42,7 +42,7 @@ CraftControl is not a strict textbook Clean Architecture implementation. It appl
 ## Target modules
 
 ```text
-minecraft_manager/
+apps/backend/minecraft_manager/
 ├── core/          configuration, database, events, validation
 ├── server/        settings, gamerules, world and lifecycle use cases
 ├── players/       profiles, sessions, history and permissions
@@ -52,7 +52,11 @@ minecraft_manager/
 └── http/          HTTP mapping grouped by domain
 ```
 
-Migration to this shape is incremental. Existing public APIs, database tables, environment variables, world data, and deployment paths remain compatible during refactoring.
+Migration to this shape is incremental. `apps/frontend/` and `apps/backend/`
+are now explicit code boundaries, while root Python entry points and package
+links temporarily preserve local tooling. Existing public APIs, database
+tables, environment variables, world data, and deployment paths remain
+compatible during refactoring.
 
 ## Dependency direction
 
@@ -121,7 +125,8 @@ The process currently runs one Gunicorn worker because the broker, runtime super
 
 ## Deliberate non-goals
 
-- No microservice split for individual manager domains.
+- No microservice split for individual backend domains; the frontend/backend
+  deployment boundary does not fragment backend use cases.
 - No external message broker while process-local delivery is sufficient.
 - No ORM solely to replace small, explicit SQLite queries.
 - No frontend framework or build pipeline until native browser modules stop meeting product needs.

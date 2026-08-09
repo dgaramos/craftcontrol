@@ -12,10 +12,12 @@ files, browser-side API and authentication code, localization, and visual
 assets. Flask still serves the index template and `/static/*` from that
 application directory as compatibility behavior.
 
-The backend consists of `minecraft_manager/`, `app.py`, `wsgi.py`, SQLite,
-authentication and CSRF enforcement, the SSE stream, Bedrock and Docker
-adapters, telemetry ingestion, pack lifecycle, and coordinated backups. Only
-the future backend service may receive persistent or privileged mounts.
+The backend now lives under `apps/backend/` and contains the Python package,
+entry points, dependencies, SQLite, authentication and CSRF enforcement, the
+SSE stream, Bedrock and Docker adapters, telemetry ingestion, pack lifecycle,
+and coordinated backups. Root entry points and package links remain temporary
+compatibility facades. Only the future backend service may receive persistent
+or privileged mounts.
 
 `packages/contracts/http-surface.json` freezes the methods and paths at the
 start of the migration. Tests compare that inventory with Flask's real URL map

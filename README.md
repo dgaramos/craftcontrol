@@ -122,6 +122,7 @@ The planned homelab hostname is `craftcontrol.lab.home.arpa`; DNS and reverse-pr
 | `AUTH_MODE` | `local` | Built-in authentication; `disabled` is LAN recovery compatibility only |
 | `AUTH_COOKIE_SECURE` | `true` | Send panel session cookies over HTTPS only |
 | `TZ` | `America/Sao_Paulo` | Container timezone |
+| `CRAFTCONTROL_VERSION` | `0.2.1` | Release tag displayed for the active CraftControl image |
 
 The old service name, container name, database filename, Python package, and variables remain supported deliberately. This visual rebrand does not destructively rename persistent paths. Compatibility migrations will be released separately.
 
@@ -247,6 +248,8 @@ Current structured metrics include:
 - sampled horizontal distance and active movement time by dimension;
 - dimensions visited with first and last observation timestamps.
 
+Block changes are coalesced per player into five-second incremental batches to limit content-log and database amplification. Authoritative snapshots still recover lifetime totals after a missed batch, while unrecoverable per-event detail is never invented.
+
 The manager remains fully usable when the pack is absent or temporarily unavailable. The embedded **CraftControl Telemetry Pack** integration provides native status, installation, upgrade, disable, removal, backup, and rollback commands:
 
 ```bash
@@ -257,6 +260,8 @@ docker compose exec craftcontrol craftcontrol telemetry install
 Installation is idempotent, writes only to persistent Bedrock data, creates a recoverable backup, and never restarts Bedrock automatically. See [Telemetry Pack integration](docs/telemetry-pack.md) for the complete command and recovery guide.
 
 The **Server → Telemetry Pack** panel exposes the same installer service on mobile and desktop. It reports embedded and installed versions, world association, runtime health, and the timestamp of the latest pack response. Install, upgrade, disable, and rollback actions create a backup first and leave the required Bedrock restart under explicit operator control.
+
+Compact release tags identify the active CraftControl image and the Behavior Pack version observed at runtime. The Server panel also separates image activation time, installed pack file time, and latest pack response so an installed upgrade is not confused with a pack already loaded by Bedrock.
 
 Telemetry reconciliation is sequence-aware. Missing ranges and pack resets automatically degrade health and request a coalesced authoritative snapshot; stale deltas are rejected, and health becomes healthy again only after a complete snapshot. The panel surfaces the current sequence, completed-snapshot time, gap count, missing-event count, and recovery errors.
 

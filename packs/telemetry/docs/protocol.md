@@ -33,6 +33,7 @@ Protocol `schema` and pack `storageVersion` are intentionally independent. Stora
 - `entity.died`
 - `block.broken`
 - `block.placed`
+- `blocks.changed`
 - `snapshot.started`
 - `snapshot.player`
 - `snapshot.finished`
@@ -40,5 +41,7 @@ Protocol `schema` and pack `storageVersion` are intentionally independent. Stora
 Send `/scriptevent bedrock_telemetry:sync full` from the dedicated-server console to request a full snapshot. The message body is reserved for future filters.
 
 Damage and movement are aggregated in the snapshot rather than logged for every sample. State is flushed every five seconds and immediately before a requested snapshot. Consumers must reconcile from snapshots after either process restarts.
+
+Pack `0.3.1` coalesces block activity per player and five-second persistence cycle into `blocks.changed`. Its `broken` and `placed` objects contain a `total` and bounded `byType` counts. Consumers continue accepting the legacy per-block topics during rolling upgrades.
 
 Snapshot player data in pack `0.3.0` adds `killsByType`, `distanceByDimension`, `activeTimeByDimension`, `firstDimensionVisitAt`, and `lastDimensionVisitAt`. Type and dimension maps are bounded. Visit timestamps are Unix epoch milliseconds as produced by the Bedrock JavaScript runtime.

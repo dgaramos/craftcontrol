@@ -59,6 +59,8 @@ button { cursor: pointer; }
 .brand-copy h1 span { color: var(--grass-light); }
 .instance-line { display: flex; align-items: center; gap: 6px; min-width: 0; margin-top: 2px; color: #607066; font-size: .65rem; font-weight: 800; }
 .instance-line > span:first-child { max-width: min(34vw, 260px); overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
+.release-tags { display: flex; gap: 5px; margin-top: 5px; }
+.release-tags span { padding: 2px 5px; color: #bcefff; font-size: .48rem; font-weight: 900; letter-spacing: .04em; background: #13272d; border: 1px solid #31515a; text-shadow: none; }
 .top-actions { display: flex; align-items: stretch; gap: 7px; }
 .language-button { min-width: 48px; padding: 7px 9px; color: var(--grass-light); font-size: .74rem; letter-spacing: .08em; }
 .block-logo {
@@ -374,6 +376,11 @@ dialog.drawer { position: fixed; inset: auto 0 0; width: min(100%, 680px); max-h
 .telemetry-pack-state dl div { padding: .7rem; background: rgba(0, 0, 0, .12); }
 .telemetry-pack-state dt { color: var(--muted); font-size: .75rem; }
 .telemetry-pack-state dd { margin: .25rem 0 0; font-weight: 900; overflow-wrap: anywhere; }
+.release-version-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; }
+.release-version-grid article { display: grid; gap: .3rem; padding: .85rem; background: #101b1e; border: 1px solid #31515a; }
+.release-version-grid small { color: var(--muted); font-size: .62rem; font-weight: 900; text-transform: uppercase; }
+.release-version-grid strong { color: #bcefff; font-size: 1.05rem; }
+.release-version-grid span { color: var(--muted); font-size: .62rem; }
 .telemetry-pack-actions { display: flex; flex-wrap: wrap; gap: .65rem; }
 @media (min-width: 760px) {
   .telemetry-pack-card { grid-template-columns: minmax(14rem, .8fr) minmax(24rem, 1.2fr); align-items: start; }

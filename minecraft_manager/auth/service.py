@@ -27,6 +27,7 @@ class AuthService:
     SCRYPT_N = 1 << 14
     SCRYPT_R = 8
     SCRYPT_P = 1
+    SESSION_TOUCH_INTERVAL_SECONDS = 60
 
     def __init__(self, database: Path, idle_seconds: int = 43200, absolute_seconds: int = 604800) -> None:
         self.database = database
@@ -35,7 +36,8 @@ class AuthService:
 
     @contextmanager
     def _connect(self) -> Iterator[sqlite3.Connection]:
-        connection = sqlite3.connect(self.database, timeout=10)
+        connection = sqlite3.connect(self.database, timeout=30)
+        connection.execute("PRAGMA busy_timeout=30000")
         connection.execute("PRAGMA foreign_keys=ON")
         try:
             yield connection
@@ -183,17 +185,19 @@ class AuthService:
         token_hash = self._token_hash(token)
         with self._connect() as connection:
             row = connection.execute(
-                "SELECT s.identity,a.role,a.status,p.current_name,s.idle_expires_at,s.absolute_expires_at,s.revoked_at "
+                "SELECT s.identity,a.role,a.status,p.current_name,s.idle_expires_at,s.absolute_expires_at,s.revoked_at,s.last_seen_at "
                 "FROM panel_sessions s JOIN panel_accounts a ON a.identity=s.identity "
                 "JOIN player_profiles p ON p.identity=s.identity WHERE s.token_hash=?",
                 (token_hash,),
             ).fetchone()
             if not row or row[2] != "active" or row[6] is not None or min(row[4], row[5]) < now:
                 return None
-            connection.execute(
-                "UPDATE panel_sessions SET last_seen_at=?,idle_expires_at=? WHERE token_hash=?",
-                (now, min(now + self.idle_seconds, row[5]), token_hash),
-            )
+            last_seen_at = float(row[7])
+            if now - last_seen_at >= self.SESSION_TOUCH_INTERVAL_SECONDS:
+                connection.execute(
+                    "UPDATE panel_sessions SET last_seen_at=?,idle_expires_at=? WHERE token_hash=?",
+                    (now, min(now + self.idle_seconds, row[5]), token_hash),
+                )
             return self._public_user(row[0], row[3], row[1])
 
     def logout(self, token: str | None) -> None:

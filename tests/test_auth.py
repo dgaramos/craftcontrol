@@ -1,5 +1,6 @@
 import sqlite3
 import tempfile
+from unittest.mock import patch
 import unittest
 from pathlib import Path
 
@@ -41,6 +42,23 @@ class AuthServiceTest(unittest.TestCase):
         second_session, user = self.auth.login("Nicole", "a sufficiently long password")
         self.assertEqual(user["role"], "operator")
         self.assertIsNotNone(self.auth.authenticate(second_session))
+
+    def test_authentication_throttles_session_writes(self) -> None:
+        self.auth.idle_seconds = 120
+        invitation = self.auth.create_invitation("Nicole", "operator")
+        session, _ = self.auth.claim("Nicole", invitation, "a sufficiently long password")
+        with sqlite3.connect(self.path) as connection:
+            before = connection.execute("SELECT last_seen_at FROM panel_sessions WHERE revoked_at IS NULL").fetchone()[0]
+        with patch("minecraft_manager.auth.service.time.time", return_value=before + 30):
+            self.assertIsNotNone(self.auth.authenticate(session))
+        with sqlite3.connect(self.path) as connection:
+            unchanged = connection.execute("SELECT last_seen_at FROM panel_sessions WHERE revoked_at IS NULL").fetchone()[0]
+        self.assertEqual(unchanged, before)
+        with patch("minecraft_manager.auth.service.time.time", return_value=before + 61):
+            self.assertIsNotNone(self.auth.authenticate(session))
+        with sqlite3.connect(self.path) as connection:
+            touched = connection.execute("SELECT last_seen_at FROM panel_sessions WHERE revoked_at IS NULL").fetchone()[0]
+        self.assertEqual(touched, before + 61)
 
     def test_rejects_unknown_player_and_short_password(self) -> None:
         with self.assertRaisesRegex(ValueError, "not been observed"):

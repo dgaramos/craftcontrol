@@ -25,10 +25,11 @@ system.afterEvents.scriptEventReceive.emit({ id: "bedrock_telemetry:sync", messa
 const envelopes = output
   .filter((line) => line.includes("[BEDROCK_TELEMETRY]"))
   .map((line) => JSON.parse(line.slice(line.indexOf("{") )));
-const blockEvent = envelopes.find((item) => item.type === "block.broken");
+const blockEvent = envelopes.find((item) => item.type === "blocks.changed");
 const snapshot = envelopes.findLast((item) => item.type === "snapshot.player" && item.player?.name === "VonCrush");
 
-assert.equal(blockEvent?.data.blockType, "minecraft:stone");
+assert.equal(blockEvent?.data.broken.total, 1);
+assert.equal(blockEvent?.data.broken.byType["minecraft:stone"], 1);
 assert.equal(snapshot?.data.joins, 1);
 assert.equal(snapshot?.data.blocksBroken, 1);
 assert.equal(snapshot?.data.brokenByType["minecraft:stone"], 1);

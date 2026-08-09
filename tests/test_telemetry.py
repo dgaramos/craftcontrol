@@ -119,3 +119,31 @@ class TelemetryTest(unittest.TestCase):
             self.assertEqual(stats["brokenByType"]["minecraft:diamond_ore"], 1)
             self.assertEqual(stats["blocksPlaced"], 3)
             self.assertEqual(stats["placedByType"]["minecraft:oak_planks"], 1)
+
+    def test_batched_block_deltas_update_totals_maps_and_daily_buckets(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "state.db"
+            repository = StateRepository(path)
+            repository.initialize()
+            repository.ingest_telemetry({
+                "schema": 1, "sequence": 1, "type": "snapshot.player", "timestamp": 1,
+                "player": {"name": "VonCrush"},
+                "data": {"blocksBroken": 4, "blocksPlaced": 2, "brokenByType": {}, "placedByType": {}},
+            })
+            batch = {
+                "schema": 1, "sequence": 2, "type": "blocks.changed", "timestamp": 2,
+                "player": {"name": "VonCrush"},
+                "data": {
+                    "broken": {"total": 3, "byType": {"minecraft:stone": 2, "minecraft:diamond_ore": 1}},
+                    "placed": {"total": 2, "byType": {"minecraft:oak_planks": 2}},
+                },
+            }
+            self.assertTrue(repository.ingest_telemetry(batch)[0])
+            self.assertFalse(repository.ingest_telemetry(batch)[0])
+            stats = repository.player_profiles()[0]["telemetry"]
+            self.assertEqual(stats["blocksBroken"], 7)
+            self.assertEqual(stats["brokenByType"]["minecraft:stone"], 2)
+            self.assertEqual(stats["blocksPlaced"], 4)
+            with sqlite3.connect(path) as connection:
+                daily = connection.execute("SELECT blocks_broken,blocks_placed FROM player_daily").fetchone()
+            self.assertEqual(daily, (3, 2))

@@ -1,7 +1,7 @@
 import { system, world } from "@minecraft/server";
 import { ensurePlayer, horizontalDistance, incrementMap, observeDimension, round } from "./model.js";
 import { flush, loadState, mutatePlayer, storageStatus } from "./store.js";
-import { publish, publishSnapshot } from "./transport.js";
+import { publish, publishBlockChanges, publishSnapshot, queueBlockChange } from "./transport.js";
 import { capabilitySnapshot, startMovementSampling, subscribeScriptEvents, subscribeWorldEvent } from "./capabilities.js";
 
 const positions = new Map();
@@ -67,7 +67,7 @@ subscribeWorldEvent("playerBreakBlock", "blocksBroken", (event) => {
     stats.blocksBroken += 1;
     incrementMap(stats.brokenByType, type);
   });
-  publish("block.broken", event.player.name, { blockType: type });
+  queueBlockChange(event.player.name, "broken", type);
 });
 
 subscribeWorldEvent("playerPlaceBlock", "blocksPlaced", (event) => {
@@ -76,7 +76,7 @@ subscribeWorldEvent("playerPlaceBlock", "blocksPlaced", (event) => {
     stats.blocksPlaced += 1;
     incrementMap(stats.placedByType, type);
   });
-  publish("block.placed", event.player.name, { blockType: type });
+  queueBlockChange(event.player.name, "placed", type);
 });
 
 subscribeWorldEvent("playerDimensionChange", "dimensionChanges", (event) => {
@@ -105,11 +105,12 @@ startMovementSampling(() => {
       observeDimension(stats, current.dimension, Date.now());
     });
   }
+  publishBlockChanges();
   flush();
 }, 100);
 
 system.runTimeout(() => {
   loadState();
-  publish("telemetry.started", null, { version: "0.3.0", product: "CraftControl Telemetry Pack", storage: storageStatus(), capabilities: capabilitySnapshot() });
+  publish("telemetry.started", null, { version: "0.3.1", product: "CraftControl Telemetry Pack", storage: storageStatus(), capabilities: capabilitySnapshot() });
   publishSnapshot();
 }, 1);

@@ -60,6 +60,16 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn('month: "short"', script)
         self.assertIn(".timeline-timestamp", stylesheet)
 
+    def test_deaths_localize_game_terms_and_separate_source_from_timestamp(self) -> None:
+        script = (ROOT / "static" / "app.js").read_text()
+        stylesheet = (ROOT / "static" / "players.css").read_text()
+        template = (ROOT / "templates" / "index.html").read_text()
+        self.assertIn('entityExplosion: ["💥", "Explosão de criatura", "Entity explosion"]', script)
+        self.assertIn('skeleton: ["🏹", "Esqueleto", "Skeleton"]', script)
+        self.assertIn('class="death-entry-header"', script)
+        self.assertIn(".death-source", stylesheet)
+        self.assertIn('id="release-tags"', template)
+
     def test_recent_sessions_have_distinct_state_duration_and_period_layout(self) -> None:
         script = (ROOT / "static" / "app.js").read_text()
         stylesheet = (ROOT / "static" / "players.css").read_text()

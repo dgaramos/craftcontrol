@@ -28,6 +28,7 @@ class TelemetryPackStatus:
     upgrade_available: bool
     legacy_directory: bool
     restart_required: bool | None
+    installed_updated_at: float | None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -66,6 +67,7 @@ class TelemetryPackInstaller:
             upgrade_available=installed_version != self.version or enabled_version != self.version,
             legacy_directory=self._legacy_destination.exists(),
             restart_required=None,
+            installed_updated_at=(self._destination / "manifest.json").stat().st_mtime if installed else None,
         )
 
     def install(self, world: str | None = None) -> dict[str, Any]:

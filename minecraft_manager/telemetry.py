@@ -6,7 +6,7 @@ from typing import Any
 PREFIX = "[BEDROCK_TELEMETRY]"
 TOPICS = {
     "telemetry.started", "player.joined", "player.left", "player.respawned",
-    "player.dimension.changed", "entity.died", "block.broken", "block.placed",
+    "player.dimension.changed", "entity.died", "block.broken", "block.placed", "blocks.changed",
     "snapshot.started", "snapshot.player", "snapshot.finished",
 }
 

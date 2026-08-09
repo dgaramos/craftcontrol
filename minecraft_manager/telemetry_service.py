@@ -49,6 +49,8 @@ class TelemetryService:
                 "expected_sequence": str(sequence + 1), "last_topic": topic,
                 "last_event_at": str(time.time()),
             }
+            if topic == "telemetry.started" and isinstance(envelope.get("data", {}).get("version"), str):
+                updates["pack_version"] = envelope["data"]["version"][:32]
             if storage:
                 updates.update(
                     storage_version=str(storage.get("storageVersion", "")),

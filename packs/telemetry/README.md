@@ -95,7 +95,7 @@ The runtime integration test loads the production `main.js` through a determinis
 The package command creates:
 
 ```text
-dist/craftcontrol-telemetry-0.3.0.mcpack
+dist/craftcontrol-telemetry-0.3.1.mcpack
 ```
 
 Packaging uses sorted paths, normalized timestamps, and stripped ZIP metadata so the standalone repository and CraftControl subtree produce byte-equivalent artifacts from the same commit.
@@ -159,7 +159,7 @@ Active time means sampled movement time, not total online time: a player contrib
 
 ## Performance and limitations
 
-- Block events generate log records individually in this initial release. Aggregate persistence is still batched every five seconds. Production profiling will determine whether log batching is needed.
+- Block events are coalesced per player into one log record per five-second persistence cycle. Authoritative world aggregates remain the recovery source if an incremental batch is lost.
 - Distance is sampled horizontal movement, not a native Minecraft statistic.
 - Gamertag is the only player identity emitted. A trusted consumer must correlate it with its private Bedrock identity registry.
 - Damage and movement totals are persisted but intentionally not emitted for every occurrence; snapshots reconcile them.

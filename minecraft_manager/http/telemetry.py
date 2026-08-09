@@ -6,6 +6,7 @@ from flask import Blueprint, jsonify
 
 from .dependencies import manager, telemetry_installer
 from ..auth.http import require
+from ..version import STARTED_AT, VERSION
 
 telemetry_api = Blueprint("telemetry_api", __name__)
 
@@ -27,6 +28,8 @@ def telemetry_pack_status():
         pack["last_gap"] = values.get("last_gap")
         pack["last_snapshot_at"] = float(values["last_snapshot_at"]) if values.get("last_snapshot_at") else None
         pack["last_error"] = values.get("last_error") or None
+        pack["runtime_version"] = values.get("pack_version")
+        pack["application"] = {"version": VERSION, "started_at": STARTED_AT}
         pack["storage_version"] = values.get("storage_version")
         pack["storage_status"] = values.get("storage_status")
         pack["storage_migrated_from"] = values.get("storage_migrated_from")

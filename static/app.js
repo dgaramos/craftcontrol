@@ -92,6 +92,7 @@ const messages = {
     playerJoins: "Entradas", playerLeaves: "Saídas", playerRespawns: "Respawns", deathsAndKills: "Mortes e eliminações",
     damageAggregates: "Dano", blocksBroken: "Blocos quebrados", blocksPlaced: "Blocos colocados", dimensionChanges: "Dimensões",
     movementSampling: "Distância", snapshotRequests: "Snapshots",
+    craftControlImage: "Imagem CraftControl", activeSince: "Ativa desde", packObserved: "Pack observado", packInstalledAt: "Arquivos atualizados em",
   },
   en: {
     brandKicker: "BEDROCK CONTROL CENTER",
@@ -169,6 +170,7 @@ const messages = {
     playerJoins: "Joins", playerLeaves: "Leaves", playerRespawns: "Respawns", deathsAndKills: "Deaths and kills",
     damageAggregates: "Damage", blocksBroken: "Blocks broken", blocksPlaced: "Blocks placed", dimensionChanges: "Dimensions",
     movementSampling: "Distance", snapshotRequests: "Snapshots",
+    craftControlImage: "CraftControl image", activeSince: "Active since", packObserved: "Observed pack", packInstalledAt: "Files updated at",
   },
 };
 
@@ -360,6 +362,7 @@ async function loadTelemetryPack() {
   if (!target) return;
   try {
     const pack = await api("/api/telemetry-pack");
+    renderReleaseTags(pack);
     const status = pack.installed ? (pack.enabled ? t("packActive") : t("packInactive")) : t("packMissing");
     const primaryAction = pack.installed ? (pack.upgrade_available ? "upgrade" : null) : "install";
     const health = t(pack.health) || pack.health || t("waiting");
@@ -367,7 +370,7 @@ async function loadTelemetryPack() {
     const capabilityEntries = Object.entries(pack.capabilities || {});
     const capabilityState = pack.capability_status === "limited" ? t("capabilityLimited") : capabilityEntries.length ? t("capabilityFull") : t("unknown");
     const capabilityMarkup = capabilityEntries.length ? `<section class="capability-panel"><div><strong>${t("capabilities")}</strong><small>${escapeHtml(capabilityState)} · ${pack.capabilities_supported}/${pack.capabilities_total}</small></div><ul>${capabilityEntries.map(([name, value]) => `<li class="${value.supported ? "supported" : "unavailable"}"><span>${value.supported ? "✓" : "×"}</span>${escapeHtml(t(name) || name)}</li>`).join("")}</ul></section>` : "";
-    target.innerHTML = `<div class="telemetry-pack-summary"><strong>${escapeHtml(status)}</strong><span class="health-${escapeHtml(pack.health || "waiting")}">${escapeHtml(health)}</span>${pack.upgrade_available && pack.installed ? `<span>${t("upgradeAvailable")}</span>` : ""}</div><dl><div><dt>${t("installedVersion")}</dt><dd>${escapeHtml(pack.installed_version || "—")}</dd></div><div><dt>${t("bundledVersion")}</dt><dd>${escapeHtml(pack.source_version)}</dd></div><div><dt>${t("storageVersion")}</dt><dd>${escapeHtml(pack.storage_version || "—")}</dd></div><div><dt>${t("storageStatus")}</dt><dd>${escapeHtml(storageState)}</dd></div><div><dt>${t("telemetrySequence")}</dt><dd>${escapeHtml(pack.sequence || "—")}</dd></div><div><dt>${t("lastResponse")}</dt><dd>${formatDate(pack.last_response_at)}</dd></div><div><dt>${t("lastSnapshot")}</dt><dd>${formatDate(pack.last_snapshot_at)}</dd></div><div><dt>${t("detectedGaps")}</dt><dd>${escapeHtml(pack.gap_count || 0)}</dd></div><div><dt>${t("missingEvents")}</dt><dd>${escapeHtml(pack.missing_events || 0)}</dd></div><div><dt>${t("packHealth")}</dt><dd>${escapeHtml(health)}</dd></div></dl>${capabilityMarkup}${pack.last_error ? `<p class="telemetry-pack-error">${escapeHtml(pack.last_error)}</p>` : ""}<div class="telemetry-pack-actions">${primaryAction ? `<button data-pack-action="${primaryAction}">${t(primaryAction === "install" ? "installPack" : "upgradePack")}</button>` : ""}${pack.enabled ? `<button class="secondary" data-pack-action="disable">${t("disablePack")}</button>` : ""}<button class="secondary" data-pack-action="rollback">${t("rollbackPack")}</button></div>`;
+    target.innerHTML = `<div class="release-version-grid"><article><small>${t("craftControlImage")}</small><strong>v${escapeHtml(pack.application?.version || "—")}</strong><span>${t("activeSince")} ${formatDate(pack.application?.started_at)}</span></article><article><small>BEHAVIOR PACK</small><strong>v${escapeHtml(pack.runtime_version || pack.installed_version || "—")}</strong><span>${t("packInstalledAt")} ${formatDate(pack.installed_updated_at)}</span></article></div><div class="telemetry-pack-summary"><strong>${escapeHtml(status)}</strong><span class="health-${escapeHtml(pack.health || "waiting")}">${escapeHtml(health)}</span>${pack.upgrade_available && pack.installed ? `<span>${t("upgradeAvailable")}</span>` : ""}</div><dl><div><dt>${t("installedVersion")}</dt><dd>${escapeHtml(pack.installed_version || "—")}</dd></div><div><dt>${t("packObserved")}</dt><dd>${escapeHtml(pack.runtime_version || "—")}</dd></div><div><dt>${t("bundledVersion")}</dt><dd>${escapeHtml(pack.source_version)}</dd></div><div><dt>${t("storageVersion")}</dt><dd>${escapeHtml(pack.storage_version || "—")}</dd></div><div><dt>${t("storageStatus")}</dt><dd>${escapeHtml(storageState)}</dd></div><div><dt>${t("telemetrySequence")}</dt><dd>${escapeHtml(pack.sequence || "—")}</dd></div><div><dt>${t("lastResponse")}</dt><dd>${formatDate(pack.last_response_at)}</dd></div><div><dt>${t("lastSnapshot")}</dt><dd>${formatDate(pack.last_snapshot_at)}</dd></div><div><dt>${t("detectedGaps")}</dt><dd>${escapeHtml(pack.gap_count || 0)}</dd></div><div><dt>${t("missingEvents")}</dt><dd>${escapeHtml(pack.missing_events || 0)}</dd></div><div><dt>${t("packHealth")}</dt><dd>${escapeHtml(health)}</dd></div></dl>${capabilityMarkup}${pack.last_error ? `<p class="telemetry-pack-error">${escapeHtml(pack.last_error)}</p>` : ""}<div class="telemetry-pack-actions">${primaryAction ? `<button data-pack-action="${primaryAction}">${t(primaryAction === "install" ? "installPack" : "upgradePack")}</button>` : ""}${pack.enabled ? `<button class="secondary" data-pack-action="disable">${t("disablePack")}</button>` : ""}<button class="secondary" data-pack-action="rollback">${t("rollbackPack")}</button></div>`;
     target.querySelectorAll("[data-pack-action]").forEach((button) => button.onclick = async () => {
       if (!confirm(t("packActionConfirm"))) return;
       button.disabled = true;
@@ -378,6 +381,12 @@ async function loadTelemetryPack() {
       } catch (error) { toast(error.message, true); button.disabled = false; }
     });
   } catch (error) { target.textContent = error.message; }
+}
+
+function renderReleaseTags(pack) {
+  const target = $("#release-tags");
+  if (!target) return;
+  target.innerHTML = `<span title="${escapeHtml(`${t("craftControlImage")} · ${t("activeSince")} ${formatDate(pack.application?.started_at)}`)}">CC v${escapeHtml(pack.application?.version || "—")}</span><span title="${escapeHtml(`${t("packObserved")} · ${t("updated")} ${formatDate(pack.last_response_at)}`)}">PACK v${escapeHtml(pack.runtime_version || pack.installed_version || "—")}</span>`;
 }
 
 function settingsMarkup(groupNames) {
@@ -578,7 +587,7 @@ function historyMarkup(events) {
     const payload = event?.payload || {};
     const action = (labels[event?.topic] || {})[state.locale] || event?.topic || "event";
     const details = [
-      payload.cause ? escapeHtml(payload.cause) : "",
+      payload.cause ? escapeHtml(gameLabel(payload.cause, "cause")) : "",
       payload.inferred ? (state.locale === "pt" ? "Encerramento inferido pelo estado do servidor" : "Inferred from server state") : "",
     ].filter(Boolean);
     return `<li class="timeline-item"><span class="timeline-node" aria-hidden="true"></span><div class="timeline-action"><strong>${escapeHtml(action)}</strong>${details.length ? `<small>${details.join(" · ")}</small>` : ""}</div>${timelineTimestamp(event?.timestamp)}</li>`;
@@ -620,8 +629,9 @@ function deathHistoryMarkup(events) {
   return `<section class="death-history"><h4>${t("deathHistory")}</h4><ol>${deaths.map((event) => {
     const data = event.payload || {};
     const killer = data.killer || data.killerType || "—";
-    const details = [[t("deathCause"), data.cause], [t("killedBy"), killer], [t("projectile"), data.projectileType]].filter(([, value]) => value);
-    return `<li><div><b>☠ ${formatDate(event.timestamp)}</b><small>${event.source === "behavior-pack" ? t("telemetrySource") : escapeHtml(event.source || "")}</small></div><dl>${details.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(String(value).replace(/^minecraft:/, ""))}</dd></div>`).join("")}</dl></li>`;
+    const details = [[t("deathCause"), data.cause, "cause"], [t("killedBy"), killer, "entity"], [t("projectile"), data.projectileType, "entity"]].filter(([, value]) => value);
+    const source = event.source === "behavior-pack" ? t("telemetrySource") : t("sourceServer");
+    return `<li><header class="death-entry-header"><span class="death-entry-icon" aria-hidden="true">${gameIcon(killer)}</span><div><b>${gameLabel(data.cause, "cause")}</b><small class="death-source">${escapeHtml(source)}</small></div>${timelineTimestamp(event.timestamp)}</header><dl>${details.map(([label, value, kind]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(gameLabel(value, kind))}</dd></div>`).join("")}</dl></li>`;
   }).join("")}</ol></section>`;
 }
 
@@ -648,9 +658,9 @@ function analyticsEventPresentation(event) {
 function analyticsEventDetails(event) {
   const details = event.details || {};
   const items = [];
-  if (details.cause) items.push([t("deathCause"), details.cause]);
-  if (details.killer) items.push([t("killedBy"), String(details.killer).replace(/^minecraft:/, "")]);
-  if (details.projectile) items.push([t("projectile"), String(details.projectile).replace(/^minecraft:/, "")]);
+  if (details.cause) items.push([t("deathCause"), gameLabel(details.cause, "cause")]);
+  if (details.killer) items.push([t("killedBy"), `${gameIcon(details.killer)} ${gameLabel(details.killer, "entity")}`]);
+  if (details.projectile) items.push([t("projectile"), `${gameIcon(details.projectile)} ${gameLabel(details.projectile, "entity")}`]);
   if (details.permission) items.push([t("permission"), optionLabel(details.permission)]);
   if (details.dimension) items.push([state.locale === "pt" ? "Dimensão" : "Dimension", String(details.dimension).replace(/^minecraft:/, "")]);
   if (details.from_dimension) items.push([t("fromDimension"), String(details.from_dimension).replace(/^minecraft:/, "")]);
@@ -754,6 +764,36 @@ function blockName(identifier) {
   return String(identifier || "—").replace(/^minecraft:/, "").replaceAll("_", " ");
 }
 
+const gameTerms = {
+  entity: {
+    zombie: ["🧟", "Zumbi", "Zombie"], skeleton: ["🏹", "Esqueleto", "Skeleton"], creeper: ["💥", "Creeper", "Creeper"],
+    spider: ["🕷️", "Aranha", "Spider"], drowned: ["🌊", "Afogado", "Drowned"], cow: ["🐄", "Vaca", "Cow"],
+    pig: ["🐖", "Porco", "Pig"], sheep: ["🐑", "Ovelha", "Sheep"], chicken: ["🐔", "Galinha", "Chicken"],
+    player: ["🧑", "Jogador", "Player"], arrow: ["🏹", "Flecha", "Arrow"], trident: ["🔱", "Tridente", "Trident"],
+    zombie_villager_v2: ["🧟", "Aldeão zumbi", "Zombie villager"], enderman: ["🟪", "Enderman", "Enderman"],
+    blaze: ["🔥", "Blaze", "Blaze"], ghast: ["👻", "Ghast", "Ghast"], witch: ["🧙", "Bruxa", "Witch"],
+  },
+  cause: {
+    entityAttack: ["⚔️", "Ataque de criatura", "Entity attack"], entityExplosion: ["💥", "Explosão de criatura", "Entity explosion"],
+    blockExplosion: ["💥", "Explosão de bloco", "Block explosion"], projectile: ["🏹", "Projétil", "Projectile"],
+    fall: ["🪂", "Queda", "Fall"], fire: ["🔥", "Fogo", "Fire"], fireTick: ["🔥", "Queimadura", "Burning"],
+    lava: ["🌋", "Lava", "Lava"], drowning: ["🌊", "Afogamento", "Drowning"], suffocation: ["🧱", "Sufocamento", "Suffocation"],
+    starvation: ["🍖", "Fome", "Starvation"], void: ["🌑", "Vazio", "Void"], magic: ["✨", "Magia", "Magic"],
+    wither: ["☠️", "Wither", "Wither"], freezing: ["❄️", "Congelamento", "Freezing"], lightning: ["⚡", "Raio", "Lightning"],
+  },
+};
+
+function gameTerm(value, kind = "entity") {
+  const raw = String(value || "—").replace(/^minecraft:/, "");
+  const known = gameTerms[kind]?.[raw];
+  if (known) return known;
+  const words = raw.replace(/([a-z])([A-Z])/g, "$1 $2").replaceAll("_", " ").toLocaleLowerCase();
+  return [kind === "cause" ? "☠️" : "◆", words.charAt(0).toLocaleUpperCase() + words.slice(1), words.charAt(0).toLocaleUpperCase() + words.slice(1)];
+}
+
+function gameIcon(value, kind = "entity") { return gameTerm(value, kind)[0]; }
+function gameLabel(value, kind = "entity") { const term = gameTerm(value, kind); return `${term[0]} ${term[state.locale === "pt" ? 1 : 2]}`; }
+
 function oreLabel(ore) {
   return t(`ore${ore.charAt(0).toUpperCase()}${ore.slice(1)}`);
 }
@@ -804,7 +844,8 @@ const combatDefinitions = {
 };
 
 function combatBreakdown(title, entries, icon) {
-  return `<section class="combat-breakdown block-panel"><div class="ranking-section-title"><span class="eyebrow">${icon} LIFETIME</span><h3>${title}</h3></div>${entries.length ? `<ol>${entries.map((entry, index) => `<li><b>${index + 1}</b><span>${escapeHtml(blockName(entry.key))}</span><strong>${formatRankingValue(entry.count, "number")}</strong></li>`).join("")}</ol>` : `<div class="combat-zero"><span>${icon}</span><p>${t("noCombatEvidence")}</p></div>`}</section>`;
+  const kind = title === t("deathCauses") ? "cause" : "entity";
+  return `<section class="combat-breakdown block-panel"><div class="ranking-section-title"><span class="eyebrow">${icon} LIFETIME</span><h3>${title}</h3></div>${entries.length ? `<ol>${entries.map((entry, index) => `<li><b>${index + 1}</b><span>${escapeHtml(gameLabel(entry.key, kind))}</span><strong>${formatRankingValue(entry.count, "number")}</strong></li>`).join("")}</ol>` : `<div class="combat-zero"><span>${icon}</span><p>${t("noCombatEvidence")}</p></div>`}</section>`;
 }
 
 async function renderCombatPanel() {
@@ -1089,7 +1130,7 @@ async function loadState() {
 }
 
 async function boot() {
-  const [schema, snapshot, status] = await Promise.all([api("/api/schema"), api("/api/state"), api("/api/status")]);
+  const [schema, snapshot, status, releases] = await Promise.all([api("/api/schema"), api("/api/state"), api("/api/status"), api("/api/telemetry-pack").catch(() => ({}))]);
   state.schema = schema;
   state.config = snapshot.settings || {};
   state.gamerules = snapshot.gamerules || {};
@@ -1097,6 +1138,7 @@ async function boot() {
   updateBrand();
   showPlayers(snapshot);
   setStatus(status);
+  renderReleaseTags(releases);
   applyLocale();
   connectEvents();
 }

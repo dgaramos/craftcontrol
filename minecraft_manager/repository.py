@@ -16,6 +16,7 @@ from .migrations import LATEST_SCHEMA_VERSION, run_migrations, schema_version
 
 
 LOGGER = logging.getLogger(__name__)
+SQLITE_BUSY_TIMEOUT_MS = 30_000
 
 ORE_BLOCKS = {
     "diamond": {"minecraft:diamond_ore", "minecraft:deepslate_diamond_ore"},
@@ -38,7 +39,7 @@ class StateRepository:
     def initialize(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         existing_database = self.path.is_file() and self.path.stat().st_size > 0
-        connection = sqlite3.connect(self.path)
+        connection = sqlite3.connect(self.path, timeout=SQLITE_BUSY_TIMEOUT_MS / 1000)
         try:
             before = schema_version(connection)
             if existing_database and before < LATEST_SCHEMA_VERSION:
@@ -70,7 +71,8 @@ class StateRepository:
     @contextmanager
     def _connect(self):
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        connection = sqlite3.connect(self.path)
+        connection = sqlite3.connect(self.path, timeout=SQLITE_BUSY_TIMEOUT_MS / 1000)
+        connection.execute(f"PRAGMA busy_timeout={SQLITE_BUSY_TIMEOUT_MS}")
         try:
             with connection:
                 yield connection
@@ -384,7 +386,7 @@ class StateRepository:
                     (identity, json.dumps(envelope["data"], ensure_ascii=False), sequence, now),
                 )
                 changed.append(player)
-            elif topic in {"block.broken", "block.placed", "player.respawned", "player.dimension.changed", "entity.died"}:
+            elif topic in {"block.broken", "block.placed", "blocks.changed", "player.respawned", "player.dimension.changed", "entity.died"}:
                 changed.extend(self._apply_telemetry_delta(connection, envelope, now))
         return True, changed
 
@@ -425,6 +427,13 @@ class StateRepository:
                     stats["blocksPlaced"] = int(stats.get("blocksPlaced", 0)) + 1
                     self._increment_block_map(stats, "placedByType", data.get("blockType"))
                     self._add_daily(connection, identity, now, blocks_placed=1)
+                if topic == "blocks.changed" and name == names[0]:
+                    broken = data.get("broken") if isinstance(data.get("broken"), dict) else {}
+                    placed = data.get("placed") if isinstance(data.get("placed"), dict) else {}
+                    broken_total = self._apply_block_batch(stats, "blocksBroken", "brokenByType", broken)
+                    placed_total = self._apply_block_batch(stats, "blocksPlaced", "placedByType", placed)
+                    if broken_total or placed_total:
+                        self._add_daily(connection, identity, now, blocks_broken=broken_total, blocks_placed=placed_total)
                 if topic == "entity.died" and name == data.get("victim"):
                     stats["deaths"] = int(stats.get("deaths", 0)) + 1
                     derived = connection.execute(
@@ -471,6 +480,25 @@ class StateRepository:
         if len(values) > limit:
             values = dict(sorted(values.items(), key=lambda item: (-int(item[1]), item[0]))[:limit])
         stats[field] = values
+
+    @classmethod
+    def _apply_block_batch(cls, stats: dict[str, Any], total_field: str, map_field: str, batch: dict[str, Any]) -> int:
+        by_type = batch.get("byType") if isinstance(batch.get("byType"), dict) else {}
+        counts = {
+            block_type: int(count) for block_type, count in by_type.items()
+            if isinstance(block_type, str) and block_type.startswith("minecraft:")
+            and isinstance(count, int) and not isinstance(count, bool) and count > 0
+        }
+        declared = batch.get("total")
+        total = int(declared) if isinstance(declared, int) and not isinstance(declared, bool) and declared >= 0 else sum(counts.values())
+        if total != sum(counts.values()):
+            total = sum(counts.values())
+        stats[total_field] = int(stats.get(total_field, 0)) + total
+        values = stats.get(map_field) if isinstance(stats.get(map_field), dict) else {}
+        for block_type, count in counts.items():
+            values[block_type] = int(values.get(block_type, 0)) + count
+        stats[map_field] = dict(sorted(values.items(), key=lambda item: (-int(item[1]), item[0]))[:128])
+        return total
 
     def player_profile(self, public_id: str, history_limit: int = 100, session_limit: int = 50) -> dict[str, Any] | None:
         with self._connect() as connection:

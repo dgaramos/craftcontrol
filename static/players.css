@@ -64,8 +64,12 @@
 .session-history ol, .event-history ol, .death-history ol { margin: 0; padding: 0; list-style: none; }
 .death-history { margin: 12px 0; padding: 9px; background: #1a0e0e; border: 2px solid #6f2929; }
 .death-history h4 { color: #ff8d82; }
-.death-history li > div { align-items: center; }
-.death-history li > div > small { color: #7ed7ff; }
+.death-entry-header { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; align-items: center; gap: 9px; padding: 9px 0; border-bottom: 1px solid #512626; }
+.death-entry-icon { display: grid; width: 34px; height: 34px; place-items: center; font-size: 1.25rem; background: #100909; border: 1px solid #6f2929; }
+.death-entry-header > div { display: block !important; min-width: 0; }
+.death-entry-header b, .death-source { display: block; }
+.death-entry-header b { color: #ffd0cb; font-size: .76rem; }
+.death-source { margin-top: 4px; color: #7ed7ff !important; font-size: .55rem; text-transform: uppercase; }
 .death-history dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin: 8px 0 0; }
 .death-history dl div { display: block; min-width: 0; padding: 6px; background: #100909; }
 .death-history dt { color: var(--muted); font-size: .54rem; font-weight: 900; text-transform: uppercase; }
@@ -83,6 +87,8 @@
   .profile-facts { grid-template-columns: 1fr; }
   .telemetry-grid { grid-template-columns: repeat(2, 1fr); }
   .death-history dl { grid-template-columns: 1fr; }
+  .death-entry-header { grid-template-columns: 36px minmax(0, 1fr); align-items: start; }
+  .death-entry-header .timeline-timestamp { grid-column: 2; display: flex; min-width: 0; gap: 6px; padding: 0; text-align: left; border: 0; }
 }
 .panel-access { grid-column: 1 / -1; display: grid; gap: 10px; padding: 14px; background: rgba(0,0,0,.18); border: 1px solid #48564d; }
 .panel-access > div:first-child { display: flex; justify-content: space-between; gap: 10px; }

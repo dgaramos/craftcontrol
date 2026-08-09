@@ -38,27 +38,54 @@ class CraftControlBrandTest(unittest.TestCase):
 
     def test_player_workspace_separates_roster_profile_and_permission_scopes(self) -> None:
         script = (FRONTEND / "static" / "app.js").read_text()
-        self.assertIn('class="player-roster-row', script)
-        self.assertIn('class="player-detail-screen"', script)
-        self.assertIn("Minecraft permission", script)
-        self.assertIn("CraftControl access", script)
+        players = "\n".join(
+            path.read_text()
+            for path in sorted((FRONTEND / "static" / "js" / "features" / "players").glob("*.js"))
+        )
+        self.assertIn('class="player-roster-row', players)
+        self.assertIn('class="player-detail-screen"', players)
+        self.assertIn("Minecraft permission", players)
+        self.assertIn("CraftControl access", players)
         self.assertIn('class="player-server-settings', script)
         self.assertIn("Somente leitura", script)
 
     def test_player_profile_consolidates_authoritative_individual_analytics(self) -> None:
-        script = (FRONTEND / "static" / "app.js").read_text()
+        players = "\n".join(
+            path.read_text()
+            for path in sorted((FRONTEND / "static" / "js" / "features" / "players").glob("*.js"))
+        )
         stylesheet = (FRONTEND / "static" / "players.css").read_text()
-        self.assertIn('class="player-data-workspace"', script)
-        self.assertIn("stats.killsByType", script)
-        self.assertIn("stats.brokenByType", script)
-        self.assertIn("stats.placedByType", script)
-        self.assertIn("stats.dimensions", script)
-        self.assertIn('id="compare-player-data"', script)
-        self.assertIn('state.analytics.player = profile.name', script)
-        self.assertIn('class="player-record-drawer"', script)
-        self.assertIn("permanent aggregates", script)
+        self.assertIn('class="player-data-workspace"', players)
+        self.assertIn("stats.killsByType", players)
+        self.assertIn("stats.brokenByType", players)
+        self.assertIn("stats.placedByType", players)
+        self.assertIn("stats.dimensions", players)
+        self.assertIn('id="compare-player-data"', players)
+        self.assertIn('state.analytics.player = profile.name', players)
+        self.assertIn('class="player-record-drawer"', players)
+        self.assertIn("permanent aggregates", players)
         self.assertIn(".player-data-ranking", stylesheet)
         self.assertIn(".player-record-drawer", stylesheet)
+
+    def test_player_feature_separates_workspace_profile_access_history_and_telemetry(self) -> None:
+        feature_root = FRONTEND / "static" / "js" / "features" / "players"
+        index = (feature_root / "index.js").read_text()
+        script = (FRONTEND / "static" / "app.js").read_text()
+        for name, factory in {
+            "workspace": "createPlayersWorkspace",
+            "profile": "createPlayerProfile",
+            "access": "createPlayerAccess",
+            "history": "createPlayerHistory",
+            "telemetry": "createPlayerTelemetry",
+        }.items():
+            module = (feature_root / f"{name}.js").read_text()
+            self.assertIn(f"export function {factory}", module)
+            self.assertIn(f'from "./{name}.js?v=1"', index)
+        self.assertIn('from "./js/features/players/index.js?v=1"', script)
+        self.assertNotIn("function renderPlayerCards", script)
+        self.assertNotIn("function bindPlayerAccess", script)
+        self.assertNotIn("function deathHistoryMarkup", script)
+        self.assertNotIn("function playerDataMarkup", script)
 
     def test_browser_api_attaches_session_bound_csrf_header(self) -> None:
         api_script = (FRONTEND / "static" / "js" / "api.js").read_text()
@@ -83,22 +110,23 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn("ui-eye", symbols)
 
     def test_player_timeline_separates_action_from_localized_timestamp(self) -> None:
-        script = (FRONTEND / "static" / "app.js").read_text()
+        history = (FRONTEND / "static" / "js" / "features" / "players" / "history.js").read_text()
         time_component = (FRONTEND / "static" / "js" / "components" / "time.js").read_text()
         stylesheet = (FRONTEND / "static" / "players.css").read_text()
-        self.assertIn('class="timeline-action"', script)
+        self.assertIn('class="timeline-action"', history)
         self.assertIn('class="timeline-timestamp"', time_component)
         self.assertIn('month: "short"', time_component)
         self.assertIn(".timeline-timestamp", stylesheet)
 
     def test_deaths_localize_game_terms_and_separate_source_from_timestamp(self) -> None:
         script = (FRONTEND / "static" / "app.js").read_text()
+        history = (FRONTEND / "static" / "js" / "features" / "players" / "history.js").read_text()
         stylesheet = (FRONTEND / "static" / "players.css").read_text()
         template = (FRONTEND / "templates" / "index.html").read_text()
         self.assertIn('entityExplosion: ["creeper", "Explosão de criatura", "Entity explosion"]', script)
         self.assertIn('skeleton: ["skeleton", "Esqueleto", "Skeleton"]', script)
         self.assertIn('/static/craftcontrol-mobs.svg#mob-', script)
-        self.assertIn('class="death-entry-header"', script)
+        self.assertIn('class="death-entry-header"', history)
         self.assertIn(".death-source", stylesheet)
         self.assertIn('id="release-tags"', template)
 
@@ -147,7 +175,7 @@ class CraftControlBrandTest(unittest.TestCase):
         nginx = (FRONTEND / "nginx.conf").read_text()
         self.assertIn('fetch("/version.json", { cache: "no-store" })', script)
         self.assertIn("UI v", script)
-        self.assertIn("CRAFTCONTROL_FRONTEND_VERSION=0.1.5", dockerfile)
+        self.assertIn("CRAFTCONTROL_FRONTEND_VERSION=0.1.6", dockerfile)
         self.assertIn("/version.json", nginx)
 
     def test_frontend_core_owns_shared_state_and_dom_primitives(self) -> None:
@@ -213,12 +241,12 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIsNone(legacy_icons.search(template))
 
     def test_recent_sessions_have_distinct_state_duration_and_period_layout(self) -> None:
-        script = (FRONTEND / "static" / "app.js").read_text()
+        history = (FRONTEND / "static" / "js" / "features" / "players" / "history.js").read_text()
         stylesheet = (FRONTEND / "static" / "players.css").read_text()
-        self.assertIn('class="session-state"', script)
-        self.assertIn('class="session-duration"', script)
-        self.assertIn('class="session-period"', script)
-        self.assertIn("session.disconnected_at", script)
+        self.assertIn('class="session-state"', history)
+        self.assertIn('class="session-duration"', history)
+        self.assertIn('class="session-period"', history)
+        self.assertIn("session.disconnected_at", history)
         self.assertIn(".session-item.is-inferred", stylesheet)
 
     def test_analytics_has_dedicated_bilingual_mobile_workspace(self) -> None:

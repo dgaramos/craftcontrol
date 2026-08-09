@@ -147,7 +147,7 @@ class CraftControlBrandTest(unittest.TestCase):
         nginx = (FRONTEND / "nginx.conf").read_text()
         self.assertIn('fetch("/version.json", { cache: "no-store" })', script)
         self.assertIn("UI v", script)
-        self.assertIn("CRAFTCONTROL_FRONTEND_VERSION=0.1.4", dockerfile)
+        self.assertIn("CRAFTCONTROL_FRONTEND_VERSION=0.1.5", dockerfile)
         self.assertIn("/version.json", nginx)
 
     def test_frontend_core_owns_shared_state_and_dom_primitives(self) -> None:
@@ -175,13 +175,15 @@ class CraftControlBrandTest(unittest.TestCase):
 
     def test_analytics_activity_and_deaths_have_a_feature_boundary(self) -> None:
         script = (FRONTEND / "static" / "app.js").read_text()
+        index = (FRONTEND / "static" / "js" / "features" / "analytics" / "index.js").read_text()
         activity = (FRONTEND / "static" / "js" / "features" / "analytics" / "activity.js").read_text()
-        self.assertIn('from "./js/features/analytics/activity.js?v=1"', script)
+        self.assertIn('from "./js/features/analytics/index.js?v=1"', script)
+        self.assertIn('from "./activity.js?v=1"', index)
         self.assertIn("export function createActivityView", activity)
         self.assertIn('"player.death"', activity)
         self.assertIn('es: "Murió"', activity)
-        self.assertIn("activityView.eventsMarkup", script)
-        self.assertIn("activityView.showDeathDetails", script)
+        self.assertIn("activityView.eventsMarkup", index)
+        self.assertIn("activityView.showDeathDetails", index)
         self.assertNotIn("function analyticsEventsMarkup", script)
         self.assertNotIn("function showDeathDetails", script)
 
@@ -222,27 +224,52 @@ class CraftControlBrandTest(unittest.TestCase):
     def test_analytics_has_dedicated_bilingual_mobile_workspace(self) -> None:
         script = (FRONTEND / "static" / "app.js").read_text()
         activity = (FRONTEND / "static" / "js" / "features" / "analytics" / "activity.js").read_text()
+        analytics = "\n".join(
+            path.read_text()
+            for path in sorted((FRONTEND / "static" / "js" / "features" / "analytics").glob("*.js"))
+        )
         state_module = (FRONTEND / "static" / "js" / "core" / "state.js").read_text()
         stylesheet = (FRONTEND / "static" / "analytics.css").read_text()
         template = (FRONTEND / "templates" / "index.html").read_text()
         self.assertIn('tabs: ["home", "world", "players", "analytics"', state_module)
         self.assertIn("Atividade do servidor", script)
         self.assertIn("Server activity", script)
-        self.assertIn('["deaths", "deaths", "deathsView"]', script)
+        self.assertIn('["deaths", "deaths", "deathsView"]', analytics)
         self.assertIn("@media (max-width: 480px)", stylesheet)
         self.assertIn("analytics.css", template)
         self.assertIn('data-analytics-player=', activity)
-        self.assertIn('id="analytics-death-dialog"', script)
-        self.assertIn("respawnsOnly", script)
-        self.assertIn('class="ranking-podium', script)
+        self.assertIn('id="analytics-death-dialog"', analytics)
+        self.assertIn("respawnsOnly", analytics)
+        self.assertIn('class="ranking-podium', analytics)
         self.assertIn("rankingsTitle", script)
         self.assertIn(".podium-place.rank-1", stylesheet)
-        self.assertIn('["combat", "combat", "combatView"]', script)
+        self.assertIn('["combat", "combat", "combatView"]', analytics)
         self.assertIn("combatEmptyHelp", script)
         self.assertIn(".combat-zero", stylesheet)
-        self.assertIn('["exploration", "exploration", "explorationView"]', script)
+        self.assertIn('["exploration", "exploration", "explorationView"]', analytics)
         self.assertIn("explorationEmptyHelp", script)
         self.assertIn(".exploration-zero", stylesheet)
-        self.assertIn('["trends", "periods", "trendsView"]', script)
+        self.assertIn('["trends", "periods", "trendsView"]', analytics)
         self.assertIn("collectionStarted", script)
         self.assertIn(".heatmap-grid", stylesheet)
+
+    def test_analytics_panels_are_owned_by_separate_feature_modules(self) -> None:
+        feature_root = FRONTEND / "static" / "js" / "features" / "analytics"
+        index = (feature_root / "index.js").read_text()
+        script = (FRONTEND / "static" / "app.js").read_text()
+        for name, factory in {
+            "rankings": "createRankingsPanel",
+            "blocks": "createBlocksPanel",
+            "combat": "createCombatPanel",
+            "exploration": "createExplorationPanel",
+            "trends": "createTrendsPanel",
+        }.items():
+            module = (feature_root / f"{name}.js").read_text()
+            self.assertIn(f"export function {factory}", module)
+            self.assertIn(f'from "./{name}.js?v=1"', index)
+        self.assertIn("createAnalyticsFeature", script)
+        self.assertNotIn("async function renderRankingsPanel", script)
+        self.assertNotIn("async function renderBlocksPanel", script)
+        self.assertNotIn("async function renderCombatPanel", script)
+        self.assertNotIn("async function renderExplorationPanel", script)
+        self.assertNotIn("async function renderTrendsPanel", script)

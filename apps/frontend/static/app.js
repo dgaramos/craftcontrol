@@ -5,7 +5,7 @@ import { state } from "./js/core/state.js?v=1";
 import { $, escapeHtml } from "./js/core/dom.js?v=1";
 import { toast } from "./js/components/feedback.js?v=1";
 import { formatDate as formatLocalizedDate, formatDuration, sessionMoment as localizedSessionMoment, timelineTimestamp as localizedTimelineTimestamp } from "./js/components/time.js?v=1";
-import { createActivityView } from "./js/features/analytics/activity.js?v=1";
+import { createAnalyticsFeature } from "./js/features/analytics/index.js?v=1";
 
 const content = $("#content");
 
@@ -684,11 +684,6 @@ async function openAnalyticsPlayer(publicId) {
   } catch (error) { toast(error.message, true); }
 }
 
-function analyticsViewSwitch(active) {
-  const views = [["all", "activity", "activityView"], ["deaths", "deaths", "deathsView"], ["rankings", "rankings", "rankingsView"], ["blocks", "blocks", "blocksView"], ["combat", "combat", "combatView"], ["exploration", "exploration", "explorationView"], ["trends", "periods", "trendsView"]];
-  return `<div class="analytics-view-switch">${views.map(([view, icon, label]) => `<button data-analytics-view="${view}" class="${view} ${(view === "all" ? !['deaths', 'rankings', 'blocks', 'combat', 'exploration', 'trends'].includes(active) : active === view) ? "active" : ""}" type="button">${uiIcon(icon)} ${t(label)}</button>`).join("")}</div>`;
-}
-
 const rankingDefinitions = {
   play_time: { label: "rankPlayTime", category: "activity", format: "duration" },
   sessions: { label: "rankSessions", category: "activity", format: "number" },
@@ -709,38 +704,6 @@ function formatRankingValue(value, format) {
   if (format === "distance") return `${Math.round(Number(value || 0)).toLocaleString(localeTag())} m`;
   if (format === "decimal") return Number(value || 0).toLocaleString(localeTag(), { maximumFractionDigits: 1 });
   return Number(value || 0).toLocaleString(localeTag());
-}
-
-function bindAnalyticsViewSwitch() {
-  content.querySelectorAll("[data-analytics-view]").forEach((button) => button.onclick = () => {
-    state.analytics.kind = button.dataset.analyticsView;
-    state.analytics.page = 1;
-    renderAnalyticsPanel();
-  });
-}
-
-async function renderRankingsPanel() {
-  const analytics = state.analytics;
-  content.innerHTML = `<div class="rankings-screen">${analyticsViewSwitch("rankings")}<header class="rankings-hero block-panel"><div><span class="eyebrow">LIFETIME</span><h2>${t("rankingsTitle")}</h2><p>${t("rankingsHelp")}</p></div><button id="rankings-refresh" class="secondary" type="button">${uiIcon("refresh")} ${t("refreshData")}</button></header><div class="ranking-categories">${[["activity", "categoryActivity", "activity"], ["combat", "categoryCombat", "combat"], ["building", "categoryBuilding", "blocks"], ["exploration", "categoryExploration", "exploration"]].map(([category, label, icon]) => `<button data-ranking-category="${category}" class="${analytics.rankingCategory === category ? "active" : ""}" type="button"><span>${uiIcon(icon)}</span>${t(label)}</button>`).join("")}</div><div id="rankings-content" class="rankings-content"><div class="analytics-loading">${t("checking")}</div></div></div>`;
-  bindAnalyticsViewSwitch();
-  const load = async () => {
-    const target = $("#rankings-content");
-    target.innerHTML = `<div class="analytics-loading">${t("checking")}</div>`;
-    try {
-      const result = await api("/api/analytics/rankings?limit=10");
-      const categoryMetrics = Object.entries(rankingDefinitions).filter(([, definition]) => definition.category === analytics.rankingCategory);
-      if (!categoryMetrics.some(([key]) => key === analytics.rankingMetric)) analytics.rankingMetric = categoryMetrics[0][0];
-      const selectedDefinition = rankingDefinitions[analytics.rankingMetric];
-      const selectedEntries = result.metrics?.[analytics.rankingMetric] || [];
-      const podium = selectedEntries.slice(0, 3);
-      target.innerHTML = `<div class="ranking-metric-picker">${categoryMetrics.map(([key, definition]) => `<button data-ranking-metric="${key}" class="${key === analytics.rankingMetric ? "active" : ""}" type="button">${t(definition.label)}</button>`).join("")}</div>${podium.length ? `<section class="ranking-podium block-panel"><div class="ranking-section-title"><span class="eyebrow">${t("lifetimeRecord")}</span><h3>${t(selectedDefinition.label)}</h3></div><div class="podium-places">${podium.map((entry, index) => `<article class="podium-place rank-${index + 1}"><span class="podium-medal">${["🥇", "🥈", "🥉"][index]}</span><button data-ranking-player="${escapeHtml(entry.player.id)}" type="button">${escapeHtml(entry.player.name)}</button><b>${formatRankingValue(entry.value, selectedDefinition.format)}</b><small>${entry.source === "telemetry-pack" ? t("sourceStructured") : t("sourceServer")}</small></article>`).join("")}</div></section>` : `<div class="analytics-empty"><p>${t("noRankingData")}</p></div>`}<div class="rankings-grid"><section class="leaderboard-panel block-panel"><div class="ranking-section-title"><span class="eyebrow">TOP 10</span><h3>${t("leaderboard")}</h3></div><ol>${selectedEntries.map((entry, index) => `<li><b>${index + 1}</b><button data-ranking-player="${escapeHtml(entry.player.id)}" type="button">${escapeHtml(entry.player.name)}</button><strong>${formatRankingValue(entry.value, selectedDefinition.format)}</strong></li>`).join("")}</ol></section><section class="records-panel block-panel"><div class="ranking-section-title"><span class="eyebrow">LIFETIME</span><h3>${t("records")}</h3></div><div class="record-cards">${categoryMetrics.map(([key, definition]) => { const leader = result.metrics?.[key]?.[0]; return `<article><small>${t(definition.label)}</small>${leader ? `<button data-ranking-player="${escapeHtml(leader.player.id)}" type="button">${escapeHtml(leader.player.name)}</button><b>${formatRankingValue(leader.value, definition.format)}</b>` : `<span>—</span>`}</article>`; }).join("")}</div></section></div><small class="ranking-freshness">${t("updated")} ${formatDate(result.generated_at)} · ${t("lifetime")}</small>`;
-      target.querySelectorAll("[data-ranking-metric]").forEach((button) => button.onclick = () => { analytics.rankingMetric = button.dataset.rankingMetric; load(); });
-      target.querySelectorAll("[data-ranking-player]").forEach((button) => button.onclick = () => openAnalyticsPlayer(button.dataset.rankingPlayer));
-    } catch (error) { target.innerHTML = `<div class="analytics-empty"><p>${escapeHtml(error.message)}</p></div>`; }
-  };
-  content.querySelectorAll("[data-ranking-category]").forEach((button) => button.onclick = () => { analytics.rankingCategory = button.dataset.rankingCategory; load(); content.querySelectorAll("[data-ranking-category]").forEach((item) => item.classList.toggle("active", item === button)); });
-  $("#rankings-refresh").onclick = load;
-  await load();
 }
 
 const blockLabels = {
@@ -860,219 +823,17 @@ function oreLabel(ore) {
   return t(`ore${ore.charAt(0).toUpperCase()}${ore.slice(1)}`);
 }
 
-function blockLeaderboard(entries, title) {
-  return `<section class="block-leaderboard block-panel"><div class="ranking-section-title"><span class="eyebrow">TOP 10</span><h3>${title}</h3></div>${entries.length ? `<ol>${entries.map((entry, index) => `<li><b>${index + 1}</b>${blockTermMarkup(entry.block)}<strong>${formatRankingValue(entry.count, "number")}</strong></li>`).join("")}</ol>` : `<div class="analytics-empty"><p>${t("noBlockData")}</p></div>`}</section>`;
-}
-
-function playerBlockRanking(entries, title) {
-  return `<section class="block-player-ranking block-panel"><div class="ranking-section-title"><span class="eyebrow">LIFETIME</span><h3>${title}</h3></div>${entries.length ? `<ol>${entries.map((entry, index) => `<li><b>${index + 1}</b><button data-block-player="${escapeHtml(entry.player.id)}" type="button">${escapeHtml(entry.player.name)}</button><strong>${formatRankingValue(entry.value, "number")}</strong></li>`).join("")}</ol>` : `<div class="analytics-empty"><p>${t("noBlockData")}</p></div>`}</section>`;
-}
-
-async function renderBlocksPanel() {
-  const analytics = state.analytics;
-  content.innerHTML = `<div class="blocks-screen">${analyticsViewSwitch("blocks")}<header class="blocks-hero block-panel"><div><span class="eyebrow">WORLD STATISTICS</span><h2>${t("blocksTitle")}</h2><p>${t("blocksHelp")}</p></div><button id="blocks-refresh" class="secondary" type="button">${uiIcon("refresh")} ${t("refreshData")}</button></header><div class="blocks-mode"><button data-block-mode="mining" class="${analytics.blocksMode === "mining" ? "active" : ""}" type="button">${uiIcon("mining")} ${t("miningView")}</button><button data-block-mode="building" class="${analytics.blocksMode === "building" ? "active" : ""}" type="button">${uiIcon("building")} ${t("buildingView")}</button></div><div id="blocks-content"><div class="analytics-loading">${t("checking")}</div></div></div>`;
-  bindAnalyticsViewSwitch();
-  const load = async () => {
-    const target = $("#blocks-content");
-    target.innerHTML = `<div class="analytics-loading">${t("checking")}</div>`;
-    try {
-      const result = await api("/api/analytics/blocks?limit=10");
-      const mining = analytics.blocksMode === "mining";
-      const oreEntries = Object.entries(result.ores || {});
-      if (!oreEntries.some(([ore]) => ore === analytics.selectedOre)) analytics.selectedOre = oreEntries[0]?.[0] || "diamond";
-      const ranking = mining ? result.rankings?.miners || [] : result.rankings?.builders || [];
-      const types = mining ? result.top_broken || [] : result.top_placed || [];
-      const oreRanking = result.rankings?.ores?.[analytics.selectedOre] || [];
-      target.innerHTML = `<section class="blocks-summary"><article><small>${t("broken")}</small><b>${formatRankingValue(result.totals?.broken, "number")}</b><span>${uiIcon("mining")}</span></article><article><small>${t("placed")}</small><b>${formatRankingValue(result.totals?.placed, "number")}</b><span>${uiIcon("building")}</span></article><p>${t("blocksTelemetryHint")}<br><small>${t("updated")} ${formatDate(result.generated_at)}</small></p></section>${mining ? `<section class="ore-section block-panel"><div class="ranking-section-title"><span class="eyebrow">ORE TRACKER</span><h3>${t("oresTitle")}</h3></div><div class="ore-grid">${oreEntries.map(([ore, count]) => `<button data-ore="${ore}" class="${ore === analytics.selectedOre ? "active" : ""}" type="button"><span class="ore-gem ore-${ore}">${blockIcon(`minecraft:${ore === "ancient_debris" ? ore : `${ore}_ore`}`)}</span><small>${oreLabel(ore)}</small><b>${formatRankingValue(count, "number")}</b></button>`).join("")}</div></section>` : ""}<div class="blocks-rank-grid">${blockLeaderboard(types, t("topBlocks"))}${playerBlockRanking(ranking, mining ? t("miners") : t("builders"))}${mining ? playerBlockRanking(oreRanking, `${t("oreRanking")}: ${oreLabel(analytics.selectedOre)}`) : ""}</div><section class="player-favorites block-panel"><div class="ranking-section-title"><span class="eyebrow">PLAYERS</span><h3>${t("favoriteBlocks")}</h3></div><div>${(result.players || []).map((item) => { const favorite = mining ? item.favorite_broken : item.favorite_placed; return `<button data-block-player="${escapeHtml(item.player.id)}" type="button"><strong>${escapeHtml(item.player.name)}</strong><span>${favorite ? blockTermMarkup(favorite.block) : "—"}</span><b>${favorite ? formatRankingValue(favorite.count, "number") : "0"}</b></button>`; }).join("") || `<p>${t("noBlockData")}</p>`}</div></section>`;
-      target.querySelectorAll("[data-block-player]").forEach((button) => button.onclick = () => openAnalyticsPlayer(button.dataset.blockPlayer));
-      target.querySelectorAll("[data-ore]").forEach((button) => button.onclick = () => { analytics.selectedOre = button.dataset.ore; load(); });
-    } catch (error) { target.innerHTML = `<div class="analytics-empty"><p>${escapeHtml(error.message)}</p></div>`; }
-  };
-  content.querySelectorAll("[data-block-mode]").forEach((button) => button.onclick = () => {
-    analytics.blocksMode = button.dataset.blockMode;
-    content.querySelectorAll("[data-block-mode]").forEach((item) => item.classList.toggle("active", item === button));
-    load();
-  });
-  $("#blocks-refresh").onclick = load;
-  await load();
-}
-
-const combatDefinitions = {
-  mob_kills: { label: "combatMobKills", format: "number" },
-  player_kills: { label: "combatPlayerKills", format: "number" },
-  deaths: { label: "combatDeaths", format: "number" },
-  damage_dealt: { label: "combatDamageDealt", format: "decimal" },
-  damage_taken: { label: "combatDamageTaken", format: "decimal" },
-};
-
-function combatBreakdown(title, entries, icon) {
-  const kind = title === t("deathCauses") ? "cause" : "entity";
-  return `<section class="combat-breakdown block-panel"><div class="ranking-section-title"><span class="eyebrow">${uiIcon(icon)} LIFETIME</span><h3>${title}</h3></div>${entries.length ? `<ol>${entries.map((entry, index) => `<li><b>${index + 1}</b>${gameTermMarkup(entry.key, kind)}<strong>${formatRankingValue(entry.count, "number")}</strong></li>`).join("")}</ol>` : `<div class="combat-zero"><span>${uiIcon(icon)}</span><p>${t("noCombatEvidence")}</p></div>`}</section>`;
-}
-
-async function renderCombatPanel() {
-  const analytics = state.analytics;
-  content.innerHTML = `<div class="combat-screen">${analyticsViewSwitch("combat")}<header class="combat-hero block-panel"><div><span class="eyebrow">COMBAT LOG</span><h2>${t("combatTitle")}</h2><p>${t("combatHelp")}</p></div><button id="combat-refresh" class="secondary" type="button">${uiIcon("refresh")} ${t("refreshData")}</button></header><div id="combat-content"><div class="analytics-loading">${t("checking")}</div></div></div>`;
-  bindAnalyticsViewSwitch();
-  const load = async () => {
-    const target = $("#combat-content");
-    target.innerHTML = `<div class="analytics-loading">${t("checking")}</div>`;
-    try {
-      const result = await api("/api/analytics/combat?limit=10");
-      const definition = combatDefinitions[analytics.combatMetric] || combatDefinitions.mob_kills;
-      const ranking = result.rankings?.[analytics.combatMetric] || [];
-      const totals = result.totals || {};
-      const breakdowns = result.breakdowns || {};
-      target.innerHTML = `<section class="combat-summary">${Object.entries(combatDefinitions).map(([key, item]) => `<article><small>${t(item.label)}</small><b>${formatRankingValue(totals[key], item.format)}</b><span>${uiIcon(key === "deaths" ? "deaths" : key.includes("damage") ? "damage" : "combat")}</span></article>`).join("")}</section><p class="combat-empty-note">${t("combatEmptyHelp")} <small>${t("updated")} ${formatDate(result.generated_at)}</small></p><div class="combat-metric-picker">${Object.entries(combatDefinitions).map(([key, item]) => `<button data-combat-metric="${key}" class="${analytics.combatMetric === key ? "active" : ""}" type="button">${t(item.label)}</button>`).join("")}</div><div class="combat-main-grid">${playerBlockRanking(ranking, `${t("combatRankings")}: ${t(definition.label)}`)}<section class="pvp-panel block-panel"><div class="ranking-section-title"><span class="eyebrow">${uiIcon("combat")} ${t("observedDeaths")}</span><h3>${t("pvpDuels")}</h3></div>${(result.pvp || []).length ? `<ol>${result.pvp.map((duel) => `<li><button data-combat-player="${escapeHtml(duel.attacker.id)}" type="button">${escapeHtml(duel.attacker.name)}</button><span>→</span><button data-combat-player="${escapeHtml(duel.victim.id)}" type="button">${escapeHtml(duel.victim.name)}</button><b>${duel.count}</b></li>`).join("")}</ol>` : `<div class="combat-zero"><span>${uiIcon("combat")}</span><p>${t("noCombatEvidence")}</p></div>`}</section></div><div class="combat-breakdown-grid">${combatBreakdown(t("favoriteTargets"), (result.top_targets || []).map((item) => ({ key: item.target, count: item.kills })), "combat")}${combatBreakdown(t("deathCauses"), breakdowns.causes || [], "deaths")}${combatBreakdown(t("lethalOpponents"), breakdowns.opponents || [], "combat")}${combatBreakdown(t("projectiles"), breakdowns.projectiles || [], "activity")}</div><section class="combat-profiles block-panel"><div class="ranking-section-title"><span class="eyebrow">PLAYERS</span><h3>${t("combatProfiles")}</h3></div><div>${(result.players || []).map((item) => `<button data-combat-player="${escapeHtml(item.player.id)}" type="button"><strong>${escapeHtml(item.player.name)}</strong><span>${t("combatMobKills")} <b>${formatRankingValue(item.mob_kills, "number")}</b></span><span>${t("combatPlayerKills")} <b>${formatRankingValue(item.player_kills, "number")}</b></span><span>${t("combatDeaths")} <b>${formatRankingValue(item.deaths, "number")}</b></span><span>${t("favoriteTargets")} <b>${item.favorite_target ? gameTermMarkup(item.favorite_target.target) : "—"}</b></span><small>${item.telemetry_available ? `${t("sourceStructured")} · ${t("updated")} ${formatDate(item.updated_at)}` : t("telemetryWaiting")}</small></button>`).join("") || `<div class="combat-zero"><span>${uiIcon("combat")}</span><p>${t("noCombatEvidence")}</p></div>`}</div></section>`;
-      target.querySelectorAll("[data-block-player], [data-combat-player]").forEach((button) => button.onclick = () => { const id = button.dataset.blockPlayer || button.dataset.combatPlayer; if (id) openAnalyticsPlayer(id); });
-      target.querySelectorAll("[data-combat-metric]").forEach((button) => button.onclick = () => { analytics.combatMetric = button.dataset.combatMetric; load(); });
-    } catch (error) { target.innerHTML = `<div class="analytics-empty"><p>${escapeHtml(error.message)}</p></div>`; }
-  };
-  $("#combat-refresh").onclick = load;
-  await load();
-}
-
-const explorationDefinitions = {
-  distance: { label: "distanceTraveled", format: "distance" },
-  dimension_count: { label: "dimensionsDiscovered", format: "number" },
-  play_seconds: { label: "playTime", format: "duration" },
-  sessions: { label: "explorationSessions", format: "number" },
-  active_seconds: { label: "activeMovementTime", format: "duration" },
-};
-
-function dimensionName(identifier) {
-  return blockName(identifier).replace("the end", state.locale === "pt" ? "o End" : "The End");
-}
-
-function explorationRanking(entries, definition) {
-  return `<section class="exploration-ranking block-panel"><div class="ranking-section-title"><span class="eyebrow">LIFETIME</span><h3>${t("explorerRanking")}: ${t(definition.label)}</h3></div>${entries.length ? `<ol>${entries.map((entry, index) => `<li><b>${index + 1}</b><button data-exploration-player="${escapeHtml(entry.player.id)}" type="button">${escapeHtml(entry.player.name)}</button><strong>${formatRankingValue(entry.value, definition.format)}</strong></li>`).join("")}</ol>` : `<div class="exploration-zero"><span>${uiIcon("exploration")}</span><p>${t("noExplorationEvidence")}</p></div>`}</section>`;
-}
-
-async function renderExplorationPanel() {
-  const analytics = state.analytics;
-  content.innerHTML = `<div class="exploration-screen">${analyticsViewSwitch("exploration")}<header class="exploration-hero block-panel"><div><span class="eyebrow">WORLD ATLAS</span><h2>${t("explorationTitle")}</h2><p>${t("explorationHelp")}</p></div><button id="exploration-refresh" class="secondary" type="button">${uiIcon("refresh")} ${t("refreshData")}</button></header><div id="exploration-content"><div class="analytics-loading">${t("checking")}</div></div></div>`;
-  bindAnalyticsViewSwitch();
-  const load = async () => {
-    const target = $("#exploration-content");
-    target.innerHTML = `<div class="analytics-loading">${t("checking")}</div>`;
-    try {
-      const result = await api("/api/analytics/exploration?limit=10");
-      const totals = result.totals || {};
-      const definition = explorationDefinitions[analytics.explorationMetric] || explorationDefinitions.distance;
-      const ranking = result.rankings?.[analytics.explorationMetric] || [];
-      const summary = [["distanceTraveled", totals.distance, "distance", "distance"], ["dimensionsDiscovered", totals.dimensions, "number", "exploration"], ["dimensionVisits", totals.dimension_visits, "number", "world"], ["activeMovementTime", totals.active_seconds, "duration", "activity"], ["playTime", totals.play_seconds, "duration", "periods"], ["explorationSessions", totals.sessions, "number", "sessions"]];
-      target.innerHTML = `<section class="exploration-summary">${summary.map(([label, value, format, icon]) => `<article><small>${t(label)}</small><b>${formatRankingValue(value, format)}</b><span>${uiIcon(icon)}</span></article>`).join("")}</section><p class="exploration-note">${t("explorationEmptyHelp")} <span>${t("horizontalSampled")}</span><small>${t("updated")} ${formatDate(result.generated_at)}</small></p><div class="exploration-metric-picker">${Object.entries(explorationDefinitions).map(([key, item]) => `<button data-exploration-metric="${key}" class="${analytics.explorationMetric === key ? "active" : ""}" type="button">${t(item.label)}</button>`).join("")}</div><div class="exploration-main-grid">${explorationRanking(ranking, definition)}<section class="dimension-map block-panel"><div class="ranking-section-title"><span class="eyebrow">ATLAS</span><h3>${t("dimensionMap")}</h3></div><div class="dimension-cards">${(result.dimensions || []).map((item) => `<article><span>${uiIcon("exploration")}</span><strong>${escapeHtml(dimensionName(item.dimension))}</strong><b>${formatRankingValue(item.distance, "distance")}</b><small>${t("dimensionDistance")}</small><b>${formatDuration(item.active_seconds || 0)}</b><small>${t("activeMovementTime")}</small><em>${t("explorationFirstSeen")} ${formatDate(item.first_seen_at)}<br>${t("explorationLastSeen")} ${formatDate(item.last_seen_at)}</em></article>`).join("") || `<div class="exploration-zero"><span>${uiIcon("exploration")}</span><p>${t("noExplorationEvidence")}</p></div>`}</div></section></div><section class="journey-panel block-panel"><div class="ranking-section-title"><span class="eyebrow">TRAVEL LOG</span><h3>${t("recentJourneys")}</h3></div>${(result.transitions || []).length ? `<ol>${result.transitions.map((journey) => `<li><button data-exploration-player="${escapeHtml(journey.player.id)}" type="button">${escapeHtml(journey.player.name)}</button><span>${escapeHtml(dimensionName(journey.from))} → ${escapeHtml(dimensionName(journey.to))}</span>${timelineTimestamp(journey.timestamp)}</li>`).join("")}</ol>` : `<div class="exploration-zero"><span>${uiIcon("distance")}</span><p>${t("noExplorationEvidence")}</p></div>`}</section><section class="explorer-profiles block-panel"><div class="ranking-section-title"><span class="eyebrow">PLAYERS</span><h3>${t("explorerProfiles")}</h3></div><div>${(result.players || []).map((item) => `<button data-exploration-player="${escapeHtml(item.player.id)}" type="button"><strong>${escapeHtml(item.player.name)}</strong><span>${t("distanceTraveled")} <b>${formatRankingValue(item.distance, "distance")}</b></span><span>${t("activeMovementTime")} <b>${formatDuration(item.active_seconds || 0)}</b></span><span>${t("dimensionsDiscovered")} <b>${item.dimension_count}</b></span><span>${t("favoriteDimension")} <b>${item.favorite_dimension ? escapeHtml(dimensionName(item.favorite_dimension.dimension)) : "—"}</b></span><small>${t("explorationFirstSeen")} ${formatDate(item.first_seen_at)} · ${t("explorationLastSeen")} ${formatDate(item.last_seen_at)}</small></button>`).join("") || `<div class="exploration-zero"><span>${uiIcon("exploration")}</span><p>${t("noExplorationEvidence")}</p></div>`}</div></section>`;
-      target.querySelectorAll("[data-exploration-player]").forEach((button) => button.onclick = () => openAnalyticsPlayer(button.dataset.explorationPlayer));
-      target.querySelectorAll("[data-exploration-metric]").forEach((button) => button.onclick = () => { analytics.explorationMetric = button.dataset.explorationMetric; load(); });
-    } catch (error) { target.innerHTML = `<div class="analytics-empty"><p>${escapeHtml(error.message)}</p></div>`; }
-  };
-  $("#exploration-refresh").onclick = load;
-  await load();
-}
-
-const periodDefinitions = {
-  play_seconds: { label: "playTime", format: "duration" },
-  sessions: { label: "explorationSessions", format: "number" },
-  blocks_broken: { label: "rankBlocksBroken", format: "number" },
-  blocks_placed: { label: "rankBlocksPlaced", format: "number" },
-  mob_kills: { label: "combatMobKills", format: "number" },
-  player_kills: { label: "combatPlayerKills", format: "number" },
-  deaths: { label: "combatDeaths", format: "number" },
-  distance: { label: "distanceTraveled", format: "distance" },
-};
-
-function calendarDate(day) {
-  return new Date(`${day}T12:00:00`).toLocaleDateString(localeTag(), { day: "2-digit", month: "short" });
-}
-
-async function renderTrendsPanel() {
-  const analytics = state.analytics;
-  content.innerHTML = `<div class="trends-screen">${analyticsViewSwitch("trends")}<header class="trends-hero block-panel"><div><span class="eyebrow">DAILY HISTORY</span><h2>${t("trendsTitle")}</h2><p>${t("trendsHelp")}</p></div><button id="trends-refresh" class="secondary" type="button">${uiIcon("refresh")} ${t("refreshData")}</button></header><div class="period-switch"><button data-period-days="7" class="${analytics.periodDays === 7 ? "active" : ""}" type="button">${t("sevenDays")}</button><button data-period-days="30" class="${analytics.periodDays === 30 ? "active" : ""}" type="button">${t("thirtyDays")}</button></div><div id="trends-content"><div class="analytics-loading">${t("checking")}</div></div></div>`;
-  bindAnalyticsViewSwitch();
-  const load = async () => {
-    const target = $("#trends-content");
-    target.innerHTML = `<div class="analytics-loading">${t("checking")}</div>`;
-    try {
-      const result = await api(`/api/analytics/periods?days=${analytics.periodDays}&limit=10`);
-      const definition = periodDefinitions[analytics.periodMetric] || periodDefinitions.play_seconds;
-      const ranking = result.rankings?.[analytics.periodMetric] || [];
-      const days = result.calendar || [];
-      const maxDay = Math.max(1, ...days.map((day) => Number(day.play_seconds || 0)));
-      const heatmap = result.heatmap || [];
-      const maxHeat = Math.max(1, ...heatmap.map((cell) => Number(cell.seconds || 0)));
-      const weekdays = t("weekdayShort");
-      const totals = result.totals || {};
-      target.innerHTML = `<p class="trends-note">${t("collectionStarted")}<small>${escapeHtml(result.timezone || "")} · ${t("updated")} ${formatDate(result.generated_at)}</small></p><section class="trends-summary"><article><small>${t("playTime")}</small><b>${formatDuration(totals.play_seconds || 0)}</b></article><article><small>${t("explorationSessions")}</small><b>${formatRankingValue(totals.sessions, "number")}</b></article><article><small>${t("dailyBlocks")}</small><b>${formatRankingValue((totals.blocks_broken || 0) + (totals.blocks_placed || 0), "number")}</b></article><article><small>${t("dailyKills")}</small><b>${formatRankingValue((totals.mob_kills || 0) + (totals.player_kills || 0), "number")}</b></article><article><small>${t("mostActiveDay")}</small><b>${result.most_active_day ? calendarDate(result.most_active_day.day) : "—"}</b></article></section><div class="period-metric-picker">${Object.entries(periodDefinitions).map(([key, item]) => `<button data-period-metric="${key}" class="${analytics.periodMetric === key ? "active" : ""}" type="button">${t(item.label)}</button>`).join("")}</div><div class="trends-main-grid"><section class="period-ranking block-panel"><div class="ranking-section-title"><span class="eyebrow">${analytics.periodDays} DAYS</span><h3>${t("periodRanking")}: ${t(definition.label)}</h3></div>${ranking.length ? `<ol>${ranking.map((entry, index) => `<li><b>${index + 1}</b><button data-period-player="${escapeHtml(entry.player.id)}" type="button">${escapeHtml(entry.player.name)}</button><strong>${formatRankingValue(entry.value, definition.format)}</strong></li>`).join("")}</ol>` : `<div class="trends-zero"><span>${uiIcon("periods")}</span><p>${t("noPeriodData")}</p></div>`}</section><section class="activity-calendar block-panel"><div class="ranking-section-title"><span class="eyebrow">${analytics.periodDays} DAYS</span><h3>${t("activityCalendar")}</h3></div><div class="calendar-grid">${days.map((day) => { const level = Math.ceil((Number(day.play_seconds || 0) / maxDay) * 4); return `<article class="level-${level}" title="${escapeHtml(calendarDate(day.day))}"><span>${calendarDate(day.day)}</span><b>${day.play_seconds ? formatDuration(day.play_seconds) : "—"}</b><small>${day.sessions || 0} ${t("explorationSessions").toLocaleLowerCase()}</small></article>`; }).join("")}</div></section></div><section class="heatmap-panel block-panel"><div class="ranking-section-title"><span class="eyebrow">${escapeHtml(result.timezone || "")}</span><h3>${t("sessionHeatmap")}</h3></div><div class="heatmap-scroll"><div class="heatmap-grid"><span></span>${Array.from({ length: 24 }, (_, hour) => `<b>${String(hour).padStart(2, "0")}</b>`).join("")}${weekdays.map((weekday, weekdayIndex) => `<strong>${weekday}</strong>${heatmap.filter((cell) => cell.weekday === weekdayIndex).map((cell) => { const level = Math.ceil((Number(cell.seconds || 0) / maxHeat) * 4); return `<i class="level-${level}" title="${weekday} ${String(cell.hour).padStart(2, "0")}:00 · ${formatDuration(cell.seconds)}"></i>`; }).join("")}`).join("")}</div></div><div class="heatmap-legend"><span>${t("lessActive")}</span><i class="level-0"></i><i class="level-1"></i><i class="level-2"></i><i class="level-3"></i><i class="level-4"></i><span>${t("moreActive")}</span></div></section>`;
-      target.querySelectorAll("[data-period-player]").forEach((button) => button.onclick = () => openAnalyticsPlayer(button.dataset.periodPlayer));
-      target.querySelectorAll("[data-period-metric]").forEach((button) => button.onclick = () => { analytics.periodMetric = button.dataset.periodMetric; load(); });
-    } catch (error) { target.innerHTML = `<div class="analytics-empty"><p>${escapeHtml(error.message)}</p></div>`; }
-  };
-  content.querySelectorAll("[data-period-days]").forEach((button) => button.onclick = () => {
-    analytics.periodDays = Number(button.dataset.periodDays);
-    content.querySelectorAll("[data-period-days]").forEach((item) => item.classList.toggle("active", item === button));
-    load();
-  });
-  $("#trends-refresh").onclick = load;
-  await load();
-}
-
+let analyticsFeature = null;
 async function renderAnalyticsPanel() {
-  const activityView = createActivityView({ state, t, optionLabel, uiIcon, gameTermMarkup, timelineTimestamp });
-  const filters = state.analytics;
-  if (filters.kind === "rankings") {
-    await renderRankingsPanel();
-    return;
+  if (!analyticsFeature) {
+    analyticsFeature = createAnalyticsFeature({
+      state, content, t, uiIcon, api, $, escapeHtml, optionLabel,
+      gameTermMarkup, timelineTimestamp, rankingDefinitions, formatRankingValue,
+      formatDate, openAnalyticsPlayer, blockTermMarkup, blockIcon, oreLabel,
+      formatDuration, dimensionName, localeTag, requestRender: renderAnalyticsPanel,
+    });
   }
-  if (filters.kind === "blocks") {
-    await renderBlocksPanel();
-    return;
-  }
-  if (filters.kind === "combat") {
-    await renderCombatPanel();
-    return;
-  }
-  if (filters.kind === "exploration") {
-    await renderExplorationPanel();
-    return;
-  }
-  if (filters.kind === "trends") {
-    await renderTrendsPanel();
-    return;
-  }
-  content.innerHTML = `<div class="analytics-screen">${analyticsViewSwitch(filters.kind)}<header class="analytics-hero block-panel"><div><span class="eyebrow">CRAFTCONTROL ANALYTICS</span><h2>${t("analyticsTitle")}</h2><p>${t("analyticsHelp")}</p></div><button id="analytics-refresh" class="secondary" type="button">${uiIcon("refresh")} ${t("refreshData")}</button></header><section class="analytics-filters block-panel"><label><span>${t("eventFilter")}</span><select id="analytics-kind" ${filters.kind === "deaths" ? "disabled" : ""}><option value="all">${t("everyEvent")}</option><option value="joins">${t("joinsOnly")}</option><option value="leaves">${t("leavesOnly")}</option><option value="respawns">${t("respawnsOnly")}</option><option value="dimensions">${t("dimensionsOnly")}</option><option value="permissions">${t("permissionsOnly")}</option></select></label><label><span>${t("playerFilter")}</span><select id="analytics-player"><option value="">${t("everyPlayer")}</option></select></label><label><span>${t("periodFilter")}</span><select id="analytics-days"><option value="0">${t("lifetime")}</option><option value="7">${t("last7Days")}</option><option value="30">${t("last30Days")}</option></select></label><label><span>${t("sourceFilter")}</span><select id="analytics-source"><option value="all">${t("everySource")}</option><option value="structured">${t("structuredSource")}</option><option value="server">${t("serverSource")}</option></select></label><label><span>${t("detailFilter")}</span><input id="analytics-search" type="search" maxlength="64" value="${escapeHtml(filters.search)}" placeholder="${t("detailFilterHint")}"></label></section><div id="analytics-results" class="analytics-results"><div class="analytics-loading">${t("checking")}</div></div><dialog id="analytics-death-dialog" class="analytics-death-dialog"><div class="drawer-header"><div><span class="eyebrow">${t("deathDetails")}</span><h2></h2></div><button class="drawer-close" type="button" aria-label="${t("close")}">${uiIcon("close")}</button></div><div class="analytics-death-content"></div></dialog></div>`;
-  const applyFilterValues = () => {
-    $("#analytics-kind").value = filters.kind === "deaths" ? "all" : filters.kind;
-    $("#analytics-days").value = String(filters.days);
-    $("#analytics-source").value = filters.source;
-  };
-  applyFilterValues();
-  const reload = async () => {
-    const target = $("#analytics-results");
-    target.innerHTML = `<div class="analytics-loading">${t("checking")}</div>`;
-    try {
-      const query = new URLSearchParams({ kind: filters.kind, player: filters.player, source: filters.source, search: filters.search, days: String(filters.days), page: String(filters.page), page_size: "25" });
-      const [result, roster] = await Promise.all([api(`/api/analytics/activity?${query}`), api("/api/players")]);
-      const playerSelect = $("#analytics-player");
-      const options = (roster.players || []).map((player) => `<option value="${escapeHtml(player.name)}">${escapeHtml(player.name)}</option>`).join("");
-      playerSelect.innerHTML = `<option value="">${t("everyPlayer")}</option>${options}`;
-      playerSelect.value = filters.player;
-      const summary = result.summary || {};
-      target.innerHTML = `<div class="analytics-summary"><span><small>${t("joinsOnly")}</small><b>${summary.joins || 0}</b></span><span><small>${t("leavesOnly")}</small><b>${summary.leaves || 0}</b></span><span><small>${t("respawnsOnly")}</small><b>${summary.respawns || 0}</b></span><span><small>${t("dimensionsOnly")}</small><b>${summary.dimensions || 0}</b></span><span class="death"><small>${t("deathsView")}</small><b>${summary.deaths || 0}</b></span><span><small>${t("permissionsOnly")}</small><b>${summary.permissions || 0}</b></span></div><div class="analytics-result-meta"><b>${t("eventCount", result.total)}</b><span>${t("pageCount", result.page, result.pages)}</span></div>${activityView.eventsMarkup(result.events || [])}<div class="analytics-pagination"><button id="analytics-previous" class="secondary" type="button" ${result.page <= 1 ? "disabled" : ""}>← ${t("previous")}</button><button id="analytics-next" class="secondary" type="button" ${result.page >= result.pages ? "disabled" : ""}>${t("next")} →</button></div>`;
-      target.querySelectorAll("[data-analytics-player]").forEach((button) => button.onclick = () => openAnalyticsPlayer(button.dataset.analyticsPlayer));
-      target.querySelectorAll("[data-death-detail]").forEach((button) => button.onclick = () => activityView.showDeathDetails((result.events || [])[Number(button.dataset.deathDetail)]));
-      $("#analytics-previous").onclick = () => { filters.page -= 1; reload(); window.scrollTo({ top: 0, behavior: "smooth" }); };
-      $("#analytics-next").onclick = () => { filters.page += 1; reload(); window.scrollTo({ top: 0, behavior: "smooth" }); };
-    } catch (error) { target.innerHTML = `<div class="analytics-empty"><p>${escapeHtml(error.message)}</p></div>`; }
-  };
-  bindAnalyticsViewSwitch();
-  [["analytics-kind", "kind"], ["analytics-player", "player"], ["analytics-source", "source"]].forEach(([id, key]) => {
-    $(`#${id}`).onchange = (event) => { filters[key] = event.target.value; filters.page = 1; reload(); };
-  });
-  $("#analytics-days").onchange = (event) => { filters.days = Number(event.target.value); filters.page = 1; reload(); };
-  $("#analytics-search").onchange = (event) => { filters.search = event.target.value.trim(); filters.page = 1; reload(); };
-  $("#analytics-refresh").onclick = reload;
-  $("#analytics-death-dialog .drawer-close").onclick = () => $("#analytics-death-dialog").close();
-  await reload();
+  await analyticsFeature.render();
 }
 
 function renderTimePanel() {

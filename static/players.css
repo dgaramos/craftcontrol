@@ -64,8 +64,12 @@
 .session-history ol, .event-history ol, .death-history ol { margin: 0; padding: 0; list-style: none; }
 .death-history { margin: 12px 0; padding: 9px; background: #1a0e0e; border: 2px solid #6f2929; }
 .death-history h4 { color: #ff8d82; }
-.death-entry-header { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; align-items: center; gap: 9px; padding: 9px 0; border-bottom: 1px solid #512626; }
-.death-entry-icon { display: grid; width: 34px; height: 34px; place-items: center; font-size: 1.25rem; background: #100909; border: 1px solid #6f2929; }
+.death-entry-header { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 9px; padding: 9px 0; border-bottom: 1px solid #512626; }
+.death-entry-icon { display: grid; width: 42px; height: 42px; place-items: center; background: linear-gradient(135deg, #1b2420, #100909); border: 1px solid #6f4032; box-shadow: inset 2px 2px 0 #34483d, 2px 2px 0 #070807; }
+.death-entry-icon .mob-icon { width: 32px; height: 32px; }
+.game-term { display: inline-flex; min-width: 0; align-items: center; gap: 7px; vertical-align: middle; }
+.game-term > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mob-icon { width: 24px; height: 24px; flex: 0 0 auto; overflow: visible; shape-rendering: crispEdges; filter: drop-shadow(2px 2px 0 #050605b8); }
 .death-entry-header > div { display: block !important; min-width: 0; }
 .death-entry-header b, .death-source { display: block; }
 .death-entry-header b { color: #ffd0cb; font-size: .76rem; }
@@ -87,7 +91,7 @@
   .profile-facts { grid-template-columns: 1fr; }
   .telemetry-grid { grid-template-columns: repeat(2, 1fr); }
   .death-history dl { grid-template-columns: 1fr; }
-  .death-entry-header { grid-template-columns: 36px minmax(0, 1fr); align-items: start; }
+  .death-entry-header { grid-template-columns: 44px minmax(0, 1fr); align-items: start; }
   .death-entry-header .timeline-timestamp { grid-column: 2; display: flex; min-width: 0; gap: 6px; padding: 0; text-align: left; border: 0; }
 }
 .panel-access { grid-column: 1 / -1; display: grid; gap: 10px; padding: 14px; background: rgba(0,0,0,.18); border: 1px solid #48564d; }

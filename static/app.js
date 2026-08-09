@@ -631,7 +631,7 @@ function deathHistoryMarkup(events) {
     const killer = data.killer || data.killerType || "—";
     const details = [[t("deathCause"), data.cause, "cause"], [t("killedBy"), killer, "entity"], [t("projectile"), data.projectileType, "entity"]].filter(([, value]) => value);
     const source = event.source === "behavior-pack" ? t("telemetrySource") : t("sourceServer");
-    return `<li><header class="death-entry-header"><span class="death-entry-icon" aria-hidden="true">${gameIcon(killer)}</span><div><b>${gameLabel(data.cause, "cause")}</b><small class="death-source">${escapeHtml(source)}</small></div>${timelineTimestamp(event.timestamp)}</header><dl>${details.map(([label, value, kind]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(gameLabel(value, kind))}</dd></div>`).join("")}</dl></li>`;
+    return `<li><header class="death-entry-header"><span class="death-entry-icon">${gameIcon(killer, "entity", gameLabel(killer, "entity"))}</span><div><b>${escapeHtml(gameLabel(data.cause, "cause"))}</b><small class="death-source">${escapeHtml(source)}</small></div>${timelineTimestamp(event.timestamp)}</header><dl>${details.map(([label, value, kind]) => `<div><dt>${escapeHtml(label)}</dt><dd>${gameTermMarkup(value, kind)}</dd></div>`).join("")}</dl></li>`;
   }).join("")}</ol></section>`;
 }
 
@@ -658,9 +658,9 @@ function analyticsEventPresentation(event) {
 function analyticsEventDetails(event) {
   const details = event.details || {};
   const items = [];
-  if (details.cause) items.push([t("deathCause"), gameLabel(details.cause, "cause")]);
-  if (details.killer) items.push([t("killedBy"), `${gameIcon(details.killer)} ${gameLabel(details.killer, "entity")}`]);
-  if (details.projectile) items.push([t("projectile"), `${gameIcon(details.projectile)} ${gameLabel(details.projectile, "entity")}`]);
+  if (details.cause) items.push([t("deathCause"), details.cause, "cause"]);
+  if (details.killer) items.push([t("killedBy"), details.killer, "entity"]);
+  if (details.projectile) items.push([t("projectile"), details.projectile, "entity"]);
   if (details.permission) items.push([t("permission"), optionLabel(details.permission)]);
   if (details.dimension) items.push([state.locale === "pt" ? "Dimensão" : "Dimension", String(details.dimension).replace(/^minecraft:/, "")]);
   if (details.from_dimension) items.push([t("fromDimension"), String(details.from_dimension).replace(/^minecraft:/, "")]);
@@ -668,7 +668,7 @@ function analyticsEventDetails(event) {
   const coordinates = details.coordinates || {};
   if (Object.keys(coordinates).length) items.push([state.locale === "pt" ? "Coordenadas" : "Coordinates", [coordinates.x, coordinates.y, coordinates.z].filter((value) => value !== undefined).join(", ")]);
   if (details.inferred) items.push([state.locale === "pt" ? "Observação" : "Note", t("inferredExit")]);
-  return items.length ? `<dl class="analytics-event-details">${items.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join("")}</dl>` : "";
+  return items.length ? `<dl class="analytics-event-details">${items.map(([label, value, kind]) => `<div><dt>${escapeHtml(label)}</dt><dd>${kind ? gameTermMarkup(value, kind) : escapeHtml(value)}</dd></div>`).join("")}</dl>` : "";
 }
 
 function analyticsEventsMarkup(events) {
@@ -766,20 +766,20 @@ function blockName(identifier) {
 
 const gameTerms = {
   entity: {
-    zombie: ["🧟", "Zumbi", "Zombie"], skeleton: ["🏹", "Esqueleto", "Skeleton"], creeper: ["💥", "Creeper", "Creeper"],
-    spider: ["🕷️", "Aranha", "Spider"], drowned: ["🌊", "Afogado", "Drowned"], cow: ["🐄", "Vaca", "Cow"],
-    pig: ["🐖", "Porco", "Pig"], sheep: ["🐑", "Ovelha", "Sheep"], chicken: ["🐔", "Galinha", "Chicken"],
-    player: ["🧑", "Jogador", "Player"], arrow: ["🏹", "Flecha", "Arrow"], trident: ["🔱", "Tridente", "Trident"],
-    zombie_villager_v2: ["🧟", "Aldeão zumbi", "Zombie villager"], enderman: ["🟪", "Enderman", "Enderman"],
-    blaze: ["🔥", "Blaze", "Blaze"], ghast: ["👻", "Ghast", "Ghast"], witch: ["🧙", "Bruxa", "Witch"],
+    zombie: ["zombie", "Zumbi", "Zombie"], skeleton: ["skeleton", "Esqueleto", "Skeleton"], creeper: ["creeper", "Creeper", "Creeper"],
+    spider: ["spider", "Aranha", "Spider"], drowned: ["drowned", "Afogado", "Drowned"], cow: ["cow", "Vaca", "Cow"],
+    pig: ["pig", "Porco", "Pig"], sheep: ["sheep", "Ovelha", "Sheep"], chicken: ["chicken", "Galinha", "Chicken"],
+    player: ["player", "Jogador", "Player"], arrow: ["arrow", "Flecha", "Arrow"], trident: ["trident", "Tridente", "Trident"],
+    zombie_villager_v2: ["zombie", "Aldeão zumbi", "Zombie villager"], enderman: ["enderman", "Enderman", "Enderman"],
+    blaze: ["blaze", "Blaze", "Blaze"], ghast: ["ghast", "Ghast", "Ghast"], witch: ["witch", "Bruxa", "Witch"],
   },
   cause: {
-    entityAttack: ["⚔️", "Ataque de criatura", "Entity attack"], entityExplosion: ["💥", "Explosão de criatura", "Entity explosion"],
-    blockExplosion: ["💥", "Explosão de bloco", "Block explosion"], projectile: ["🏹", "Projétil", "Projectile"],
-    fall: ["🪂", "Queda", "Fall"], fire: ["🔥", "Fogo", "Fire"], fireTick: ["🔥", "Queimadura", "Burning"],
-    lava: ["🌋", "Lava", "Lava"], drowning: ["🌊", "Afogamento", "Drowning"], suffocation: ["🧱", "Sufocamento", "Suffocation"],
-    starvation: ["🍖", "Fome", "Starvation"], void: ["🌑", "Vazio", "Void"], magic: ["✨", "Magia", "Magic"],
-    wither: ["☠️", "Wither", "Wither"], freezing: ["❄️", "Congelamento", "Freezing"], lightning: ["⚡", "Raio", "Lightning"],
+    entityAttack: ["unknown", "Ataque de criatura", "Entity attack"], entityExplosion: ["creeper", "Explosão de criatura", "Entity explosion"],
+    blockExplosion: ["creeper", "Explosão de bloco", "Block explosion"], projectile: ["arrow", "Projétil", "Projectile"],
+    fall: ["unknown", "Queda", "Fall"], fire: ["blaze", "Fogo", "Fire"], fireTick: ["blaze", "Queimadura", "Burning"],
+    lava: ["blaze", "Lava", "Lava"], drowning: ["drowned", "Afogamento", "Drowning"], suffocation: ["unknown", "Sufocamento", "Suffocation"],
+    starvation: ["unknown", "Fome", "Starvation"], void: ["enderman", "Vazio", "Void"], magic: ["witch", "Magia", "Magic"],
+    wither: ["unknown", "Wither", "Wither"], freezing: ["unknown", "Congelamento", "Freezing"], lightning: ["unknown", "Raio", "Lightning"],
   },
 };
 
@@ -788,11 +788,20 @@ function gameTerm(value, kind = "entity") {
   const known = gameTerms[kind]?.[raw];
   if (known) return known;
   const words = raw.replace(/([a-z])([A-Z])/g, "$1 $2").replaceAll("_", " ").toLocaleLowerCase();
-  return [kind === "cause" ? "☠️" : "◆", words.charAt(0).toLocaleUpperCase() + words.slice(1), words.charAt(0).toLocaleUpperCase() + words.slice(1)];
+  return ["unknown", words.charAt(0).toLocaleUpperCase() + words.slice(1), words.charAt(0).toLocaleUpperCase() + words.slice(1)];
 }
 
-function gameIcon(value, kind = "entity") { return gameTerm(value, kind)[0]; }
-function gameLabel(value, kind = "entity") { const term = gameTerm(value, kind); return `${term[0]} ${term[state.locale === "pt" ? 1 : 2]}`; }
+function gameIcon(value, kind = "entity", label = "") {
+  const icon = gameTerm(value, kind)[0];
+  const safeIcon = /^[a-z0-9-]+$/.test(icon) ? icon : "unknown";
+  const accessible = label ? ` role="img" aria-label="${escapeHtml(label)}"` : " aria-hidden=\"true\"";
+  return `<svg class="mob-icon mob-icon-${safeIcon}" viewBox="0 0 24 24"${accessible}><use href="/static/craftcontrol-mobs.svg#mob-${safeIcon}"></use></svg>`;
+}
+function gameLabel(value, kind = "entity") { const term = gameTerm(value, kind); return term[state.locale === "pt" ? 1 : 2]; }
+function gameTermMarkup(value, kind = "entity") {
+  const label = gameLabel(value, kind);
+  return `<span class="game-term">${gameIcon(value, kind)}<span>${escapeHtml(label)}</span></span>`;
+}
 
 function oreLabel(ore) {
   return t(`ore${ore.charAt(0).toUpperCase()}${ore.slice(1)}`);
@@ -845,7 +854,7 @@ const combatDefinitions = {
 
 function combatBreakdown(title, entries, icon) {
   const kind = title === t("deathCauses") ? "cause" : "entity";
-  return `<section class="combat-breakdown block-panel"><div class="ranking-section-title"><span class="eyebrow">${icon} LIFETIME</span><h3>${title}</h3></div>${entries.length ? `<ol>${entries.map((entry, index) => `<li><b>${index + 1}</b><span>${escapeHtml(gameLabel(entry.key, kind))}</span><strong>${formatRankingValue(entry.count, "number")}</strong></li>`).join("")}</ol>` : `<div class="combat-zero"><span>${icon}</span><p>${t("noCombatEvidence")}</p></div>`}</section>`;
+  return `<section class="combat-breakdown block-panel"><div class="ranking-section-title"><span class="eyebrow">${icon} LIFETIME</span><h3>${title}</h3></div>${entries.length ? `<ol>${entries.map((entry, index) => `<li><b>${index + 1}</b>${gameTermMarkup(entry.key, kind)}<strong>${formatRankingValue(entry.count, "number")}</strong></li>`).join("")}</ol>` : `<div class="combat-zero"><span>${icon}</span><p>${t("noCombatEvidence")}</p></div>`}</section>`;
 }
 
 async function renderCombatPanel() {
@@ -861,7 +870,7 @@ async function renderCombatPanel() {
       const ranking = result.rankings?.[analytics.combatMetric] || [];
       const totals = result.totals || {};
       const breakdowns = result.breakdowns || {};
-      target.innerHTML = `<section class="combat-summary">${Object.entries(combatDefinitions).map(([key, item]) => `<article><small>${t(item.label)}</small><b>${formatRankingValue(totals[key], item.format)}</b><span>${key === "deaths" ? "☠" : key.includes("damage") ? "♥" : "⚔"}</span></article>`).join("")}</section><p class="combat-empty-note">${t("combatEmptyHelp")} <small>${t("updated")} ${formatDate(result.generated_at)}</small></p><div class="combat-metric-picker">${Object.entries(combatDefinitions).map(([key, item]) => `<button data-combat-metric="${key}" class="${analytics.combatMetric === key ? "active" : ""}" type="button">${t(item.label)}</button>`).join("")}</div><div class="combat-main-grid">${playerBlockRanking(ranking, `${t("combatRankings")}: ${t(definition.label)}`)}<section class="pvp-panel block-panel"><div class="ranking-section-title"><span class="eyebrow">⚔ ${t("observedDeaths")}</span><h3>${t("pvpDuels")}</h3></div>${(result.pvp || []).length ? `<ol>${result.pvp.map((duel) => `<li><button data-combat-player="${escapeHtml(duel.attacker.id)}" type="button">${escapeHtml(duel.attacker.name)}</button><span>→</span><button data-combat-player="${escapeHtml(duel.victim.id)}" type="button">${escapeHtml(duel.victim.name)}</button><b>${duel.count}</b></li>`).join("")}</ol>` : `<div class="combat-zero"><span>⚔</span><p>${t("noCombatEvidence")}</p></div>`}</section></div><div class="combat-breakdown-grid">${combatBreakdown(t("favoriteTargets"), (result.top_targets || []).map((item) => ({ key: item.target, count: item.kills })), "♞")}${combatBreakdown(t("deathCauses"), breakdowns.causes || [], "☠")}${combatBreakdown(t("lethalOpponents"), breakdowns.opponents || [], "♞")}${combatBreakdown(t("projectiles"), breakdowns.projectiles || [], "➶")}</div><section class="combat-profiles block-panel"><div class="ranking-section-title"><span class="eyebrow">PLAYERS</span><h3>${t("combatProfiles")}</h3></div><div>${(result.players || []).map((item) => `<button data-combat-player="${escapeHtml(item.player.id)}" type="button"><strong>${escapeHtml(item.player.name)}</strong><span>${t("combatMobKills")} <b>${formatRankingValue(item.mob_kills, "number")}</b></span><span>${t("combatPlayerKills")} <b>${formatRankingValue(item.player_kills, "number")}</b></span><span>${t("combatDeaths")} <b>${formatRankingValue(item.deaths, "number")}</b></span><span>${t("favoriteTargets")} <b>${item.favorite_target ? escapeHtml(blockName(item.favorite_target.target)) : "—"}</b></span><small>${item.telemetry_available ? `${t("sourceStructured")} · ${t("updated")} ${formatDate(item.updated_at)}` : t("telemetryWaiting")}</small></button>`).join("") || `<div class="combat-zero"><span>◇</span><p>${t("noCombatEvidence")}</p></div>`}</div></section>`;
+      target.innerHTML = `<section class="combat-summary">${Object.entries(combatDefinitions).map(([key, item]) => `<article><small>${t(item.label)}</small><b>${formatRankingValue(totals[key], item.format)}</b><span>${key === "deaths" ? "☠" : key.includes("damage") ? "♥" : "⚔"}</span></article>`).join("")}</section><p class="combat-empty-note">${t("combatEmptyHelp")} <small>${t("updated")} ${formatDate(result.generated_at)}</small></p><div class="combat-metric-picker">${Object.entries(combatDefinitions).map(([key, item]) => `<button data-combat-metric="${key}" class="${analytics.combatMetric === key ? "active" : ""}" type="button">${t(item.label)}</button>`).join("")}</div><div class="combat-main-grid">${playerBlockRanking(ranking, `${t("combatRankings")}: ${t(definition.label)}`)}<section class="pvp-panel block-panel"><div class="ranking-section-title"><span class="eyebrow">⚔ ${t("observedDeaths")}</span><h3>${t("pvpDuels")}</h3></div>${(result.pvp || []).length ? `<ol>${result.pvp.map((duel) => `<li><button data-combat-player="${escapeHtml(duel.attacker.id)}" type="button">${escapeHtml(duel.attacker.name)}</button><span>→</span><button data-combat-player="${escapeHtml(duel.victim.id)}" type="button">${escapeHtml(duel.victim.name)}</button><b>${duel.count}</b></li>`).join("")}</ol>` : `<div class="combat-zero"><span>⚔</span><p>${t("noCombatEvidence")}</p></div>`}</section></div><div class="combat-breakdown-grid">${combatBreakdown(t("favoriteTargets"), (result.top_targets || []).map((item) => ({ key: item.target, count: item.kills })), "♞")}${combatBreakdown(t("deathCauses"), breakdowns.causes || [], "☠")}${combatBreakdown(t("lethalOpponents"), breakdowns.opponents || [], "♞")}${combatBreakdown(t("projectiles"), breakdowns.projectiles || [], "➶")}</div><section class="combat-profiles block-panel"><div class="ranking-section-title"><span class="eyebrow">PLAYERS</span><h3>${t("combatProfiles")}</h3></div><div>${(result.players || []).map((item) => `<button data-combat-player="${escapeHtml(item.player.id)}" type="button"><strong>${escapeHtml(item.player.name)}</strong><span>${t("combatMobKills")} <b>${formatRankingValue(item.mob_kills, "number")}</b></span><span>${t("combatPlayerKills")} <b>${formatRankingValue(item.player_kills, "number")}</b></span><span>${t("combatDeaths")} <b>${formatRankingValue(item.deaths, "number")}</b></span><span>${t("favoriteTargets")} <b>${item.favorite_target ? gameTermMarkup(item.favorite_target.target) : "—"}</b></span><small>${item.telemetry_available ? `${t("sourceStructured")} · ${t("updated")} ${formatDate(item.updated_at)}` : t("telemetryWaiting")}</small></button>`).join("") || `<div class="combat-zero"><span>◇</span><p>${t("noCombatEvidence")}</p></div>`}</div></section>`;
       target.querySelectorAll("[data-block-player], [data-combat-player]").forEach((button) => button.onclick = () => { const id = button.dataset.blockPlayer || button.dataset.combatPlayer; if (id) openAnalyticsPlayer(id); });
       target.querySelectorAll("[data-combat-metric]").forEach((button) => button.onclick = () => { analytics.combatMetric = button.dataset.combatMetric; load(); });
     } catch (error) { target.innerHTML = `<div class="analytics-empty"><p>${escapeHtml(error.message)}</p></div>`; }

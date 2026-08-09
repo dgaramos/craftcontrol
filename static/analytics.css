@@ -167,7 +167,10 @@
 .combat-breakdown ol, .pvp-panel ol { margin: 12px 0 0; padding: 0; list-style: none; }
 .combat-breakdown li { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 8px; min-height: 42px; border-bottom: 1px solid #41302e; }
 .combat-breakdown li > b { color: #d9695f; text-align: center; }
-.combat-breakdown li span { overflow: hidden; color: var(--text); font-size: .66rem; text-overflow: ellipsis; text-transform: capitalize; white-space: nowrap; }
+.combat-breakdown li .game-term { overflow: hidden; color: var(--text); font-size: .66rem; text-transform: none; }
+.combat-breakdown li .game-term > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.combat-breakdown .mob-icon, .analytics-event-details .mob-icon { width: 24px; height: 24px; }
+.analytics-event-details .game-term { display: inline-flex; align-items: center; gap: 7px; }
 .combat-breakdown li strong { color: #ff9489; }
 .combat-zero { display: grid; place-items: center; align-content: center; min-height: 132px; padding: 16px; color: #826c69; text-align: center; }
 .combat-zero > span { color: #62342f; font-size: 1.8rem; }
@@ -182,6 +185,8 @@
 .combat-profiles button strong { grid-column: 1 / -1; color: var(--grass-light); }
 .combat-profiles button span { font-size: .59rem; }
 .combat-profiles button span b { margin-left: 4px; color: #ff9489; }
+.combat-profiles .game-term { display: inline-flex; align-items: center; gap: 5px; }
+.combat-profiles .game-term .mob-icon { width: 20px; height: 20px; }
 .combat-profiles button small { grid-column: 1 / -1; padding-top: 6px; color: #987773; font-size: .52rem; border-top: 1px solid #3a2b29; }
 
 /* Exploration analytics */

@@ -64,11 +64,23 @@ class CraftControlBrandTest(unittest.TestCase):
         script = (ROOT / "static" / "app.js").read_text()
         stylesheet = (ROOT / "static" / "players.css").read_text()
         template = (ROOT / "templates" / "index.html").read_text()
-        self.assertIn('entityExplosion: ["💥", "Explosão de criatura", "Entity explosion"]', script)
-        self.assertIn('skeleton: ["🏹", "Esqueleto", "Skeleton"]', script)
+        self.assertIn('entityExplosion: ["creeper", "Explosão de criatura", "Entity explosion"]', script)
+        self.assertIn('skeleton: ["skeleton", "Esqueleto", "Skeleton"]', script)
+        self.assertIn('/static/craftcontrol-mobs.svg#mob-', script)
         self.assertIn('class="death-entry-header"', script)
         self.assertIn(".death-source", stylesheet)
         self.assertIn('id="release-tags"', template)
+
+    def test_original_creature_icon_pack_has_expected_pixel_art_symbols(self) -> None:
+        root = element_tree.parse(ROOT / "static" / "craftcontrol-mobs.svg").getroot()
+        symbols = {node.attrib.get("id") for node in root.iter() if node.tag.endswith("symbol")}
+        expected = {
+            "mob-unknown", "mob-zombie", "mob-drowned", "mob-skeleton", "mob-creeper",
+            "mob-spider", "mob-enderman", "mob-cow", "mob-pig", "mob-sheep",
+            "mob-chicken", "mob-witch", "mob-ghast", "mob-blaze", "mob-player",
+            "mob-arrow", "mob-trident",
+        }
+        self.assertTrue(expected.issubset(symbols))
 
     def test_recent_sessions_have_distinct_state_duration_and_period_layout(self) -> None:
         script = (ROOT / "static" / "app.js").read_text()

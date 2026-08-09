@@ -229,7 +229,7 @@ The **Data** workspace provides seven global views backed by permanent player hi
 
 Both views support player, lifetime/7-day/30-day, source, event-type, and free-text detail filters. Results are paginated server-side and every item identifies whether it came from the structured Telemetry Pack or server/manager evidence. When a structured and derived death describe the same player within the same short window, the interface prefers the structured event while retaining the raw derived evidence privately in SQLite. XUIDs and raw log lines never leave the repository layer.
 
-Player names in the global feed open the permanent player profile and return to the same analytics filters. Death entries offer a focused detail dialog so cause, killer, projectile, dimension, coordinates, source, and timestamp remain readable on a phone.
+Player names in the global feed open the permanent player profile and return to the same analytics filters. Death entries offer a focused detail dialog so cause, killer, projectile, dimension, coordinates, source, and timestamp remain readable on a phone. Creature and projectile names use bilingual labels and an original bundled pixel-art SVG icon pack designed for CraftControl's deepslate interface, without relying on platform emoji or third-party game textures.
 
 Snapshots can recover aggregate totals after downtime, but they cannot recreate every missed historical event. Empty states and source labels preserve that distinction instead of presenting missing details as zero.
 

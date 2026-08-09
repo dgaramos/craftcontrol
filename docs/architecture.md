@@ -85,6 +85,12 @@ Rules:
 7. Browser code consumes the public API and does not duplicate security-critical validation.
 8. Telemetry is always an optional enhancement; snapshots are authoritative and incremental events provide low-latency updates.
 
+The versioned OpenAPI 3.1 document under `packages/contracts/` is the canonical
+business HTTP contract. Its authenticated Swagger interface runs inside the
+backend boundary, uses same-origin session cookies, and sends the session-bound
+CSRF token for unsafe operations. The route inventory remains an independent
+migration guard until the two deployment units are complete.
+
 ## Dependency injection
 
 Dependency injection uses constructor parameters and a manual **composition root**. Python `typing.Protocol` defines only meaningful ports: external infrastructure, persistence contracts, and event publication. Concrete services do not receive redundant `IService` interfaces solely for symmetry.

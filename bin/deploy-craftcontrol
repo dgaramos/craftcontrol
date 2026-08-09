@@ -97,6 +97,10 @@ curl --fail --silent --show-error http://127.0.0.1:8082/ | grep -q 'CraftControl
 curl --fail --silent --show-error http://127.0.0.1:8082/static/app.js | grep -q 'const state'
 [[ "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8082/api/auth/me)" == "401" ]] \
   || fail "anonymous authentication canary did not return 401"
+[[ "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8082/api/docs)" == "401" ]] \
+  || fail "anonymous API documentation canary did not return 401"
+compose exec -T craftcontrol python -c \
+  'from pathlib import Path; from swagger_ui_bundle import swagger_ui_path; assert (Path(swagger_ui_path) / "swagger-ui.css").is_file()'
 compose exec -T craftcontrol craftcontrol backup list >/dev/null
 [[ "$(docker inspect --format '{{.State.Health.Status}}' minecraft-bedrock)" == "healthy" ]] \
   || fail "Bedrock is not healthy"

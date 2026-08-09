@@ -19,10 +19,12 @@ and coordinated backups. Root entry points and package links remain temporary
 compatibility facades. Only the future backend service may receive persistent
 or privileged mounts.
 
-`packages/contracts/http-surface.json` freezes the methods and paths at the
-start of the migration. Tests compare that inventory with Flask's real URL map
-and ensure browser calls remain within `/api`. It is a characterization
-manifest, not yet the final OpenAPI description.
+`packages/contracts/openapi.json` is the canonical OpenAPI 3.1 description of
+the business API. The authenticated `/api/docs` interface serves a bundled
+Swagger UI from the backend and reuses the active session and CSRF protections.
+`packages/contracts/http-surface.json` remains a route-level characterization
+guard: tests compare it with Flask's real URL map, ensure browser calls remain
+within `/api`, and require the documented business methods to stay aligned.
 
 ## Compatibility requirements
 
@@ -51,6 +53,7 @@ Bedrock canaries. `--check` performs the non-mutating preflight only.
 1. Freeze the current HTTP surface and document ownership.
 2. Extract the static frontend while Flask compatibility serving remains.
 3. Extract the Python backend behind the same-origin frontend proxy.
-4. Replace the characterization manifest with versioned OpenAPI and generated
-   frontend types.
+4. Publish versioned OpenAPI and authenticated Swagger documentation while
+   retaining the characterization manifest as a migration guard. Generate
+   frontend types when the browser build boundary is introduced.
 5. Build, deploy, health-check, and roll back both images independently.

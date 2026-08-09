@@ -320,6 +320,13 @@ manager database as part of an application update.
 
 ## API
 
+The authenticated OpenAPI 3.1 contract is available at `/api/openapi.json`,
+with an interactive Swagger UI at `/api/docs`. Both use the same local session
+as the panel. Swagger automatically attaches the session CSRF token to unsafe
+"Try it out" requests; it does not bypass capability checks. The contract is
+the canonical description of the business API, while
+`packages/contracts/http-surface.json` remains a route-level migration guard.
+
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
 | `GET` | `/api/status` | Bedrock container status |

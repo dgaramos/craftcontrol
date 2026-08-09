@@ -146,8 +146,19 @@ class CraftControlBrandTest(unittest.TestCase):
         nginx = (FRONTEND / "nginx.conf").read_text()
         self.assertIn('fetch("/version.json", { cache: "no-store" })', script)
         self.assertIn("UI v", script)
-        self.assertIn("CRAFTCONTROL_FRONTEND_VERSION=0.1.1", dockerfile)
+        self.assertIn("CRAFTCONTROL_FRONTEND_VERSION=0.1.2", dockerfile)
         self.assertIn("/version.json", nginx)
+
+    def test_frontend_core_owns_shared_state_and_dom_primitives(self) -> None:
+        script = (FRONTEND / "static" / "app.js").read_text()
+        state_module = (FRONTEND / "static" / "js" / "core" / "state.js").read_text()
+        dom_module = (FRONTEND / "static" / "js" / "core" / "dom.js").read_text()
+        self.assertIn('from "./js/core/state.js?v=1"', script)
+        self.assertIn('from "./js/core/dom.js?v=1"', script)
+        self.assertIn("export const state", state_module)
+        self.assertIn("export function escapeHtml", dom_module)
+        self.assertNotIn("const state = {", script)
+        self.assertNotIn("function escapeHtml", script)
 
     def test_interface_uses_custom_icons_and_bilingual_block_labels(self) -> None:
         script = (FRONTEND / "static" / "app.js").read_text()
@@ -185,9 +196,10 @@ class CraftControlBrandTest(unittest.TestCase):
 
     def test_analytics_has_dedicated_bilingual_mobile_workspace(self) -> None:
         script = (FRONTEND / "static" / "app.js").read_text()
+        state_module = (FRONTEND / "static" / "js" / "core" / "state.js").read_text()
         stylesheet = (FRONTEND / "static" / "analytics.css").read_text()
         template = (FRONTEND / "templates" / "index.html").read_text()
-        self.assertIn('tabs: ["home", "world", "players", "analytics"', script)
+        self.assertIn('tabs: ["home", "world", "players", "analytics"', state_module)
         self.assertIn("Atividade do servidor", script)
         self.assertIn("Server activity", script)
         self.assertIn('["deaths", "deaths", "deathsView"]', script)

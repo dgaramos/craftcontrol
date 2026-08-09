@@ -62,7 +62,10 @@ docker run -d --rm \
 wait_healthy "$BACKEND_CONTAINER"
 wait_healthy "$FRONTEND_CONTAINER"
 docker exec "$FRONTEND_CONTAINER" wget -q -O - http://127.0.0.1:8080/ | grep -q '<title>CraftControl'
-docker exec "$FRONTEND_CONTAINER" wget -q -O - http://127.0.0.1:8080/static/app.js | grep -q 'const state'
+app_script="$(docker exec "$FRONTEND_CONTAINER" wget -q -O - http://127.0.0.1:8080/static/app.js)"
+grep -q 'import { state } from "./js/core/state.js?v=1"' <<<"$app_script"
+state_module="$(docker exec "$FRONTEND_CONTAINER" wget -q -O - http://127.0.0.1:8080/static/js/core/state.js)"
+grep -q 'export const state' <<<"$state_module"
 docker exec "$FRONTEND_CONTAINER" wget -q -O - http://127.0.0.1:8080/version.json | grep -q "\"version\":\"$CRAFTCONTROL_FRONTEND_VERSION\""
 [[ "$(docker exec "$FRONTEND_CONTAINER" wget -q -O - http://127.0.0.1:8080/api/health)" == '{"ok":true}' ]]
 docker exec "$FRONTEND_CONTAINER" wget -q -O - http://127.0.0.1:8080/api/auth/me | grep -q 'Local administrator'

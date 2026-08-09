@@ -1,15 +1,9 @@
 import { api } from "./js/api.js?v=1";
 import { connectEventStream } from "./js/events.js";
 import { requireSession } from "./js/auth.js?v=4";
+import { state } from "./js/core/state.js?v=1";
+import { $, escapeHtml } from "./js/core/dom.js?v=1";
 
-const state = {
-  schema: null, config: {}, gamerules: {}, players: [], online: 0, maxPlayers: 0,
-  changes: {}, tab: "home", tabs: ["home", "world", "players", "analytics", "rules", "server"], status: null, updatedAt: 0, domains: {},
-  analytics: { kind: "all", player: "", source: "all", search: "", days: 0, page: 1, rankingCategory: "activity", rankingMetric: "play_time", blocksMode: "mining", selectedOre: "diamond", combatMetric: "mob_kills", explorationMetric: "distance", periodDays: 30, periodMetric: "play_seconds" },
-  locale: ["pt", "en", "es"].includes(localStorage.getItem("craftcontrol-locale") || localStorage.getItem("manager-locale")) ? (localStorage.getItem("craftcontrol-locale") || localStorage.getItem("manager-locale")) : "pt",
-  user: null, frontendVersion: null,
-};
-const $ = (selector) => document.querySelector(selector);
 const content = $("#content");
 
 if ("scrollRestoration" in window.history) window.history.scrollRestoration = "manual";
@@ -222,12 +216,6 @@ function localized(pt, en, es = en) { return state.locale === "pt" ? pt : state.
 function can(capability) {
   const capabilities = state.user?.capabilities || [];
   return capabilities.includes("*") || capabilities.includes(capability);
-}
-
-function escapeHtml(value) {
-  return String(value ?? "").replace(/[&<>'"]/g, (character) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;",
-  })[character]);
 }
 
 function fieldLabel(definition) {

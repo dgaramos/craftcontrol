@@ -33,4 +33,5 @@
   <symbol id="ui-flag-br" viewBox="0 0 24 24"><path fill="#1c281f" d="M1 4h22v16H1z"/><path fill="#239447" d="M2 5h20v14H2z"/><path fill="#f6d44a" d="m12 7 8 5-8 5-8-5z"/><path fill="#315a9b" d="M8 9h8v6H8z"/><path fill="#e8eee8" d="M8 11h8v2H8z"/></symbol>
   <symbol id="ui-flag-us" viewBox="0 0 24 24"><path fill="#1c281f" d="M1 4h22v16H1z"/><path fill="#f2eee3" d="M2 5h20v14H2z"/><path fill="#bd3b47" d="M2 5h20v2H2zm0 4h20v2H2zm0 4h20v2H2zm0 4h20v2H2z"/><path fill="#355796" d="M2 5h9v8H2z"/><path fill="#f2eee3" d="M4 7h2v2H4zm4 0h2v2H8zm-2 3h2v2H6z"/></symbol>
   <symbol id="ui-flag-es" viewBox="0 0 24 24"><path fill="#1c281f" d="M1 4h22v16H1z"/><path fill="#aa2835" d="M2 5h20v14H2z"/><path fill="#f4cb45" d="M2 8h20v8H2z"/><path fill="#b33b35" d="M7 10h3v4H7z"/><path fill="#f7e8b2" d="M8 11h1v2H8z"/></symbol>
+  <symbol id="ui-eye" viewBox="0 0 24 24"><path fill="#26332c" d="M1 9 6 4h12l5 5v6l-5 5H6l-5-5z"/><path fill="#9cc58a" d="m3 10 4-4h10l4 4v4l-4 4H7l-4-4z"/><path fill="#dcebd4" d="M8 7h8v10H8z"/><path fill="#315d45" d="M10 9h5v6h-5z"/><path fill="#101a14" d="M12 10h3v4h-3z"/><path fill="#fff" d="M10 8h2v2h-2z"/></symbol>
 </svg>

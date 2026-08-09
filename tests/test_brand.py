@@ -69,6 +69,19 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn('./js/api.js?v=1', app_script)
         self.assertIn('./api.js?v=1', auth_script)
 
+    def test_authentication_can_reveal_passwords_accessibly(self) -> None:
+        auth_script = (FRONTEND / "static" / "js" / "auth.js").read_text()
+        stylesheet = (FRONTEND / "static" / "auth.css").read_text()
+        ui_root = element_tree.parse(FRONTEND / "static" / "craftcontrol-ui.svg").getroot()
+        symbols = {node.attrib.get("id") for node in ui_root.iter() if node.tag.endswith("symbol")}
+        self.assertIn("password-toggle", auth_script)
+        self.assertIn("aria-pressed", auth_script)
+        self.assertIn('showPassword: "Mostrar senha"', auth_script)
+        self.assertIn('showPassword: "Show password"', auth_script)
+        self.assertIn('showPassword: "Mostrar contraseña"', auth_script)
+        self.assertIn(".password-toggle", stylesheet)
+        self.assertIn("ui-eye", symbols)
+
     def test_player_timeline_separates_action_from_localized_timestamp(self) -> None:
         script = (FRONTEND / "static" / "app.js").read_text()
         stylesheet = (FRONTEND / "static" / "players.css").read_text()

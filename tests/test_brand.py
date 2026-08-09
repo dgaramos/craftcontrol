@@ -84,10 +84,11 @@ class CraftControlBrandTest(unittest.TestCase):
 
     def test_player_timeline_separates_action_from_localized_timestamp(self) -> None:
         script = (FRONTEND / "static" / "app.js").read_text()
+        time_component = (FRONTEND / "static" / "js" / "components" / "time.js").read_text()
         stylesheet = (FRONTEND / "static" / "players.css").read_text()
         self.assertIn('class="timeline-action"', script)
-        self.assertIn('class="timeline-timestamp"', script)
-        self.assertIn('month: "short"', script)
+        self.assertIn('class="timeline-timestamp"', time_component)
+        self.assertIn('month: "short"', time_component)
         self.assertIn(".timeline-timestamp", stylesheet)
 
     def test_deaths_localize_game_terms_and_separate_source_from_timestamp(self) -> None:
@@ -146,7 +147,7 @@ class CraftControlBrandTest(unittest.TestCase):
         nginx = (FRONTEND / "nginx.conf").read_text()
         self.assertIn('fetch("/version.json", { cache: "no-store" })', script)
         self.assertIn("UI v", script)
-        self.assertIn("CRAFTCONTROL_FRONTEND_VERSION=0.1.2", dockerfile)
+        self.assertIn("CRAFTCONTROL_FRONTEND_VERSION=0.1.3", dockerfile)
         self.assertIn("/version.json", nginx)
 
     def test_frontend_core_owns_shared_state_and_dom_primitives(self) -> None:
@@ -159,6 +160,18 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn("export function escapeHtml", dom_module)
         self.assertNotIn("const state = {", script)
         self.assertNotIn("function escapeHtml", script)
+
+    def test_frontend_components_own_feedback_and_time_primitives(self) -> None:
+        script = (FRONTEND / "static" / "app.js").read_text()
+        feedback = (FRONTEND / "static" / "js" / "components" / "feedback.js").read_text()
+        time = (FRONTEND / "static" / "js" / "components" / "time.js").read_text()
+        self.assertIn('from "./js/components/feedback.js?v=1"', script)
+        self.assertIn('from "./js/components/time.js?v=1"', script)
+        self.assertIn("export function toast", feedback)
+        self.assertIn("export function timelineTimestamp", time)
+        self.assertIn("export function formatDuration", time)
+        self.assertNotIn("function toast", script)
+        self.assertNotIn("function formatDuration", script)
 
     def test_interface_uses_custom_icons_and_bilingual_block_labels(self) -> None:
         script = (FRONTEND / "static" / "app.js").read_text()

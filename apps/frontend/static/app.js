@@ -3,6 +3,8 @@ import { connectEventStream } from "./js/events.js";
 import { requireSession } from "./js/auth.js?v=4";
 import { state } from "./js/core/state.js?v=1";
 import { $, escapeHtml } from "./js/core/dom.js?v=1";
+import { toast } from "./js/components/feedback.js?v=1";
+import { formatDate as formatLocalizedDate, formatDuration, sessionMoment as localizedSessionMoment, timelineTimestamp as localizedTimelineTimestamp } from "./js/components/time.js?v=1";
 
 const content = $("#content");
 
@@ -242,14 +244,6 @@ const destinationGroups = {
 
 function optionLabel(option) {
   return optionNames[option]?.[state.locale] || option;
-}
-
-function toast(message, error = false) {
-  const element = $("#toast");
-  element.textContent = message;
-  element.style.background = error ? "#ffd2cf" : "#eef8ee";
-  element.classList.add("show");
-  setTimeout(() => element.classList.remove("show"), 2600);
 }
 
 function booleanControl(id, value) {
@@ -590,23 +584,11 @@ function bindPlayerAccess(profile, account) {
 }
 
 function formatDate(timestamp) {
-  if (!timestamp) return "—";
-  return new Date(timestamp * 1000).toLocaleString(localeTag(), { dateStyle: "short", timeStyle: "short" });
+  return formatLocalizedDate(timestamp, localeTag());
 }
 
 function timelineTimestamp(timestamp) {
-  if (!timestamp) return `<time class="timeline-timestamp"><span>—</span></time>`;
-  const value = new Date(timestamp * 1000);
-  const locale = localeTag();
-  const date = value.toLocaleDateString(locale, { day: "2-digit", month: "short", year: "numeric" });
-  const time = value.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
-  return `<time class="timeline-timestamp" datetime="${value.toISOString()}"><span>${escapeHtml(date)}</span><b>${escapeHtml(time)}</b></time>`;
-}
-
-function formatDuration(seconds) {
-  const minutes = Math.floor((seconds || 0) / 60);
-  const hours = Math.floor(minutes / 60);
-  return hours ? `${hours}h ${minutes % 60}m` : `${minutes}m`;
+  return localizedTimelineTimestamp(timestamp, localeTag());
 }
 
 function historyMarkup(events) {
@@ -629,12 +611,7 @@ function historyMarkup(events) {
 }
 
 function sessionMoment(timestamp) {
-  if (!timestamp) return "—";
-  const value = new Date(timestamp * 1000);
-  const locale = localeTag();
-  const date = value.toLocaleDateString(locale, { day: "2-digit", month: "short", year: "numeric" });
-  const time = value.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
-  return `<time datetime="${value.toISOString()}"><span>${escapeHtml(date)}</span><b>${escapeHtml(time)}</b></time>`;
+  return localizedSessionMoment(timestamp, localeTag());
 }
 
 function sessionsMarkup(sessions) {

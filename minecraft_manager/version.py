@@ -4,5 +4,5 @@ import os
 import time
 
 
-VERSION = os.environ.get("CRAFTCONTROL_VERSION", "0.2.4")
+VERSION = os.environ.get("CRAFTCONTROL_VERSION", "0.2.5")
 STARTED_AT = time.time()

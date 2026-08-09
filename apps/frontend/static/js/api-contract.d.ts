@@ -1,0 +1,38 @@
+// Generated from packages/contracts/openapi.json.
+// Do not edit by hand; run: python packages/contracts/generate_types.py --write
+export const contractVersion: "1.1.0";
+
+export type Error = { error: string; capability?: string; };
+export type User = { id: string; name: string; role: "viewer" | "operator" | "owner"; capabilities: Array<string>; };
+export type Session = { user: User; csrf_token?: string; };
+export type LoginRequest = { player: string; password: string; };
+export type ClaimRequest = { player: string; token: string; password: string; };
+export type Health = { ok: true; };
+export type JsonMap = { [key: string]: unknown; };
+export type NullableTimestamp = number | null;
+export type SchemaDocument = { settings: { [key: string]: { [key: string]: unknown; }; }; gamerules: { [key: string]: { [key: string]: unknown; }; }; };
+export type StateSnapshot = { settings: JsonMap; gamerules: JsonMap; players: JsonMap; server: JsonMap; domains: JsonMap; telemetry: JsonMap; refreshing: boolean; };
+export type ServerStatus = { container: string; state: string; online: boolean; };
+export type RefreshAccepted = { ok: true; refreshing: true; };
+export type PlayerReference = { id: string; name: string; };
+export type PlayerSummary = { id: string; name: string; online: boolean; sessions_count: number; total_play_seconds: number; deaths_count: number; permission: string; operator: boolean; telemetry?: JsonMap; telemetry_updated_at?: NullableTimestamp; };
+export type PlayerList = { players: Array<PlayerSummary>; };
+export type PlayerProfile = PlayerSummary & { aliases: Array<string>; history: Array<HistoryEvent>; sessions: Array<PlayerSession>; };
+export type HistoryEvent = { id: number; topic: string; timestamp: number; source: string; payload: JsonMap; };
+export type PlayerSession = { id: number; connected_at: number; disconnected_at?: NullableTimestamp; duration_seconds: number; close_reason?: string | null; inferred: boolean; active: boolean; };
+export type ActivityEvent = { id: number; topic: string; timestamp: number; source: string; player: PlayerReference; details: JsonMap; };
+export type ActivityPage = { events: Array<ActivityEvent>; page: number; page_size: number; total: number; pages: number; summary: JsonMap; };
+export type LifetimeAnalytics = { period: "lifetime"; generated_at?: number; totals?: JsonMap; metrics?: JsonMap; players?: Array<{ [key: string]: unknown; }>; };
+export type PeriodAnalytics = { period_days: 7 | 30; generated_at?: number; timezone?: string; totals: JsonMap; calendar?: Array<{ [key: string]: unknown; }>; heatmap?: Array<{ [key: string]: unknown; }>; rankings?: JsonMap; players?: Array<{ [key: string]: unknown; }>; };
+export type ConfigUpdateResult = { ok: true; restart_required: boolean; changed: Array<string>; };
+export type AccessEntry = { id: string; name: string; role?: string | null; status: string; updated_at?: NullableTimestamp; active_sessions: number; };
+export type AccessList = { players: Array<AccessEntry>; };
+export type InvitationResult = { player: string; role: "viewer" | "operator" | "owner"; token: string; expires_in: number; };
+export type SuspendResult = { ok: true; player: string; status: "suspended"; };
+export type OperatorResult = { ok: true; player: string; operator: boolean; };
+export type ActionResult = { ok: true; action: string; };
+export type GameruleResult = { ok: true; rule: string; value: string; };
+export type TimeActionResult = { ok: true; [key: string]: unknown; };
+export type TelemetryPackBaseStatus = { world: string; source_version: string; installed_version: string | null; enabled_version: string | null; installed: boolean; enabled: boolean; upgrade_available: boolean; legacy_directory: boolean; restart_required: boolean | null; installed_updated_at: NullableTimestamp; };
+export type TelemetryPackStatus = TelemetryPackBaseStatus & { health: string; application: { version: string; started_at: number; }; gap_count: number; missing_events: number; persistence_blocked: boolean; capabilities: JsonMap; };
+export type TelemetryPackActionResult = { changed: boolean; action: "install" | "upgrade" | "disable" | "rollback"; status: TelemetryPackBaseStatus; backup: string | null; restart_required: boolean; };

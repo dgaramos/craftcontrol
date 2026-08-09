@@ -326,6 +326,10 @@ as the panel. Swagger automatically attaches the session CSRF token to unsafe
 "Try it out" requests; it does not bypass capability checks. The contract is
 the canonical description of the business API, while
 `packages/contracts/http-surface.json` remains a route-level migration guard.
+Stable response envelopes are expressed as reusable schemas and generate the
+frontend declarations at `apps/frontend/static/js/api-contract.d.ts`. Regenerate
+them with `python packages/contracts/generate_types.py --write`; the test suite
+and quality gate reject stale declarations.
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |

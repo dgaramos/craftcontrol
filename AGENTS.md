@@ -56,6 +56,7 @@ python -m compileall -q apps/backend/minecraft_manager apps/backend/app.py apps/
 node --check apps/frontend/static/app.js
 node --check apps/frontend/static/js/api.js
 node --check apps/frontend/static/js/events.js
+python packages/contracts/generate_types.py --check
 docker compose config --quiet
 git diff --check
 ```

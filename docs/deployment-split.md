@@ -25,6 +25,10 @@ Swagger UI from the backend and reuses the active session and CSRF protections.
 `packages/contracts/http-surface.json` remains a route-level characterization
 guard: tests compare it with Flask's real URL map, ensure browser calls remain
 within `/api`, and require the documented business methods to stay aligned.
+Stable OpenAPI schemas also generate
+`apps/frontend/static/js/api-contract.d.ts`; a deterministic check prevents the
+browser declarations and backend contract from drifting. Representative Flask
+responses are validated against the same published schemas.
 
 ## Compatibility requirements
 
@@ -54,6 +58,7 @@ Bedrock canaries. `--check` performs the non-mutating preflight only.
 2. Extract the static frontend while Flask compatibility serving remains.
 3. Extract the Python backend behind the same-origin frontend proxy.
 4. Publish versioned OpenAPI and authenticated Swagger documentation while
-   retaining the characterization manifest as a migration guard. Generate
-   frontend types when the browser build boundary is introduced.
-5. Build, deploy, health-check, and roll back both images independently.
+   retaining the characterization manifest as a migration guard.
+5. Generate frontend API declarations and validate representative backend
+   responses against the published schemas.
+6. Build, deploy, health-check, and roll back both images independently.

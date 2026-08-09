@@ -9,5 +9,6 @@ while IFS= read -r source; do
   node --check "$source"
 done < <(rg --files apps/frontend/static -g '*.js' | sort)
 
+node apps/frontend/scripts/check-i18n.mjs
 "$PYTHON" -m unittest tests.test_brand -v
 echo "frontend gate: ok"

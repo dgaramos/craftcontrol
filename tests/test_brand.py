@@ -43,6 +43,21 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn('class="player-server-settings', script)
         self.assertIn("Somente leitura", script)
 
+    def test_player_profile_consolidates_authoritative_individual_analytics(self) -> None:
+        script = (ROOT / "static" / "app.js").read_text()
+        stylesheet = (ROOT / "static" / "players.css").read_text()
+        self.assertIn('class="player-data-workspace"', script)
+        self.assertIn("stats.killsByType", script)
+        self.assertIn("stats.brokenByType", script)
+        self.assertIn("stats.placedByType", script)
+        self.assertIn("stats.dimensions", script)
+        self.assertIn('id="compare-player-data"', script)
+        self.assertIn('state.analytics.player = profile.name', script)
+        self.assertIn('class="player-record-drawer"', script)
+        self.assertIn("permanent aggregates", script)
+        self.assertIn(".player-data-ranking", stylesheet)
+        self.assertIn(".player-record-drawer", stylesheet)
+
     def test_browser_api_attaches_session_bound_csrf_header(self) -> None:
         api_script = (ROOT / "static" / "js" / "api.js").read_text()
         app_script = (ROOT / "static" / "app.js").read_text()

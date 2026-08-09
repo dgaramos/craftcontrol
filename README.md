@@ -209,7 +209,7 @@ CraftControl stores permanent player data in `./data/manager.db`:
 
 XUIDs never appear in public API responses or the interface. Disconnecting a player closes the session and marks the profile offline; it never deletes the profile.
 
-The Players workspace uses a compact roster so presence, Minecraft permission, and CraftControl access remain visibly distinct. Selecting a player opens a dedicated profile with telemetry, sessions, deaths, and two independent administration areas: in-game operator status and panel role. Recent sessions distinguish active, normally closed, and inferred closures while separating duration from localized start/end timestamps. The event timeline keeps the action and supporting detail separate from its timestamp, with both views collapsing cleanly on phones. Server-wide player rules live in a separate, always-visible section instead of being hidden in the player cards.
+The Players workspace uses a compact roster so presence, Minecraft permission, and CraftControl access remain visibly distinct. Selecting a player opens a consolidated individual profile: authoritative combat totals and kills by creature, blocks broken and placed by type, exploration by dimension, and headline activity statistics appear before recent evidence and administration. Sessions, detailed deaths, and the technical timeline remain available in collapsible records without being mistaken for complete lifetime totals. In-game operator status and panel role remain independent. Recent sessions distinguish active, normally closed, and inferred closures while separating duration from localized start/end timestamps. Server-wide player rules live in a separate, always-visible section instead of being hidden in the player cards.
 
 ### Death data
 

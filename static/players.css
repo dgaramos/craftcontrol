@@ -125,6 +125,7 @@
 .player-detail-screen { display: grid; gap: 12px; }
 .player-back { justify-self: start; }
 .player-detail-hero { display: flex; align-items: center; gap: 18px; padding: 20px; }
+.player-detail-hero .player-data-link { margin-left: auto; white-space: nowrap; }
 .player-avatar.large { width: 68px; height: 68px; font-size: 1.7rem; }
 .player-detail-hero h2 { margin: 4px 0; font-size: 1.55rem; }
 .player-detail-hero p { margin: 0; color: var(--muted); }
@@ -146,13 +147,48 @@
 .read-only-badge { padding: 7px 9px; color: var(--muted); font-size: .62rem; font-weight: 900; text-transform: uppercase; background: #171b18; border: 1px solid #48564d; }
 .panel-role-field { display: grid; gap: 6px; margin: 12px 0; font-weight: 800; }
 .panel-role-field select { min-height: 46px; padding: 0 10px; color: #fff; background: #0b0f0c; border: 2px solid #48564d; }
-.player-history-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.player-history-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
 .player-history-grid > * { margin: 0; padding: 15px; background: #0b0e0c; border: 2px solid #293029; }
 .player-history-grid .profile-facts { grid-column: 1 / -1; }
 .player-history-grid .death-history { background: #1a0e0e; border-color: #6f2929; }
 .player-history-grid ol { margin: 0; padding: 0; list-style: none; }
 .player-history-grid li { padding: 10px 0; border-bottom: 1px solid #293029; }
 .player-history-grid li:last-child { border: 0; }
+.player-data-workspace { display: grid; gap: 9px; }
+.player-data-heading { display: flex; align-items: end; justify-content: space-between; gap: 16px; padding: 18px; background: linear-gradient(135deg, #0d2226, #151b17); border-color: #315660; }
+.player-data-heading h3 { margin: 5px 0; color: #9be6f2; }
+.player-data-heading p { margin: 0; color: var(--muted); font-size: .74rem; }
+.player-data-heading > small { flex: 0 0 auto; color: #7ed7ff; font-size: .58rem; text-align: right; }
+.player-data-workspace > .telemetry-grid { margin-top: 0; }
+.player-data-workspace .telemetry-grid span { min-height: 58px; align-content: center; padding: 10px 5px; border: 1px solid #29444a; }
+.player-data-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.player-data-panel { min-width: 0; padding: 15px; }
+.player-data-panel-title { display: flex; align-items: center; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid #344038; }
+.player-data-panel-title > span { display: grid; width: 38px; height: 38px; flex: 0 0 auto; place-items: center; color: #82c7d6; font-size: 1.35rem; background: #101a18; border: 1px solid #35535a; }
+.player-data-panel-title .mob-icon { width: 30px; height: 30px; }
+.player-data-panel-title small, .player-data-panel-title h4 { display: block; margin: 0; }
+.player-data-panel-title small { color: #6ca5b1; font-size: .52rem; font-weight: 900; letter-spacing: .08em; }
+.player-data-panel-title h4 { margin-top: 3px; color: var(--text); font-size: .78rem; }
+.player-data-ranking { margin: 8px 0 0; padding: 0; list-style: none; }
+.player-data-ranking li { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: 8px; min-height: 39px; padding: 4px 0; border-bottom: 1px solid #293029; }
+.player-data-ranking li:last-child { border: 0; }
+.player-data-ranking li > b { color: #638f98; text-align: center; }
+.player-data-ranking li > span { overflow: hidden; color: var(--text); font-size: .66rem; text-overflow: ellipsis; text-transform: capitalize; white-space: nowrap; }
+.player-data-ranking .game-term { text-transform: none; }
+.player-data-ranking .game-term .mob-icon { width: 26px; height: 26px; }
+.player-data-ranking li > strong { color: #9be6f2; font-size: .72rem; }
+.player-data-empty { margin: 9px 0 0; padding: 14px; color: var(--muted); font-size: .66rem; text-align: center; background: #0c100d; }
+.player-records-heading h3 { margin: 5px 0; color: var(--grass-light); }
+.player-records-heading p { margin: 0 0 8px; color: var(--muted); font-size: .7rem; line-height: 1.5; }
+.player-record-drawer { margin-top: 8px; background: #090c0a; border: 1px solid #344038; }
+.player-record-drawer > summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px; color: var(--text); font-size: .7rem; font-weight: 900; cursor: pointer; list-style: none; }
+.player-record-drawer > summary::-webkit-details-marker { display: none; }
+.player-record-drawer > summary::before { color: var(--grass-light); content: "›"; font-size: 1.1rem; transition: transform .15s ease; }
+.player-record-drawer[open] > summary::before { transform: rotate(90deg); }
+.player-record-drawer > summary span { flex: 1; }
+.player-record-drawer > summary b { min-width: 28px; padding: 4px 6px; color: #9be6f2; text-align: center; background: #102126; }
+.player-record-drawer > section { margin: 0; padding: 0 12px 12px; }
+.player-record-drawer .death-history { margin: 0 12px 12px; }
 .session-list { display: grid; gap: 8px; }
 .player-history-grid .session-item { display: grid; grid-template-columns: minmax(140px, 1fr) auto; gap: 12px 18px; padding: 13px; background: #111612; border: 1px solid #344038; }
 .session-state { display: flex; align-items: center; gap: 10px; min-width: 0; }
@@ -193,6 +229,8 @@
   .player-roster-summary { display: none; }
   .player-admin-grid, .player-history-grid { grid-template-columns: 1fr; }
   .player-detail-stats { grid-template-columns: repeat(2, 1fr); }
+  .player-detail-hero { align-items: flex-start; flex-wrap: wrap; }
+  .player-detail-hero .player-data-link { width: 100%; margin-left: 0; }
   .player-history-grid .profile-facts { grid-column: auto; }
   .event-history .timeline-item { grid-template-columns: 14px minmax(0, 1fr); align-items: start; }
   .timeline-timestamp { grid-column: 2; grid-row: 2; display: flex; min-width: 0; gap: 6px; padding: 0; text-align: left; border: 0; }
@@ -200,4 +238,7 @@
   .player-history-grid .session-item { grid-template-columns: 1fr; }
   .session-duration { padding-left: 19px; text-align: left; }
   .session-period { grid-column: 1; grid-template-columns: 1fr; }
+  .player-data-heading { display: grid; align-items: start; }
+  .player-data-heading > small { text-align: left; }
+  .player-data-grid { grid-template-columns: 1fr; }
 }

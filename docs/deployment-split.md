@@ -36,6 +36,16 @@ manifest, not yet the final OpenAPI description.
 - Preserve the single-service deployment until independent backup, rollback,
   authentication, SSE, and state-preservation canaries pass.
 
+## Guarded deployment
+
+`bin/deploy-craftcontrol` is the only supported production update entrypoint.
+It uses an explicit Compose project directory and file, refuses a dirty or
+non-`main` source checkout, validates the live `/data` and
+`/minecraft-project` mount sources before backup, verifies the coordinated
+backup, synchronizes only tracked files, proves `.env` and SQLite checksums were
+preserved, and exercises frontend, API, anonymous authentication, CLI, and
+Bedrock canaries. `--check` performs the non-mutating preflight only.
+
 ## Phase sequence
 
 1. Freeze the current HTTP surface and document ownership.

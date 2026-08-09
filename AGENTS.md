@@ -62,6 +62,12 @@ git diff --check
 
 Update tests and the English `README.md` whenever public behavior, persistence, recovery rules, configuration, or API contracts change.
 
+## Production deployment
+
+- Deploy only with `bin/deploy-craftcontrol` from a clean, published `main`.
+- Never run a bare `docker compose up` from a development checkout; relative bind mounts can select development state.
+- Run `bin/deploy-craftcontrol --check` before the mutating deployment. The guarded command owns mount validation, coordinated backup and verification, tracked-file synchronization, state checksum checks, rebuild, and production canaries.
+
 ## Git history
 
 - Every commit message must follow Conventional Commits: `type(scope): imperative summary`.

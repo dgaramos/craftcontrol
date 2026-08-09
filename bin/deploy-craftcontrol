@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly EXPECTED_DEPLOY_ROOT="/mnt/storage/docker/craftcontrol"
+SOURCE_ROOT="$(git rev-parse --show-toplevel)"
+DEPLOY_ROOT="${CRAFTCONTROL_DEPLOY_ROOT:-$EXPECTED_DEPLOY_ROOT}"
+CHECK_ONLY=false
+
+if [[ "${1:-}" == "--check" ]]; then
+  CHECK_ONLY=true
+elif [[ $# -gt 0 ]]; then
+  echo "usage: bin/deploy-craftcontrol [--check]" >&2
+  exit 2
+fi
+
+SOURCE_ROOT="$(realpath "$SOURCE_ROOT")"
+DEPLOY_ROOT="$(realpath "$DEPLOY_ROOT")"
+readonly SOURCE_ROOT DEPLOY_ROOT CHECK_ONLY
+readonly COMPOSE_FILE="$DEPLOY_ROOT/docker-compose.yml"
+readonly DATABASE_FILE="$DEPLOY_ROOT/data/manager.db"
+readonly ENV_FILE="$DEPLOY_ROOT/.env"
+readonly BEDROCK_ROOT="$(realpath "$DEPLOY_ROOT/../minecraft-bedrock")"
+
+compose() {
+  docker compose --project-directory "$DEPLOY_ROOT" --file "$COMPOSE_FILE" "$@"
+}
+
+fail() {
+  echo "deploy refused: $*" >&2
+  exit 1
+}
+
+mount_source() {
+  local destination="$1"
+  docker inspect craftcontrol --format '{{range .Mounts}}{{println .Source "|" .Destination}}{{end}}' \
+    | awk -F ' \| ' -v destination="$destination" '$2 == destination {print $1}'
+}
+
+validate_mounts() {
+  [[ "$(mount_source /data)" == "$DEPLOY_ROOT/data" ]] \
+    || fail "craftcontrol /data is not mounted from $DEPLOY_ROOT/data"
+  [[ "$(mount_source /minecraft-project)" == "$BEDROCK_ROOT" ]] \
+    || fail "craftcontrol /minecraft-project is not mounted from $BEDROCK_ROOT"
+}
+
+[[ "$DEPLOY_ROOT" == "$EXPECTED_DEPLOY_ROOT" || -n "${CRAFTCONTROL_DEPLOY_ROOT:-}" ]] \
+  || fail "unexpected deploy root"
+[[ "$SOURCE_ROOT" != "$DEPLOY_ROOT" ]] || fail "source and deploy roots must be different"
+[[ "$(git -C "$SOURCE_ROOT" branch --show-current)" == "main" ]] || fail "source checkout must be on main"
+[[ -z "$(git -C "$SOURCE_ROOT" status --porcelain)" ]] || fail "source checkout is not clean"
+source_revision="$(git -C "$SOURCE_ROOT" rev-parse HEAD)"
+for remote in github origin; do
+  git -C "$SOURCE_ROOT" remote get-url "$remote" >/dev/null 2>&1 || fail "missing $remote remote"
+  [[ "$(git -C "$SOURCE_ROOT" ls-remote "$remote" refs/heads/main | awk '{print $1}')" == "$source_revision" ]] \
+    || fail "$remote/main does not match the source revision"
+done
+[[ -f "$COMPOSE_FILE" ]] || fail "missing production Compose file"
+[[ -f "$ENV_FILE" ]] || fail "missing production .env"
+[[ -f "$DATABASE_FILE" ]] || fail "missing production database"
+[[ -d "$BEDROCK_ROOT/data/worlds" ]] || fail "missing production Bedrock worlds"
+compose config --quiet
+validate_mounts
+
+if $CHECK_ONLY; then
+  echo "deploy preflight: ok"
+  exit 0
+fi
+
+before_env="$(sha256sum "$ENV_FILE" | awk '{print $1}')"
+before_database="$(sha256sum "$DATABASE_FILE" | awk '{print $1}')"
+backup_output="$(compose exec -T craftcontrol craftcontrol backup create)"
+backup_id="$(python -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<<"$backup_output")"
+compose exec -T craftcontrol craftcontrol backup verify "$backup_id" >/dev/null
+
+git -C "$SOURCE_ROOT" ls-files -z \
+  | rsync -a --from0 --exclude=/minecraft_manager --exclude=/requirements.txt \
+      --files-from=- "$SOURCE_ROOT/" "$DEPLOY_ROOT/"
+
+[[ "$(sha256sum "$ENV_FILE" | awk '{print $1}')" == "$before_env" ]] \
+  || fail ".env changed during synchronization"
+[[ "$(sha256sum "$DATABASE_FILE" | awk '{print $1}')" == "$before_database" ]] \
+  || fail "database changed during synchronization"
+
+compose config --quiet
+compose up -d --build
+
+for _ in $(seq 1 30); do
+  [[ "$(docker inspect --format '{{.State.Health.Status}}' craftcontrol 2>/dev/null || true)" == "healthy" ]] && break
+  sleep 2
+done
+[[ "$(docker inspect --format '{{.State.Health.Status}}' craftcontrol)" == "healthy" ]] \
+  || fail "CraftControl did not become healthy"
+
+validate_mounts
+curl --fail --silent --show-error http://127.0.0.1:8082/api/health >/dev/null
+curl --fail --silent --show-error http://127.0.0.1:8082/ | grep -q 'CraftControl'
+curl --fail --silent --show-error http://127.0.0.1:8082/static/app.js | grep -q 'const state'
+[[ "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8082/api/auth/me)" == "401" ]] \
+  || fail "anonymous authentication canary did not return 401"
+compose exec -T craftcontrol craftcontrol backup list >/dev/null
+[[ "$(docker inspect --format '{{.State.Health.Status}}' minecraft-bedrock)" == "healthy" ]] \
+  || fail "Bedrock is not healthy"
+
+echo "deploy complete: backup=$backup_id"

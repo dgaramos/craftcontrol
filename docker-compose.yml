@@ -30,8 +30,8 @@ services:
       - ./apps/backend/app.py:/app/app.py:ro
       - ./apps/backend/wsgi.py:/app/wsgi.py:ro
       - ./apps/backend/minecraft_manager:/app/minecraft_manager:ro
-      - ./static:/app/static:ro
-      - ./templates:/app/templates:ro
+      - ./apps/frontend/static:/app/apps/frontend/static:ro
+      - ./apps/frontend/templates:/app/apps/frontend/templates:ro
       - ./packs:/app/packs:ro
     security_opt:
       - no-new-privileges:true

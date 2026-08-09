@@ -301,14 +301,22 @@ Telemetry envelopes used for recovery and diagnostics are retained in SQLite wit
 
 ## Updating
 
-For an in-place Git checkout:
+Production deployments must use the guarded workflow from a clean `main`
+checkout. It anchors every Compose operation to the production project,
+verifies the live data and Bedrock mounts before creating a coordinated backup,
+preserves `.env` and SQLite checksums during synchronization, and runs health,
+frontend, authentication, CLI, and Bedrock canaries:
 
 ```bash
-git pull --ff-only
-docker compose up -d --build
+bin/deploy-craftcontrol --check
+bin/deploy-craftcontrol
 ```
 
-When development and deployment use separate directories, copy the source while preserving `.env` and `data/`, then rebuild. Never overwrite the world or manager database as part of an application update.
+The default production root is `/mnt/storage/docker/craftcontrol`. An explicit
+`CRAFTCONTROL_DEPLOY_ROOT` may be used for an equivalent installation. Never
+run a bare `docker compose up` from the development checkout: relative bind
+mounts would point at development data. Never overwrite the world, `.env`, or
+manager database as part of an application update.
 
 ## API
 

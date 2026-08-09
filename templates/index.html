@@ -8,9 +8,9 @@
     <title>CraftControl · Bedrock control center</title>
     <link rel="icon" href="/static/craftcontrol-mark.svg" type="image/svg+xml">
     <link rel="manifest" href="/static/site.webmanifest">
-    <link rel="stylesheet" href="/static/app.css?v=22">
-    <link rel="stylesheet" href="/static/players.css?v=24">
-    <link rel="stylesheet" href="/static/analytics.css?v=9">
+    <link rel="stylesheet" href="/static/app.css?v=23">
+    <link rel="stylesheet" href="/static/players.css?v=25">
+    <link rel="stylesheet" href="/static/analytics.css?v=10">
     <link rel="stylesheet" href="/static/auth.css?v=1">
   </head>
   <body>
@@ -23,7 +23,7 @@
       <div class="top-actions">
         <div id="identity" hidden></div>
         <button id="language" class="language-button" type="button" aria-label="Switch language">EN</button>
-        <button id="refresh" class="icon-button" title="Atualizar estado"><b aria-hidden="true">↻</b><span data-i18n="refresh">Atualizar</span></button>
+        <button id="refresh" class="icon-button" title="Atualizar estado"><b><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-refresh"></use></svg></b><span data-i18n="refresh">Atualizar</span></button>
       </div>
     </header>
 
@@ -34,16 +34,16 @@
         <div class="grass-edge" aria-hidden="true"></div>
         <div class="overview-grid">
           <div class="overview-item server-overview">
-            <div class="shield" aria-hidden="true">✓</div>
+            <div class="shield"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-shield"></use></svg></div>
             <div><span class="eyebrow" data-i18n="worldState">ESTADO DO MUNDO</span><h2 id="server-state-title">Consultando servidor</h2></div>
           </div>
           <button id="open-players" class="overview-item players-card" type="button" aria-label="Abrir jogadores e históricos">
-            <div class="player-count"><span class="pixel-icon" aria-hidden="true">♟</span><strong id="players-summary">0 jogadores online</strong></div>
+            <div class="player-count"><span class="pixel-icon"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-players"></use></svg></span><strong id="players-summary">0 jogadores online</strong></div>
             <div id="players-list">Ninguém conectado</div>
             <small id="updated-at">Aguardando atualização</small>
             <span class="players-card-arrow" aria-hidden="true">›</span>
           </button>
-          <button id="time-controls" class="overview-item time-launch" type="button"><span aria-hidden="true">☀</span><b data-i18n="timeControls">Tempo e clima</b><small data-i18n="timeControlsHint">Horário, ciclos e clima</small></button>
+          <button id="time-controls" class="overview-item time-launch" type="button"><span><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-sun"></use></svg></span><b data-i18n="timeControls">Tempo e clima</b><small data-i18n="timeControlsHint">Horário, ciclos e clima</small></button>
         </div>
       </section>
 
@@ -52,24 +52,24 @@
 
     <div id="toast" role="status"></div>
     <footer>
-      <button id="server-menu" class="secondary"><span aria-hidden="true">⚙</span><b data-i18n="server">Servidor</b></button>
-      <button id="save" class="primary" hidden><span aria-hidden="true">▣</span><b id="save-label">Revisar alterações</b></button>
+      <button id="server-menu" class="secondary"><span><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-server"></use></svg></span><b data-i18n="server">Servidor</b></button>
+      <button id="save" class="primary" hidden><span><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-save"></use></svg></span><b id="save-label">Revisar alterações</b></button>
     </footer>
 
     <dialog id="changes-drawer" class="drawer">
       <div class="drawer-handle" aria-hidden="true"></div>
-      <div class="drawer-header"><div><span class="eyebrow" data-i18n="pendingChanges">ALTERAÇÕES PENDENTES</span><h2 data-i18n="reviewChanges">Revisar alterações</h2></div><button id="close-changes" class="drawer-close" type="button" aria-label="Fechar">×</button></div>
+      <div class="drawer-header"><div><span class="eyebrow" data-i18n="pendingChanges">ALTERAÇÕES PENDENTES</span><h2 data-i18n="reviewChanges">Revisar alterações</h2></div><button id="close-changes" class="drawer-close" type="button" aria-label="Fechar"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-close"></use></svg></button></div>
       <p data-i18n="pendingHelp">Estas configurações serão salvas e o servidor será reiniciado somente quando você aplicar.</p>
       <div id="changes-list" class="changes-list"></div>
       <div class="drawer-actions"><button id="discard-all" class="secondary" data-i18n="discardAll">Descartar todas</button><button id="apply-changes" class="primary" data-i18n="applyChanges">Aplicar alterações</button></div>
     </dialog>
 
     <dialog id="server-dialog">
-      <div class="dialog-title"><span aria-hidden="true">⚙</span><div><span class="eyebrow" data-i18n="control">CONTROLE</span><h2 data-i18n="serverOperation">Operação do servidor</h2></div></div>
+      <div class="dialog-title"><span><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-server"></use></svg></span><div><span class="eyebrow" data-i18n="control">CONTROLE</span><h2 data-i18n="serverOperation">Operação do servidor</h2></div></div>
       <p data-i18n="restartNotice">Alterações persistentes entram em vigor ao aplicar e reiniciar.</p>
       <div class="dialog-actions"><button data-server="start" data-i18n="start">Iniciar</button><button data-server="restart" data-i18n="restart">Reiniciar</button><button data-server="stop" class="danger" data-i18n="stop">Parar</button></div>
       <button id="close-dialog" class="secondary wide" data-i18n="close">Fechar</button>
     </dialog>
-    <script type="module" src="/static/app.js?v=40"></script>
+    <script type="module" src="/static/app.js?v=41"></script>
   </body>
 </html>

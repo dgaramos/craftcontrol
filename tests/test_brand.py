@@ -1,4 +1,5 @@
 import json
+import re
 import unittest
 import xml.etree.ElementTree as element_tree
 from pathlib import Path
@@ -97,6 +98,35 @@ class CraftControlBrandTest(unittest.TestCase):
         }
         self.assertTrue(expected.issubset(symbols))
 
+    def test_custom_ui_and_block_sprites_cover_core_interface_semantics(self) -> None:
+        ui_root = element_tree.parse(ROOT / "static" / "craftcontrol-ui.svg").getroot()
+        block_root = element_tree.parse(ROOT / "static" / "craftcontrol-blocks.svg").getroot()
+        ui_symbols = {node.attrib.get("id") for node in ui_root.iter() if node.tag.endswith("symbol")}
+        block_symbols = {node.attrib.get("id") for node in block_root.iter() if node.tag.endswith("symbol")}
+        self.assertTrue({
+            "ui-home", "ui-world", "ui-players", "ui-data", "ui-rules", "ui-server",
+            "ui-refresh", "ui-save", "ui-warning", "ui-activity", "ui-deaths",
+            "ui-rankings", "ui-blocks", "ui-combat", "ui-exploration", "ui-periods",
+        }.issubset(ui_symbols))
+        self.assertTrue({
+            "block-unknown", "block-stone", "block-deepslate", "block-dirt", "block-grass",
+            "block-log", "block-planks", "block-diamond", "block-iron", "block-gold",
+            "block-redstone", "block-lapis", "block-emerald", "block-ancient-debris",
+        }.issubset(block_symbols))
+
+    def test_interface_uses_custom_icons_and_bilingual_block_labels(self) -> None:
+        script = (ROOT / "static" / "app.js").read_text()
+        template = (ROOT / "templates" / "index.html").read_text()
+        self.assertIn('stone: ["Pedra", "Stone"]', script)
+        self.assertIn('diamond_ore: ["Minério de diamante", "Diamond ore"]', script)
+        self.assertIn("function blockTermMarkup", script)
+        self.assertIn("/static/craftcontrol-blocks.svg#block-", script)
+        self.assertIn("/static/craftcontrol-ui.svg#ui-", script)
+        self.assertIn("craftcontrol-ui.svg#ui-refresh", template)
+        legacy_icons = re.compile(r"[☀☠⚔♛♟⚙◆◇◈▦▥▤☷⌂⌛♥▶↝➶✦✓↻⛏⚡⚠]")
+        self.assertIsNone(legacy_icons.search(script))
+        self.assertIsNone(legacy_icons.search(template))
+
     def test_recent_sessions_have_distinct_state_duration_and_period_layout(self) -> None:
         script = (ROOT / "static" / "app.js").read_text()
         stylesheet = (ROOT / "static" / "players.css").read_text()
@@ -113,7 +143,7 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn('tabs: ["home", "world", "players", "analytics"', script)
         self.assertIn("Atividade do servidor", script)
         self.assertIn("Server activity", script)
-        self.assertIn('data-analytics-view="deaths"', script)
+        self.assertIn('["deaths", "deaths", "deathsView"]', script)
         self.assertIn("@media (max-width: 480px)", stylesheet)
         self.assertIn("analytics.css", template)
         self.assertIn('data-analytics-player=', script)
@@ -122,12 +152,12 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn('class="ranking-podium', script)
         self.assertIn("rankingsTitle", script)
         self.assertIn(".podium-place.rank-1", stylesheet)
-        self.assertIn('data-analytics-view="combat"', script)
+        self.assertIn('["combat", "combat", "combatView"]', script)
         self.assertIn("combatEmptyHelp", script)
         self.assertIn(".combat-zero", stylesheet)
-        self.assertIn('data-analytics-view="exploration"', script)
+        self.assertIn('["exploration", "exploration", "explorationView"]', script)
         self.assertIn("explorationEmptyHelp", script)
         self.assertIn(".exploration-zero", stylesheet)
-        self.assertIn('data-analytics-view="trends"', script)
+        self.assertIn('["trends", "periods", "trendsView"]', script)
         self.assertIn("collectionStarted", script)
         self.assertIn(".heatmap-grid", stylesheet)

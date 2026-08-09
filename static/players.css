@@ -159,6 +159,7 @@
 .player-data-heading h3 { margin: 5px 0; color: #9be6f2; }
 .player-data-heading p { margin: 0; color: var(--muted); font-size: .74rem; }
 .player-data-heading > small { flex: 0 0 auto; color: #7ed7ff; font-size: .58rem; text-align: right; }
+.player-data-heading > small .cc-icon { width: 17px; height: 17px; }
 .player-data-workspace > .telemetry-grid { margin-top: 0; }
 .player-data-workspace .telemetry-grid span { min-height: 58px; align-content: center; padding: 10px 5px; border: 1px solid #29444a; }
 .player-data-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
@@ -176,6 +177,8 @@
 .player-data-ranking li > span { overflow: hidden; color: var(--text); font-size: .66rem; text-overflow: ellipsis; text-transform: capitalize; white-space: nowrap; }
 .player-data-ranking .game-term { text-transform: none; }
 .player-data-ranking .game-term .mob-icon { width: 26px; height: 26px; }
+.player-data-ranking .block-term { overflow: hidden; text-transform: none; }
+.player-data-ranking .block-term .block-icon { width: 27px; height: 27px; }
 .player-data-ranking li > strong { color: #9be6f2; font-size: .72rem; }
 .player-data-empty { margin: 9px 0 0; padding: 14px; color: var(--muted); font-size: .66rem; text-align: center; background: #0c100d; }
 .player-records-heading h3 { margin: 5px 0; color: var(--grass-light); }

@@ -122,7 +122,7 @@ The planned homelab hostname is `craftcontrol.lab.home.arpa`; DNS and reverse-pr
 | `AUTH_MODE` | `local` | Built-in authentication; `disabled` is LAN recovery compatibility only |
 | `AUTH_COOKIE_SECURE` | `true` | Send panel session cookies over HTTPS only |
 | `TZ` | `America/Sao_Paulo` | Container timezone |
-| `CRAFTCONTROL_VERSION` | `0.2.16` | Release tag displayed for the active CraftControl image |
+| `CRAFTCONTROL_VERSION` | `0.2.17` | Release tag displayed for the active CraftControl image |
 | `CRAFTCONTROL_FRONTEND_VERSION` | `0.1.1` | Independently deployable frontend image version |
 | `CRAFTCONTROL_BACKEND_VERSION` | `0.1.0` | Independently deployable backend image version |
 

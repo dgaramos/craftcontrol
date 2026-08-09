@@ -26,6 +26,20 @@ class DeploymentSafetyTest(unittest.TestCase):
         self.assertIn("Content-Type: text/event-stream", canary)
         self.assertIn("X-Accel-Buffering: no", canary)
         self.assertIn("wait_removed", canary)
+        self.assertIn("versions.env", canary)
+        self.assertIn("/version.json", canary)
+
+    def test_frontend_deploy_is_independent_guarded_and_reversible(self) -> None:
+        script = (ROOT / "bin" / "deploy-craftcontrol-frontend").read_text()
+        versions = (ROOT / "versions.env").read_text()
+        self.assertIn("CRAFTCONTROL_FRONTEND_VERSION=0.1.1", versions)
+        self.assertIn("CRAFTCONTROL_BACKEND_VERSION=0.1.0", versions)
+        self.assertIn("split production topology is not active", script)
+        self.assertIn("up -d --no-deps craftcontrol-frontend", script)
+        self.assertIn("--rollback VERSION", script)
+        self.assertIn("backend was recreated", script)
+        self.assertIn("database changed", script)
+        self.assertIn("/version.json", script)
 
     def test_compose_mounts_explicit_application_boundaries(self) -> None:
         compose = (ROOT / "docker-compose.yml").read_text()

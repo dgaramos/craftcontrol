@@ -62,7 +62,10 @@ Bedrock canaries. `--check` performs the non-mutating preflight only.
 5. Generate frontend API declarations and validate representative backend
    responses against the published schemas.
 6. Run frontend, backend, contract, and integration quality gates independently.
-7. Build, deploy, health-check, and roll back both images independently.
+7. Build, deploy, health-check, and roll back both images independently. The
+   frontend half is implemented with a pinned release pair and a guarded
+   frontend-only deploy/rollback command; the backend half and coordinated
+   release command remain before production cutover.
 
 ## Independent quality gates
 
@@ -92,3 +95,23 @@ state, checks the index and static assets, proxies health and authentication,
 verifies unbuffered SSE headers, recreates the backend, and proves the existing
 frontend reconnects through dynamic service discovery. It never mounts the
 production database, world, `.env`, backups, or Docker socket.
+
+## Independent frontend releases
+
+`versions.env` is the reviewed compatibility pair for the two images. The
+frontend exposes the actual image version through an uncacheable
+`/version.json`; the browser displays it independently from the API and pack.
+After the split topology becomes active, use:
+
+```bash
+bin/deploy-craftcontrol-frontend --check
+bin/deploy-craftcontrol-frontend
+bin/deploy-craftcontrol-frontend --rollback 0.1.0
+```
+
+The command requires clean, published `main`, the production split Compose
+file, and both live split containers. It replaces the frontend with
+`--no-deps`, verifies frontend health and same-origin API/auth proxying, and
+asserts that neither the backend container ID nor the SQLite checksum changed.
+It refuses the current compatibility topology so this capability cannot bypass
+the remaining cutover canaries.

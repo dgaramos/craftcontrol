@@ -140,6 +140,15 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn("#identity button > span { display: none; }", auth_stylesheet)
         self.assertIn("#ui-logout", auth_script)
 
+    def test_split_frontend_reports_its_own_release_version(self) -> None:
+        script = (FRONTEND / "static" / "app.js").read_text()
+        dockerfile = (FRONTEND / "Dockerfile").read_text()
+        nginx = (FRONTEND / "nginx.conf").read_text()
+        self.assertIn('fetch("/version.json", { cache: "no-store" })', script)
+        self.assertIn("UI v", script)
+        self.assertIn("CRAFTCONTROL_FRONTEND_VERSION=0.1.1", dockerfile)
+        self.assertIn("/version.json", nginx)
+
     def test_interface_uses_custom_icons_and_bilingual_block_labels(self) -> None:
         script = (FRONTEND / "static" / "app.js").read_text()
         template = (FRONTEND / "templates" / "index.html").read_text()

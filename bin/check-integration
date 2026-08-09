@@ -6,6 +6,7 @@ readonly PYTHON="${PYTHON:-python}"
 cd "$ROOT"
 
 bash -n bin/deploy-craftcontrol
+bash -n bin/deploy-craftcontrol-frontend
 docker compose config --quiet
 docker compose --file docker-compose.split.yml config --quiet
 docker compose --file docker-compose.split.yml build

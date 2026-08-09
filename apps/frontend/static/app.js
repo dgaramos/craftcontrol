@@ -7,7 +7,7 @@ const state = {
   changes: {}, tab: "home", tabs: ["home", "world", "players", "analytics", "rules", "server"], status: null, updatedAt: 0, domains: {},
   analytics: { kind: "all", player: "", source: "all", search: "", days: 0, page: 1, rankingCategory: "activity", rankingMetric: "play_time", blocksMode: "mining", selectedOre: "diamond", combatMetric: "mob_kills", explorationMetric: "distance", periodDays: 30, periodMetric: "play_seconds" },
   locale: ["pt", "en", "es"].includes(localStorage.getItem("craftcontrol-locale") || localStorage.getItem("manager-locale")) ? (localStorage.getItem("craftcontrol-locale") || localStorage.getItem("manager-locale")) : "pt",
-  user: null,
+  user: null, frontendVersion: null,
 };
 const $ = (selector) => document.querySelector(selector);
 const content = $("#content");
@@ -414,7 +414,17 @@ async function loadTelemetryPack() {
 function renderReleaseTags(pack) {
   const target = $("#release-tags");
   if (!target) return;
-  target.innerHTML = `<span title="${escapeHtml(`${t("craftControlImage")} · ${t("activeSince")} ${formatDate(pack.application?.started_at)}`)}">CC v${escapeHtml(pack.application?.version || "—")}</span><span title="${escapeHtml(`${t("packObserved")} · ${t("updated")} ${formatDate(pack.last_response_at)}`)}">PACK v${escapeHtml(pack.runtime_version || pack.installed_version || "—")}</span>`;
+  const frontendTag = state.frontendVersion ? `<span>UI v${escapeHtml(state.frontendVersion)}</span>` : "";
+  target.innerHTML = `${frontendTag}<span title="${escapeHtml(`${t("craftControlImage")} · ${t("activeSince")} ${formatDate(pack.application?.started_at)}`)}">API v${escapeHtml(pack.application?.version || "—")}</span><span title="${escapeHtml(`${t("packObserved")} · ${t("updated")} ${formatDate(pack.last_response_at)}`)}">PACK v${escapeHtml(pack.runtime_version || pack.installed_version || "—")}</span>`;
+}
+
+async function loadFrontendVersion() {
+  try {
+    const response = await fetch("/version.json", { cache: "no-store" });
+    if (!response.ok) return;
+    const release = await response.json();
+    if (release.service === "frontend" && typeof release.version === "string") state.frontendVersion = release.version;
+  } catch (_) { /* The compatibility image has no independent frontend version. */ }
 }
 
 function settingsMarkup(groupNames) {
@@ -1265,7 +1275,7 @@ async function loadState() {
 }
 
 async function boot() {
-  const [schema, snapshot, status, releases] = await Promise.all([api("/api/schema"), api("/api/state"), api("/api/status"), api("/api/telemetry-pack").catch(() => ({}))]);
+  const [schema, snapshot, status, releases] = await Promise.all([api("/api/schema"), api("/api/state"), api("/api/status"), api("/api/telemetry-pack").catch(() => ({})), loadFrontendVersion()]);
   state.schema = schema;
   state.config = snapshot.settings || {};
   state.gamerules = snapshot.gamerules || {};

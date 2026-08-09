@@ -123,6 +123,8 @@ The planned homelab hostname is `craftcontrol.lab.home.arpa`; DNS and reverse-pr
 | `AUTH_COOKIE_SECURE` | `true` | Send panel session cookies over HTTPS only |
 | `TZ` | `America/Sao_Paulo` | Container timezone |
 | `CRAFTCONTROL_VERSION` | `0.2.16` | Release tag displayed for the active CraftControl image |
+| `CRAFTCONTROL_FRONTEND_VERSION` | `0.1.1` | Independently deployable frontend image version |
+| `CRAFTCONTROL_BACKEND_VERSION` | `0.1.0` | Independently deployable backend image version |
 
 The old service name, container name, database filename, Python package, and variables remain supported deliberately. This visual rebrand does not destructively rename persistent paths. Compatibility migrations will be released separately.
 
@@ -430,7 +432,7 @@ the four gates as independent jobs so a failure identifies the owning boundary.
 
 ### Split-image preview
 
-The migration now produces independent `craftcontrol-frontend:0.1.0` and
+The migration now produces independent `craftcontrol-frontend:0.1.1` and
 `craftcontrol-backend:0.1.0` images through `docker-compose.split.yml`. The
 frontend is a read-only Nginx service with no persistent or privileged mounts;
 it owns the browser origin and proxies `/api/*`, including unbuffered SSE, to
@@ -447,6 +449,15 @@ The split Compose file currently publishes the preview on port `18082` to avoid
 colliding with production. It is not yet the supported production deployment;
 continue using `bin/deploy-craftcontrol` until authenticated session/CSRF,
 persistent-state, rollback, and production cutover canaries are complete.
+
+`versions.env` pins the tested frontend/backend release pair. The frontend
+image publishes its running version at `/version.json`, which the interface
+shows separately from the backend and Telemetry Pack versions. Once the split
+topology is promoted, `bin/deploy-craftcontrol-frontend` will build and replace
+only the frontend; `--check` performs its preflight and `--rollback VERSION`
+selects an already available frontend image. The command deliberately refuses
+to run against the current compatibility topology and proves the backend
+container identity and SQLite checksum remain unchanged.
 
 ## Roadmap
 

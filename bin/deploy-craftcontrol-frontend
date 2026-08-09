@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly EXPECTED_DEPLOY_ROOT="/mnt/storage/docker/craftcontrol"
+SOURCE_ROOT="$(realpath "$(git rev-parse --show-toplevel)")"
+DEPLOY_ROOT="$(realpath "${CRAFTCONTROL_DEPLOY_ROOT:-$EXPECTED_DEPLOY_ROOT}")"
+ACTION="deploy"
+ROLLBACK_VERSION=""
+
+if [[ "${1:-}" == "--check" ]]; then
+  ACTION="check"
+elif [[ "${1:-}" == "--rollback" && -n "${2:-}" && $# -eq 2 ]]; then
+  ACTION="rollback"
+  ROLLBACK_VERSION="$2"
+elif [[ $# -gt 0 ]]; then
+  echo "usage: bin/deploy-craftcontrol-frontend [--check | --rollback VERSION]" >&2
+  exit 2
+fi
+
+readonly SOURCE_ROOT DEPLOY_ROOT ACTION ROLLBACK_VERSION
+readonly COMPOSE_FILE="$DEPLOY_ROOT/docker-compose.split.yml"
+readonly DATABASE_FILE="$DEPLOY_ROOT/data/manager.db"
+
+fail() { echo "frontend deploy refused: $*" >&2; exit 1; }
+compose() { docker compose --project-directory "$DEPLOY_ROOT" --file "$COMPOSE_FILE" "$@"; }
+
+[[ "$DEPLOY_ROOT" == "$EXPECTED_DEPLOY_ROOT" || -n "${CRAFTCONTROL_DEPLOY_ROOT:-}" ]] || fail "unexpected deploy root"
+[[ "$SOURCE_ROOT" != "$DEPLOY_ROOT" ]] || fail "source and deploy roots must be different"
+[[ "$(git -C "$SOURCE_ROOT" branch --show-current)" == "main" ]] || fail "source checkout must be on main"
+[[ -z "$(git -C "$SOURCE_ROOT" status --porcelain)" ]] || fail "source checkout is not clean"
+source_revision="$(git -C "$SOURCE_ROOT" rev-parse HEAD)"
+for remote in github origin; do
+  [[ "$(git -C "$SOURCE_ROOT" ls-remote "$remote" refs/heads/main | awk '{print $1}')" == "$source_revision" ]] \
+    || fail "$remote/main does not match the source revision"
+done
+[[ -f "$COMPOSE_FILE" ]] || fail "missing split Compose file"
+[[ -f "$DATABASE_FILE" ]] || fail "missing production database"
+docker inspect craftcontrol-frontend craftcontrol-backend >/dev/null 2>&1 \
+  || fail "split production topology is not active"
+
+source "$SOURCE_ROOT/versions.env"
+export CRAFTCONTROL_FRONTEND_VERSION CRAFTCONTROL_BACKEND_VERSION CRAFTCONTROL_RELEASE_PAIR
+compose config --quiet
+
+if [[ "$ACTION" == "check" ]]; then
+  echo "frontend deploy preflight: ok version=$CRAFTCONTROL_FRONTEND_VERSION pair=$CRAFTCONTROL_RELEASE_PAIR"
+  exit 0
+fi
+
+backend_id="$(docker inspect craftcontrol-backend --format '{{.Id}}')"
+database_checksum="$(sha256sum "$DATABASE_FILE" | awk '{print $1}')"
+
+if [[ "$ACTION" == "rollback" ]]; then
+  docker image inspect "craftcontrol-frontend:$ROLLBACK_VERSION" >/dev/null 2>&1 \
+    || fail "rollback image craftcontrol-frontend:$ROLLBACK_VERSION is unavailable"
+  CRAFTCONTROL_FRONTEND_VERSION="$ROLLBACK_VERSION" compose up -d --no-deps craftcontrol-frontend
+  deployed_version="$ROLLBACK_VERSION"
+else
+  git -C "$SOURCE_ROOT" ls-files -z apps/frontend docker-compose.split.yml versions.env \
+    | rsync -a --from0 --files-from=- "$SOURCE_ROOT/" "$DEPLOY_ROOT/"
+  compose build craftcontrol-frontend
+  compose up -d --no-deps craftcontrol-frontend
+  deployed_version="$CRAFTCONTROL_FRONTEND_VERSION"
+fi
+
+for _ in $(seq 1 30); do
+  [[ "$(docker inspect craftcontrol-frontend --format '{{.State.Health.Status}}' 2>/dev/null || true)" == "healthy" ]] && break
+  sleep 2
+done
+[[ "$(docker inspect craftcontrol-frontend --format '{{.State.Health.Status}}')" == "healthy" ]] \
+  || fail "frontend did not become healthy"
+[[ "$(docker inspect craftcontrol-backend --format '{{.Id}}')" == "$backend_id" ]] \
+  || fail "backend was recreated during frontend deployment"
+[[ "$(sha256sum "$DATABASE_FILE" | awk '{print $1}')" == "$database_checksum" ]] \
+  || fail "database changed during frontend deployment"
+
+frontend_port="${CRAFTCONTROL_SPLIT_PORT:-18082}"
+curl --fail --silent --show-error "http://127.0.0.1:$frontend_port/healthz" >/dev/null
+curl --fail --silent --show-error "http://127.0.0.1:$frontend_port/version.json" | grep "\"version\":\"$deployed_version\"" >/dev/null
+curl --fail --silent --show-error "http://127.0.0.1:$frontend_port/api/health" >/dev/null
+[[ "$(curl --silent --output /dev/null --write-out '%{http_code}' "http://127.0.0.1:$frontend_port/api/auth/me")" == "401" ]] \
+  || fail "anonymous authentication canary did not return 401"
+
+echo "frontend deploy complete: version=$deployed_version backend=unchanged database=unchanged"

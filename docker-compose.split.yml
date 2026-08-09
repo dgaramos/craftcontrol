@@ -6,6 +6,7 @@ services:
       args:
         CRAFTCONTROL_BACKEND_VERSION: "${CRAFTCONTROL_BACKEND_VERSION:-0.1.0}"
     image: "craftcontrol-backend:${CRAFTCONTROL_BACKEND_VERSION:-0.1.0}"
+    container_name: craftcontrol-backend
     restart: unless-stopped
     environment:
       MINECRAFT_CONTAINER: "${MINECRAFT_CONTAINER:-minecraft-bedrock}"
@@ -27,14 +28,17 @@ services:
       - ./data:/data
     security_opt:
       - no-new-privileges:true
+    labels:
+      io.craftcontrol.release-pair: "${CRAFTCONTROL_RELEASE_PAIR:-frontend-0.1.1_backend-0.1.0}"
 
   craftcontrol-frontend:
     build:
       context: .
       dockerfile: apps/frontend/Dockerfile
       args:
-        CRAFTCONTROL_FRONTEND_VERSION: "${CRAFTCONTROL_FRONTEND_VERSION:-0.1.0}"
-    image: "craftcontrol-frontend:${CRAFTCONTROL_FRONTEND_VERSION:-0.1.0}"
+        CRAFTCONTROL_FRONTEND_VERSION: "${CRAFTCONTROL_FRONTEND_VERSION:-0.1.1}"
+    image: "craftcontrol-frontend:${CRAFTCONTROL_FRONTEND_VERSION:-0.1.1}"
+    container_name: craftcontrol-frontend
     restart: unless-stopped
     depends_on:
       craftcontrol-backend:
@@ -48,3 +52,5 @@ services:
       - /tmp
     security_opt:
       - no-new-privileges:true
+    labels:
+      io.craftcontrol.release-pair: "${CRAFTCONTROL_RELEASE_PAIR:-frontend-0.1.1_backend-0.1.0}"

@@ -38,8 +38,26 @@ class DeploymentSafetyTest(unittest.TestCase):
         self.assertIn("up -d --no-deps craftcontrol-frontend", script)
         self.assertIn("--rollback VERSION", script)
         self.assertIn("backend was recreated", script)
-        self.assertIn("database changed", script)
+        self.assertIn("persistent data mount", script)
         self.assertIn("/version.json", script)
+
+    def test_backend_deploy_is_backed_up_independent_and_reversible(self) -> None:
+        script = (ROOT / "bin" / "deploy-craftcontrol-backend").read_text()
+        self.assertIn("split production topology is not active", script)
+        self.assertIn("craftcontrol backup create", script)
+        self.assertIn("craftcontrol backup verify", script)
+        self.assertIn("PRAGMA quick_check", script)
+        self.assertIn("up -d --no-deps craftcontrol-backend", script)
+        self.assertIn("frontend was recreated", script)
+        self.assertIn("--rollback VERSION", script)
+        self.assertIn("Bedrock is not healthy", script)
+
+    def test_coordinated_release_uses_the_pinned_pair_and_component_commands(self) -> None:
+        script = (ROOT / "bin" / "deploy-craftcontrol-release").read_text()
+        self.assertIn("deploy-craftcontrol-backend", script)
+        self.assertIn("deploy-craftcontrol-frontend", script)
+        self.assertIn("CRAFTCONTROL_RELEASE_PAIR", script)
+        self.assertIn("--rollback FRONTEND_VERSION BACKEND_VERSION", script)
 
     def test_compose_mounts_explicit_application_boundaries(self) -> None:
         compose = (ROOT / "docker-compose.yml").read_text()

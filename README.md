@@ -457,7 +457,16 @@ topology is promoted, `bin/deploy-craftcontrol-frontend` will build and replace
 only the frontend; `--check` performs its preflight and `--rollback VERSION`
 selects an already available frontend image. The command deliberately refuses
 to run against the current compatibility topology and proves the backend
-container identity and SQLite checksum remain unchanged.
+container identity remains unchanged while the frontend stays isolated from
+all persistent mounts.
+
+The matching `bin/deploy-craftcontrol-backend` command creates and verifies a
+coordinated world/database backup before replacing only the backend, validates
+the persistent mounts and SQLite integrity, and proves the frontend container
+was not recreated. `bin/deploy-craftcontrol-release` applies the pinned backend
+and frontend pair in order; it also supports a coordinated rollback with
+explicit frontend and backend versions. All split deployment commands remain
+guarded until the split production topology is deliberately activated.
 
 ## Roadmap
 

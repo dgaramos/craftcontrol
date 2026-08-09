@@ -63,9 +63,9 @@ Bedrock canaries. `--check` performs the non-mutating preflight only.
    responses against the published schemas.
 6. Run frontend, backend, contract, and integration quality gates independently.
 7. Build, deploy, health-check, and roll back both images independently. The
-   frontend half is implemented with a pinned release pair and a guarded
-   frontend-only deploy/rollback command; the backend half and coordinated
-   release command remain before production cutover.
+   pinned release pair, guarded frontend/backend deploy and rollback commands,
+   and coordinated release command are implemented. Production cutover still
+   waits for the phase-eight state, session, CSRF, SSE, and rollback canaries.
 
 ## Independent quality gates
 
@@ -115,3 +115,33 @@ file, and both live split containers. It replaces the frontend with
 asserts that neither the backend container ID nor the SQLite checksum changed.
 It refuses the current compatibility topology so this capability cannot bypass
 the remaining cutover canaries.
+
+## Independent backend and coordinated releases
+
+The backend follows the same clean, published-main and active-topology guards:
+
+```bash
+bin/deploy-craftcontrol-backend --check
+bin/deploy-craftcontrol-backend
+bin/deploy-craftcontrol-backend --rollback 0.1.0
+```
+
+Before either a forward deploy or rollback, it creates and verifies a
+coordinated world/SQLite backup. It then replaces only the backend, confirms
+the frontend container identity did not change, revalidates `/data` and
+Bedrock mount sources, runs SQLite `quick_check`, and exercises health,
+anonymous authentication, backup CLI, and Bedrock canaries through the public
+frontend origin.
+
+For a tested pair, use:
+
+```bash
+bin/deploy-craftcontrol-release --check
+bin/deploy-craftcontrol-release
+bin/deploy-craftcontrol-release --rollback 0.1.0 0.1.0
+```
+
+The coordinated command deploys the backend first while the static frontend
+continues serving, then replaces the frontend without touching the new
+backend. Rollback versions are always explicit; an arbitrary unpinned image is
+never inferred from a mutable tag.

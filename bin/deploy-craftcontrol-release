@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly ROOT="$(git rev-parse --show-toplevel)"
+
+if [[ "${1:-}" == "--check" && $# -eq 1 ]]; then
+  "$ROOT/bin/deploy-craftcontrol-backend" --check
+  "$ROOT/bin/deploy-craftcontrol-frontend" --check
+  source "$ROOT/versions.env"
+  echo "coordinated release preflight: ok pair=$CRAFTCONTROL_RELEASE_PAIR"
+elif [[ "${1:-}" == "--rollback" && -n "${2:-}" && -n "${3:-}" && $# -eq 3 ]]; then
+  "$ROOT/bin/deploy-craftcontrol-backend" --rollback "$3"
+  "$ROOT/bin/deploy-craftcontrol-frontend" --rollback "$2"
+  echo "coordinated rollback complete: frontend=$2 backend=$3"
+elif [[ $# -eq 0 ]]; then
+  "$ROOT/bin/deploy-craftcontrol-backend"
+  "$ROOT/bin/deploy-craftcontrol-frontend"
+  source "$ROOT/versions.env"
+  echo "coordinated release complete: pair=$CRAFTCONTROL_RELEASE_PAIR"
+else
+  echo "usage: bin/deploy-craftcontrol-release [--check | --rollback FRONTEND_VERSION BACKEND_VERSION]" >&2
+  exit 2
+fi

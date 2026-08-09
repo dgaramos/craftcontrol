@@ -19,7 +19,6 @@ fi
 
 readonly SOURCE_ROOT DEPLOY_ROOT ACTION ROLLBACK_VERSION
 readonly COMPOSE_FILE="$DEPLOY_ROOT/docker-compose.split.yml"
-readonly DATABASE_FILE="$DEPLOY_ROOT/data/manager.db"
 
 fail() { echo "frontend deploy refused: $*" >&2; exit 1; }
 compose() { docker compose --project-directory "$DEPLOY_ROOT" --file "$COMPOSE_FILE" "$@"; }
@@ -34,7 +33,6 @@ for remote in github origin; do
     || fail "$remote/main does not match the source revision"
 done
 [[ -f "$COMPOSE_FILE" ]] || fail "missing split Compose file"
-[[ -f "$DATABASE_FILE" ]] || fail "missing production database"
 docker inspect craftcontrol-frontend craftcontrol-backend >/dev/null 2>&1 \
   || fail "split production topology is not active"
 
@@ -48,7 +46,6 @@ if [[ "$ACTION" == "check" ]]; then
 fi
 
 backend_id="$(docker inspect craftcontrol-backend --format '{{.Id}}')"
-database_checksum="$(sha256sum "$DATABASE_FILE" | awk '{print $1}')"
 
 if [[ "$ACTION" == "rollback" ]]; then
   docker image inspect "craftcontrol-frontend:$ROLLBACK_VERSION" >/dev/null 2>&1 \
@@ -71,8 +68,8 @@ done
   || fail "frontend did not become healthy"
 [[ "$(docker inspect craftcontrol-backend --format '{{.Id}}')" == "$backend_id" ]] \
   || fail "backend was recreated during frontend deployment"
-[[ "$(sha256sum "$DATABASE_FILE" | awk '{print $1}')" == "$database_checksum" ]] \
-  || fail "database changed during frontend deployment"
+[[ -z "$(docker inspect craftcontrol-frontend --format '{{range .Mounts}}{{println .Destination}}{{end}}' | awk '$0 == "/data"')" ]] \
+  || fail "frontend unexpectedly received the persistent data mount"
 
 frontend_port="${CRAFTCONTROL_SPLIT_PORT:-18082}"
 curl --fail --silent --show-error "http://127.0.0.1:$frontend_port/healthz" >/dev/null
@@ -81,4 +78,4 @@ curl --fail --silent --show-error "http://127.0.0.1:$frontend_port/api/health" >
 [[ "$(curl --silent --output /dev/null --write-out '%{http_code}' "http://127.0.0.1:$frontend_port/api/auth/me")" == "401" ]] \
   || fail "anonymous authentication canary did not return 401"
 
-echo "frontend deploy complete: version=$deployed_version backend=unchanged database=unchanged"
+echo "frontend deploy complete: version=$deployed_version backend=unchanged persistent-mounts=isolated"

@@ -6,6 +6,12 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class DeploymentSafetyTest(unittest.TestCase):
+    def test_component_deploy_canaries_use_the_production_port_default(self) -> None:
+        for script_name in ("deploy-craftcontrol-frontend", "deploy-craftcontrol-backend"):
+            script = (ROOT / "bin" / script_name).read_text()
+            self.assertIn('frontend_port="${CRAFTCONTROL_SPLIT_PORT:-8082}"', script)
+            self.assertNotIn('frontend_port="${CRAFTCONTROL_SPLIT_PORT:-18082}"', script)
+
     def test_quality_gates_are_partitioned_and_automated(self) -> None:
         gates = ["frontend", "backend", "contracts", "integration"]
         for gate in gates:

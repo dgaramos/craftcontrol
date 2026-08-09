@@ -71,7 +71,7 @@ done
 [[ -z "$(docker inspect craftcontrol-frontend --format '{{range .Mounts}}{{println .Destination}}{{end}}' | awk '$0 == "/data"')" ]] \
   || fail "frontend unexpectedly received the persistent data mount"
 
-frontend_port="${CRAFTCONTROL_SPLIT_PORT:-18082}"
+frontend_port="${CRAFTCONTROL_SPLIT_PORT:-8082}"
 curl --fail --silent --show-error "http://127.0.0.1:$frontend_port/healthz" >/dev/null
 curl --fail --silent --show-error "http://127.0.0.1:$frontend_port/version.json" | grep "\"version\":\"$deployed_version\"" >/dev/null
 curl --fail --silent --show-error "http://127.0.0.1:$frontend_port/api/health" >/dev/null

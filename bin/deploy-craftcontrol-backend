@@ -92,7 +92,7 @@ done
 validate_mounts
 validate_database
 
-frontend_port="${CRAFTCONTROL_SPLIT_PORT:-18082}"
+frontend_port="${CRAFTCONTROL_SPLIT_PORT:-8082}"
 curl --fail --silent --show-error "http://127.0.0.1:$frontend_port/healthz" >/dev/null
 curl --fail --silent --show-error "http://127.0.0.1:$frontend_port/api/health" >/dev/null
 [[ "$(curl --silent --output /dev/null --write-out '%{http_code}' "http://127.0.0.1:$frontend_port/api/auth/me")" == "401" ]] \

@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly CANARY_SUFFIX="$$"
+readonly CANARY_NETWORK="craftcontrol-split-canary-$CANARY_SUFFIX"
+readonly BACKEND_CONTAINER="craftcontrol-split-backend-$CANARY_SUFFIX"
+readonly FRONTEND_CONTAINER="craftcontrol-split-frontend-$CANARY_SUFFIX"
+
+wait_removed() {
+  local container="$1"
+  for _ in $(seq 1 20); do
+    docker inspect "$container" >/dev/null 2>&1 || return 0
+    sleep 0.25
+  done
+  return 1
+}
+
+cleanup() {
+  docker stop --time 1 "$FRONTEND_CONTAINER" "$BACKEND_CONTAINER" >/dev/null 2>&1 || true
+  wait_removed "$FRONTEND_CONTAINER" || true
+  wait_removed "$BACKEND_CONTAINER" || true
+  docker network rm "$CANARY_NETWORK" >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
+
+run_backend() {
+  docker run -d --rm \
+    --name "$BACKEND_CONTAINER" \
+    --network "$CANARY_NETWORK" \
+    --network-alias craftcontrol-backend \
+    -e AUTH_MODE=disabled \
+    -e AUTH_COOKIE_SECURE=false \
+    -e DATABASE_PATH=/tmp/manager.db \
+    -e MINECRAFT_PROJECT=/tmp \
+    -e BACKUP_ROOT=/tmp/backups \
+    -e MINECRAFT_CONTAINER=craftcontrol-canary-no-bedrock \
+    craftcontrol-backend:0.1.0 >/dev/null
+}
+
+wait_healthy() {
+  local container="$1"
+  for _ in $(seq 1 30); do
+    [[ "$(docker inspect "$container" --format '{{.State.Health.Status}}')" == "healthy" ]] && return 0
+    sleep 1
+  done
+  return 1
+}
+
+docker network create "$CANARY_NETWORK" >/dev/null
+run_backend
+docker run -d --rm \
+  --name "$FRONTEND_CONTAINER" \
+  --network "$CANARY_NETWORK" \
+  --read-only \
+  --tmpfs /var/cache/nginx \
+  --tmpfs /var/run \
+  --tmpfs /tmp \
+  craftcontrol-frontend:0.1.0 >/dev/null
+
+wait_healthy "$BACKEND_CONTAINER"
+wait_healthy "$FRONTEND_CONTAINER"
+docker exec "$FRONTEND_CONTAINER" wget -q -O - http://127.0.0.1:8080/ | grep -q '<title>CraftControl'
+docker exec "$FRONTEND_CONTAINER" wget -q -O - http://127.0.0.1:8080/static/app.js | grep -q 'const state'
+[[ "$(docker exec "$FRONTEND_CONTAINER" wget -q -O - http://127.0.0.1:8080/api/health)" == '{"ok":true}' ]]
+docker exec "$FRONTEND_CONTAINER" wget -q -O - http://127.0.0.1:8080/api/auth/me | grep -q 'Local administrator'
+sse_headers="$(docker exec "$FRONTEND_CONTAINER" sh -c 'timeout 3 wget -S -O /dev/null http://127.0.0.1:8080/api/events' 2>&1 || true)"
+grep -q 'Content-Type: text/event-stream' <<<"$sse_headers"
+grep -q 'X-Accel-Buffering: no' <<<"$sse_headers"
+
+docker stop --time 1 "$BACKEND_CONTAINER" >/dev/null
+wait_removed "$BACKEND_CONTAINER"
+run_backend
+wait_healthy "$BACKEND_CONTAINER"
+sleep 11
+[[ "$(docker exec "$FRONTEND_CONTAINER" wget -q -O - http://127.0.0.1:8080/api/health)" == '{"ok":true}' ]]
+
+echo "split runtime gate: ok"

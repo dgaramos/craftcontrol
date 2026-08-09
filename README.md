@@ -428,6 +428,26 @@ bin/check-integration
 `bin/check` runs the complete local gate. GitHub Actions and Gitea Actions run
 the four gates as independent jobs so a failure identifies the owning boundary.
 
+### Split-image preview
+
+The migration now produces independent `craftcontrol-frontend:0.1.0` and
+`craftcontrol-backend:0.1.0` images through `docker-compose.split.yml`. The
+frontend is a read-only Nginx service with no persistent or privileged mounts;
+it owns the browser origin and proxies `/api/*`, including unbuffered SSE, to
+the private backend. Only the backend contains Python, SQLite access, Bedrock
+mounts, backups, and Docker operations.
+
+```bash
+docker compose -f docker-compose.split.yml config --quiet
+docker compose -f docker-compose.split.yml build
+bin/check-split-runtime
+```
+
+The split Compose file currently publishes the preview on port `18082` to avoid
+colliding with production. It is not yet the supported production deployment;
+continue using `bin/deploy-craftcontrol` until authenticated session/CSRF,
+persistent-state, rollback, and production cutover canaries are complete.
+
 ## Roadmap
 
 The immediate direction is:

@@ -58,6 +58,12 @@ links temporarily preserve local tooling. Existing public APIs, database
 tables, environment variables, world data, and deployment paths remain
 compatible during refactoring.
 
+The split-image preview turns those source boundaries into two runtime images.
+The frontend is a stateless Nginx origin and `/api/*` proxy; the backend remains
+one modular-monolith process and is the only service allowed to access durable
+state or privileged infrastructure. The production deployment remains on the
+compatibility image until cutover and rollback canaries pass.
+
 ## Dependency direction
 
 ```text

@@ -71,3 +71,24 @@ Bedrock canaries. `--check` performs the non-mutating preflight only.
 the local umbrella gate and also checks patch whitespace. GitHub Actions and
 Gitea Actions execute the four boundaries as separate jobs with fail-fast
 disabled, so one failure does not hide results from the other applications.
+
+## Split-image preview
+
+`apps/frontend/Dockerfile` builds a static, read-only Nginx image. It owns the
+public origin and forwards `/api/*` to `craftcontrol-backend` on the private
+Compose network. The dedicated `/api/events` location disables proxy buffering
+and caching, retains a long read timeout, and passes reconnect headers. Docker's
+embedded DNS is resolved dynamically so recreating only the backend does not
+leave the frontend pinned to an obsolete container address.
+
+`apps/backend/Dockerfile` contains the Flask application, OpenAPI contracts,
+Telemetry Pack, and operations CLI, but no frontend files. In
+`docker-compose.split.yml`, only this service receives SQLite, Bedrock, backup,
+and Docker access; it has no host-published port. The preview frontend uses port
+`18082`, keeping the current production service untouched.
+
+`bin/check-split-runtime` starts both images against disposable container-local
+state, checks the index and static assets, proxies health and authentication,
+verifies unbuffered SSE headers, recreates the backend, and proves the existing
+frontend reconnects through dynamic service discovery. It never mounts the
+production database, world, `.env`, backups, or Docker socket.

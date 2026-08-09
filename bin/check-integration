@@ -7,5 +7,8 @@ cd "$ROOT"
 
 bash -n bin/deploy-craftcontrol
 docker compose config --quiet
+docker compose --file docker-compose.split.yml config --quiet
+docker compose --file docker-compose.split.yml build
+bin/check-split-runtime
 "$PYTHON" -m unittest tests.test_architecture tests.test_deployment -v
 echo "integration gate: ok"

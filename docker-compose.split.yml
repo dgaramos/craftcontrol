@@ -1,0 +1,50 @@
+services:
+  craftcontrol-backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+      args:
+        CRAFTCONTROL_BACKEND_VERSION: "${CRAFTCONTROL_BACKEND_VERSION:-0.1.0}"
+    image: "craftcontrol-backend:${CRAFTCONTROL_BACKEND_VERSION:-0.1.0}"
+    restart: unless-stopped
+    environment:
+      MINECRAFT_CONTAINER: "${MINECRAFT_CONTAINER:-minecraft-bedrock}"
+      MINECRAFT_PROJECT: "${MINECRAFT_PROJECT:-/minecraft-project}"
+      DATABASE_PATH: "${DATABASE_PATH:-/data/manager.db}"
+      CONSOLE_WAIT_SECONDS: "${CONSOLE_WAIT_SECONDS:-1}"
+      BOOTSTRAP_OPERATOR: "${BOOTSTRAP_OPERATOR:-VonCrush}"
+      RECONCILE_SECONDS: "${RECONCILE_SECONDS:-900}"
+      BACKUP_ROOT: "${BACKUP_ROOT:-/data/backups/coordinated}"
+      AUTH_MODE: "${AUTH_MODE:-local}"
+      AUTH_COOKIE_SECURE: "${AUTH_COOKIE_SECURE:-true}"
+      TZ: "${TZ:-America/Sao_Paulo}"
+      CRAFTCONTROL_VERSION: "${CRAFTCONTROL_BACKEND_VERSION:-0.1.0}"
+    expose:
+      - "8082"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ../minecraft-bedrock:/minecraft-project
+      - ./data:/data
+    security_opt:
+      - no-new-privileges:true
+
+  craftcontrol-frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+      args:
+        CRAFTCONTROL_FRONTEND_VERSION: "${CRAFTCONTROL_FRONTEND_VERSION:-0.1.0}"
+    image: "craftcontrol-frontend:${CRAFTCONTROL_FRONTEND_VERSION:-0.1.0}"
+    restart: unless-stopped
+    depends_on:
+      craftcontrol-backend:
+        condition: service_healthy
+    ports:
+      - "${CRAFTCONTROL_SPLIT_PORT:-18082}:8080"
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+      - /tmp
+    security_opt:
+      - no-new-privileges:true

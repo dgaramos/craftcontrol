@@ -147,7 +147,7 @@ class CraftControlBrandTest(unittest.TestCase):
         nginx = (FRONTEND / "nginx.conf").read_text()
         self.assertIn('fetch("/version.json", { cache: "no-store" })', script)
         self.assertIn("UI v", script)
-        self.assertIn("CRAFTCONTROL_FRONTEND_VERSION=0.1.3", dockerfile)
+        self.assertIn("CRAFTCONTROL_FRONTEND_VERSION=0.1.4", dockerfile)
         self.assertIn("/version.json", nginx)
 
     def test_frontend_core_owns_shared_state_and_dom_primitives(self) -> None:
@@ -172,6 +172,18 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn("export function formatDuration", time)
         self.assertNotIn("function toast", script)
         self.assertNotIn("function formatDuration", script)
+
+    def test_analytics_activity_and_deaths_have_a_feature_boundary(self) -> None:
+        script = (FRONTEND / "static" / "app.js").read_text()
+        activity = (FRONTEND / "static" / "js" / "features" / "analytics" / "activity.js").read_text()
+        self.assertIn('from "./js/features/analytics/activity.js?v=1"', script)
+        self.assertIn("export function createActivityView", activity)
+        self.assertIn('"player.death"', activity)
+        self.assertIn('es: "Murió"', activity)
+        self.assertIn("activityView.eventsMarkup", script)
+        self.assertIn("activityView.showDeathDetails", script)
+        self.assertNotIn("function analyticsEventsMarkup", script)
+        self.assertNotIn("function showDeathDetails", script)
 
     def test_interface_uses_custom_icons_and_bilingual_block_labels(self) -> None:
         script = (FRONTEND / "static" / "app.js").read_text()
@@ -209,6 +221,7 @@ class CraftControlBrandTest(unittest.TestCase):
 
     def test_analytics_has_dedicated_bilingual_mobile_workspace(self) -> None:
         script = (FRONTEND / "static" / "app.js").read_text()
+        activity = (FRONTEND / "static" / "js" / "features" / "analytics" / "activity.js").read_text()
         state_module = (FRONTEND / "static" / "js" / "core" / "state.js").read_text()
         stylesheet = (FRONTEND / "static" / "analytics.css").read_text()
         template = (FRONTEND / "templates" / "index.html").read_text()
@@ -218,7 +231,7 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn('["deaths", "deaths", "deathsView"]', script)
         self.assertIn("@media (max-width: 480px)", stylesheet)
         self.assertIn("analytics.css", template)
-        self.assertIn('data-analytics-player=', script)
+        self.assertIn('data-analytics-player=', activity)
         self.assertIn('id="analytics-death-dialog"', script)
         self.assertIn("respawnsOnly", script)
         self.assertIn('class="ranking-podium', script)

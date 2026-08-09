@@ -5,6 +5,7 @@ import { state } from "./js/core/state.js?v=1";
 import { $, escapeHtml } from "./js/core/dom.js?v=1";
 import { toast } from "./js/components/feedback.js?v=1";
 import { formatDate as formatLocalizedDate, formatDuration, sessionMoment as localizedSessionMoment, timelineTimestamp as localizedTimelineTimestamp } from "./js/components/time.js?v=1";
+import { createActivityView } from "./js/features/analytics/activity.js?v=1";
 
 const content = $("#content");
 
@@ -669,51 +670,6 @@ function playerDataMarkup(profile) {
   return `<section class="player-data-workspace"><header class="player-data-heading block-panel"><div><span class="eyebrow">PLAYER DATA</span><h3>${state.locale === "pt" ? "Dados individuais" : "Individual data"}</h3><p>${state.locale === "pt" ? `Tudo o que a telemetria conhece especificamente sobre ${escapeHtml(profile.name)}.` : `Everything telemetry knows specifically about ${escapeHtml(profile.name)}.`}</p></div><small>${uiIcon("check")} ${t("authoritative")} · ${t("updated")} ${formatDate(profile.telemetry_updated_at)}</small></header><div class="telemetry-grid">${items.map(([label, value]) => `<span><b>${value || 0}</b>${t(label)}</span>`).join("")}</div><div class="player-data-grid"><section class="player-data-panel player-combat-data block-panel"><div class="player-data-panel-title"><span>${gameIcon("skeleton")}</span><div><small>COMBAT</small><h4>${state.locale === "pt" ? "Criaturas eliminadas" : "Creatures defeated"}</h4></div></div>${playerBreakdownMarkup(sortedTelemetryEntries(stats.killsByType), "entity", noKills)}</section><section class="player-data-panel block-panel"><div class="player-data-panel-title"><span>${uiIcon("mining")}</span><div><small>MINING</small><h4>${state.locale === "pt" ? "Blocos quebrados" : "Blocks broken"}</h4></div></div>${playerBreakdownMarkup(sortedTelemetryEntries(stats.brokenByType), "block", noBlocks)}</section><section class="player-data-panel block-panel"><div class="player-data-panel-title"><span>${uiIcon("building")}</span><div><small>BUILDING</small><h4>${state.locale === "pt" ? "Blocos colocados" : "Blocks placed"}</h4></div></div>${playerBreakdownMarkup(sortedTelemetryEntries(stats.placedByType), "block", noBlocks)}</section><section class="player-data-panel block-panel"><div class="player-data-panel-title"><span>${uiIcon("exploration")}</span><div><small>EXPLORATION</small><h4>${state.locale === "pt" ? "Dimensões visitadas" : "Dimensions visited"}</h4></div></div>${playerBreakdownMarkup(dimensions, "dimension", noDimensions)}</section></div></section>`;
 }
 
-function analyticsEventPresentation(event) {
-  const definitions = {
-    "player.connected": { icon: "players", pt: "Entrou no servidor", en: "Joined the server", tone: "join" },
-    "player.disconnected": { icon: "players", pt: "Saiu do servidor", en: "Left the server", tone: "leave" },
-    "player.respawned": { icon: "restart", pt: "Renasceu", en: "Respawned", tone: "respawn" },
-    "player.dimension.changed": { icon: "exploration", pt: "Mudou de dimensão", en: "Changed dimension", tone: "dimension" },
-    "player.death": { icon: "deaths", pt: "Morreu", en: "Died", tone: "death" },
-    "player.permission.changed": { icon: "shield", pt: "Permissão alterada", en: "Permission changed", tone: "permission" },
-  };
-  return definitions[event.topic] || { icon: "activity", pt: event.topic, en: event.topic, tone: "default" };
-}
-
-function analyticsEventDetails(event) {
-  const details = event.details || {};
-  const items = [];
-  if (details.cause) items.push([t("deathCause"), details.cause, "cause"]);
-  if (details.killer) items.push([t("killedBy"), details.killer, "entity"]);
-  if (details.projectile) items.push([t("projectile"), details.projectile, "entity"]);
-  if (details.permission) items.push([t("permission"), optionLabel(details.permission)]);
-  if (details.dimension) items.push([state.locale === "pt" ? "Dimensão" : "Dimension", String(details.dimension).replace(/^minecraft:/, "")]);
-  if (details.from_dimension) items.push([t("fromDimension"), String(details.from_dimension).replace(/^minecraft:/, "")]);
-  if (details.to_dimension) items.push([t("toDimension"), String(details.to_dimension).replace(/^minecraft:/, "")]);
-  const coordinates = details.coordinates || {};
-  if (Object.keys(coordinates).length) items.push([state.locale === "pt" ? "Coordenadas" : "Coordinates", [coordinates.x, coordinates.y, coordinates.z].filter((value) => value !== undefined).join(", ")]);
-  if (details.inferred) items.push([state.locale === "pt" ? "Observação" : "Note", t("inferredExit")]);
-  return items.length ? `<dl class="analytics-event-details">${items.map(([label, value, kind]) => `<div><dt>${escapeHtml(label)}</dt><dd>${kind ? gameTermMarkup(value, kind) : escapeHtml(value)}</dd></div>`).join("")}</dl>` : "";
-}
-
-function analyticsEventsMarkup(events) {
-  if (!events.length) return `<div class="analytics-empty"><span>${uiIcon("activity")}</span><p>${t("activityEmpty")}</p></div>`;
-  return `<ol class="analytics-event-list">${events.map((event, index) => {
-    const presentation = analyticsEventPresentation(event);
-    const source = event.source === "behavior-pack" ? t("sourceStructured") : t("sourceServer");
-    return `<li class="analytics-event tone-${presentation.tone}"><span class="analytics-event-icon">${uiIcon(presentation.icon)}</span><div class="analytics-event-main"><div class="analytics-event-title"><div><button class="analytics-player-link" data-analytics-player="${escapeHtml(event.player?.id || "")}" type="button">${escapeHtml(event.player?.name || "—")}</button><span>${escapeHtml(presentation[state.locale])}</span></div><b class="analytics-source ${event.source === "behavior-pack" ? "structured" : "server"}">${escapeHtml(source)}</b></div>${analyticsEventDetails(event)}${event.topic === "player.death" ? `<button class="analytics-detail-button" data-death-detail="${index}" type="button">${t("viewDetails")} ›</button>` : ""}</div>${timelineTimestamp(event.timestamp)}</li>`;
-  }).join("")}</ol>`;
-}
-
-function showDeathDetails(event) {
-  const dialog = $("#analytics-death-dialog");
-  const presentation = analyticsEventPresentation(event);
-  dialog.querySelector("h2").innerHTML = `${uiIcon(presentation.icon)} ${escapeHtml(event.player?.name || "—")}`;
-  dialog.querySelector(".analytics-death-content").innerHTML = `<p>${escapeHtml(presentation[state.locale])}</p>${analyticsEventDetails(event)}<div class="analytics-death-meta"><span>${event.source === "behavior-pack" ? t("sourceStructured") : t("sourceServer")}</span>${timelineTimestamp(event.timestamp)}</div>`;
-  dialog.showModal();
-}
-
 async function openAnalyticsPlayer(publicId) {
   try {
     const roster = await api("/api/players");
@@ -1061,6 +1017,7 @@ async function renderTrendsPanel() {
 }
 
 async function renderAnalyticsPanel() {
+  const activityView = createActivityView({ state, t, optionLabel, uiIcon, gameTermMarkup, timelineTimestamp });
   const filters = state.analytics;
   if (filters.kind === "rankings") {
     await renderRankingsPanel();
@@ -1100,9 +1057,9 @@ async function renderAnalyticsPanel() {
       playerSelect.innerHTML = `<option value="">${t("everyPlayer")}</option>${options}`;
       playerSelect.value = filters.player;
       const summary = result.summary || {};
-      target.innerHTML = `<div class="analytics-summary"><span><small>${t("joinsOnly")}</small><b>${summary.joins || 0}</b></span><span><small>${t("leavesOnly")}</small><b>${summary.leaves || 0}</b></span><span><small>${t("respawnsOnly")}</small><b>${summary.respawns || 0}</b></span><span><small>${t("dimensionsOnly")}</small><b>${summary.dimensions || 0}</b></span><span class="death"><small>${t("deathsView")}</small><b>${summary.deaths || 0}</b></span><span><small>${t("permissionsOnly")}</small><b>${summary.permissions || 0}</b></span></div><div class="analytics-result-meta"><b>${t("eventCount", result.total)}</b><span>${t("pageCount", result.page, result.pages)}</span></div>${analyticsEventsMarkup(result.events || [])}<div class="analytics-pagination"><button id="analytics-previous" class="secondary" type="button" ${result.page <= 1 ? "disabled" : ""}>← ${t("previous")}</button><button id="analytics-next" class="secondary" type="button" ${result.page >= result.pages ? "disabled" : ""}>${t("next")} →</button></div>`;
+      target.innerHTML = `<div class="analytics-summary"><span><small>${t("joinsOnly")}</small><b>${summary.joins || 0}</b></span><span><small>${t("leavesOnly")}</small><b>${summary.leaves || 0}</b></span><span><small>${t("respawnsOnly")}</small><b>${summary.respawns || 0}</b></span><span><small>${t("dimensionsOnly")}</small><b>${summary.dimensions || 0}</b></span><span class="death"><small>${t("deathsView")}</small><b>${summary.deaths || 0}</b></span><span><small>${t("permissionsOnly")}</small><b>${summary.permissions || 0}</b></span></div><div class="analytics-result-meta"><b>${t("eventCount", result.total)}</b><span>${t("pageCount", result.page, result.pages)}</span></div>${activityView.eventsMarkup(result.events || [])}<div class="analytics-pagination"><button id="analytics-previous" class="secondary" type="button" ${result.page <= 1 ? "disabled" : ""}>← ${t("previous")}</button><button id="analytics-next" class="secondary" type="button" ${result.page >= result.pages ? "disabled" : ""}>${t("next")} →</button></div>`;
       target.querySelectorAll("[data-analytics-player]").forEach((button) => button.onclick = () => openAnalyticsPlayer(button.dataset.analyticsPlayer));
-      target.querySelectorAll("[data-death-detail]").forEach((button) => button.onclick = () => showDeathDetails((result.events || [])[Number(button.dataset.deathDetail)]));
+      target.querySelectorAll("[data-death-detail]").forEach((button) => button.onclick = () => activityView.showDeathDetails((result.events || [])[Number(button.dataset.deathDetail)]));
       $("#analytics-previous").onclick = () => { filters.page -= 1; reload(); window.scrollTo({ top: 0, behavior: "smooth" }); };
       $("#analytics-next").onclick = () => { filters.page += 1; reload(); window.scrollTo({ top: 0, behavior: "smooth" }); };
     } catch (error) { target.innerHTML = `<div class="analytics-empty"><p>${escapeHtml(error.message)}</p></div>`; }

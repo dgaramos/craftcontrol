@@ -1,6 +1,6 @@
 FROM nginx:1.29-alpine
 
-ARG CRAFTCONTROL_FRONTEND_VERSION=0.1.2
+ARG CRAFTCONTROL_FRONTEND_VERSION=0.1.3
 LABEL org.opencontainers.image.title="CraftControl Frontend" \
       org.opencontainers.image.description="CraftControl static interface and same-origin API proxy" \
       org.opencontainers.image.version="${CRAFTCONTROL_FRONTEND_VERSION}"

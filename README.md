@@ -123,7 +123,7 @@ The homelab deployment is available at `craftcontrol.lab.home.arpa`; DNS and rev
 | `AUTH_COOKIE_SECURE` | `true` | Send panel session cookies over HTTPS only |
 | `TZ` | `America/Sao_Paulo` | Container timezone |
 | `CRAFTCONTROL_VERSION` | `0.2.18` | Release tag displayed for the active CraftControl image |
-| `CRAFTCONTROL_FRONTEND_VERSION` | `0.1.9` | Independently deployable frontend image version |
+| `CRAFTCONTROL_FRONTEND_VERSION` | `0.2.0` | Independently deployable frontend image version |
 | `CRAFTCONTROL_BACKEND_VERSION` | `0.1.0` | Independently deployable backend image version |
 
 The old service name, container name, database filename, Python package, and variables remain supported deliberately. This visual rebrand does not destructively rename persistent paths. Compatibility migrations will be released separately.
@@ -435,7 +435,7 @@ the four gates as independent jobs so a failure identifies the owning boundary.
 
 ### Independent frontend and backend
 
-The migration now produces independent `craftcontrol-frontend:0.1.9` and
+The migration now produces independent `craftcontrol-frontend:0.2.0` and
 `craftcontrol-backend:0.1.0` images through `docker-compose.split.yml`. The
 frontend is a read-only Nginx service with no persistent or privileged mounts;
 it owns the browser origin and proxies `/api/*`, including unbuffered SSE, to

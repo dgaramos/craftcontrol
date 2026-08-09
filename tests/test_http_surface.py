@@ -76,18 +76,23 @@ class HttpSurfaceContractTest(unittest.TestCase):
             client = app.test_client()
             index = client.get("/")
             script = client.get("/static/app.js")
+            composition = client.get("/static/js/composition.js")
             state_module = client.get("/static/js/core/state.js")
             index_status, index_data = index.status_code, index.data
             script_status, script_data = script.status_code, script.data
+            composition_status, composition_data = composition.status_code, composition.data
             state_status, state_data = state_module.status_code, state_module.data
             index.close()
             script.close()
+            composition.close()
             state_module.close()
 
         self.assertEqual(index_status, 200)
         self.assertIn(b"CraftControl", index_data)
         self.assertEqual(script_status, 200)
-        self.assertIn(b'import { state } from "./js/core/state.js?v=1"', script_data)
+        self.assertIn(b'import { startApplication } from "./js/composition.js?v=1"', script_data)
+        self.assertEqual(composition_status, 200)
+        self.assertIn(b'import { state } from "./core/state.js?v=1"', composition_data)
         self.assertEqual(state_status, 200)
         self.assertIn(b"export const state", state_data)
 

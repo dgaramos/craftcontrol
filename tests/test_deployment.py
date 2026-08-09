@@ -38,7 +38,7 @@ class DeploymentSafetyTest(unittest.TestCase):
     def test_frontend_deploy_is_independent_guarded_and_reversible(self) -> None:
         script = (ROOT / "bin" / "deploy-craftcontrol-frontend").read_text()
         versions = (ROOT / "versions.env").read_text()
-        self.assertIn("CRAFTCONTROL_FRONTEND_VERSION=0.1.9", versions)
+        self.assertIn("CRAFTCONTROL_FRONTEND_VERSION=0.2.0", versions)
         self.assertIn("CRAFTCONTROL_BACKEND_VERSION=0.1.0", versions)
         self.assertIn("split production topology is not active", script)
         self.assertIn("up -d --no-deps craftcontrol-frontend", script)

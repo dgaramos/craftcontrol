@@ -9,7 +9,26 @@ ROOT = Path(__file__).resolve().parents[1]
 FRONTEND = ROOT / "apps" / "frontend"
 
 
+def frontend_script() -> str:
+    static = FRONTEND / "static"
+    return "\n".join((
+        (static / "app.js").read_text(),
+        (static / "js" / "composition.js").read_text(),
+        (static / "js" / "features" / "settings" / "index.js").read_text(),
+    ))
+
+
 class CraftControlBrandTest(unittest.TestCase):
+    def test_frontend_entrypoint_is_only_bootstrap_and_composition(self) -> None:
+        entrypoint = (FRONTEND / "static" / "app.js").read_text()
+        composition = (FRONTEND / "static" / "js" / "composition.js").read_text()
+        settings = (FRONTEND / "static" / "js" / "features" / "settings" / "index.js").read_text()
+        self.assertLessEqual(len(entrypoint.splitlines()), 5)
+        self.assertIn("startApplication", entrypoint)
+        self.assertIn("createNavigation", composition)
+        self.assertIn("connectInvalidation", composition)
+        self.assertIn("createSettingsFeature", settings)
+
     def test_template_uses_product_brand_and_dynamic_instance_name(self) -> None:
         template = (FRONTEND / "templates" / "index.html").read_text()
         self.assertIn("<title>CraftControl", template)
@@ -37,7 +56,8 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertNotIn("minecraft-bedrock-manager", compose)
 
     def test_player_workspace_separates_roster_profile_and_permission_scopes(self) -> None:
-        script = (FRONTEND / "static" / "app.js").read_text()
+        script = frontend_script()
+        settings = (FRONTEND / "static" / "js" / "features" / "settings" / "index.js").read_text()
         players = "\n".join(
             path.read_text()
             for path in sorted((FRONTEND / "static" / "js" / "features" / "players").glob("*.js"))
@@ -46,7 +66,7 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn('class="player-detail-screen"', players)
         self.assertIn("Minecraft permission", players)
         self.assertIn("CraftControl access", players)
-        self.assertIn('class="player-server-settings', script)
+        self.assertIn('class="player-server-settings', settings)
         self.assertIn("Somente leitura", script)
 
     def test_player_profile_consolidates_authoritative_individual_analytics(self) -> None:
@@ -70,7 +90,7 @@ class CraftControlBrandTest(unittest.TestCase):
     def test_player_feature_separates_workspace_profile_access_history_and_telemetry(self) -> None:
         feature_root = FRONTEND / "static" / "js" / "features" / "players"
         index = (feature_root / "index.js").read_text()
-        script = (FRONTEND / "static" / "app.js").read_text()
+        script = frontend_script()
         for name, factory in {
             "workspace": "createPlayersWorkspace",
             "profile": "createPlayerProfile",
@@ -81,7 +101,7 @@ class CraftControlBrandTest(unittest.TestCase):
             module = (feature_root / f"{name}.js").read_text()
             self.assertIn(f"export function {factory}", module)
             self.assertIn(f'from "./{name}.js?v=1"', index)
-        self.assertIn('from "./js/features/players/index.js?v=1"', script)
+        self.assertIn('from "./features/players/index.js?v=1"', script)
         self.assertNotIn("function renderPlayerCards", script)
         self.assertNotIn("function bindPlayerAccess", script)
         self.assertNotIn("function deathHistoryMarkup", script)
@@ -89,11 +109,11 @@ class CraftControlBrandTest(unittest.TestCase):
 
     def test_browser_api_attaches_session_bound_csrf_header(self) -> None:
         api_script = (FRONTEND / "static" / "js" / "api.js").read_text()
-        app_script = (FRONTEND / "static" / "app.js").read_text()
+        app_script = frontend_script()
         auth_script = (FRONTEND / "static" / "js" / "auth.js").read_text()
         self.assertIn('headers["X-CSRF-Token"] = csrfToken', api_script)
         self.assertIn('typeof data.csrf_token === "string"', api_script)
-        self.assertIn('./js/api.js?v=1', app_script)
+        self.assertIn('./api.js?v=1', app_script)
         self.assertIn('./api.js?v=1', auth_script)
 
     def test_authentication_can_reveal_passwords_accessibly(self) -> None:
@@ -119,7 +139,7 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn(".timeline-timestamp", stylesheet)
 
     def test_deaths_localize_game_terms_and_separate_source_from_timestamp(self) -> None:
-        script = (FRONTEND / "static" / "app.js").read_text()
+        script = frontend_script()
         terms = (FRONTEND / "static" / "js" / "i18n" / "game-terms.js").read_text()
         history = (FRONTEND / "static" / "js" / "features" / "players" / "history.js").read_text()
         stylesheet = (FRONTEND / "static" / "players.css").read_text()
@@ -132,7 +152,7 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn('id="release-tags"', template)
 
     def test_players_and_analytics_receive_localized_dimension_names(self) -> None:
-        script = (FRONTEND / "static" / "app.js").read_text()
+        script = frontend_script()
         terms = (FRONTEND / "static" / "js" / "i18n" / "game-terms.js").read_text()
         self.assertIn("function dimensionName(identifier)", terms)
         self.assertIn("blockIcon, dimensionName, gameTermMarkup", script)
@@ -179,17 +199,17 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn("#ui-logout", auth_script)
 
     def test_split_frontend_reports_its_own_release_version(self) -> None:
-        script = (FRONTEND / "static" / "app.js").read_text()
+        script = frontend_script()
         server = (FRONTEND / "static" / "js" / "features" / "server" / "index.js").read_text()
         dockerfile = (FRONTEND / "Dockerfile").read_text()
         nginx = (FRONTEND / "nginx.conf").read_text()
         self.assertIn('fetch("/version.json", { cache: "no-store" })', server)
         self.assertIn("UI v", server)
-        self.assertIn("CRAFTCONTROL_FRONTEND_VERSION=0.1.9", dockerfile)
+        self.assertIn("CRAFTCONTROL_FRONTEND_VERSION=0.2.0", dockerfile)
         self.assertIn("/version.json", nginx)
 
     def test_world_rules_server_and_auth_have_feature_boundaries(self) -> None:
-        script = (FRONTEND / "static" / "app.js").read_text()
+        script = frontend_script()
         expectations = {
             "world/index.js": "createWorldFeature",
             "rules/index.js": "createRulesFeature",
@@ -207,22 +227,22 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertNotIn("requireSession().then", script)
 
     def test_frontend_core_owns_shared_state_and_dom_primitives(self) -> None:
-        script = (FRONTEND / "static" / "app.js").read_text()
+        script = frontend_script()
         state_module = (FRONTEND / "static" / "js" / "core" / "state.js").read_text()
         dom_module = (FRONTEND / "static" / "js" / "core" / "dom.js").read_text()
-        self.assertIn('from "./js/core/state.js?v=1"', script)
-        self.assertIn('from "./js/core/dom.js?v=1"', script)
+        self.assertIn('from "./core/state.js?v=1"', script)
+        self.assertIn('from "./core/dom.js?v=1"', script)
         self.assertIn("export const state", state_module)
         self.assertIn("export function escapeHtml", dom_module)
         self.assertNotIn("const state = {", script)
         self.assertNotIn("function escapeHtml", script)
 
     def test_frontend_components_own_feedback_and_time_primitives(self) -> None:
-        script = (FRONTEND / "static" / "app.js").read_text()
+        script = frontend_script()
         feedback = (FRONTEND / "static" / "js" / "components" / "feedback.js").read_text()
         time = (FRONTEND / "static" / "js" / "components" / "time.js").read_text()
-        self.assertIn('from "./js/components/feedback.js?v=1"', script)
-        self.assertIn('from "./js/components/time.js?v=1"', script)
+        self.assertIn('from "./components/feedback.js?v=1"', script)
+        self.assertIn('from "./components/time.js?v=1"', script)
         self.assertIn("export function toast", feedback)
         self.assertIn("export function timelineTimestamp", time)
         self.assertIn("export function formatDuration", time)
@@ -230,10 +250,10 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertNotIn("function formatDuration", script)
 
     def test_analytics_activity_and_deaths_have_a_feature_boundary(self) -> None:
-        script = (FRONTEND / "static" / "app.js").read_text()
+        script = frontend_script()
         index = (FRONTEND / "static" / "js" / "features" / "analytics" / "index.js").read_text()
         activity = (FRONTEND / "static" / "js" / "features" / "analytics" / "activity.js").read_text()
-        self.assertIn('from "./js/features/analytics/index.js?v=1"', script)
+        self.assertIn('from "./features/analytics/index.js?v=1"', script)
         self.assertIn('from "./activity.js?v=1"', index)
         self.assertIn("export function createActivityView", activity)
         self.assertIn('"player.death"', activity)
@@ -244,7 +264,7 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertNotIn("function showDeathDetails", script)
 
     def test_interface_uses_custom_icons_and_bilingual_block_labels(self) -> None:
-        script = (FRONTEND / "static" / "app.js").read_text()
+        script = frontend_script()
         terms = (FRONTEND / "static" / "js" / "i18n" / "game-terms.js").read_text()
         template = (FRONTEND / "templates" / "index.html").read_text()
         self.assertIn('stone: ["Pedra", "Stone"]', terms)
@@ -280,7 +300,7 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn(".session-item.is-inferred", stylesheet)
 
     def test_analytics_has_dedicated_bilingual_mobile_workspace(self) -> None:
-        script = (FRONTEND / "static" / "app.js").read_text()
+        script = frontend_script()
         activity = (FRONTEND / "static" / "js" / "features" / "analytics" / "activity.js").read_text()
         analytics = "\n".join(
             path.read_text()
@@ -318,7 +338,7 @@ class CraftControlBrandTest(unittest.TestCase):
     def test_analytics_panels_are_owned_by_separate_feature_modules(self) -> None:
         feature_root = FRONTEND / "static" / "js" / "features" / "analytics"
         index = (feature_root / "index.js").read_text()
-        script = (FRONTEND / "static" / "app.js").read_text()
+        script = frontend_script()
         for name, factory in {
             "rankings": "createRankingsPanel",
             "blocks": "createBlocksPanel",

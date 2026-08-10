@@ -13,6 +13,8 @@
 .auth-card .password-toggle:hover, .auth-card .password-toggle[aria-pressed="true"] { color: var(--grass-light); border-color: var(--grass); }
 .password-toggle svg { display: block; width: 24px; height: 24px; }
 .auth-error { min-height: 1.4em; margin: 0; color: #ffaaa3; }
+.auth-card .auth-switch { display: grid; gap: 5px; justify-items: center; margin: 2px 0 0; color: var(--muted); text-align: center; font-size: .9rem; }
+.auth-card .auth-switch button { width: auto; min-height: 0; padding: 4px 8px; border: 0; background: transparent; color: var(--grass-light); font: inherit; font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
 #identity { display: flex; align-items: center; gap: 8px; }
 #identity small { text-transform: uppercase; color: #91aa98; }
 #identity button { display: inline-flex; align-items: center; min-height: 38px; }

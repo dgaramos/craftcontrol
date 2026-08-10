@@ -1,3 +1,5 @@
+import { persistTab } from "../../core/route.js?v=4";
+
 export function createPlayerProfile({ state, content, t, api, $, escapeHtml, formatDate, formatDuration, playerDataMarkup, profileMarkup, booleanControl, panelAccessDetailMarkup, renderPlayersPanel, renderAnalyticsPanel, renderTabs, updateToggleLabel, toast, bindPlayerAccess }) {
 return async function renderPlayerDetail(player, account, back = renderPlayersPanel) {
   content.innerHTML = `<div class="player-detail-loading">${t("checking")}</div>`;
@@ -15,6 +17,7 @@ return async function renderPlayerDetail(player, account, back = renderPlayersPa
       state.analytics.player = profile.name;
       state.analytics.page = 1;
       state.tab = "analytics";
+      persistTab(state.tab);
       renderTabs();
       renderAnalyticsPanel();
     };
@@ -29,4 +32,3 @@ return async function renderPlayerDetail(player, account, back = renderPlayersPa
 }
 
 }
-

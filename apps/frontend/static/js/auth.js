@@ -1,14 +1,14 @@
-import { api } from "./api.js?v=3";
+import { api } from "./api.js?v=4";
 
 const locale = () => ["pt", "en", "es"].includes(localStorage.getItem("craftcontrol-locale")) ? localStorage.getItem("craftcontrol-locale") : "pt";
 const copy = {
-  pt: { title: "Entrar no CraftControl", player: "Gamertag", password: "Senha", login: "Entrar", claim: "Primeiro acesso ou convite", token: "Código de convite", choose: "Escolha uma senha com pelo menos 8 caracteres", activate: "Ativar acesso", back: "Voltar ao login", logout: "Sair", showPassword: "Mostrar senha", hidePassword: "Ocultar senha" },
-  en: { title: "Sign in to CraftControl", player: "Gamertag", password: "Password", login: "Sign in", claim: "First access or invitation", token: "Invitation code", choose: "Choose a password with at least 8 characters", activate: "Activate access", back: "Back to sign in", logout: "Sign out", showPassword: "Show password", hidePassword: "Hide password" },
-  es: { title: "Entrar en CraftControl", player: "Gamertag", password: "Contraseña", login: "Entrar", claim: "Primer acceso o invitación", token: "Código de invitación", choose: "Elige una contraseña de al menos 8 caracteres", activate: "Activar acceso", back: "Volver al inicio de sesión", logout: "Salir", showPassword: "Mostrar contraseña", hidePassword: "Ocultar contraseña" },
+  pt: { title: "Entrar no CraftControl", claimTitle: "Criar acesso", player: "Gamertag", password: "Senha", login: "Entrar", noAccount: "Primeiro acesso ou recebeu um convite?", claim: "Criar acesso", token: "Código de convite", choose: "Escolha uma senha com pelo menos 8 caracteres", activate: "Cadastrar", back: "Já tem acesso? Entrar", logout: "Sair", showPassword: "Mostrar senha", hidePassword: "Ocultar senha" },
+  en: { title: "Sign in to CraftControl", claimTitle: "Create access", player: "Gamertag", password: "Password", login: "Sign in", noAccount: "First access or received an invitation?", claim: "Sign up", token: "Invitation code", choose: "Choose a password with at least 8 characters", activate: "Sign up", back: "Already have access? Sign in", logout: "Sign out", showPassword: "Show password", hidePassword: "Hide password" },
+  es: { title: "Entrar en CraftControl", claimTitle: "Crear acceso", player: "Gamertag", password: "Contraseña", login: "Entrar", noAccount: "¿Primer acceso o recibiste una invitación?", claim: "Registrarse", token: "Código de invitación", choose: "Elige una contraseña de al menos 8 caracteres", activate: "Registrarse", back: "¿Ya tienes acceso? Entrar", logout: "Salir", showPassword: "Mostrar contraseña", hidePassword: "Ocultar contraseña" },
 };
 
 function passwordInput(words, autocomplete, minimum = "") {
-  return `<span class="password-control"><input name="password" type="password" ${minimum} autocomplete="${autocomplete}" required><button class="password-toggle" type="button" aria-label="${words.showPassword}" title="${words.showPassword}" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=3#ui-eye"></use></svg></button></span>`;
+  return `<span class="password-control"><input name="password" type="password" ${minimum} autocomplete="${autocomplete}" required><button class="password-toggle" type="button" aria-label="${words.showPassword}" title="${words.showPassword}" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=4#ui-eye"></use></svg></button></span>`;
 }
 
 export async function requireSession() {
@@ -36,13 +36,14 @@ function showAuth() {
   const words = copy[locale()];
   const overlay = document.querySelector("#auth-overlay");
   overlay.hidden = false;
-  overlay.innerHTML = `<section class="auth-card block-panel"><img src="/static/craftcontrol-mark.svg" alt=""><span class="eyebrow">CRAFTCONTROL</span><h1>${words.title}</h1>
-    <form id="login-form"><label>${words.player}<input name="player" autocomplete="username" required></label><label>${words.password}${passwordInput(words, "current-password")}</label><p class="auth-error" role="alert"></p><button class="primary" type="submit">${words.login}</button><button id="show-claim" class="secondary" type="button">${words.claim}</button></form>
-    <form id="claim-form" hidden><label>${words.player}<input name="player" autocomplete="username" required></label><label>${words.token}<input name="token" autocomplete="one-time-code" required></label><label>${words.choose}${passwordInput(words, "new-password", 'minlength="8"')}</label><p class="auth-error" role="alert"></p><button class="primary" type="submit">${words.activate}</button><button id="show-login" class="secondary" type="button">${words.back}</button></form></section>`;
+  overlay.innerHTML = `<section class="auth-card block-panel"><img src="/static/craftcontrol-mark.svg" alt=""><span class="eyebrow">CRAFTCONTROL</span><h1 id="auth-title">${words.title}</h1>
+    <form id="login-form"><label>${words.player}<input name="player" autocomplete="username" required></label><label>${words.password}${passwordInput(words, "current-password")}</label><p class="auth-error" role="alert"></p><button class="primary" type="submit">${words.login}</button><p class="auth-switch"><span>${words.noAccount}</span><button id="show-claim" type="button">${words.claim}</button></p></form>
+    <form id="claim-form" hidden><label>${words.player}<input name="player" autocomplete="username" required></label><label>${words.token}<input name="token" autocomplete="one-time-code" required></label><label>${words.choose}${passwordInput(words, "new-password", 'minlength="8"')}</label><p class="auth-error" role="alert"></p><button class="primary" type="submit">${words.activate}</button><p class="auth-switch"><button id="show-login" type="button">${words.back}</button></p></form></section>`;
   const login = overlay.querySelector("#login-form");
   const claim = overlay.querySelector("#claim-form");
-  overlay.querySelector("#show-claim").onclick = () => { login.hidden = true; claim.hidden = false; };
-  overlay.querySelector("#show-login").onclick = () => { claim.hidden = true; login.hidden = false; };
+  const title = overlay.querySelector("#auth-title");
+  overlay.querySelector("#show-claim").onclick = () => { login.hidden = true; claim.hidden = false; title.textContent = words.claimTitle; claim.querySelector("input").focus(); };
+  overlay.querySelector("#show-login").onclick = () => { claim.hidden = true; login.hidden = false; title.textContent = words.title; login.querySelector("input").focus(); };
   overlay.querySelectorAll(".password-toggle").forEach((button) => button.onclick = () => {
     const input = button.parentElement.querySelector("input");
     const visible = input.type === "password";

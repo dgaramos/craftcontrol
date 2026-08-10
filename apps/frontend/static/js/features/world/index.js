@@ -1,3 +1,5 @@
+import { persistTab } from "../../core/route.js?v=4";
+
 export function createWorldFeature({ state, content, t, api, $, uiIcon, booleanControl, updateToggleLabel, toast, renderSettingsGroups, renderTabs }) {
 function renderTimePanel() {
   const presets = ["sunrise", "day", "noon", "sunset", "night", "midnight"];
@@ -60,6 +62,7 @@ function bindTimePanel() {
 
   const openTimeControls = () => {
     state.tab = "__time__";
+    persistTab(state.tab);
     renderTabs();
     renderTimePanel();
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -71,4 +74,3 @@ function bindTimePanel() {
   };
   return { renderWorld, renderTimePanel, openTimeControls };
 }
-

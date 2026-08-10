@@ -1,21 +1,21 @@
-import { api } from "./api.js?v=3";
+import { api } from "./api.js?v=4";
 import { connectEventStream } from "./events.js";
 import { requireSession } from "./auth.js?v=4";
-import { state } from "./core/state.js?v=3";
-import { $, escapeHtml } from "./core/dom.js?v=3";
-import { connectInvalidation } from "./core/invalidation.js?v=3";
-import { createNavigation } from "./core/navigation.js?v=3";
-import { toast } from "./components/feedback.js?v=3";
-import { formatDate as formatLocalizedDate, formatDuration, sessionMoment as localizedSessionMoment, timelineTimestamp as localizedTimelineTimestamp } from "./components/time.js?v=3";
-import { createAnalyticsFeature } from "./features/analytics/index.js?v=3";
-import { createPlayersFeature } from "./features/players/index.js?v=3";
-import { createWorldFeature } from "./features/world/index.js?v=3";
-import { createRulesFeature } from "./features/rules/index.js?v=3";
-import { createServerFeature } from "./features/server/index.js?v=3";
-import { startAuthenticatedApplication } from "./features/auth/bootstrap.js?v=3";
-import { createSettingsFeature } from "./features/settings/index.js?v=3";
-import { createI18n } from "./i18n/index.js?v=3";
-import { createGameTerms } from "./i18n/game-terms.js?v=3";
+import { state } from "./core/state.js?v=4";
+import { $, escapeHtml } from "./core/dom.js?v=4";
+import { connectInvalidation } from "./core/invalidation.js?v=4";
+import { createNavigation } from "./core/navigation.js?v=4";
+import { toast } from "./components/feedback.js?v=4";
+import { formatDate as formatLocalizedDate, formatDuration, sessionMoment as localizedSessionMoment, timelineTimestamp as localizedTimelineTimestamp } from "./components/time.js?v=4";
+import { createAnalyticsFeature } from "./features/analytics/index.js?v=4";
+import { createPlayersFeature } from "./features/players/index.js?v=4";
+import { createWorldFeature } from "./features/world/index.js?v=4";
+import { createRulesFeature } from "./features/rules/index.js?v=4";
+import { createServerFeature } from "./features/server/index.js?v=4";
+import { startAuthenticatedApplication } from "./features/auth/bootstrap.js?v=4";
+import { createSettingsFeature } from "./features/settings/index.js?v=4";
+import { createI18n } from "./i18n/index.js?v=4";
+import { createGameTerms } from "./i18n/game-terms.js?v=4";
 
 export function startApplication() {
   const content = $("#content");
@@ -196,7 +196,7 @@ export function startApplication() {
     const languageNames = { pt: "Português", en: "English", es: "Español" };
     const languageFlags = { pt: "br", en: "us", es: "es" };
     $("#language span").textContent = languageNames[state.locale];
-    $("#language use").setAttribute("href", `/static/craftcontrol-ui.svg?v=3#ui-flag-${languageFlags[state.locale]}`);
+    $("#language use").setAttribute("href", `/static/craftcontrol-ui.svg?v=4#ui-flag-${languageFlags[state.locale]}`);
     $("#language").setAttribute("aria-label", t("language"));
     document.querySelectorAll("[data-locale]").forEach((option) => option.setAttribute("aria-selected", String(option.dataset.locale === state.locale)));
     renderTabs();

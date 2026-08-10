@@ -7,8 +7,13 @@ import { createGameTerms } from "../static/js/i18n/game-terms.js";
 import { createPlayerTelemetry } from "../static/js/features/players/telemetry.js";
 import { createPlayerHistory } from "../static/js/features/players/history.js";
 import { sessionMoment } from "../static/js/components/time.js";
+import { tabFromLocation } from "../static/js/core/route.js";
 
-global.window = { scrollTo: () => {} };
+global.window = {
+  scrollTo: () => {},
+  location: { hash: "#/home" },
+  history: { replaceState: (_state, _title, hash) => { window.location.hash = hash; } },
+};
 
 const state = { tab: "home", tabs: ["home", "players", "analytics"] };
 let rendered = 0;
@@ -32,6 +37,9 @@ assert.match(tabs.markup, /data-tab="players"/);
 buttons[1].onclick();
 assert.equal(state.tab, "__players__");
 assert.equal(rendered, 1);
+assert.equal(window.location.hash, "#/players");
+assert.equal(tabFromLocation({ hash: "#/analytics" }), "home");
+assert.equal(tabFromLocation({ hash: "#/data" }), "analytics");
 
 let locale = "pt";
 const i18n = createI18n(() => locale);

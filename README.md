@@ -3,6 +3,20 @@
   <h1>CraftControl</h1>
   <p><strong>A mobile-first control center for Minecraft Bedrock servers.</strong></p>
   <p>Manage worlds, players, rules, access, backups, and structured gameplay statistics without living in a server console.</p>
+  <p>
+    <a href="https://github.com/dgaramos/craftcontrol/actions/workflows/quality.yml"><img alt="Quality gates" src="https://github.com/dgaramos/craftcontrol/actions/workflows/quality.yml/badge.svg?branch=main"></a>
+    <a href="https://www.python.org/"><img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white"></a>
+    <a href="https://flask.palletsprojects.com/"><img alt="Flask 3" src="https://img.shields.io/badge/Flask-3-101010?logo=flask&logoColor=white"></a>
+    <a href="https://www.sqlite.org/"><img alt="SQLite" src="https://img.shields.io/badge/SQLite-durable-003B57?logo=sqlite&logoColor=white"></a>
+    <a href="https://www.docker.com/"><img alt="Docker Compose" src="https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white"></a>
+  </p>
+  <p>
+    <a href="https://nginx.org/"><img alt="Nginx" src="https://img.shields.io/badge/Nginx-static_proxy-009639?logo=nginx&logoColor=white"></a>
+    <a href="https://developer.mozilla.org/docs/Web/JavaScript"><img alt="JavaScript ES modules" src="https://img.shields.io/badge/JavaScript-ES_modules-F7DF1E?logo=javascript&logoColor=101010"></a>
+    <a href="packages/contracts/openapi.json"><img alt="OpenAPI 3.1" src="https://img.shields.io/badge/OpenAPI-3.1-6BA539?logo=openapiinitiative&logoColor=white"></a>
+    <a href="#contracts-and-api-documentation"><img alt="Swagger UI" src="https://img.shields.io/badge/Swagger-UI-85EA2D?logo=swagger&logoColor=173647"></a>
+    <img alt="Languages: PT, EN, ES" src="https://img.shields.io/badge/UI-PT%20%7C%20EN%20%7C%20ES-B87333">
+  </p>
 </div>
 
 > [!IMPORTANT]

@@ -18,6 +18,11 @@ class PublicDocumentationTest(unittest.TestCase):
         self.assertIn("modular monolith", self.readme)
         self.assertIn("compatibility overlay", self.readme)
 
+    def test_readme_surfaces_stack_contract_and_quality_badges(self) -> None:
+        for badge in ("Quality gates", "Python 3.12", "Flask 3", "SQLite", "Docker Compose", "Nginx", "JavaScript ES modules", "OpenAPI 3.1", "Swagger UI"):
+            self.assertIn(f'alt="{badge}"', self.readme)
+        self.assertIn("actions/workflows/quality.yml/badge.svg?branch=main", self.readme)
+
     def test_readme_documents_runtime_contract_and_security(self) -> None:
         for claim in ("OpenAPI 3.1", "Swagger UI", "same-origin", "Server-Sent Events", "CSRF", "one Gunicorn worker"):
             self.assertIn(claim, self.readme)

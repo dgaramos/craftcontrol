@@ -5,6 +5,7 @@
   <p>Manage worlds, players, rules, access, backups, and structured gameplay statistics without living in a server console.</p>
   <p>
     <a href="https://github.com/dgaramos/craftcontrol/actions/workflows/quality.yml"><img alt="Quality gates" src="https://github.com/dgaramos/craftcontrol/actions/workflows/quality.yml/badge.svg?branch=main"></a>
+    <a href="LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/License-Apache--2.0-D22128?logo=apache"></a>
     <a href="https://www.python.org/"><img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white"></a>
     <a href="https://flask.palletsprojects.com/"><img alt="Flask 3" src="https://img.shields.io/badge/Flask-3-101010?logo=flask&logoColor=white"></a>
     <a href="https://www.sqlite.org/"><img alt="SQLite" src="https://img.shields.io/badge/SQLite-durable-003B57?logo=sqlite&logoColor=white"></a>
@@ -315,6 +316,10 @@ Remaining hardening work:
 
 ## License and trademarks
 
-No project license has been declared. All rights remain with the repository owner until a license is added.
+Copyright 2026 Danilo Ramos.
+
+CraftControl is licensed under the [Apache License 2.0](LICENSE). The license
+applies to the original CraftControl source code, documentation, Telemetry Pack,
+and visual assets contained in this repository unless a file states otherwise.
 
 CraftControl is independent and is not affiliated with Mojang Studios or Microsoft. Minecraft is a trademark of Microsoft Corporation.

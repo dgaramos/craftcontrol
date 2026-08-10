@@ -204,6 +204,18 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn("#identity button > span { display: none; }", auth_stylesheet)
         self.assertIn("#ui-logout", auth_script)
 
+    def test_mobile_page_scroll_is_bounded_and_navigation_resets_position(self) -> None:
+        stylesheet = (FRONTEND / "static" / "app.css").read_text()
+        navigation = (FRONTEND / "static" / "js" / "core" / "navigation.js").read_text()
+        template = (FRONTEND / "templates" / "index.html").read_text()
+
+        self.assertIn("overscroll-behavior-y: none", stylesheet)
+        self.assertIn("min-height: 100dvh", stylesheet)
+        self.assertIn("overflow-x: clip", stylesheet)
+        self.assertIn('window.scrollTo({ top: 0, left: 0, behavior: "auto" })', navigation)
+        self.assertIn('/static/app.css?v=25', template)
+        self.assertIn('/static/app.js?v=63', template)
+
     def test_split_frontend_reports_its_own_release_version(self) -> None:
         script = frontend_script()
         server = (FRONTEND / "static" / "js" / "features" / "server" / "index.js").read_text()
@@ -211,7 +223,7 @@ class CraftControlBrandTest(unittest.TestCase):
         nginx = (FRONTEND / "nginx.conf").read_text()
         self.assertIn('fetch("/version.json", { cache: "no-store" })', server)
         self.assertIn("UI v", server)
-        self.assertIn("CRAFTCONTROL_FRONTEND_VERSION=0.3.4", dockerfile)
+        self.assertIn("CRAFTCONTROL_FRONTEND_VERSION=0.3.5", dockerfile)
         self.assertIn("/version.json", nginx)
 
     def test_world_rules_server_and_auth_have_feature_boundaries(self) -> None:

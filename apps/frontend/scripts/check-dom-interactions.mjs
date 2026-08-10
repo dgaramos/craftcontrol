@@ -118,4 +118,15 @@ assert.match(players, /data-player-index/);
 assert.match(analytics, /data-analytics-view/);
 assert.match(css, /@media \(max-width:/);
 
+const fetchCalls = [];
+global.fetch = async (url, options = {}) => {
+  fetchCalls.push({ url, options });
+  if (url === "/api/auth/me") return { ok: true, status: 200, json: async () => ({ csrf_token: "fresh-token" }) };
+  return { ok: true, status: 200, json: async () => ({ token: "invitation-token" }) };
+};
+const { api } = await import(`../static/js/api.js?interaction=${Date.now()}`);
+await api("/api/auth/access/invite", { method: "POST", body: "{}" });
+assert.equal(fetchCalls[0].url, "/api/auth/me");
+assert.equal(fetchCalls[1].options.headers["X-CSRF-Token"], "fresh-token");
+
 console.log("DOM interactions: navigation, auth, settings, players, analytics, responsive UI, SSE, i18n");

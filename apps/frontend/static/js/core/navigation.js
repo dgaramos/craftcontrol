@@ -1,4 +1,4 @@
-import { persistTab } from "./route.js?v=4";
+import { persistTab } from "./route.js?v=5";
 
 export function createNavigation({ state, $, t, uiIcon, render }) {
   const icons = { home: "home", world: "world", players: "players", analytics: "data", rules: "rules", server: "server" };

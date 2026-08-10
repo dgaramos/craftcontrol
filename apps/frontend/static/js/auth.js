@@ -1,4 +1,4 @@
-import { api } from "./api.js?v=4";
+import { api } from "./api.js?v=5";
 
 const locale = () => ["pt", "en", "es"].includes(localStorage.getItem("craftcontrol-locale")) ? localStorage.getItem("craftcontrol-locale") : "pt";
 const copy = {
@@ -8,7 +8,7 @@ const copy = {
 };
 
 function passwordInput(words, autocomplete, minimum = "") {
-  return `<span class="password-control"><input name="password" type="password" ${minimum} autocomplete="${autocomplete}" required><button class="password-toggle" type="button" aria-label="${words.showPassword}" title="${words.showPassword}" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=4#ui-eye"></use></svg></button></span>`;
+  return `<span class="password-control"><input name="password" type="password" ${minimum} autocomplete="${autocomplete}" required><button class="password-toggle" type="button" aria-label="${words.showPassword}" title="${words.showPassword}" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=5#ui-eye"></use></svg></button></span>`;
 }
 
 export async function requireSession() {
@@ -28,7 +28,7 @@ function showIdentity(user) {
   if (!container) return;
   container.hidden = false;
   const logoutLabel = copy[locale()].logout;
-  container.innerHTML = `<span>${escape(user.name)}</span><small>${escape(user.role)}</small><button id="logout" type="button" aria-label="${logoutLabel}" title="${logoutLabel}"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=4#ui-logout"></use></svg><span>${logoutLabel}</span></button>`;
+  container.innerHTML = `<span>${escape(user.name)}</span><small>${escape(user.role)}</small><button id="logout" type="button" aria-label="${logoutLabel}" title="${logoutLabel}"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=5#ui-logout"></use></svg><span>${logoutLabel}</span></button>`;
   document.querySelector("#logout").onclick = async () => { await api("/api/auth/logout", { method: "POST" }); window.location.reload(); };
 }
 

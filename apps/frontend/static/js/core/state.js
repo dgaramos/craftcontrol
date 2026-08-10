@@ -1,4 +1,4 @@
-import { tabFromLocation } from "./route.js?v=4";
+import { tabFromLocation } from "./route.js?v=5";
 
 const storedLocale = localStorage.getItem("craftcontrol-locale") || localStorage.getItem("manager-locale");
 

@@ -90,9 +90,9 @@ class HttpSurfaceContractTest(unittest.TestCase):
         self.assertEqual(index_status, 200)
         self.assertIn(b"CraftControl", index_data)
         self.assertEqual(script_status, 200)
-        self.assertIn(b'import { startApplication } from "./js/composition.js?v=2"', script_data)
+        self.assertIn(b'import { startApplication } from "./js/composition.js?v=3"', script_data)
         self.assertEqual(composition_status, 200)
-        self.assertIn(b'import { state } from "./core/state.js?v=2"', composition_data)
+        self.assertIn(b'import { state } from "./core/state.js?v=3"', composition_data)
         self.assertEqual(state_status, 200)
         self.assertIn(b"export const state", state_data)
 

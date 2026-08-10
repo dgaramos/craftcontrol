@@ -1,4 +1,4 @@
-import { en } from "./en.js?v=2";
+import { en } from "./en.js?v=3";
 
 export const es = {
   ...en,

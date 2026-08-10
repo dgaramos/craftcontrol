@@ -1,8 +1,8 @@
-import { createPlayerAccess } from "./access.js?v=2";
-import { createPlayerHistory } from "./history.js?v=2";
-import { createPlayerProfile } from "./profile.js?v=2";
-import { createPlayerTelemetry } from "./telemetry.js?v=2";
-import { createPlayersWorkspace } from "./workspace.js?v=2";
+import { createPlayerAccess } from "./access.js?v=3";
+import { createPlayerHistory } from "./history.js?v=3";
+import { createPlayerProfile } from "./profile.js?v=3";
+import { createPlayerTelemetry } from "./telemetry.js?v=3";
+import { createPlayersWorkspace } from "./workspace.js?v=3";
 
 export function createPlayersFeature(deps) {
   let renderPlayersPanel;

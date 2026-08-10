@@ -1,4 +1,4 @@
-export function createPlayerHistory({ state, t, escapeHtml, gameLabel, gameIcon, gameTermMarkup, optionLabel, formatDate, formatDuration, timelineTimestamp }) {
+export function createPlayerHistory({ state, t, escapeHtml, gameLabel, gameIcon, gameTermMarkup, optionLabel, formatDate, formatDuration, sessionMoment, timelineTimestamp }) {
 function historyMarkup(events) {
   if (!events.length) return `<p>${t("noHistory")}</p>`;
   const labels = {
@@ -16,10 +16,6 @@ function historyMarkup(events) {
     ].filter(Boolean);
     return `<li class="timeline-item"><span class="timeline-node" aria-hidden="true"></span><div class="timeline-action"><strong>${escapeHtml(action)}</strong>${details.length ? `<small>${details.join(" · ")}</small>` : ""}</div>${timelineTimestamp(event?.timestamp)}</li>`;
   }).join("")}</ol>`;
-}
-
-function sessionMoment(timestamp) {
-  return localizedSessionMoment(timestamp, localeTag());
 }
 
 function sessionsMarkup(sessions) {

@@ -1,4 +1,4 @@
-import { $, escapeHtml } from "../../core/dom.js?v=2";
+import { $, escapeHtml } from "../../core/dom.js?v=3";
 
 const eventDefinitions = {
   "player.connected": { icon: "players", pt: "Entrou no servidor", en: "Joined the server", es: "Entró al servidor", tone: "join" },

@@ -5,6 +5,8 @@ import { createNavigation } from "../static/js/core/navigation.js";
 import { createI18n } from "../static/js/i18n/index.js";
 import { createGameTerms } from "../static/js/i18n/game-terms.js";
 import { createPlayerTelemetry } from "../static/js/features/players/telemetry.js";
+import { createPlayerHistory } from "../static/js/features/players/history.js";
+import { sessionMoment } from "../static/js/components/time.js";
 
 global.window = { scrollTo: () => {} };
 
@@ -57,6 +59,21 @@ assert.match(playerTelemetry.playerDataMarkup({
   telemetry_updated_at: 1,
   telemetry: { dimensions: { overworld: 3 } },
 }), /Mundo superior/);
+
+const playerHistory = createPlayerHistory({
+  state: { locale: "pt" },
+  t: (key) => key,
+  escapeHtml: (value) => String(value),
+  gameLabel: (value) => String(value),
+  gameIcon: () => "",
+  gameTermMarkup: (value) => String(value),
+  optionLabel: (value) => String(value),
+  formatDate: () => "agora",
+  formatDuration: () => "1m",
+  sessionMoment: (timestamp) => sessionMoment(timestamp, "pt-BR"),
+  timelineTimestamp: () => "",
+});
+assert.match(playerHistory.sessionsMarkup([{ connected_at: 1, disconnected_at: 61, duration_seconds: 60 }]), /<time datetime=/);
 
 let listener;
 let loads = 0;

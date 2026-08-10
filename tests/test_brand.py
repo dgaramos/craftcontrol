@@ -208,7 +208,7 @@ class CraftControlBrandTest(unittest.TestCase):
         nginx = (FRONTEND / "nginx.conf").read_text()
         self.assertIn('fetch("/version.json", { cache: "no-store" })', server)
         self.assertIn("UI v", server)
-        self.assertIn("CRAFTCONTROL_FRONTEND_VERSION=0.3.0", dockerfile)
+        self.assertIn("CRAFTCONTROL_FRONTEND_VERSION=0.3.1", dockerfile)
         self.assertIn("/version.json", nginx)
 
     def test_world_rules_server_and_auth_have_feature_boundaries(self) -> None:
@@ -337,6 +337,9 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn('["trends", "periods", "trendsView"]', analytics)
         self.assertIn("collectionStarted", catalogs)
         self.assertIn(".heatmap-grid", stylesheet)
+        self.assertIn(".trends-main-grid { display: grid; min-width: 0", stylesheet)
+        self.assertIn(".calendar-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }", stylesheet)
+        self.assertIn(".heatmap-scroll { width: 100%; max-width: 100%", stylesheet)
 
     def test_analytics_panels_are_owned_by_separate_feature_modules(self) -> None:
         feature_root = FRONTEND / "static" / "js" / "features" / "analytics"

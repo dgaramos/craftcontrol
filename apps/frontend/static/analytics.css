@@ -244,7 +244,7 @@
 .explorer-profiles button small { grid-column: 1 / -1; padding-top: 6px; color: #76929e; font-size: .51rem; border-top: 1px solid #293b42; }
 
 /* Daily history and period rankings */
-.trends-screen, #trends-content { display: grid; gap: 12px; }
+.trends-screen, #trends-content { display: grid; min-width: 0; gap: 12px; }
 .trends-hero { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 20px; background: linear-gradient(135deg, #302617, #171815); }
 .trends-hero h2 { margin: 5px 0 7px; color: #e4bd7c; }
 .trends-hero p { max-width: 62ch; margin: 0; color: var(--muted); }
@@ -258,12 +258,12 @@
 .trends-summary small, .trends-summary b { display: block; }
 .trends-summary small { min-height: 2.2em; color: #a89b88; font-size: .53rem; font-weight: 900; text-transform: uppercase; }
 .trends-summary b { margin-top: 6px; color: #e4bd7c; font-size: 1.08rem; }
-.period-metric-picker { display: flex; gap: 7px; overflow-x: auto; scrollbar-width: none; }
+.period-metric-picker { display: flex; max-width: 100%; gap: 7px; overflow-x: auto; scrollbar-width: none; }
 .period-metric-picker::-webkit-scrollbar { display: none; }
 .period-metric-picker button { flex: 0 0 auto; min-height: 40px; padding: 7px 11px; color: var(--muted); font-size: .62rem; }
 .period-metric-picker button.active { color: #171006; background: #c99c5e; border-top-color: #f2ce94; text-shadow: 1px 1px 0 #edd2a5; }
-.trends-main-grid { display: grid; grid-template-columns: .8fr 1.2fr; gap: 12px; }
-.period-ranking, .activity-calendar, .heatmap-panel { padding: 16px; }
+.trends-main-grid { display: grid; min-width: 0; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 12px; }
+.period-ranking, .activity-calendar, .heatmap-panel { min-width: 0; padding: 16px; overflow: hidden; }
 .period-ranking ol { margin: 12px 0 0; padding: 0; list-style: none; }
 .period-ranking li { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 8px; min-height: 43px; border-bottom: 1px solid #423a2e; }
 .period-ranking li > b { color: #c69a5e; text-align: center; }
@@ -279,7 +279,7 @@
 .calendar-grid span { color: #aaa18f; font-size: .51rem; text-transform: uppercase; }
 .calendar-grid b { margin-top: 4px; color: var(--text); font-size: .61rem; }
 .calendar-grid small { margin-top: 3px; color: #899183; font-size: .47rem; }
-.heatmap-scroll { margin-top: 12px; overflow-x: auto; }
+.heatmap-scroll { width: 100%; max-width: 100%; margin-top: 12px; overflow-x: auto; overscroll-behavior-inline: contain; }
 .heatmap-grid { display: grid; grid-template-columns: 34px repeat(24, 18px); grid-auto-rows: 18px; gap: 3px; width: max-content; }
 .heatmap-grid > b { color: #857d6e; font-size: .42rem; text-align: center; }
 .heatmap-grid > strong { align-self: center; color: #a49b8a; font-size: .48rem; }
@@ -305,6 +305,7 @@
   .exploration-main-grid { grid-template-columns: 1fr; }
   .trends-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .trends-main-grid { grid-template-columns: 1fr; }
+  .calendar-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
 @media (max-width: 480px) {
@@ -330,7 +331,12 @@
   .journey-panel li { grid-template-columns: minmax(0, 1fr) auto; }
   .journey-panel li > span { grid-column: 1 / -1; grid-row: 2; }
   .trends-hero { align-items: stretch; flex-direction: column; }
+  .trends-hero > button { width: 100%; }
   .trends-note { flex-direction: column; }
   .trends-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .calendar-grid { grid-template-columns: repeat(5, minmax(50px, 1fr)); }
+  .calendar-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .calendar-grid article { min-height: 72px; padding: 8px; }
+  .calendar-grid span { font-size: .56rem; }
+  .calendar-grid b { font-size: .68rem; }
+  .period-ranking, .activity-calendar, .heatmap-panel { padding: 12px; }
 }

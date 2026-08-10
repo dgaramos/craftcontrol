@@ -1,4 +1,4 @@
-import { persistTab } from "../../core/route.js?v=6";
+import { persistTab } from "../../core/route.js?v=7";
 
 export function createWorldFeature({ state, content, t, api, $, uiIcon, booleanControl, updateToggleLabel, toast, renderSettingsGroups, renderTabs }) {
 function renderTimePanel() {

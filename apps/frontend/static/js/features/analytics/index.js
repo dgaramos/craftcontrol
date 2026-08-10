@@ -1,9 +1,9 @@
-import { createActivityView } from "./activity.js?v=6";
-import { createRankingsPanel } from "./rankings.js?v=6";
-import { createBlocksPanel } from "./blocks.js?v=6";
-import { createCombatPanel } from "./combat.js?v=6";
-import { createExplorationPanel } from "./exploration.js?v=6";
-import { createTrendsPanel } from "./trends.js?v=6";
+import { createActivityView } from "./activity.js?v=7";
+import { createRankingsPanel } from "./rankings.js?v=7";
+import { createBlocksPanel } from "./blocks.js?v=7";
+import { createCombatPanel } from "./combat.js?v=7";
+import { createExplorationPanel } from "./exploration.js?v=7";
+import { createTrendsPanel } from "./trends.js?v=7";
 
 export function createAnalyticsFeature(deps) {
   const { state, content, t, uiIcon, api, $, escapeHtml, optionLabel, gameTermMarkup, timelineTimestamp, rankingDefinitions, formatRankingValue, formatDate, openAnalyticsPlayer, blockTermMarkup, blockIcon, oreLabel, formatDuration, dimensionName, localeTag, requestRender } = deps;

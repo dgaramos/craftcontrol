@@ -1,4 +1,4 @@
-import { escapeHtml } from "../core/dom.js?v=6";
+import { escapeHtml } from "../core/dom.js?v=7";
 
 export function formatDate(timestamp, locale) {
   if (!timestamp) return "—";

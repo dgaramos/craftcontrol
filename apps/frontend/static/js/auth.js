@@ -1,4 +1,4 @@
-import { api } from "./api.js?v=6";
+import { api } from "./api.js?v=7";
 
 const locale = () => ["pt", "en", "es"].includes(localStorage.getItem("craftcontrol-locale")) ? localStorage.getItem("craftcontrol-locale") : "pt";
 const copy = {
@@ -8,7 +8,7 @@ const copy = {
 };
 
 function passwordInput(words, autocomplete, minimum = "") {
-  return `<span class="password-control"><input name="password" type="password" ${minimum} autocomplete="${autocomplete}" required><button class="password-toggle" type="button" aria-label="${words.showPassword}" title="${words.showPassword}" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=6#ui-eye"></use></svg></button></span>`;
+  return `<span class="password-control"><input name="password" type="password" ${minimum} autocomplete="${autocomplete}" required><button class="password-toggle" type="button" aria-label="${words.showPassword}" title="${words.showPassword}" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=7#ui-eye"></use></svg></button></span>`;
 }
 
 export async function requireSession() {
@@ -28,7 +28,7 @@ function showIdentity(user) {
   if (!container) return;
   container.hidden = false;
   const logoutLabel = copy[locale()].logout;
-  container.innerHTML = `<span>${escape(user.name)}</span><small>${escape(user.role)}</small><button id="logout" type="button" aria-label="${logoutLabel}" title="${logoutLabel}"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=6#ui-logout"></use></svg><span>${logoutLabel}</span></button>`;
+  container.innerHTML = `<span>${escape(user.name)}</span><small>${escape(user.role)}</small><button id="logout" type="button" aria-label="${logoutLabel}" title="${logoutLabel}"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=7#ui-logout"></use></svg><span>${logoutLabel}</span></button>`;
   document.querySelector("#logout").onclick = async () => { await api("/api/auth/logout", { method: "POST" }); window.location.reload(); };
 }
 
@@ -39,8 +39,8 @@ function showAuth() {
   const render = (mode) => {
     const claim = mode === "claim";
     const form = claim
-      ? `<form id="claim-form"><label>${words.player}<input name="player" autocomplete="username" required></label><label>${words.token}<input name="token" autocomplete="one-time-code" required></label><label>${words.choose}${passwordInput(words, "new-password", 'minlength="8"')}</label><p class="auth-error" role="alert"></p><button class="primary" type="submit">${words.activate}</button><p class="auth-switch"><button id="show-login" type="button">${words.back}</button></p></form>`
-      : `<form id="login-form"><label>${words.player}<input name="player" autocomplete="username" required></label><label>${words.password}${passwordInput(words, "current-password")}</label><p class="auth-error" role="alert"></p><button class="primary" type="submit">${words.login}</button><p class="auth-switch"><span>${words.noAccount}</span><button id="show-claim" type="button">${words.claim}</button></p></form>`;
+      ? `<form id="claim-form"><label>${words.player}<input name="player" autocomplete="username" required></label><label>${words.token}<input name="token" autocomplete="one-time-code" required></label><label>${words.choose}${passwordInput(words, "new-password", 'minlength="8"')}</label><p class="auth-error" role="alert"></p><button class="primary" type="submit">${words.activate}</button><p class="auth-switch"><button id="show-login" class="auth-route-action" type="button"><span aria-hidden="true">←</span>${words.back}</button></p></form>`
+      : `<form id="login-form"><label>${words.player}<input name="player" autocomplete="username" required></label><label>${words.password}${passwordInput(words, "current-password")}</label><p class="auth-error" role="alert"></p><button class="primary" type="submit">${words.login}</button><p class="auth-switch"><span>${words.noAccount}</span><button id="show-claim" class="auth-route-action" type="button">${words.claim}<span aria-hidden="true">→</span></button></p></form>`;
     overlay.innerHTML = `<section class="auth-card block-panel"><img src="/static/craftcontrol-mark.svg" alt=""><span class="eyebrow">CRAFTCONTROL</span><h1>${claim ? words.claimTitle : words.title}</h1>${form}</section>`;
     const activeForm = overlay.querySelector("form");
     activeForm.onsubmit = (event) => submit(event, claim ? "/api/auth/claim" : "/api/auth/login");

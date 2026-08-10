@@ -1,4 +1,4 @@
-import { persistTab } from "../../core/route.js?v=5";
+import { persistTab } from "../../core/route.js?v=6";
 
 export function createPlayerProfile({ state, content, t, api, $, escapeHtml, formatDate, formatDuration, playerDataMarkup, profileMarkup, booleanControl, panelAccessDetailMarkup, renderPlayersPanel, renderAnalyticsPanel, renderTabs, updateToggleLabel, toast, bindPlayerAccess }) {
 return async function renderPlayerDetail(player, account, back = renderPlayersPanel) {

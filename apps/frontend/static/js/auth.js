@@ -1,4 +1,4 @@
-import { api } from "./api.js?v=5";
+import { api } from "./api.js?v=6";
 
 const locale = () => ["pt", "en", "es"].includes(localStorage.getItem("craftcontrol-locale")) ? localStorage.getItem("craftcontrol-locale") : "pt";
 const copy = {
@@ -8,7 +8,7 @@ const copy = {
 };
 
 function passwordInput(words, autocomplete, minimum = "") {
-  return `<span class="password-control"><input name="password" type="password" ${minimum} autocomplete="${autocomplete}" required><button class="password-toggle" type="button" aria-label="${words.showPassword}" title="${words.showPassword}" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=5#ui-eye"></use></svg></button></span>`;
+  return `<span class="password-control"><input name="password" type="password" ${minimum} autocomplete="${autocomplete}" required><button class="password-toggle" type="button" aria-label="${words.showPassword}" title="${words.showPassword}" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=6#ui-eye"></use></svg></button></span>`;
 }
 
 export async function requireSession() {
@@ -28,7 +28,7 @@ function showIdentity(user) {
   if (!container) return;
   container.hidden = false;
   const logoutLabel = copy[locale()].logout;
-  container.innerHTML = `<span>${escape(user.name)}</span><small>${escape(user.role)}</small><button id="logout" type="button" aria-label="${logoutLabel}" title="${logoutLabel}"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=5#ui-logout"></use></svg><span>${logoutLabel}</span></button>`;
+  container.innerHTML = `<span>${escape(user.name)}</span><small>${escape(user.role)}</small><button id="logout" type="button" aria-label="${logoutLabel}" title="${logoutLabel}"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=6#ui-logout"></use></svg><span>${logoutLabel}</span></button>`;
   document.querySelector("#logout").onclick = async () => { await api("/api/auth/logout", { method: "POST" }); window.location.reload(); };
 }
 
@@ -36,24 +36,32 @@ function showAuth() {
   const words = copy[locale()];
   const overlay = document.querySelector("#auth-overlay");
   overlay.hidden = false;
-  overlay.innerHTML = `<section class="auth-card block-panel"><img src="/static/craftcontrol-mark.svg" alt=""><span class="eyebrow">CRAFTCONTROL</span><h1 id="auth-title">${words.title}</h1>
-    <form id="login-form"><label>${words.player}<input name="player" autocomplete="username" required></label><label>${words.password}${passwordInput(words, "current-password")}</label><p class="auth-error" role="alert"></p><button class="primary" type="submit">${words.login}</button><p class="auth-switch"><span>${words.noAccount}</span><button id="show-claim" type="button">${words.claim}</button></p></form>
-    <form id="claim-form" hidden><label>${words.player}<input name="player" autocomplete="username" required></label><label>${words.token}<input name="token" autocomplete="one-time-code" required></label><label>${words.choose}${passwordInput(words, "new-password", 'minlength="8"')}</label><p class="auth-error" role="alert"></p><button class="primary" type="submit">${words.activate}</button><p class="auth-switch"><button id="show-login" type="button">${words.back}</button></p></form></section>`;
-  const login = overlay.querySelector("#login-form");
-  const claim = overlay.querySelector("#claim-form");
-  const title = overlay.querySelector("#auth-title");
-  overlay.querySelector("#show-claim").onclick = () => { login.hidden = true; claim.hidden = false; title.textContent = words.claimTitle; claim.querySelector("input").focus(); };
-  overlay.querySelector("#show-login").onclick = () => { claim.hidden = true; login.hidden = false; title.textContent = words.title; login.querySelector("input").focus(); };
-  overlay.querySelectorAll(".password-toggle").forEach((button) => button.onclick = () => {
-    const input = button.parentElement.querySelector("input");
-    const visible = input.type === "password";
-    input.type = visible ? "text" : "password";
-    button.setAttribute("aria-pressed", String(visible));
-    button.setAttribute("aria-label", visible ? words.hidePassword : words.showPassword);
-    button.title = visible ? words.hidePassword : words.showPassword;
-  });
-  login.onsubmit = (event) => submit(event, "/api/auth/login");
-  claim.onsubmit = (event) => submit(event, "/api/auth/claim");
+  const render = (mode) => {
+    const claim = mode === "claim";
+    const form = claim
+      ? `<form id="claim-form"><label>${words.player}<input name="player" autocomplete="username" required></label><label>${words.token}<input name="token" autocomplete="one-time-code" required></label><label>${words.choose}${passwordInput(words, "new-password", 'minlength="8"')}</label><p class="auth-error" role="alert"></p><button class="primary" type="submit">${words.activate}</button><p class="auth-switch"><button id="show-login" type="button">${words.back}</button></p></form>`
+      : `<form id="login-form"><label>${words.player}<input name="player" autocomplete="username" required></label><label>${words.password}${passwordInput(words, "current-password")}</label><p class="auth-error" role="alert"></p><button class="primary" type="submit">${words.login}</button><p class="auth-switch"><span>${words.noAccount}</span><button id="show-claim" type="button">${words.claim}</button></p></form>`;
+    overlay.innerHTML = `<section class="auth-card block-panel"><img src="/static/craftcontrol-mark.svg" alt=""><span class="eyebrow">CRAFTCONTROL</span><h1>${claim ? words.claimTitle : words.title}</h1>${form}</section>`;
+    const activeForm = overlay.querySelector("form");
+    activeForm.onsubmit = (event) => submit(event, claim ? "/api/auth/claim" : "/api/auth/login");
+    const switcher = overlay.querySelector(claim ? "#show-login" : "#show-claim");
+    switcher.onclick = () => {
+      const next = claim ? "login" : "claim";
+      window.history.replaceState(null, "", claim ? "#/login" : "#/first-access");
+      render(next);
+      overlay.querySelector("input").focus();
+    };
+    overlay.querySelector(".password-toggle").onclick = (event) => {
+      const button = event.currentTarget;
+      const input = button.parentElement.querySelector("input");
+      const visible = input.type === "password";
+      input.type = visible ? "text" : "password";
+      button.setAttribute("aria-pressed", String(visible));
+      button.setAttribute("aria-label", visible ? words.hidePassword : words.showPassword);
+      button.title = visible ? words.hidePassword : words.showPassword;
+    };
+  };
+  render(window.location.hash === "#/first-access" ? "claim" : "login");
 }
 
 async function submit(event, endpoint) {

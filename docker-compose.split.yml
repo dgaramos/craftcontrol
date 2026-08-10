@@ -29,15 +29,15 @@ services:
     security_opt:
       - no-new-privileges:true
     labels:
-      io.craftcontrol.release-pair: "${CRAFTCONTROL_RELEASE_PAIR:-frontend-0.3.2_backend-0.1.0}"
+      io.craftcontrol.release-pair: "${CRAFTCONTROL_RELEASE_PAIR:-frontend-0.3.3_backend-0.1.0}"
 
   craftcontrol-frontend:
     build:
       context: .
       dockerfile: apps/frontend/Dockerfile
       args:
-        CRAFTCONTROL_FRONTEND_VERSION: "${CRAFTCONTROL_FRONTEND_VERSION:-0.3.2}"
-    image: "craftcontrol-frontend:${CRAFTCONTROL_FRONTEND_VERSION:-0.3.2}"
+        CRAFTCONTROL_FRONTEND_VERSION: "${CRAFTCONTROL_FRONTEND_VERSION:-0.3.3}"
+    image: "craftcontrol-frontend:${CRAFTCONTROL_FRONTEND_VERSION:-0.3.3}"
     container_name: craftcontrol-frontend
     restart: unless-stopped
     depends_on:
@@ -53,4 +53,4 @@ services:
     security_opt:
       - no-new-privileges:true
     labels:
-      io.craftcontrol.release-pair: "${CRAFTCONTROL_RELEASE_PAIR:-frontend-0.3.2_backend-0.1.0}"
+      io.craftcontrol.release-pair: "${CRAFTCONTROL_RELEASE_PAIR:-frontend-0.3.3_backend-0.1.0}"

@@ -7,14 +7,14 @@ import { connectInvalidation } from "./core/invalidation.js?v=7";
 import { createNavigation } from "./core/navigation.js?v=8";
 import { toast } from "./components/feedback.js?v=7";
 import { formatDate as formatLocalizedDate, formatDuration, sessionMoment as localizedSessionMoment, timelineTimestamp as localizedTimelineTimestamp } from "./components/time.js?v=7";
-import { createAnalyticsFeature } from "./features/analytics/index.js?v=7";
+import { createAnalyticsFeature } from "./features/analytics/index.js?v=8";
 import { createPlayersFeature } from "./features/players/index.js?v=7";
 import { createWorldFeature } from "./features/world/index.js?v=7";
 import { createRulesFeature } from "./features/rules/index.js?v=7";
 import { createServerFeature } from "./features/server/index.js?v=7";
 import { startAuthenticatedApplication } from "./features/auth/bootstrap.js?v=7";
 import { createSettingsFeature } from "./features/settings/index.js?v=7";
-import { createI18n } from "./i18n/index.js?v=7";
+import { createI18n } from "./i18n/index.js?v=8";
 import { createGameTerms } from "./i18n/game-terms.js?v=7";
 
 export function startApplication() {

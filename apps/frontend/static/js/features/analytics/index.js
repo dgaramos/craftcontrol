@@ -25,8 +25,17 @@ export function createAnalyticsFeature(deps) {
   const renderCombatPanel = createCombatPanel(shared);
   const renderExplorationPanel = createExplorationPanel(shared);
   const renderTrendsPanel = createTrendsPanel(shared);
+  let activityObserver = null;
+  let loadedEvents = [];
+  let loadingActivity = false;
+
+  const stopActivityObserver = () => {
+    activityObserver?.disconnect();
+    activityObserver = null;
+  };
 
 async function renderAnalyticsPanel() {
+  stopActivityObserver();
   const filters = state.analytics;
   if (filters.kind === "rankings") {
     await renderRankingsPanel();
@@ -55,9 +64,15 @@ async function renderAnalyticsPanel() {
     $("#analytics-source").value = filters.source;
   };
   applyFilterValues();
-  const reload = async () => {
+  const reload = async ({ append = false } = {}) => {
+    if (loadingActivity) return;
+    loadingActivity = true;
+    stopActivityObserver();
+    if (!append) {
+      loadedEvents = [];
+    }
     const target = $("#analytics-results");
-    target.innerHTML = `<div class="analytics-loading">${t("checking")}</div>`;
+    if (!append) target.innerHTML = `<div class="analytics-loading">${t("checking")}</div>`;
     try {
       const query = new URLSearchParams({ kind: filters.kind, player: filters.player, source: filters.source, search: filters.search, days: String(filters.days), page: String(filters.page), page_size: "25" });
       const [result, roster] = await Promise.all([api(`/api/analytics/activity?${query}`), api("/api/players")]);
@@ -66,12 +81,43 @@ async function renderAnalyticsPanel() {
       playerSelect.innerHTML = `<option value="">${t("everyPlayer")}</option>${options}`;
       playerSelect.value = filters.player;
       const summary = result.summary || {};
-      target.innerHTML = `<div class="analytics-summary"><span><small>${t("joinsOnly")}</small><b>${summary.joins || 0}</b></span><span><small>${t("leavesOnly")}</small><b>${summary.leaves || 0}</b></span><span><small>${t("respawnsOnly")}</small><b>${summary.respawns || 0}</b></span><span><small>${t("dimensionsOnly")}</small><b>${summary.dimensions || 0}</b></span><span class="death"><small>${t("deathsView")}</small><b>${summary.deaths || 0}</b></span><span><small>${t("permissionsOnly")}</small><b>${summary.permissions || 0}</b></span></div><div class="analytics-result-meta"><b>${t("eventCount", result.total)}</b><span>${t("pageCount", result.page, result.pages)}</span></div>${activityView.eventsMarkup(result.events || [])}<div class="analytics-pagination"><button id="analytics-previous" class="secondary" type="button" ${result.page <= 1 ? "disabled" : ""}>← ${t("previous")}</button><button id="analytics-next" class="secondary" type="button" ${result.page >= result.pages ? "disabled" : ""}>${t("next")} →</button></div>`;
+      loadedEvents = append ? [...loadedEvents, ...(result.events || [])] : (result.events || []);
+      const hasMore = result.page < result.pages;
+      const timelineTail = hasMore
+        ? `<div id="activity-scroll-sentinel" class="activity-scroll-sentinel" role="status">${t("loadingMoreActivity")}</div>`
+        : loadedEvents.length ? `<div class="activity-scroll-end">${t("activityTimelineEnd")}</div>` : "";
+      target.innerHTML = `<div class="analytics-summary"><span><small>${t("joinsOnly")}</small><b>${summary.joins || 0}</b></span><span><small>${t("leavesOnly")}</small><b>${summary.leaves || 0}</b></span><span><small>${t("respawnsOnly")}</small><b>${summary.respawns || 0}</b></span><span><small>${t("dimensionsOnly")}</small><b>${summary.dimensions || 0}</b></span><span class="death"><small>${t("deathsView")}</small><b>${summary.deaths || 0}</b></span><span><small>${t("permissionsOnly")}</small><b>${summary.permissions || 0}</b></span></div><div class="analytics-result-meta"><b>${t("eventCount", result.total)}</b><span>${t("loadedEventCount", loadedEvents.length, result.total)}</span></div>${activityView.eventsMarkup(loadedEvents)}${timelineTail}`;
       target.querySelectorAll("[data-analytics-player]").forEach((button) => button.onclick = () => openAnalyticsPlayer(button.dataset.analyticsPlayer));
-      target.querySelectorAll("[data-death-detail]").forEach((button) => button.onclick = () => activityView.showDeathDetails((result.events || [])[Number(button.dataset.deathDetail)]));
-      $("#analytics-previous").onclick = () => { filters.page -= 1; reload(); window.scrollTo({ top: 0, behavior: "smooth" }); };
-      $("#analytics-next").onclick = () => { filters.page += 1; reload(); window.scrollTo({ top: 0, behavior: "smooth" }); };
-    } catch (error) { target.innerHTML = `<div class="analytics-empty"><p>${escapeHtml(error.message)}</p></div>`; }
+      target.querySelectorAll("[data-death-detail]").forEach((button) => button.onclick = () => activityView.showDeathDetails(loadedEvents[Number(button.dataset.deathDetail)]));
+      if (hasMore) {
+        const sentinel = $("#activity-scroll-sentinel");
+        const loadNextPage = () => {
+          if (loadingActivity) return;
+          filters.page += 1;
+          reload({ append: true });
+        };
+        if ("IntersectionObserver" in window) {
+          activityObserver = new window.IntersectionObserver((entries) => {
+            if (entries.some((entry) => entry.isIntersecting)) loadNextPage();
+          }, { root: null, rootMargin: "320px 0px" });
+          activityObserver.observe(sentinel);
+        } else {
+          sentinel.innerHTML = `<button id="activity-load-more" class="secondary" type="button">${t("loadMoreActivity")}</button>`;
+          $("#activity-load-more").onclick = loadNextPage;
+        }
+      }
+    } catch (error) {
+      if (append) {
+        filters.page = Math.max(1, filters.page - 1);
+        const sentinel = $("#activity-scroll-sentinel");
+        if (sentinel) {
+          sentinel.innerHTML = `<p>${escapeHtml(error.message)}</p><button id="activity-load-more" class="secondary" type="button">${t("tryAgain")}</button>`;
+          $("#activity-load-more").onclick = () => { filters.page += 1; reload({ append: true }); };
+        }
+      } else target.innerHTML = `<div class="analytics-empty"><p>${escapeHtml(error.message)}</p></div>`;
+    } finally {
+      loadingActivity = false;
+    }
   };
   bindAnalyticsViewSwitch();
   [["analytics-kind", "kind"], ["analytics-player", "player"], ["analytics-source", "source"]].forEach(([id, key]) => {
@@ -87,4 +133,3 @@ async function renderAnalyticsPanel() {
 
   return { render: renderAnalyticsPanel };
 }
-

@@ -214,7 +214,7 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn("overflow-x: clip", stylesheet)
         self.assertIn('window.scrollTo({ top: 0, left: 0, behavior: "auto" })', navigation)
         self.assertIn('/static/app.css?v=25', template)
-        self.assertIn('/static/app.js?v=63', template)
+        self.assertIn('/static/app.js?v=64', template)
 
     def test_split_frontend_reports_its_own_release_version(self) -> None:
         script = frontend_script()
@@ -223,7 +223,7 @@ class CraftControlBrandTest(unittest.TestCase):
         nginx = (FRONTEND / "nginx.conf").read_text()
         self.assertIn('fetch("/version.json", { cache: "no-store" })', server)
         self.assertIn("UI v", server)
-        self.assertIn("CRAFTCONTROL_FRONTEND_VERSION=0.3.5", dockerfile)
+        self.assertIn("CRAFTCONTROL_FRONTEND_VERSION=0.3.6", dockerfile)
         self.assertIn("/version.json", nginx)
 
     def test_world_rules_server_and_auth_have_feature_boundaries(self) -> None:
@@ -271,7 +271,7 @@ class CraftControlBrandTest(unittest.TestCase):
         script = frontend_script()
         index = (FRONTEND / "static" / "js" / "features" / "analytics" / "index.js").read_text()
         activity = (FRONTEND / "static" / "js" / "features" / "analytics" / "activity.js").read_text()
-        self.assertIn('from "./features/analytics/index.js?v=7"', script)
+        self.assertIn('from "./features/analytics/index.js?v=8"', script)
         self.assertIn('from "./activity.js?v=7"', index)
         self.assertIn("export function createActivityView", activity)
         self.assertIn('"player.death"', activity)
@@ -299,7 +299,7 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn('ui-flag-us', template)
         self.assertIn('ui-flag-es', template)
         i18n = (FRONTEND / "static" / "js" / "i18n" / "index.js").read_text()
-        self.assertIn('import { es } from "./es.js?v=7"', i18n)
+        self.assertIn('import { es } from "./es.js?v=8"', i18n)
         self.assertIn("function blockTermMarkup", terms)
         self.assertIn("/static/craftcontrol-blocks.svg#block-", terms)
         self.assertIn("/static/craftcontrol-ui.svg#ui-", terms)
@@ -355,6 +355,25 @@ class CraftControlBrandTest(unittest.TestCase):
         self.assertIn(".trends-main-grid { display: grid; min-width: 0", stylesheet)
         self.assertIn(".calendar-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }", stylesheet)
         self.assertIn(".heatmap-scroll { width: 100%; max-width: 100%", stylesheet)
+
+    def test_activity_timeline_loads_incrementally_and_stops_at_the_last_page(self) -> None:
+        analytics = (FRONTEND / "static" / "js" / "features" / "analytics" / "index.js").read_text()
+        stylesheet = (FRONTEND / "static" / "analytics.css").read_text()
+        catalogs = "\n".join(
+            (FRONTEND / "static" / "js" / "i18n" / f"{locale}.js").read_text()
+            for locale in ("pt", "en", "es")
+        )
+
+        self.assertIn('const hasMore = result.page < result.pages', analytics)
+        self.assertIn('new window.IntersectionObserver', analytics)
+        self.assertIn('if (loadingActivity) return', analytics)
+        self.assertIn('activityObserver?.disconnect()', analytics)
+        self.assertIn('activityTimelineEnd', analytics)
+        self.assertNotIn('id="analytics-next"', analytics)
+        self.assertIn('.activity-scroll-sentinel', stylesheet)
+        self.assertIn('Fim da linha do tempo', catalogs)
+        self.assertIn('End of timeline', catalogs)
+        self.assertIn('Fin de la línea de tiempo', catalogs)
 
     def test_analytics_panels_are_owned_by_separate_feature_modules(self) -> None:
         feature_root = FRONTEND / "static" / "js" / "features" / "analytics"

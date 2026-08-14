@@ -5,3 +5,7 @@ __pycache__/
 data/*.db
 !data/.gitkeep
 roadmap/
+
+# Coverage
+.coverage
+coverage.xml

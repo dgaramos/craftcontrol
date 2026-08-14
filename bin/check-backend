@@ -7,8 +7,9 @@ cd "$ROOT"
 
 "$PYTHON" -m compileall -q \
   apps/backend/minecraft_manager apps/backend/app.py apps/backend/wsgi.py app.py wsgi.py
-"$PYTHON" -m unittest -v \
+"$PYTHON" -m coverage run --source=apps/backend/minecraft_manager -m unittest -v \
   tests.test_analytics tests.test_auth tests.test_backup tests.test_bedrock \
   tests.test_files tests.test_migrations tests.test_repository tests.test_runtime \
   tests.test_schema tests.test_services tests.test_telemetry tests.test_telemetry_installer
+"$PYTHON" -m coverage xml -o coverage.xml
 echo "backend gate: ok"

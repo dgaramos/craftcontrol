@@ -13,3 +13,5 @@ coverage.xml
 # Frontend
 apps/frontend/node_modules/
 apps/frontend/coverage/
+test-results/
+apps/frontend/junit.xml

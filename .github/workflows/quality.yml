@@ -30,9 +30,21 @@ jobs:
         with:
           files: coverage.xml
           flags: backend
+      - name: Upload backend test results
+        if: matrix.gate == 'backend'
+        uses: codecov/test-results-action@v1
+        with:
+          files: test-results/*.xml
+          flags: backend
       - name: Upload frontend coverage
         if: matrix.gate == 'frontend'
         uses: codecov/codecov-action@v5
         with:
           files: apps/frontend/coverage/lcov.info
+          flags: frontend
+      - name: Upload frontend test results
+        if: matrix.gate == 'frontend'
+        uses: codecov/test-results-action@v1
+        with:
+          files: apps/frontend/junit.xml
           flags: frontend

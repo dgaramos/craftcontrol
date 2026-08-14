@@ -5,6 +5,7 @@
   <p>Manage worlds, players, rules, access, backups, and structured gameplay statistics without living in a server console.</p>
   <p>
     <a href="https://github.com/dgaramos/craftcontrol/actions/workflows/quality.yml"><img alt="Quality gates" src="https://github.com/dgaramos/craftcontrol/actions/workflows/quality.yml/badge.svg?branch=main"></a>
+    <a href="https://codecov.io/gh/dgaramos/craftcontrol"><img alt="Coverage" src="https://codecov.io/gh/dgaramos/craftcontrol/graph/badge.svg?branch=main"></a>
     <a href="LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/License-Apache--2.0-D22128?logo=apache"></a>
     <a href="https://www.python.org/"><img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white"></a>
     <a href="https://flask.palletsprojects.com/"><img alt="Flask 3" src="https://img.shields.io/badge/Flask-3-101010?logo=flask&logoColor=white"></a>

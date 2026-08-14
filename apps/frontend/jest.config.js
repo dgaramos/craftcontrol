@@ -1,6 +1,5 @@
 export default {
   testEnvironment: "node",
-  extensionsToTreatAsEsm: [".js"],
   moduleNameMapper: {
     // Strip ?v=... query strings from imports
     "^(.*\\.js)\\?.*$": "$1",

@@ -9,3 +9,7 @@ roadmap/
 # Coverage
 .coverage
 coverage.xml
+
+# Frontend
+apps/frontend/node_modules/
+apps/frontend/coverage/

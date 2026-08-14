@@ -9,6 +9,15 @@ coverage:
         target: auto
         threshold: 1%
 
+flags:
+  backend:
+    paths:
+      - apps/backend/minecraft_manager/
+      - tests/
+  frontend:
+    paths:
+      - apps/frontend/static/js/
+
 comment:
   layout: "reach,diff,flags"
   behavior: default

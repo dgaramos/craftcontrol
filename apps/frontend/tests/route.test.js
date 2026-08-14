@@ -1,3 +1,4 @@
+import { jest } from "@jest/globals";
 import { tabFromLocation, persistTab } from "../static/js/core/route.js";
 
 function loc(hash) {

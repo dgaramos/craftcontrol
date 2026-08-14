@@ -1,3 +1,4 @@
+import { jest } from "@jest/globals";
 import { connectInvalidation } from "../static/js/core/invalidation.js";
 
 function makeSetup(overrides = {}) {

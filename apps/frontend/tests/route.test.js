@@ -34,7 +34,7 @@ describe("persistTab", () => {
 
   test("unknown tab defaults to home route", () => {
     const history = { replaceState: jest.fn() };
-    persistTab("__time__", history, loc(""));
+    persistTab("nonexistent", history, loc(""));
     expect(history.replaceState).toHaveBeenCalledWith(null, "", "#/home");
   });
 });

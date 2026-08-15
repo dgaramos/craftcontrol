@@ -70,6 +70,8 @@ Update tests and the English `README.md` whenever public behavior, persistence, 
 
 All changes must go through a pull request. Do not push directly to `main`.
 
+- Name branches with the issue number as prefix: `{issue-number}-{type}/{short-description}` (e.g. `42-feat/player-history`).
+- Include the issue number in the PR title: `type(scope): description (#issue-number)` (e.g. `feat(players): add history view (#42)`).
 - CodeRabbit reviews every PR automatically. Address its findings before merging; use `@coderabbitai` commands in PR comments to interact with it.
 - Follow `.github/pull_request_template.md` when writing PR descriptions.
 - The quality gate (`bin/check`) must pass before requesting a merge.

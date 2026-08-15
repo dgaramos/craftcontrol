@@ -66,6 +66,14 @@ Update tests and the English `README.md` whenever public behavior, persistence, 
 - Never run a bare `docker compose up` from a development checkout; relative bind mounts can select development state.
 - Run `bin/deploy-craftcontrol --check` before the mutating deployment. The guarded command owns mount validation, coordinated backup and verification, tracked-file synchronization, state checksum checks, rebuild, and production canaries.
 
+## Pull requests
+
+All changes must go through a pull request. Do not push directly to `main`.
+
+- CodeRabbit reviews every PR automatically. Address its findings before merging; use `@coderabbitai` commands in PR comments to interact with it.
+- Follow `.github/pull_request_template.md` when writing PR descriptions.
+- The quality gate (`bin/check`) must pass before requesting a merge.
+
 ## Git history
 
 - Every commit message must follow Conventional Commits: `type(scope): imperative summary`.

@@ -20,3 +20,5 @@ Key constraints:
 - Use `craftcontrol backup` and `docs/backup-and-restore.md` for recovery operations. Never perform a live restore; require explicit confirmation and preserve the pre-restore recovery set.
 - Run the quality gate documented in `AGENTS.md` before handoff.
 - Use Conventional Commits for every commit: `type(scope): imperative summary`. Verify the final subject before pushing; never publish a non-conforming message for later cleanup.
+- All changes must go through a pull request. Do not push directly to `main`. CodeRabbit reviews every PR automatically; address its findings before merging.
+- Follow `.github/pull_request_template.md` when writing PR descriptions.

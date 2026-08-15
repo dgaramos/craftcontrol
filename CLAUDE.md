@@ -21,6 +21,4 @@ Key constraints:
 - Run the quality gate documented in `AGENTS.md` before handoff.
 - Use Conventional Commits for every commit: `type(scope): imperative summary`. Verify the final subject before pushing; never publish a non-conforming message for later cleanup.
 - All changes must go through a pull request. Do not push directly to `main`. CodeRabbit reviews every PR automatically; address its findings before merging.
-- Name branches with the issue number as prefix: `{issue-number}-{type}/{short-description}` (e.g. `42-feat/player-history`).
-- Include the issue number in the PR title: `type(scope): description (#issue-number)` (e.g. `feat(players): add history view (#42)`).
 - Follow `.github/pull_request_template.md` when writing PR descriptions.

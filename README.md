@@ -315,6 +315,10 @@ Remaining hardening work:
 3. continue removing compatibility overlays after tested migration windows;
 4. expand community installation, diagnostics, and release automation.
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for branch naming, PR title format, metadata requirements, Conventional Commits, quality gate, and CodeRabbit interaction.
+
 ## License and trademarks
 
 Copyright 2026 Danilo Ramos.

@@ -177,10 +177,7 @@ class RuntimeLogsThreadTest(unittest.TestCase):
 
         with patch("minecraft_manager.runtime.threading.Timer"):
             with patch.dict("sys.modules", {"docker": fake_docker}):
-                try:
-                    runtime._logs()
-                except Exception:
-                    pass
+                runtime._logs()
 
         broker.publish.assert_any_call("stream.logs.connected", "docker-logs")
 
@@ -234,10 +231,7 @@ class RuntimeLogsThreadTest(unittest.TestCase):
         fake_docker.from_env.side_effect = stop_after_first
 
         with patch.dict("sys.modules", {"docker": fake_docker}):
-            try:
-                runtime._docker_events()
-            except Exception:
-                pass
+            runtime._docker_events()
 
         broker.publish.assert_any_call("stream.docker.connected", "docker-events")
         broker.publish.assert_any_call("server.start", "docker-events", {"container_id": "abc123"})
@@ -310,10 +304,7 @@ class RuntimeLogsThreadTest(unittest.TestCase):
         fake_docker.from_env.side_effect = stop_after_first
 
         with patch.dict("sys.modules", {"docker": fake_docker}):
-            try:
-                runtime._docker_events()
-            except Exception:
-                pass
+            runtime._docker_events()
 
         broker.publish.assert_any_call(
             "state.changed", "docker-events",
@@ -343,10 +334,7 @@ class RuntimeLogsThreadTest(unittest.TestCase):
         fake_docker.from_env.side_effect = stop_after_first
 
         with patch.dict("sys.modules", {"docker": fake_docker}):
-            try:
-                runtime._docker_events()
-            except Exception:
-                pass
+            runtime._docker_events()
 
         calls = [str(c) for c in broker.publish.call_args_list]
         self.assertFalse(any("state.changed" in c for c in calls))

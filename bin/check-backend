@@ -11,6 +11,8 @@ cd "$ROOT"
   -v -o test-results \
   tests.test_analytics tests.test_auth tests.test_backup tests.test_bedrock \
   tests.test_files tests.test_migrations tests.test_repository tests.test_runtime \
-  tests.test_schema tests.test_services tests.test_telemetry tests.test_telemetry_installer
+  tests.test_schema tests.test_services tests.test_telemetry tests.test_telemetry_installer \
+  tests.test_architecture tests.test_deployment tests.test_documentation \
+  tests.test_http_surface tests.test_openapi
 "$PYTHON" -m coverage xml -o coverage.xml
 echo "backend gate: ok"

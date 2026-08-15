@@ -66,7 +66,7 @@ Do not publish a non-conforming commit and plan to repair it later.
 
 All changes must go through a pull request. **Do not push directly to `main`.**
 
-`main` is protected: every PR requires at least one approval from the repository owner (`@dgaramos`) before it can be merged. The quality gate checks must also pass. Reviews are requested automatically via `CODEOWNERS`.
+`main` is protected: PRs from external contributors require at least one approval from the repository owner (`@dgaramos`) before they can be merged. The owner can merge their own PRs without a separate approval. The quality gate checks must pass for everyone. Reviews are requested automatically via `CODEOWNERS`.
 
 ### PR title format
 

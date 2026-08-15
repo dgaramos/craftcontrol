@@ -58,7 +58,7 @@ class FakeRuntime:
 
 class TimeActionsTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.directory = tempfile.TemporaryDirectory()
+        self.directory = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         root = Path(self.directory.name)
         self.bedrock = FakeBedrock()
         repository = StateRepository(root / "state.db")
@@ -219,7 +219,7 @@ def _make_service(directory: Path, bedrock: FakeBedrock | None = None, docker: F
 
 class RefreshTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.directory = tempfile.TemporaryDirectory()
+        self.directory = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.bedrock = FakeBedrock()
         self.service = _make_service(Path(self.directory.name), self.bedrock)
 
@@ -294,20 +294,40 @@ class RefreshTest(unittest.TestCase):
 
 class InitializeTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.directory = tempfile.TemporaryDirectory()
+        self.directory = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
 
     def tearDown(self) -> None:
         self.directory.cleanup()
 
     def test_initialize_without_runtime_starts_refresh(self) -> None:
+        import threading
+        refreshed = threading.Event()
         service = _make_service(Path(self.directory.name))
+        original = service.refresh
+
+        def refresh_and_signal(reason: str = "manual") -> None:
+            original(reason)
+            refreshed.set()
+
+        service.refresh = refresh_and_signal  # type: ignore[method-assign]
         service.initialize()
+        self.assertTrue(refreshed.wait(timeout=3), "refresh did not run")
 
     def test_initialize_starts_runtime_when_attached(self) -> None:
+        import threading
+        refreshed = threading.Event()
         service = _make_service(Path(self.directory.name))
+        original = service.refresh
+
+        def refresh_and_signal(reason: str = "manual") -> None:
+            original(reason)
+            refreshed.set()
+
+        service.refresh = refresh_and_signal  # type: ignore[method-assign]
         runtime = FakeRuntime()
         service.attach_runtime(runtime)  # type: ignore[arg-type]
         service.initialize()
+        self.assertTrue(refreshed.wait(timeout=3), "refresh did not run")
         self.assertTrue(runtime.started)
 
     def test_attach_runtime_twice_raises(self) -> None:
@@ -320,15 +340,18 @@ class InitializeTest(unittest.TestCase):
 
 class SaveSettingsTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.directory = tempfile.TemporaryDirectory()
+        self.directory = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.service = _make_service(Path(self.directory.name))
 
     def tearDown(self) -> None:
         self.directory.cleanup()
 
     def test_save_known_setting_persists_and_returns_keys(self) -> None:
+        root = Path(self.directory.name)
         changed = self.service.save_settings({"SERVER_NAME": "TestServer"})
         self.assertEqual(changed, ["SERVER_NAME"])
+        _, env_values = ServerFiles(root / ".env", root / "server.properties").read_env()
+        self.assertEqual(env_values.get("SERVER_NAME"), "TestServer")
 
     def test_save_settings_rejects_non_dict(self) -> None:
         with self.assertRaises(TypeError):
@@ -341,7 +364,7 @@ class SaveSettingsTest(unittest.TestCase):
 
 class SetGameruleTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.directory = tempfile.TemporaryDirectory()
+        self.directory = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.bedrock = FakeBedrock()
         self.service = _make_service(Path(self.directory.name), self.bedrock)
 
@@ -363,7 +386,7 @@ class SetGameruleTest(unittest.TestCase):
 
 class WorldActionTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.directory = tempfile.TemporaryDirectory()
+        self.directory = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.bedrock = FakeBedrock()
         self.service = _make_service(Path(self.directory.name), self.bedrock)
 
@@ -381,7 +404,7 @@ class WorldActionTest(unittest.TestCase):
 
 class TimeActionEdgeCasesTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.directory = tempfile.TemporaryDirectory()
+        self.directory = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.bedrock = FakeBedrock()
         self.service = _make_service(Path(self.directory.name), self.bedrock)
 
@@ -435,13 +458,26 @@ class TimeActionEdgeCasesTest(unittest.TestCase):
 
 class TelemetryCoalescingTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.directory = tempfile.TemporaryDirectory()
+        self.directory = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.service = _make_service(Path(self.directory.name))
 
     def tearDown(self) -> None:
         self.directory.cleanup()
 
     def test_second_request_within_cooldown_is_coalesced(self) -> None:
+        import threading
+        first_started = threading.Event()
+        call_count = 0
+        original_snapshot = self.service.request_telemetry_snapshot
+
+        def counted_snapshot(reason: str) -> int:
+            nonlocal call_count
+            call_count += 1
+            first_started.set()
+            return original_snapshot(reason)
+
+        self.service.request_telemetry_snapshot = counted_snapshot  # type: ignore[method-assign]
+
         events: list[str] = []
         original_publish = self.service.broker.publish
 
@@ -450,15 +486,18 @@ class TelemetryCoalescingTest(unittest.TestCase):
             return original_publish(topic, *args, **kwargs)
 
         self.service.broker.publish = capture  # type: ignore[method-assign]
-        # First async call sets _telemetry_last_request; second call within 5s is coalesced.
+
+        # First async call sets _telemetry_last_request; second within 5s is coalesced.
         self.service.request_telemetry_snapshot_async("first")
         self.service.request_telemetry_snapshot_async("second")
+        first_started.wait(timeout=3)
         self.assertIn("telemetry.snapshot.coalesced", events)
+        self.assertEqual(call_count, 1)
 
 
 class PlayerDelegationTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.directory = tempfile.TemporaryDirectory()
+        self.directory = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.service = _make_service(Path(self.directory.name))
 
     def tearDown(self) -> None:

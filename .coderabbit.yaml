@@ -1,0 +1,77 @@
+language: "pt-BR"
+
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - main
+
+  path_instructions:
+    - path: "apps/backend/**"
+      instructions: |
+        Este é um monólito modular Python com Ports & Adapters. Verifique:
+        - Dependências dirigidas de HTTP → application services → ports/adapters. Runtime não alcança repositórios diretamente.
+        - Injeção por construtor sem fallbacks que instanciem infraestrutura (sem `self.x = x or SomeClass()`).
+        - Protocolos (`typing.Protocol`) como fronteiras — sem DI container ou service locator.
+        - SQLite usado com WAL mode e busy timeout explícito. Transações curtas.
+        - Eventos SSE não bloqueiam threads HTTP.
+        - Nenhuma operação Docker arbitrária — apenas as operações do allowlist existente.
+        - Nunca expor XUID no payload de resposta.
+
+    - path: "apps/backend/minecraft_manager/http/**"
+      instructions: |
+        Camada HTTP Flask. Verifique:
+        - CSRF token validado em toda mutação de estado.
+        - Origin/Host validados como defense-in-depth.
+        - Autenticação verificada antes de qualquer lógica de negócio.
+        - Sem lógica de domínio inline nas rotas — delegar para application services.
+        - Respostas de erro não vazam stack traces ou detalhes internos.
+
+    - path: "apps/frontend/**"
+      instructions: |
+        Vanilla JS com ES Modules nativos, sem bundler. Verifique:
+        - Dados da API nunca interpolados via template string em innerHTML — usar .textContent ou templates DOM.
+        - CSRF token incluído em toda requisição de mutação.
+        - Traduções presentes em pt-BR, en e es para qualquer string visível ao usuário.
+        - Features não importam outras features — apenas core/ e components/.
+        - Sem dependências externas novas (sem CDN, sem npm para runtime).
+
+    - path: "packs/telemetry/**"
+      instructions: |
+        Behavior Pack Minecraft Bedrock (JavaScript/TypeScript, Script API). Verifique:
+        - Apenas Script APIs estáveis (@minecraft/server 2.0.0) — sem APIs experimentais.
+        - Eventos de bloco coalesced por ciclo de persistência, nunca por bloco individual.
+        - Mapas dinâmicos limitados em cardinalidade (bounded maps).
+        - Sem coleta de chat, coordenadas contínuas, inventário ou XUID.
+        - Migrações de storage versionadas com backup do estado anterior.
+
+    - path: "packages/contracts/**"
+      instructions: |
+        Contrato OpenAPI compartilhado entre frontend e backend. Verifique:
+        - Novos endpoints documentados com autenticação, CSRF, paginação e envelopes de erro.
+        - Schemas gerados no frontend em sync com o contrato — sem drift.
+        - XUID ausente em qualquer response schema público.
+
+    - path: "tests/**"
+      instructions: |
+        Suite de testes backend. Verifique:
+        - Testes de integração usam banco real, não mocks de SQLite.
+        - Fakes injetados explicitamente — sem monkey-patching global.
+        - Novos módulos incluídos no gate `bin/check-backend`.
+
+    - path: ".github/workflows/**"
+      instructions: |
+        CI com 4 gates independentes: frontend, backend, contracts, integration.
+        Verifique se mudanças preservam os uploads para Codecov (coverage + test results).
+
+  abort_on_close: true
+
+chat:
+  auto_reply: true

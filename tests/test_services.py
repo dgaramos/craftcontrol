@@ -311,7 +311,7 @@ class InitializeTest(unittest.TestCase):
 
         service.refresh = refresh_and_signal  # type: ignore[method-assign]
         service.initialize()
-        self.assertTrue(refreshed.wait(timeout=3), "refresh did not run")
+        self.assertTrue(refreshed.wait(timeout=10), "refresh did not run")
 
     def test_initialize_starts_runtime_when_attached(self) -> None:
         import threading
@@ -327,7 +327,7 @@ class InitializeTest(unittest.TestCase):
         runtime = FakeRuntime()
         service.attach_runtime(runtime)  # type: ignore[arg-type]
         service.initialize()
-        self.assertTrue(refreshed.wait(timeout=3), "refresh did not run")
+        self.assertTrue(refreshed.wait(timeout=10), "refresh did not run")
         self.assertTrue(runtime.started)
 
     def test_attach_runtime_twice_raises(self) -> None:

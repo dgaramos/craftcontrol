@@ -48,6 +48,7 @@ class ComposeManagerTest(unittest.TestCase):
             manager = compose_manager(settings)
 
         MockRuntime.assert_called_once()
+        self.assertIs(manager.runtime, fake_runtime)
 
     @patch("minecraft_manager.composition.EventRuntime")
     @patch("minecraft_manager.composition.DockerOperations")

@@ -52,31 +52,37 @@ class DockerOperationsExecuteTest(unittest.TestCase):
     def test_start_calls_compose_up(self, mock_run) -> None:
         mock_run.return_value = _completed()
         self.ops.execute("start")
-        cmd = mock_run.call_args[0][0]
-        self.assertIn("compose", cmd)
-        self.assertIn("up", cmd)
+        mock_run.assert_called_once_with(
+            ["docker", "compose", "--project-directory", "/srv/project", "up", "-d", "minecraft-bedrock"],
+            capture_output=True, text=True, timeout=120, check=False,
+        )
 
     @patch("minecraft_manager.docker_ops.subprocess.run")
     def test_apply_calls_force_recreate(self, mock_run) -> None:
         mock_run.return_value = _completed()
         self.ops.execute("apply")
-        cmd = mock_run.call_args[0][0]
-        self.assertIn("--force-recreate", cmd)
+        mock_run.assert_called_once_with(
+            ["docker", "compose", "--project-directory", "/srv/project", "up", "-d", "--force-recreate", "minecraft-bedrock"],
+            capture_output=True, text=True, timeout=120, check=False,
+        )
 
     @patch("minecraft_manager.docker_ops.subprocess.run")
     def test_stop_calls_docker_stop(self, mock_run) -> None:
         mock_run.return_value = _completed()
         self.ops.execute("stop")
-        cmd = mock_run.call_args[0][0]
-        self.assertIn("stop", cmd)
-        self.assertIn("bedrock", cmd)
+        mock_run.assert_called_once_with(
+            ["docker", "stop", "bedrock"],
+            capture_output=True, text=True, timeout=120, check=False,
+        )
 
     @patch("minecraft_manager.docker_ops.subprocess.run")
     def test_restart_calls_docker_restart(self, mock_run) -> None:
         mock_run.return_value = _completed()
         self.ops.execute("restart")
-        cmd = mock_run.call_args[0][0]
-        self.assertIn("restart", cmd)
+        mock_run.assert_called_once_with(
+            ["docker", "restart", "bedrock"],
+            capture_output=True, text=True, timeout=120, check=False,
+        )
 
     @patch("minecraft_manager.docker_ops.subprocess.run")
     def test_execute_nonzero_raises_runtime_error(self, mock_run) -> None:

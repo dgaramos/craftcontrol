@@ -12,6 +12,9 @@ class FakeBedrock:
     def __init__(self) -> None:
         self.commands: list[list[str]] = []
         self.telemetry_output: str | None = None
+        self.query_state_result: tuple = ({}, [], 0, 0, {})
+        self.query_state_error: Exception | None = None
+        self.gamerule_result: dict = {}
 
     def send(self, parts: list[str]) -> None:
         self.commands.append(parts)
@@ -22,6 +25,14 @@ class FakeBedrock:
 
     def set_operator(self, player: str, enabled: bool) -> None:
         self.commands.append(["op" if enabled else "deop", player])
+
+    def query_state(self) -> tuple:
+        if self.query_state_error is not None:
+            raise self.query_state_error
+        return self.query_state_result
+
+    def query_gamerules(self, rules: set) -> dict:
+        return self.gamerule_result
 
     def request_telemetry_snapshot(self) -> str:
         if self.telemetry_output is not None:
@@ -37,9 +48,17 @@ class FakeDocker:
     pass
 
 
+class FakeRuntime:
+    def __init__(self) -> None:
+        self.started = False
+
+    def start(self) -> None:
+        self.started = True
+
+
 class TimeActionsTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.directory = tempfile.TemporaryDirectory()
+        self.directory = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         root = Path(self.directory.name)
         self.bedrock = FakeBedrock()
         repository = StateRepository(root / "state.db")
@@ -185,3 +204,312 @@ class TimeActionsTest(unittest.TestCase):
         self.assertEqual(telemetry["capabilities_supported"], "1")
         self.assertEqual(telemetry["capabilities_total"], "2")
         self.assertEqual(json.loads(telemetry["capabilities"]), capabilities)
+
+
+def _make_service(directory: Path, bedrock: FakeBedrock | None = None, docker: FakeDocker | None = None) -> ManagerService:
+    repo = StateRepository(directory / "state.db")
+    repo.initialize()
+    return ManagerService(
+        repo,
+        ServerFiles(directory / ".env", directory / "server.properties"),
+        bedrock or FakeBedrock(),  # type: ignore[arg-type]
+        docker or FakeDocker(),  # type: ignore[arg-type]
+    )
+
+
+class RefreshTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.directory = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.bedrock = FakeBedrock()
+        self.service = _make_service(Path(self.directory.name), self.bedrock)
+
+    def tearDown(self) -> None:
+        self.directory.cleanup()
+
+    def test_refresh_stores_settings_and_server_info(self) -> None:
+        gamerules = {"keepInventory": "false"}
+        self.bedrock.query_state_result = (gamerules, ["Alice"], 1, 10, {"Alice": "111"})
+        self.service.refresh("test")
+        state = self.service.state()
+        self.assertEqual(state["online"], 1)
+        self.assertEqual(state["max_players"], 10)
+        self.assertEqual(state["gamerules"]["keepInventory"], "false")
+
+    def test_refresh_max_players_falls_back_to_env(self) -> None:
+        root = Path(self.directory.name)
+        (root / ".env").write_text("MAX_PLAYERS=20\n")
+        self.bedrock.query_state_result = ({}, [], 0, 0, {})
+        self.service.refresh("test")
+        state = self.service.state()
+        self.assertEqual(state["max_players"], 20)
+
+    def test_refresh_error_publishes_failed_event_and_reraises(self) -> None:
+        self.bedrock.query_state_error = RuntimeError("docker gone")
+        events: list[str] = []
+        original_publish = self.service.broker.publish
+
+        def capture(topic: str, *args, **kwargs):
+            events.append(topic)
+            return original_publish(topic, *args, **kwargs)
+
+        self.service.broker.publish = capture  # type: ignore[method-assign]
+        with self.assertRaises(RuntimeError):
+            self.service.refresh("test")
+        self.assertIn("state.reconciliation.failed", events)
+
+    def test_concurrent_refresh_is_skipped(self) -> None:
+        import threading
+        barrier = threading.Barrier(2)
+        original_query = self.bedrock.query_state
+
+        call_count = 0
+
+        def slow_query():
+            nonlocal call_count
+            call_count += 1
+            barrier.wait(timeout=2)
+            return original_query()
+
+        self.bedrock.query_state = slow_query  # type: ignore[method-assign]
+
+        t = threading.Thread(target=self.service.refresh, args=("bg",))
+        t.start()
+        barrier.wait(timeout=2)
+        self.service.refresh("concurrent")  # should be skipped
+        t.join(timeout=3)
+        self.assertEqual(call_count, 1)
+
+    def test_public_state_hides_known_players_and_bootstrap(self) -> None:
+        self.bedrock.query_state_result = ({}, ["Alice"], 1, 5, {"Alice": "111"})
+        self.service.refresh("test")
+        pub = self.service.public_state()
+        self.assertNotIn("known_players", pub)
+        self.assertNotIn("bootstrap", pub)
+        self.assertIn("online", pub)
+
+    def test_refreshing_flag_is_false_after_refresh(self) -> None:
+        self.service.refresh("test")
+        self.assertFalse(self.service.refreshing)
+
+
+class InitializeTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.directory = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+
+    def tearDown(self) -> None:
+        self.directory.cleanup()
+
+    def test_initialize_without_runtime_starts_refresh(self) -> None:
+        import threading
+        refreshed = threading.Event()
+        service = _make_service(Path(self.directory.name))
+        original = service.refresh
+
+        def refresh_and_signal(reason: str = "manual") -> None:
+            original(reason)
+            refreshed.set()
+
+        service.refresh = refresh_and_signal  # type: ignore[method-assign]
+        service.initialize()
+        self.assertTrue(refreshed.wait(timeout=3), "refresh did not run")
+
+    def test_initialize_starts_runtime_when_attached(self) -> None:
+        import threading
+        refreshed = threading.Event()
+        service = _make_service(Path(self.directory.name))
+        original = service.refresh
+
+        def refresh_and_signal(reason: str = "manual") -> None:
+            original(reason)
+            refreshed.set()
+
+        service.refresh = refresh_and_signal  # type: ignore[method-assign]
+        runtime = FakeRuntime()
+        service.attach_runtime(runtime)  # type: ignore[arg-type]
+        service.initialize()
+        self.assertTrue(refreshed.wait(timeout=3), "refresh did not run")
+        self.assertTrue(runtime.started)
+
+    def test_attach_runtime_twice_raises(self) -> None:
+        service = _make_service(Path(self.directory.name))
+        runtime = FakeRuntime()
+        service.attach_runtime(runtime)  # type: ignore[arg-type]
+        with self.assertRaises(RuntimeError):
+            service.attach_runtime(runtime)  # type: ignore[arg-type]
+
+
+class SaveSettingsTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.directory = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.service = _make_service(Path(self.directory.name))
+
+    def tearDown(self) -> None:
+        self.directory.cleanup()
+
+    def test_save_known_setting_persists_and_returns_keys(self) -> None:
+        root = Path(self.directory.name)
+        changed = self.service.save_settings({"SERVER_NAME": "TestServer"})
+        self.assertEqual(changed, ["SERVER_NAME"])
+        _, env_values = ServerFiles(root / ".env", root / "server.properties").read_env()
+        self.assertEqual(env_values.get("SERVER_NAME"), "TestServer")
+
+    def test_save_settings_rejects_non_dict(self) -> None:
+        with self.assertRaises(TypeError):
+            self.service.save_settings("bad")
+
+    def test_save_settings_rejects_unknown_keys(self) -> None:
+        with self.assertRaises(ValueError):
+            self.service.save_settings({"__unknown__": "value"})
+
+
+class SetGameruleTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.directory = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.bedrock = FakeBedrock()
+        self.service = _make_service(Path(self.directory.name), self.bedrock)
+
+    def tearDown(self) -> None:
+        self.directory.cleanup()
+
+    def test_set_known_gamerule_sends_command(self) -> None:
+        from minecraft_manager.schema import GAMERULES
+        rule = next(iter(GAMERULES))
+        schema = GAMERULES[rule]
+        value = schema.get("default", "false")
+        self.service.set_gamerule(rule, value)
+        self.assertIn(["gamerule", rule, str(value)], self.bedrock.commands)
+
+    def test_set_unknown_gamerule_raises_key_error(self) -> None:
+        with self.assertRaises(KeyError):
+            self.service.set_gamerule("__not_a_rule__", "true")
+
+
+class WorldActionTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.directory = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.bedrock = FakeBedrock()
+        self.service = _make_service(Path(self.directory.name), self.bedrock)
+
+    def tearDown(self) -> None:
+        self.directory.cleanup()
+
+    def test_run_valid_world_action_sends_command(self) -> None:
+        self.service.run_world_action("day")
+        self.assertEqual(self.bedrock.commands[-1], ["time", "set", "day"])
+
+    def test_run_invalid_world_action_raises_key_error(self) -> None:
+        with self.assertRaises(KeyError):
+            self.service.run_world_action("__nope__")
+
+
+class TimeActionEdgeCasesTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.directory = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.bedrock = FakeBedrock()
+        self.service = _make_service(Path(self.directory.name), self.bedrock)
+
+    def tearDown(self) -> None:
+        self.directory.cleanup()
+
+    def test_add_time_valid(self) -> None:
+        result = self.service.time_action("add", {"value": 100})
+        self.assertEqual(result["action"], "add")
+        self.assertEqual(self.bedrock.commands[-1], ["time", "add", "100"])
+
+    def test_add_time_out_of_range_raises(self) -> None:
+        with self.assertRaisesRegex(ValueError, "fora do intervalo"):
+            self.service.time_action("add", {"value": 0})
+
+    def test_set_time_at_boundary_is_valid(self) -> None:
+        self.service.time_action("set", {"value": 24000})
+        self.assertEqual(self.bedrock.commands[-1], ["time", "set", "24000"])
+
+    def test_weather_action_with_duration(self) -> None:
+        result = self.service.time_action("weather", {"value": "rain", "duration": "500"})
+        self.assertEqual(result["value"], "rain")
+        self.assertEqual(self.bedrock.commands[-1], ["weather", "rain", "500"])
+
+    def test_weather_action_without_duration(self) -> None:
+        self.service.time_action("weather", {"value": "clear"})
+        self.assertEqual(self.bedrock.commands[-1], ["weather", "clear"])
+
+    def test_weather_duration_out_of_range_raises(self) -> None:
+        with self.assertRaisesRegex(ValueError, "fora do intervalo"):
+            self.service.time_action("weather", {"value": "rain", "duration": "0"})
+
+    def test_weather_query_returns_weather_type(self) -> None:
+        self.bedrock.send_and_read = lambda parts: "It is currently clear"  # type: ignore[method-assign]
+        result = self.service.time_action("weather-query", {})
+        self.assertEqual(result["value"], "clear")
+
+    def test_weather_query_returns_unknown_for_unrecognised_output(self) -> None:
+        self.bedrock.send_and_read = lambda parts: "something else"  # type: ignore[method-assign]
+        result = self.service.time_action("weather-query", {})
+        self.assertEqual(result["value"], "unknown")
+
+    def test_invalid_action_raises_key_error(self) -> None:
+        with self.assertRaises(KeyError):
+            self.service.time_action("__bad__", {})
+
+    def test_invalid_preset_raises_key_error(self) -> None:
+        with self.assertRaises(KeyError):
+            self.service.time_action("preset", {"value": "__bad__"})
+
+
+class TelemetryCoalescingTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.directory = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.service = _make_service(Path(self.directory.name))
+
+    def tearDown(self) -> None:
+        self.directory.cleanup()
+
+    def test_second_request_within_cooldown_is_coalesced(self) -> None:
+        import threading
+        first_started = threading.Event()
+        call_count = 0
+        original_snapshot = self.service.request_telemetry_snapshot
+
+        def counted_snapshot(reason: str) -> int:
+            nonlocal call_count
+            call_count += 1
+            first_started.set()
+            return original_snapshot(reason)
+
+        self.service.request_telemetry_snapshot = counted_snapshot  # type: ignore[method-assign]
+
+        events: list[str] = []
+        original_publish = self.service.broker.publish
+
+        def capture(topic: str, *args, **kwargs):
+            events.append(topic)
+            return original_publish(topic, *args, **kwargs)
+
+        self.service.broker.publish = capture  # type: ignore[method-assign]
+
+        # First async call sets _telemetry_last_request; second within 5s is coalesced.
+        self.service.request_telemetry_snapshot_async("first")
+        self.service.request_telemetry_snapshot_async("second")
+        first_started.wait(timeout=3)
+        self.assertIn("telemetry.snapshot.coalesced", events)
+        self.assertEqual(call_count, 1)
+
+
+class PlayerDelegationTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.directory = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.service = _make_service(Path(self.directory.name))
+
+    def tearDown(self) -> None:
+        self.directory.cleanup()
+
+    def test_players_returns_list(self) -> None:
+        self.assertIsInstance(self.service.players(), list)
+
+    def test_player_profile_returns_none_for_unknown(self) -> None:
+        self.assertIsNone(self.service.player_profile("__nobody__"))
+
+    def test_close_online_sessions_returns_list(self) -> None:
+        self.service.player_event("Bob", True, "999")
+        closed = self.service.close_online_sessions("server-stop")
+        self.assertIn("Bob", closed)

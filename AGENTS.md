@@ -66,19 +66,6 @@ Update tests and the English `README.md` whenever public behavior, persistence, 
 - Never run a bare `docker compose up` from a development checkout; relative bind mounts can select development state.
 - Run `bin/deploy-craftcontrol --check` before the mutating deployment. The guarded command owns mount validation, coordinated backup and verification, tracked-file synchronization, state checksum checks, rebuild, and production canaries.
 
-## Pull requests
+## Pull requests and Git history
 
-All changes must go through a pull request. Do not push directly to `main`.
-
-- Name branches with the issue number as prefix: `{issue-number}-{type}/{short-description}` (e.g. `42-feat/player-history`).
-- Include the issue number in the PR title: `type(scope): description (#issue-number)` (e.g. `feat(players): add history view (#42)`).
-- CodeRabbit reviews every PR automatically. Address its findings before merging; use `@coderabbitai` commands in PR comments to interact with it.
-- Follow `.github/pull_request_template.md` when writing PR descriptions.
-- The quality gate (`bin/check`) must pass before requesting a merge.
-
-## Git history
-
-- Every commit message must follow Conventional Commits: `type(scope): imperative summary`.
-- Use an established type such as `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `build`, `ci`, or `chore`; choose a short domain scope when it adds clarity, such as `telemetry`, `auth`, `players`, or `ui`.
-- Mark breaking changes with `!` and explain them in the commit body or a `BREAKING CHANGE:` footer.
-- Before pushing, verify the final commit subject with `git show -s --format=%s HEAD`. Do not publish a non-conforming commit and plan to repair it later.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full contribution workflow: branch naming, PR title format, metadata requirements (Project, Milestone, Label, Assignee), Conventional Commits, CodeRabbit interaction, and what not to commit.

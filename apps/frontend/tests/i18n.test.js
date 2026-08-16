@@ -101,13 +101,30 @@ describe("createI18n — optionLabel", () => {
   test("FLAT in es", () => expect(es.optionLabel("FLAT")).toBe("Plano"));
 });
 
-describe("en translation completeness", () => {
-  const { en, pt } = messages;
-  const ptKeys = Object.keys(pt).filter((k) => typeof pt[k] !== "function");
+describe("translation completeness", () => {
+  const { en, pt, es } = messages;
+  const stringKeys = (locale) => Object.keys(locale).filter((k) => typeof locale[k] !== "function");
+  const ptKeys = stringKeys(pt);
+  const enKeys = stringKeys(en);
+  const esKeys = stringKeys(es);
 
   test("all pt string keys exist in en", () => {
-    const enKeys = new Set(Object.keys(en));
-    const missing = ptKeys.filter((k) => !enKeys.has(k));
+    const missing = ptKeys.filter((k) => !enKeys.includes(k));
+    expect(missing).toEqual([]);
+  });
+
+  test("all pt string keys exist in es", () => {
+    const missing = ptKeys.filter((k) => !esKeys.includes(k));
+    expect(missing).toEqual([]);
+  });
+
+  test("all en string keys exist in pt", () => {
+    const missing = enKeys.filter((k) => !ptKeys.includes(k));
+    expect(missing).toEqual([]);
+  });
+
+  test("all es string keys exist in pt", () => {
+    const missing = esKeys.filter((k) => !ptKeys.includes(k));
     expect(missing).toEqual([]);
   });
 });

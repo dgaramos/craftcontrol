@@ -67,8 +67,7 @@ describe("createNavigation — renderTabs", () => {
     const { state, $, t, uiIcon, render, tabsEl } = makeEnv("world");
     const nav = createNavigation({ state, $, t, uiIcon, render });
     nav.renderTabs();
-    expect(tabsEl._html).toContain('class="active"');
-    expect(tabsEl._html).toContain('data-tab="world"');
+    expect(tabsEl._html).toContain('<button class="active" data-tab="world"');
   });
 
   test("__players__ state marks players button active", () => {

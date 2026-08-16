@@ -198,8 +198,3 @@ describe("booleanControl — select type via inputFor via playerSettingsMarkup",
   });
 });
 
-describe("createRulesFeature", () => {
-  test("renderRules calls renderSettingsGroups with correct groups", () => {
-    // Import inline to avoid top-level import issues
-  });
-});

@@ -96,8 +96,7 @@ describe("createAnalyticsFeature — factory setup", () => {
     deps.$ = jest.fn(() => makeEl());
     const { render } = createAnalyticsFeature(deps);
     await render();
-    // Just verify it didn't throw and set some content
-    expect(deps.content.innerHTML).toBeDefined();
+    expect(deps.content.innerHTML).toContain("rankings-screen");
   });
 
   test("render delegates to renderBlocksPanel for blocks kind", async () => {
@@ -114,7 +113,7 @@ describe("createAnalyticsFeature — factory setup", () => {
     deps.$ = jest.fn(() => makeEl());
     const { render } = createAnalyticsFeature(deps);
     await render();
-    expect(deps.content.innerHTML).toBeDefined();
+    expect(deps.content.innerHTML).toContain("blocks-screen");
   });
 
   test("render with kind=combat falls through to renderCombatPanel", async () => {

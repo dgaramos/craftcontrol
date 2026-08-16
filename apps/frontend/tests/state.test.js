@@ -48,6 +48,22 @@ describe("state module", () => {
     expect(state.tab).toBe("home");
   });
 
+  test("initial tab is home for unknown hash", async () => {
+    global.window = { location: { hash: "#/unknown-tab", replace: jest.fn() }, history: { replaceState: jest.fn() } };
+    jest.resetModules();
+    storageMock.getItem.mockReturnValue(null);
+    const { state } = await import("../static/js/core/state.js");
+    expect(state.tab).toBe("home");
+  });
+
+  test("initial tab reflects known permitted hash", async () => {
+    global.window = { location: { hash: "#/world", replace: jest.fn() }, history: { replaceState: jest.fn() } };
+    jest.resetModules();
+    storageMock.getItem.mockReturnValue(null);
+    const { state } = await import("../static/js/core/state.js");
+    expect(state.tab).toBe("world");
+  });
+
   test("state has expected top-level keys", async () => {
     storageMock.getItem.mockReturnValue(null);
     const { state } = await import("../static/js/core/state.js");

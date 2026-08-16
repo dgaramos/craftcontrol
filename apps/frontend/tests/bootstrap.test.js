@@ -51,4 +51,15 @@ describe("startAuthenticatedApplication", () => {
 
     expect(result).toBe("done");
   });
+
+  test("calls toast when boot rejects", async () => {
+    const state = { user: null };
+    const requireSession = jest.fn().mockResolvedValue({ name: "Admin" });
+    const boot = jest.fn().mockRejectedValue(new Error("Boot error"));
+    const toast = jest.fn();
+
+    await startAuthenticatedApplication({ requireSession, state, boot, toast });
+
+    expect(toast).toHaveBeenCalledWith("Boot error", true);
+  });
 });

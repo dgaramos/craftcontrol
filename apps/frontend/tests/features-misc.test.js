@@ -12,10 +12,10 @@ describe("createRulesFeature", () => {
     renderRules();
     expect(renderSettingsGroups).toHaveBeenCalledTimes(1);
     const [groups] = renderSettingsGroups.mock.calls[0];
-    expect(groups).toContain("Interface");
-    expect(groups).toContain("Jogabilidade");
-    expect(groups).toContain("Criaturas");
-    expect(groups).toHaveLength(6);
+    expect(groups).toEqual([
+      "Interface", "Jogabilidade", "Tempo e clima",
+      "Criaturas", "Drops", "Comandos",
+    ]);
   });
 });
 
@@ -110,14 +110,14 @@ describe("createSettingsFeature — renderChangesDrawer", () => {
     const { renderChangesDrawer } = createSettingsFeature(deps);
     renderChangesDrawer();
     const listEl = deps.$("#changes-list");
-    expect(typeof listEl.innerHTML).toBe("string");
+    expect(listEl.innerHTML).toContain("difficulty");
   });
 });
 
 describe("createSettingsFeature — updateSaveLabel", () => {
   test("hides save button when no changes", () => {
     const deps = makeSettingsDeps();
-    const saveEl = { hidden: true, textContent: "" };
+    const saveEl = { hidden: false, textContent: "" };
     deps.$ = jest.fn((sel) => {
       if (sel === "#save") return saveEl;
       if (sel === "#save-label") return { textContent: "" };
@@ -131,7 +131,7 @@ describe("createSettingsFeature — updateSaveLabel", () => {
 
   test("shows save button when changes present", () => {
     const deps = makeSettingsDeps({ changes: { foo: "bar" } });
-    const saveEl = { hidden: false, textContent: "" };
+    const saveEl = { hidden: true, textContent: "" };
     deps.$ = jest.fn((sel) => {
       if (sel === "#save") return saveEl;
       if (sel === "#save-label") return { textContent: "" };

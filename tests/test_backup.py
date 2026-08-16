@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from minecraft_manager.operations.backup import BackupService
-from tests.conftest import FakeConsole
+from tests.fakes import FakeConsole
 
 
 @pytest.fixture

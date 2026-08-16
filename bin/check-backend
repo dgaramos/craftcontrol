@@ -7,13 +7,11 @@ cd "$ROOT"
 
 "$PYTHON" -m compileall -q \
   apps/backend/minecraft_manager apps/backend/app.py apps/backend/wsgi.py app.py wsgi.py
-"$PYTHON" -m coverage run --source=apps/backend/minecraft_manager,tests -m xmlrunner \
-  -v -o test-results \
-  tests.test_analytics tests.test_auth tests.test_backup tests.test_bedrock \
-  tests.test_files tests.test_migrations tests.test_repository tests.test_runtime \
-  tests.test_schema tests.test_services tests.test_telemetry tests.test_telemetry_installer \
-  tests.test_architecture tests.test_deployment tests.test_documentation \
-  tests.test_http_surface tests.test_openapi \
-  tests.test_cli tests.test_docker_ops tests.test_routes tests.test_composition
-"$PYTHON" -m coverage xml -o coverage.xml
+mkdir -p test-results
+"$PYTHON" -m pytest tests/ \
+  --cov=apps/backend/minecraft_manager \
+  --cov=tests \
+  --cov-report=xml:coverage.xml \
+  --junit-xml=test-results/results.xml \
+  -v
 echo "backend gate: ok"

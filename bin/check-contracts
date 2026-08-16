@@ -7,5 +7,5 @@ cd "$ROOT"
 
 "$PYTHON" -m json.tool packages/contracts/openapi.json >/dev/null
 "$PYTHON" packages/contracts/generate_types.py --check
-"$PYTHON" -m unittest tests.test_http_surface tests.test_openapi -v
+"$PYTHON" -m pytest tests/test_http_surface.py tests/test_openapi.py -v
 echo "contracts gate: ok"

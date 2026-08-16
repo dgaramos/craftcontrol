@@ -4,16 +4,14 @@ import { makeEl, makeAnalyticsDeps } from "./helpers.js";
 
 // analytics/index.js uses `"IntersectionObserver" in window` and `window.scrollTo`.
 // Define a minimal global.window for node environment.
-beforeAll(() => {
+let _savedWindow;
+beforeEach(() => {
+  _savedWindow = global.window;
   if (typeof global.window === "undefined") {
     global.window = {};
   }
 });
-
-afterEach(() => {
-  // Reset IntersectionObserver between tests
-  delete global.window.IntersectionObserver;
-});
+afterEach(() => { global.window = _savedWindow; });
 
 
 function makeActivityResult(overrides = {}) {

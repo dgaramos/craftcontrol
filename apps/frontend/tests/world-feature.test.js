@@ -180,6 +180,10 @@ describe("renderTimePanel — bindings", () => {
 });
 
 describe("openTimeControls", () => {
+  let _savedWindow;
+  beforeEach(() => { _savedWindow = global.window; });
+  afterEach(() => { global.window = _savedWindow; });
+
   test("sets state.tab, calls renderTabs, renders time panel markup, and scrolls to top", () => {
     const deps = makeDeps();
     deps.content.querySelectorAll = jest.fn(() => []);

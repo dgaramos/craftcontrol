@@ -60,7 +60,7 @@ def test_send_closes_client_on_exception(client: BedrockClient) -> None:
 # ---------------------------------------------------------------------------
 
 def test_send_and_read_returns_log_output(client: BedrockClient) -> None:
-    docker_mod, _, container = _fake_docker(b"The time is 6000\n")
+    docker_mod, _, _container = _fake_docker(b"The time is 6000\n")
     with patch.dict("sys.modules", {"docker": docker_mod}):
         result = client.send_and_read(["time", "query", "day"])
     assert "The time is 6000" in result
@@ -143,6 +143,7 @@ def test_query_state_returns_parsed_result(client: BedrockClient) -> None:
     assert gamerules.get("keepInventory") == "true"
     assert "VonCrush" in players
     assert online == 1
+    assert maximum == 10
     assert xuids.get("VonCrush") == "999"
     docker_client.close.assert_called_once()
 

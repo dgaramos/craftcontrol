@@ -91,26 +91,35 @@ def test_player_activity_delegates(repo: SQLitePlayerRepository, db: MagicMock) 
 
 
 def test_player_rankings_delegates(repo: SQLitePlayerRepository, db: MagicMock) -> None:
-    db.player_rankings.return_value = {}
-    repo.player_rankings(5)
+    db.player_rankings.return_value = {"top": ["VonCrush"]}
+    result = repo.player_rankings(5)
     db.player_rankings.assert_called_once_with(5)
+    assert result == {"top": ["VonCrush"]}
 
 
 def test_block_analytics_delegates(repo: SQLitePlayerRepository, db: MagicMock) -> None:
-    repo.block_analytics(5)
+    db.block_analytics.return_value = {"mined": 42}
+    result = repo.block_analytics(5)
     db.block_analytics.assert_called_once_with(5)
+    assert result == {"mined": 42}
 
 
 def test_combat_analytics_delegates(repo: SQLitePlayerRepository, db: MagicMock) -> None:
-    repo.combat_analytics(5)
+    db.combat_analytics.return_value = {"kills": 7}
+    result = repo.combat_analytics(5)
     db.combat_analytics.assert_called_once_with(5)
+    assert result == {"kills": 7}
 
 
 def test_exploration_analytics_delegates(repo: SQLitePlayerRepository, db: MagicMock) -> None:
-    repo.exploration_analytics(5)
+    db.exploration_analytics.return_value = {"biomes": 3}
+    result = repo.exploration_analytics(5)
     db.exploration_analytics.assert_called_once_with(5)
+    assert result == {"biomes": 3}
 
 
 def test_period_analytics_delegates(repo: SQLitePlayerRepository, db: MagicMock) -> None:
-    repo.period_analytics(30, 5)
+    db.period_analytics.return_value = {"sessions": 12}
+    result = repo.period_analytics(30, 5)
     db.period_analytics.assert_called_once_with(30, 5)
+    assert result == {"sessions": 12}

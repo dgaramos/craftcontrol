@@ -42,9 +42,11 @@ def service(repo, files, console, events) -> PlayerService:
 def test_refresh_permissions_publishes_failure_when_read_raises(service: PlayerService, files: MagicMock, events: MagicMock) -> None:
     files.read_permissions.side_effect = OSError("file missing")
     service.refresh_permissions()
-    events.publish.assert_called_once()
-    call_args = events.publish.call_args[0]
-    assert call_args[0] == "permissions.reconciliation.failed"
+    events.publish.assert_called_once_with(
+        "permissions.reconciliation.failed",
+        "permissions.json",
+        {"error": "file missing"},
+    )
 
 
 def test_refresh_permissions_returns_early_on_error(service: PlayerService, files: MagicMock, repo: MagicMock) -> None:
@@ -137,9 +139,10 @@ def test_activity_player_too_long_raises(service: PlayerService) -> None:
 
 
 def test_activity_delegates_valid_params(service: PlayerService, repo: MagicMock) -> None:
-    repo.player_activity.return_value = {"events": []}
-    service.activity("deaths", "VonCrush", "all", "", 7, 1, 10)
+    repo.player_activity.return_value = {"events": [{"type": "join"}]}
+    result = service.activity("deaths", "VonCrush", "all", "", 7, 1, 10)
     repo.player_activity.assert_called_once_with("deaths", "VonCrush", "all", "", 7, 1, 10)
+    assert result == {"events": [{"type": "join"}]}
 
 
 # ---------------------------------------------------------------------------
@@ -157,9 +160,10 @@ def test_rankings_limit_too_high_raises(service: PlayerService) -> None:
 
 
 def test_rankings_delegates_valid_limit(service: PlayerService, repo: MagicMock) -> None:
-    repo.player_rankings.return_value = {}
-    service.rankings(5)
+    repo.player_rankings.return_value = {"top": ["VonCrush"]}
+    result = service.rankings(5)
     repo.player_rankings.assert_called_once_with(5)
+    assert result == {"top": ["VonCrush"]}
 
 
 # ---------------------------------------------------------------------------
@@ -177,8 +181,10 @@ def test_blocks_limit_too_high_raises(service: PlayerService) -> None:
 
 
 def test_blocks_delegates_valid_limit(service: PlayerService, repo: MagicMock) -> None:
-    service.blocks(5)
+    repo.block_analytics.return_value = {"mined": 42}
+    result = service.blocks(5)
     repo.block_analytics.assert_called_once_with(5)
+    assert result == {"mined": 42}
 
 
 # ---------------------------------------------------------------------------
@@ -196,8 +202,10 @@ def test_combat_limit_too_high_raises(service: PlayerService) -> None:
 
 
 def test_combat_delegates_valid_limit(service: PlayerService, repo: MagicMock) -> None:
-    service.combat(5)
+    repo.combat_analytics.return_value = {"kills": 7}
+    result = service.combat(5)
     repo.combat_analytics.assert_called_once_with(5)
+    assert result == {"kills": 7}
 
 
 # ---------------------------------------------------------------------------
@@ -215,8 +223,10 @@ def test_exploration_limit_too_high_raises(service: PlayerService) -> None:
 
 
 def test_exploration_delegates_valid_limit(service: PlayerService, repo: MagicMock) -> None:
-    service.exploration(5)
+    repo.exploration_analytics.return_value = {"biomes": 3}
+    result = service.exploration(5)
     repo.exploration_analytics.assert_called_once_with(5)
+    assert result == {"biomes": 3}
 
 
 # ---------------------------------------------------------------------------
@@ -239,5 +249,7 @@ def test_periods_limit_too_high_raises(service: PlayerService) -> None:
 
 
 def test_periods_delegates_valid_params(service: PlayerService, repo: MagicMock) -> None:
-    service.periods(days=7, limit=5)
+    repo.period_analytics.return_value = {"sessions": 12}
+    result = service.periods(days=7, limit=5)
     repo.period_analytics.assert_called_once_with(7, 5)
+    assert result == {"sessions": 12}

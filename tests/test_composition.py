@@ -46,3 +46,11 @@ def test_compose_manager_uses_bootstrap_operator(tmp_path: Path) -> None:
     settings = _minimal_settings(tmp_path, bootstrap_operator="Steve")
     manager = compose_manager(settings, **_fake_deps())
     assert manager.bootstrap_operator == "Steve"
+
+
+def test_compose_manager_preserves_falsy_injected_runtime(tmp_path: Path) -> None:
+    settings = _minimal_settings(tmp_path)
+    fake_runtime = MagicMock()
+    fake_runtime.__bool__ = lambda self: False
+    manager = compose_manager(settings, bedrock=MagicMock(), docker=MagicMock(), runtime=fake_runtime)
+    assert manager.runtime is fake_runtime

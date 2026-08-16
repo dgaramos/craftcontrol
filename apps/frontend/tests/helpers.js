@@ -118,3 +118,17 @@ export function makeSettingsDeps(stateOverrides = {}) {
   const render = jest.fn();
   return { state, $, content, t, escapeHtml, uiIcon, optionLabel, localeTag, groupLabel, toast, api, render, elements };
 }
+
+export class FakeEventSource {
+  constructor(url) {
+    this.url = url;
+    this._listeners = {};
+  }
+  addEventListener(event, handler) {
+    this._listeners[event] = handler;
+  }
+  set onerror(fn) { this._onerror = fn; }
+  emit(event, data) {
+    if (this._listeners[event]) this._listeners[event]({ data: JSON.stringify(data) });
+  }
+}

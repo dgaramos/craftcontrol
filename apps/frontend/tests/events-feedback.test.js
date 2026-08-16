@@ -1,21 +1,8 @@
 import { jest } from "@jest/globals";
 import { connectEventStream } from "../static/js/events.js";
+import { FakeEventSource } from "./helpers.js";
 
 // ── events.js ────────────────────────────────────────────────────────────────
-
-class FakeEventSource {
-  constructor(url) {
-    this.url = url;
-    this._listeners = {};
-  }
-  addEventListener(event, handler) {
-    this._listeners[event] = handler;
-  }
-  set onerror(fn) { this._onerror = fn; }
-  emit(event, data) {
-    if (this._listeners[event]) this._listeners[event]({ data: JSON.stringify(data) });
-  }
-}
 
 describe("connectEventStream", () => {
   let handler;

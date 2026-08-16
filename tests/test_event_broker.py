@@ -45,21 +45,23 @@ def test_publish_uses_empty_payload_when_none_given(broker: EventBroker, store: 
 
 def test_publish_delivers_to_active_subscriber(broker: EventBroker) -> None:
     received: list[Event] = []
-    ready = threading.Event()
+    registered = threading.Event()
+    done = threading.Event()
 
     def consume():
-        for item in broker.stream(after_id=0):
+        gen = broker.stream(after_id=0)
+        registered.set()
+        for item in gen:
             if item is not None:
                 received.append(item)
                 break
-        ready.set()
+        done.set()
 
     t = threading.Thread(target=consume, daemon=True)
     t.start()
-    # Give stream time to register the subscriber
-    import time; time.sleep(0.05)
+    registered.wait(timeout=3)
     broker.publish("player.join", "bedrock-log", {"player": "VonCrush"})
-    ready.wait(timeout=3)
+    done.wait(timeout=3)
     assert len(received) == 1
     assert received[0].topic == "player.join"
 

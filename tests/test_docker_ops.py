@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -18,35 +18,32 @@ def _completed(returncode: int = 0, stdout: str = "", stderr: str = "") -> subpr
     return cp
 
 
-@pytest.fixture
-def ops() -> DockerOperations:
-    return DockerOperations("bedrock", Path("/srv/project"))
+def _ops(result: subprocess.CompletedProcess | None = None) -> tuple[DockerOperations, MagicMock]:
+    executor = MagicMock(return_value=result or _completed())
+    return DockerOperations("bedrock", Path("/srv/project"), executor=executor), executor
 
 
 # ---------------------------------------------------------------------------
 # Status tests
 # ---------------------------------------------------------------------------
 
-@patch("minecraft_manager.docker_ops.subprocess.run")
-def test_status_running(mock_run, ops: DockerOperations) -> None:
-    mock_run.return_value = _completed(stdout="running\n")
+def test_status_running() -> None:
+    ops, _ = _ops(_completed(stdout="running\n"))
     result = ops.status()
     assert result["state"] == "running"
     assert result["online"]
     assert result["container"] == "bedrock"
 
 
-@patch("minecraft_manager.docker_ops.subprocess.run")
-def test_status_exited(mock_run, ops: DockerOperations) -> None:
-    mock_run.return_value = _completed(stdout="exited\n")
+def test_status_exited() -> None:
+    ops, _ = _ops(_completed(stdout="exited\n"))
     result = ops.status()
     assert result["state"] == "exited"
     assert not result["online"]
 
 
-@patch("minecraft_manager.docker_ops.subprocess.run")
-def test_status_docker_error_returns_stopped(mock_run, ops: DockerOperations) -> None:
-    mock_run.return_value = _completed(returncode=1, stdout="", stderr="No such container")
+def test_status_docker_error_returns_stopped() -> None:
+    ops, _ = _ops(_completed(returncode=1, stdout="", stderr="No such container"))
     result = ops.status()
     assert result["state"] == "stopped"
     assert not result["online"]
@@ -56,54 +53,50 @@ def test_status_docker_error_returns_stopped(mock_run, ops: DockerOperations) ->
 # Execute tests
 # ---------------------------------------------------------------------------
 
-@patch("minecraft_manager.docker_ops.subprocess.run")
-def test_start_calls_compose_up(mock_run, ops: DockerOperations) -> None:
-    mock_run.return_value = _completed()
+def test_start_calls_compose_up() -> None:
+    ops, executor = _ops()
     ops.execute("start")
-    mock_run.assert_called_once_with(
+    executor.assert_called_once_with(
         ["docker", "compose", "--project-directory", "/srv/project", "up", "-d", "minecraft-bedrock"],
         capture_output=True, text=True, timeout=120, check=False,
     )
 
 
-@patch("minecraft_manager.docker_ops.subprocess.run")
-def test_apply_calls_force_recreate(mock_run, ops: DockerOperations) -> None:
-    mock_run.return_value = _completed()
+def test_apply_calls_force_recreate() -> None:
+    ops, executor = _ops()
     ops.execute("apply")
-    mock_run.assert_called_once_with(
+    executor.assert_called_once_with(
         ["docker", "compose", "--project-directory", "/srv/project", "up", "-d", "--force-recreate", "minecraft-bedrock"],
         capture_output=True, text=True, timeout=120, check=False,
     )
 
 
-@patch("minecraft_manager.docker_ops.subprocess.run")
-def test_stop_calls_docker_stop(mock_run, ops: DockerOperations) -> None:
-    mock_run.return_value = _completed()
+def test_stop_calls_docker_stop() -> None:
+    ops, executor = _ops()
     ops.execute("stop")
-    mock_run.assert_called_once_with(
+    executor.assert_called_once_with(
         ["docker", "stop", "bedrock"],
         capture_output=True, text=True, timeout=120, check=False,
     )
 
 
-@patch("minecraft_manager.docker_ops.subprocess.run")
-def test_restart_calls_docker_restart(mock_run, ops: DockerOperations) -> None:
-    mock_run.return_value = _completed()
+def test_restart_calls_docker_restart() -> None:
+    ops, executor = _ops()
     ops.execute("restart")
-    mock_run.assert_called_once_with(
+    executor.assert_called_once_with(
         ["docker", "restart", "bedrock"],
         capture_output=True, text=True, timeout=120, check=False,
     )
 
 
-@patch("minecraft_manager.docker_ops.subprocess.run")
-def test_execute_nonzero_raises_runtime_error(mock_run, ops: DockerOperations) -> None:
-    mock_run.return_value = _completed(returncode=1, stderr="permission denied")
+def test_execute_nonzero_raises_runtime_error() -> None:
+    ops, _ = _ops(_completed(returncode=1, stderr="permission denied"))
     with pytest.raises(RuntimeError) as exc_info:
         ops.execute("stop")
     assert "permission denied" in str(exc_info.value)
 
 
-def test_unknown_action_raises_key_error(ops: DockerOperations) -> None:
+def test_unknown_action_raises_key_error() -> None:
+    ops, _ = _ops()
     with pytest.raises(KeyError):
         ops.execute("unknown")

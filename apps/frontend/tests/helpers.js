@@ -53,7 +53,7 @@ export function makeAnalyticsDeps(stateOverrides = {}) {
   };
   const content = { innerHTML: "", querySelectorAll: jest.fn(() => []) };
   const t = (key, ...args) => (args.length ? `${key}(${args.join(",")})` : key);
-  const escapeHtml = (s) => String(s ?? "").replace(/</g, "&lt;");
+  const escapeHtml = (s) => String(s ?? "").replace(/[&<>'"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[c]);
   const uiIcon = (name) => `<svg icon="${name}"/>`;
   const optionLabel = (v) => v;
   const gameTermMarkup = (v) => `<span>${escapeHtml(String(v))}</span>`;

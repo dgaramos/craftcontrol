@@ -8,6 +8,13 @@ from minecraft_manager.repository import StateRepository
 from minecraft_manager.telemetry import parse_telemetry_line
 
 
+@pytest.fixture
+def repository(tmp_path: Path) -> StateRepository:
+    repo = StateRepository(tmp_path / "state.db")
+    repo.initialize()
+    return repo
+
+
 def test_parses_actual_bedrock_content_log_fixture() -> None:
     fixture = Path(__file__).with_name("fixtures") / "bedrock_content_log.txt"
     envelopes = [parse_telemetry_line(line) for line in fixture.read_text().splitlines()]
@@ -28,10 +35,7 @@ def test_rejects_unknown_topic() -> None:
         parse_telemetry_line(line)
 
 
-def test_snapshot_is_persisted_and_deduplicated(tmp_path: Path) -> None:
-    path = tmp_path / "state.db"
-    repository = StateRepository(path)
-    repository.initialize()
+def test_snapshot_is_persisted_and_deduplicated(repository: StateRepository, tmp_path: Path) -> None:
     repository.observe_player("VonCrush", True, "99")
     event = {"schema": 1, "sequence": 8, "type": "snapshot.player", "timestamp": 1, "player": {"name": "VonCrush"}, "data": {"deaths": 3, "blocksBroken": 42}}
     assert repository.ingest_telemetry(event) == (True, ["VonCrush"])
@@ -40,14 +44,12 @@ def test_snapshot_is_persisted_and_deduplicated(tmp_path: Path) -> None:
     assert profile["deaths_count"] == 3
     assert profile["deaths_source"] == "behavior-pack"
     assert profile["telemetry"]["blocksBroken"] == 42
-    with sqlite3.connect(path) as connection:
+    with sqlite3.connect(tmp_path / "state.db") as connection:
         stored = json.loads(connection.execute("SELECT payload FROM telemetry_events").fetchone()[0])
     assert stored == event
 
 
-def test_telemetry_follows_profile_when_xuid_becomes_known(tmp_path: Path) -> None:
-    repository = StateRepository(tmp_path / "state.db")
-    repository.initialize()
+def test_telemetry_follows_profile_when_xuid_becomes_known(repository: StateRepository) -> None:
     event = {"schema": 1, "sequence": 2, "type": "snapshot.player", "timestamp": 1, "player": {"name": "Nicole"}, "data": {"mobKills": 9}}
     repository.ingest_telemetry(event)
     repository.observe_player("Nicole", True, "123")
@@ -56,9 +58,7 @@ def test_telemetry_follows_profile_when_xuid_becomes_known(tmp_path: Path) -> No
     assert profiles[0]["telemetry"]["mobKills"] == 9
 
 
-def test_behavior_pack_death_is_saved_in_player_history(tmp_path: Path) -> None:
-    repository = StateRepository(tmp_path / "state.db")
-    repository.initialize()
+def test_behavior_pack_death_is_saved_in_player_history(repository: StateRepository) -> None:
     repository.observe_player("VonCrush", True, "99")
     repository.ingest_telemetry({"schema": 1, "sequence": 8, "type": "snapshot.player", "timestamp": 1, "player": {"name": "VonCrush"}, "data": {"deaths": 0}})
     death = {"schema": 1, "sequence": 9, "type": "entity.died", "timestamp": 2, "player": {"name": "VonCrush"}, "data": {"victim": "VonCrush", "victimType": "minecraft:player", "killer": None, "killerType": "minecraft:zombie", "projectileType": None, "cause": "entityAttack"}}
@@ -71,9 +71,7 @@ def test_behavior_pack_death_is_saved_in_player_history(tmp_path: Path) -> None:
     assert profile["last_death_at"] is not None
 
 
-def test_respawn_and_dimension_change_are_saved_in_player_history(tmp_path: Path) -> None:
-    repository = StateRepository(tmp_path / "state.db")
-    repository.initialize()
+def test_respawn_and_dimension_change_are_saved_in_player_history(repository: StateRepository) -> None:
     repository.observe_player("VonCrush", True, "99")
     repository.ingest_telemetry({
         "schema": 1, "sequence": 1, "type": "player.respawned", "timestamp": 1,
@@ -92,9 +90,7 @@ def test_respawn_and_dimension_change_are_saved_in_player_history(tmp_path: Path
     assert dimension["details"]["to_dimension"] == "minecraft:nether"
 
 
-def test_new_snapshot_at_same_sequence_replaces_authoritative_totals(tmp_path: Path) -> None:
-    repository = StateRepository(tmp_path / "state.db")
-    repository.initialize()
+def test_new_snapshot_at_same_sequence_replaces_authoritative_totals(repository: StateRepository) -> None:
     first = {"schema": 1, "sequence": 8, "type": "snapshot.player", "timestamp": 1, "player": {"name": "VonCrush"}, "data": {"blocksBroken": 10}}
     second = {**first, "timestamp": 2, "data": {"blocksBroken": 15}}
     assert repository.ingest_telemetry(first)[0]
@@ -102,9 +98,7 @@ def test_new_snapshot_at_same_sequence_replaces_authoritative_totals(tmp_path: P
     assert repository.player_profiles()[0]["telemetry"]["blocksBroken"] == 15
 
 
-def test_block_deltas_update_bounded_type_maps_and_are_idempotent(tmp_path: Path) -> None:
-    repository = StateRepository(tmp_path / "state.db")
-    repository.initialize()
+def test_block_deltas_update_bounded_type_maps_and_are_idempotent(repository: StateRepository) -> None:
     repository.ingest_telemetry({
         "schema": 1, "sequence": 1, "type": "snapshot.player", "timestamp": 1,
         "player": {"name": "VonCrush"},
@@ -122,10 +116,7 @@ def test_block_deltas_update_bounded_type_maps_and_are_idempotent(tmp_path: Path
     assert stats["placedByType"]["minecraft:oak_planks"] == 1
 
 
-def test_batched_block_deltas_update_totals_maps_and_daily_buckets(tmp_path: Path) -> None:
-    path = tmp_path / "state.db"
-    repository = StateRepository(path)
-    repository.initialize()
+def test_batched_block_deltas_update_totals_maps_and_daily_buckets(repository: StateRepository, tmp_path: Path) -> None:
     repository.ingest_telemetry({
         "schema": 1, "sequence": 1, "type": "snapshot.player", "timestamp": 1,
         "player": {"name": "VonCrush"},
@@ -145,6 +136,6 @@ def test_batched_block_deltas_update_totals_maps_and_daily_buckets(tmp_path: Pat
     assert stats["blocksBroken"] == 7
     assert stats["brokenByType"]["minecraft:stone"] == 2
     assert stats["blocksPlaced"] == 4
-    with sqlite3.connect(path) as connection:
+    with sqlite3.connect(tmp_path / "state.db") as connection:
         daily = connection.execute("SELECT blocks_broken,blocks_placed FROM player_daily").fetchone()
     assert daily == (3, 2)

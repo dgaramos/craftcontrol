@@ -8,7 +8,7 @@ import pytest
 from minecraft_manager.files import ServerFiles
 from minecraft_manager.repository import StateRepository
 from minecraft_manager.services import ManagerService
-from tests.conftest import FakeBedrock, FakeDocker, FakeRuntime
+from tests.fakes import FakeBedrock, FakeDocker, FakeRuntime
 
 
 def _make_service(directory: Path, bedrock: FakeBedrock | None = None, docker: FakeDocker | None = None) -> ManagerService:
@@ -239,21 +239,24 @@ def test_refresh_error_publishes_failed_event_and_reraises(tmp_path: Path) -> No
 def test_concurrent_refresh_is_skipped(tmp_path: Path) -> None:
     bedrock = FakeBedrock()
     service = _make_service(tmp_path, bedrock)
-    barrier = threading.Barrier(2)
+    inside = threading.Barrier(2)
+    concurrent_done = threading.Event()
     original_query = bedrock.query_state
     call_count = 0
 
     def slow_query():
         nonlocal call_count
         call_count += 1
-        barrier.wait(timeout=2)
+        inside.wait(timeout=2)
+        concurrent_done.wait(timeout=2)
         return original_query()
 
     bedrock.query_state = slow_query  # type: ignore[method-assign]
     t = threading.Thread(target=service.refresh, args=("bg",))
     t.start()
-    barrier.wait(timeout=2)
+    inside.wait(timeout=2)
     service.refresh("concurrent")
+    concurrent_done.set()
     t.join(timeout=3)
     assert call_count == 1
 

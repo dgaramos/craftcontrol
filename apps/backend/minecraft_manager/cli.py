@@ -4,7 +4,7 @@ import argparse
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable, Protocol
 
 from .config import Settings
 from .bedrock import BedrockClient
@@ -14,17 +14,43 @@ from .repository import StateRepository
 from .telemetry_installer import TelemetryPackInstaller
 
 
+class _Repository(Protocol):
+    def initialize(self) -> None: ...
+
+
+class _AuthService(Protocol):
+    def bootstrap(self, player: str) -> str: ...
+    def create_invitation(self, player: str, role: str) -> str: ...
+    def create_recovery(self, player: str, lifetime: int) -> tuple[str, str]: ...
+
+
+class _BackupService(Protocol):
+    def create(self, world: str | None) -> Any: ...
+    def list(self) -> Any: ...
+    def verify(self, backup_id: str) -> Any: ...
+    def prune(self, keep: int, *, confirmed: bool) -> Any: ...
+    def restore(self, backup_id: str, *, confirmed: bool) -> Any: ...
+
+
+class _Installer(Protocol):
+    def status(self, world: str | None) -> Any: ...
+    def install(self, world: str | None) -> Any: ...
+    def disable(self, world: str | None) -> Any: ...
+    def remove(self, world: str | None) -> Any: ...
+    def rollback(self, backup: str | None) -> Any: ...
+
+
 @dataclass
 class CliDependencies:
     """Composition seam for the CLI: production defaults, replaceable in tests."""
 
-    repository_factory: Callable[[Settings], StateRepository] = field(
+    repository_factory: Callable[[Settings], _Repository] = field(
         default=lambda settings: StateRepository(settings.database)
     )
-    auth_service_factory: Callable[[Settings], AuthService] = field(
+    auth_service_factory: Callable[[Settings], _AuthService] = field(
         default=lambda settings: AuthService(settings.database)
     )
-    backup_service_factory: Callable[[Settings], BackupService] = field(
+    backup_service_factory: Callable[[Settings], _BackupService] = field(
         default=lambda settings: BackupService(
             settings.database,
             settings.project,
@@ -33,7 +59,7 @@ class CliDependencies:
             lambda: docker_container_running(settings.container),
         )
     )
-    installer_factory: Callable[[Settings, Path], TelemetryPackInstaller] = field(
+    installer_factory: Callable[[Settings, Path], _Installer] = field(
         default=lambda settings, project: TelemetryPackInstaller.bundled(project)
     )
 

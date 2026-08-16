@@ -6,7 +6,7 @@ function makeSetup(overrides = {}) {
   const refreshStatus = jest.fn().mockResolvedValue("online");
   const setStatus = jest.fn();
   let scheduledFn = null;
-  let scheduledTimer = null;
+  let scheduledTimer = 0;
   const schedule = jest.fn((fn, _delay) => { scheduledFn = fn; return ++scheduledTimer; });
   const cancel = jest.fn();
   let listener = null;

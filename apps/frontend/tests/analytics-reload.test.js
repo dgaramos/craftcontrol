@@ -1,6 +1,6 @@
 import { jest } from "@jest/globals";
 import { createAnalyticsFeature } from "../static/js/features/analytics/index.js";
-import { makeEl } from "./helpers.js";
+import { makeEl, makeAnalyticsDeps } from "./helpers.js";
 
 // analytics/index.js uses `"IntersectionObserver" in window` and `window.scrollTo`.
 // Define a minimal global.window for node environment.
@@ -28,62 +28,12 @@ function makeActivityResult(overrides = {}) {
   };
 }
 
-function makeAnalyticsDeps(stateOverrides = {}) {
-  const state = {
-    locale: "en",
-    analytics: {
-      kind: "all",
-      player: "",
-      source: "all",
-      search: "",
-      days: 0,
-      page: 1,
-      rankingCategory: "activity",
-      rankingMetric: "play_time",
-      blocksMode: "mining",
-      selectedOre: "diamond",
-      combatMetric: "mob_kills",
-      explorationMetric: "distance",
-      periodDays: 30,
-      periodMetric: "play_seconds",
-      ...stateOverrides,
-    },
-  };
-
-  const elements = {};
-  const $ = jest.fn((sel) => {
-    if (!elements[sel]) elements[sel] = makeEl();
-    return elements[sel];
-  });
-
-  const content = { innerHTML: "", querySelectorAll: jest.fn(() => []) };
-  const t = (key, ...args) => (args.length ? `${key}(${args.join(",")})` : key);
-  const escapeHtml = (s) => String(s ?? "").replace(/</g, "&lt;");
-  const uiIcon = (name) => `<svg icon="${name}"/>`;
-  const optionLabel = (v) => v;
-  const gameTermMarkup = (v) => `<span>${escapeHtml(String(v))}</span>`;
-  const timelineTimestamp = (ts) => ts ? `<time>${ts}</time>` : "<span>—</span>";
-  const rankingDefinitions = { play_time: { category: "activity", label: "rankPlayTime", format: "duration" } };
-  const formatRankingValue = (v) => String(v ?? 0);
-  const formatDate = (ts) => ts ? "2024-01-01" : "—";
-  const formatDuration = (s) => `${s ?? 0}s`;
-  const blockTermMarkup = (v) => `<span>${v}</span>`;
-  const blockIcon = () => "";
-  const oreLabel = (v) => v;
-  const dimensionName = (v) => String(v);
-  const localeTag = () => "en-US";
-  const openAnalyticsPlayer = jest.fn();
-  const requestRender = jest.fn();
-  const api = jest.fn().mockResolvedValue(makeActivityResult());
-
-  return { state, content, t, escapeHtml, uiIcon, optionLabel, gameTermMarkup, timelineTimestamp, rankingDefinitions, formatRankingValue, formatDate, formatDuration, blockTermMarkup, blockIcon, oreLabel, dimensionName, localeTag, api, openAnalyticsPlayer, requestRender, $, elements };
-}
 
 // ── basic reload — happy path ─────────────────────────────────────────────────
 
 describe("renderAnalyticsPanel — reload happy path (kind=all)", () => {
   test("content.innerHTML contains analytics-screen after render", async () => {
-    const deps = makeAnalyticsDeps();
+    const deps = makeAnalyticsDeps({ kind: "all" });
     deps.api = jest.fn()
       .mockResolvedValueOnce(makeActivityResult())
       .mockResolvedValueOnce({ players: [] });
@@ -97,7 +47,7 @@ describe("renderAnalyticsPanel — reload happy path (kind=all)", () => {
   });
 
   test("analytics-summary is rendered in target after successful reload", async () => {
-    const deps = makeAnalyticsDeps();
+    const deps = makeAnalyticsDeps({ kind: "all" });
     const resultsEl = makeEl();
     deps.elements["#analytics-results"] = resultsEl;
     deps.$ = jest.fn((sel) => {
@@ -113,7 +63,7 @@ describe("renderAnalyticsPanel — reload happy path (kind=all)", () => {
   });
 
   test("player select gets populated with player options", async () => {
-    const deps = makeAnalyticsDeps();
+    const deps = makeAnalyticsDeps({ kind: "all" });
     const playerSelect = makeEl({ value: "", innerHTML: "" });
     deps.elements["#analytics-player"] = playerSelect;
     deps.$ = jest.fn((sel) => {
@@ -135,7 +85,7 @@ describe("renderAnalyticsPanel — pagination without IntersectionObserver", () 
   test("hasMore=true renders load more button when no IntersectionObserver", async () => {
     // Ensure window exists but has no IntersectionObserver
     global.window = {};
-    const deps = makeAnalyticsDeps();
+    const deps = makeAnalyticsDeps({ kind: "all" });
     const resultsEl = makeEl();
     deps.elements["#analytics-results"] = resultsEl;
     deps.elements["#activity-load-more"] = makeEl();
@@ -161,7 +111,7 @@ describe("renderAnalyticsPanel — pagination with IntersectionObserver", () => 
     const IOConstructor = jest.fn(() => ({ observe: observeMock, disconnect: jest.fn() }));
     global.window = { IntersectionObserver: IOConstructor };
 
-    const deps = makeAnalyticsDeps();
+    const deps = makeAnalyticsDeps({ kind: "all" });
     const sentinelEl = makeEl();
     deps.elements["#activity-scroll-sentinel"] = sentinelEl;
     deps.$ = jest.fn((sel) => {
@@ -181,7 +131,7 @@ describe("renderAnalyticsPanel — pagination with IntersectionObserver", () => 
 
 describe("renderAnalyticsPanel — reload error", () => {
   test("initial load error renders analytics-empty in target", async () => {
-    const deps = makeAnalyticsDeps();
+    const deps = makeAnalyticsDeps({ kind: "all" });
     const resultsEl = makeEl();
     deps.elements["#analytics-results"] = resultsEl;
     deps.$ = jest.fn((sel) => {
@@ -206,7 +156,7 @@ describe("renderAnalyticsPanel — filter handlers", () => {
   }
 
   test("#analytics-kind onchange updates filters.kind and reloads", async () => {
-    const deps = makeAnalyticsDeps();
+    const deps = makeAnalyticsDeps({ kind: "all" });
     deps.$ = jest.fn((sel) => {
       if (!deps.elements[sel]) deps.elements[sel] = makeEl();
       return deps.elements[sel];
@@ -224,7 +174,7 @@ describe("renderAnalyticsPanel — filter handlers", () => {
   });
 
   test("#analytics-days onchange updates filters.days as Number", async () => {
-    const deps = makeAnalyticsDeps();
+    const deps = makeAnalyticsDeps({ kind: "all" });
     deps.$ = jest.fn((sel) => {
       if (!deps.elements[sel]) deps.elements[sel] = makeEl();
       return deps.elements[sel];
@@ -240,7 +190,7 @@ describe("renderAnalyticsPanel — filter handlers", () => {
   });
 
   test("#analytics-search onchange trims the value", async () => {
-    const deps = makeAnalyticsDeps();
+    const deps = makeAnalyticsDeps({ kind: "all" });
     deps.$ = jest.fn((sel) => {
       if (!deps.elements[sel]) deps.elements[sel] = makeEl();
       return deps.elements[sel];

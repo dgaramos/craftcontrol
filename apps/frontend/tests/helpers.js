@@ -1,3 +1,5 @@
+import { jest } from "@jest/globals";
+
 export function makeEl(extra = {}) {
   return {
     innerHTML: "",

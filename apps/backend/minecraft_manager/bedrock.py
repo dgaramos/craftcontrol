@@ -2,21 +2,31 @@ from __future__ import annotations
 
 import re
 import time
-from typing import Any
+from typing import Any, Callable
+
+
+def _default_docker_factory() -> Any:
+    import docker as docker_sdk
+    return docker_sdk.from_env()
 
 
 class BedrockClient:
-    def __init__(self, container_name: str, gamerules: list[str], console_wait_seconds: float = 1.0) -> None:
+    def __init__(
+        self,
+        container_name: str,
+        gamerules: list[str],
+        console_wait_seconds: float = 1.0,
+        docker_factory: Callable[[], Any] | None = None,
+    ) -> None:
         self.container_name = container_name
         self.gamerules = gamerules
         self.console_wait_seconds = console_wait_seconds
+        self._docker_factory = docker_factory or _default_docker_factory
 
     def send(self, parts: list[str]) -> None:
-        import docker as docker_sdk
-
         if not parts or any(not re.fullmatch(r"[a-z0-9_-]+", part, re.IGNORECASE) for part in parts):
             raise ValueError("Comando inválido")
-        client = docker_sdk.from_env()
+        client = self._docker_factory()
         try:
             container = client.containers.get(self.container_name)
             self._write(container, " ".join(parts) + "\n")
@@ -24,11 +34,9 @@ class BedrockClient:
             client.close()
 
     def send_and_read(self, parts: list[str]) -> str:
-        import docker as docker_sdk
-
         if not parts or any(not re.fullmatch(r"[a-z0-9_-]+", part, re.IGNORECASE) for part in parts):
             raise ValueError("Comando inválido")
-        client = docker_sdk.from_env()
+        client = self._docker_factory()
         try:
             container = client.containers.get(self.container_name)
             since = int(time.time()) - 1
@@ -41,9 +49,7 @@ class BedrockClient:
     def set_operator(self, player: str, enabled: bool) -> None:
         if not re.fullmatch(r"[a-z0-9 _-]{1,32}", player, re.IGNORECASE):
             raise ValueError("Jogador inválido")
-        import docker as docker_sdk
-
-        client = docker_sdk.from_env()
+        client = self._docker_factory()
         try:
             container = client.containers.get(self.container_name)
             self._write(container, f'{"op" if enabled else "deop"} "{player}"\n')
@@ -51,9 +57,7 @@ class BedrockClient:
             client.close()
 
     def request_telemetry_snapshot(self) -> str:
-        import docker as docker_sdk
-
-        client = docker_sdk.from_env()
+        client = self._docker_factory()
         try:
             container = client.containers.get(self.container_name)
             since = int(time.time()) - 1
@@ -120,9 +124,7 @@ class BedrockClient:
         return result
 
     def query_state(self) -> tuple[dict[str, str], list[str], int, int, dict[str, str]]:
-        import docker as docker_sdk
-
-        client = docker_sdk.from_env()
+        client = self._docker_factory()
         try:
             container = client.containers.get(self.container_name)
             since = int(time.time()) - 1
@@ -138,9 +140,7 @@ class BedrockClient:
         return gamerules, players, online, maximum, self.parse_xuids(history)
 
     def query_gamerules(self, rules: set[str]) -> dict[str, str]:
-        import docker as docker_sdk
-
-        client = docker_sdk.from_env()
+        client = self._docker_factory()
         try:
             container = client.containers.get(self.container_name)
             since = int(time.time()) - 1

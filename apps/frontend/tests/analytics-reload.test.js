@@ -1,6 +1,19 @@
 import { jest } from "@jest/globals";
 import { createAnalyticsFeature } from "../static/js/features/analytics/index.js";
 
+// analytics/index.js uses `"IntersectionObserver" in window` and `window.scrollTo`.
+// Define a minimal global.window for node environment.
+beforeAll(() => {
+  if (typeof global.window === "undefined") {
+    global.window = {};
+  }
+});
+
+afterEach(() => {
+  // Reset IntersectionObserver between tests
+  delete global.window.IntersectionObserver;
+});
+
 function makeEl(extra = {}) {
   return {
     innerHTML: "",
@@ -134,13 +147,12 @@ describe("renderAnalyticsPanel — reload happy path (kind=all)", () => {
 
 describe("renderAnalyticsPanel — pagination without IntersectionObserver", () => {
   test("hasMore=true renders load more button when no IntersectionObserver", async () => {
-    const originalIO = global.IntersectionObserver;
-    delete global.IntersectionObserver;
+    // Ensure window exists but has no IntersectionObserver
+    global.window = {};
     const deps = makeAnalyticsDeps();
     const resultsEl = makeEl();
     deps.elements["#analytics-results"] = resultsEl;
-    const loadMoreEl = makeEl();
-    deps.elements["#activity-load-more"] = loadMoreEl;
+    deps.elements["#activity-load-more"] = makeEl();
     deps.elements["#activity-scroll-sentinel"] = makeEl({ innerHTML: "" });
     deps.$ = jest.fn((sel) => {
       if (!deps.elements[sel]) deps.elements[sel] = makeEl();
@@ -152,7 +164,6 @@ describe("renderAnalyticsPanel — pagination without IntersectionObserver", () 
     const { render } = createAnalyticsFeature(deps);
     await render();
     expect(resultsEl.innerHTML).toContain("activity-scroll-sentinel");
-    global.IntersectionObserver = originalIO;
   });
 });
 
@@ -161,8 +172,8 @@ describe("renderAnalyticsPanel — pagination without IntersectionObserver", () 
 describe("renderAnalyticsPanel — pagination with IntersectionObserver", () => {
   test("IntersectionObserver.observe is called on sentinel", async () => {
     const observeMock = jest.fn();
-    const IOConstructor = jest.fn((cb) => ({ observe: observeMock, disconnect: jest.fn() }));
-    global.IntersectionObserver = IOConstructor;
+    const IOConstructor = jest.fn(() => ({ observe: observeMock, disconnect: jest.fn() }));
+    global.window = { IntersectionObserver: IOConstructor };
 
     const deps = makeAnalyticsDeps();
     const sentinelEl = makeEl();
@@ -177,7 +188,6 @@ describe("renderAnalyticsPanel — pagination with IntersectionObserver", () => 
     const { render } = createAnalyticsFeature(deps);
     await render();
     expect(observeMock).toHaveBeenCalled();
-    delete global.IntersectionObserver;
   });
 });
 

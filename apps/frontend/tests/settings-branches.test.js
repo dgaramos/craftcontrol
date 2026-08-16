@@ -251,7 +251,9 @@ describe("bindSettingFields — live gamerule field", () => {
         },
       },
     });
-    const fieldEl = makeEl({ value: "false", checked: false });
+    const labelEl = makeEl({ textContent: "", classList: { remove: jest.fn() } });
+    const toggleControl = makeEl({ querySelector: jest.fn(() => labelEl) });
+    const fieldEl = makeEl({ value: "false", checked: false, closest: jest.fn(() => toggleControl) });
     deps.elements["#field-showcoordinates"] = fieldEl;
     return { deps, fieldEl };
   }

@@ -1,72 +1,78 @@
 import json
-import tempfile
-import unittest
 from pathlib import Path
+
+import pytest
 
 from minecraft_manager.telemetry_installer import LEGACY_DIRECTORY, PACK_DIRECTORY, PACK_ID, TelemetryPackInstaller
 
 
-class TelemetryPackInstallerTest(unittest.TestCase):
-    def setUp(self) -> None:
-        self.temporary = tempfile.TemporaryDirectory()
-        root = Path(self.temporary.name)
-        self.project = root / "project"
-        self.source = root / "source"
-        self.world = self.project / "data" / "worlds" / "BedrockLevel"
-        self.world.mkdir(parents=True)
-        self.source.mkdir()
-        (self.project / ".env").write_text("LEVEL_NAME=BedrockLevel\n", encoding="utf-8")
-        (self.source / "scripts").mkdir()
-        (self.source / "scripts" / "main.js").write_text("// pack\n", encoding="utf-8")
-        (self.source / "manifest.json").write_text(json.dumps({
-            "format_version": 2,
-            "header": {"name": "CraftControl Telemetry Pack", "uuid": PACK_ID, "version": [0, 2, 0]},
-        }), encoding="utf-8")
-        self.installer = TelemetryPackInstaller(self.project, self.source)
+@pytest.fixture
+def installer_env(tmp_path: Path):
+    root = tmp_path
+    project = root / "project"
+    source = root / "source"
+    world = project / "data" / "worlds" / "BedrockLevel"
+    world.mkdir(parents=True)
+    source.mkdir()
+    (project / ".env").write_text("LEVEL_NAME=BedrockLevel\n", encoding="utf-8")
+    (source / "scripts").mkdir()
+    (source / "scripts" / "main.js").write_text("// pack\n", encoding="utf-8")
+    (source / "manifest.json").write_text(json.dumps({
+        "format_version": 2,
+        "header": {"name": "CraftControl Telemetry Pack", "uuid": PACK_ID, "version": [0, 2, 0]},
+    }), encoding="utf-8")
+    installer = TelemetryPackInstaller(project, source)
+    return {"project": project, "source": source, "world": world, "installer": installer}
 
-    def tearDown(self) -> None:
-        self.temporary.cleanup()
 
-    @property
-    def association(self) -> Path:
-        return self.world / "world_behavior_packs.json"
+@pytest.fixture
+def association(installer_env) -> Path:
+    return installer_env["world"] / "world_behavior_packs.json"
 
-    def test_install_migrates_legacy_directory_and_is_idempotent(self) -> None:
-        legacy = self.project / "data" / "behavior_packs" / LEGACY_DIRECTORY
-        legacy.mkdir(parents=True)
-        (legacy / "legacy.txt").write_text("old")
-        self.association.write_text(json.dumps([{"pack_id": PACK_ID, "version": [0, 1, 1]}]))
 
-        result = self.installer.install()
-        self.assertTrue(result["changed"])
-        self.assertTrue(result["restart_required"])
-        self.assertFalse(legacy.exists())
-        self.assertTrue((self.project / "data" / "behavior_packs" / PACK_DIRECTORY / "scripts" / "main.js").is_file())
-        self.assertEqual(json.loads(self.association.read_text())[0]["version"], [0, 2, 0])
-        status = self.installer.status()
-        self.assertTrue(status.installed)
-        self.assertTrue(status.enabled)
-        self.assertFalse(status.upgrade_available)
+def test_install_migrates_legacy_directory_and_is_idempotent(installer_env, association: Path) -> None:
+    env = installer_env
+    legacy = env["project"] / "data" / "behavior_packs" / LEGACY_DIRECTORY
+    legacy.mkdir(parents=True)
+    (legacy / "legacy.txt").write_text("old")
+    association.write_text(json.dumps([{"pack_id": PACK_ID, "version": [0, 1, 1]}]))
 
-        repeated = self.installer.install()
-        self.assertFalse(repeated["changed"])
-        self.assertFalse(repeated["restart_required"])
+    result = env["installer"].install()
+    assert result["changed"]
+    assert result["restart_required"]
+    assert not legacy.exists()
+    assert (env["project"] / "data" / "behavior_packs" / PACK_DIRECTORY / "scripts" / "main.js").is_file()
+    assert json.loads(association.read_text())[0]["version"] == [0, 2, 0]
+    status = env["installer"].status()
+    assert status.installed
+    assert status.enabled
+    assert not status.upgrade_available
 
-    def test_disable_and_rollback_restore_association(self) -> None:
-        self.installer.install()
-        disabled = self.installer.disable()
-        self.assertFalse(self.installer.status().enabled)
-        restored = self.installer.rollback(disabled["backup"])
-        self.assertEqual(restored["action"], "rollback")
-        self.assertTrue(self.installer.status().enabled)
+    repeated = env["installer"].install()
+    assert not repeated["changed"]
+    assert not repeated["restart_required"]
 
-    def test_remove_keeps_recoverable_backup(self) -> None:
-        self.installer.install()
-        result = self.installer.remove()
-        self.assertTrue(result["changed"])
-        self.assertFalse(self.installer.status().installed)
-        self.assertTrue((self.project / "backups" / "craftcontrol-telemetry" / result["backup"] / "backup.json").is_file())
 
-    def test_rejects_world_path_traversal(self) -> None:
-        with self.assertRaises(FileNotFoundError):
-            self.installer.status("../BedrockLevel")
+def test_disable_and_rollback_restore_association(installer_env) -> None:
+    env = installer_env
+    env["installer"].install()
+    disabled = env["installer"].disable()
+    assert not env["installer"].status().enabled
+    restored = env["installer"].rollback(disabled["backup"])
+    assert restored["action"] == "rollback"
+    assert env["installer"].status().enabled
+
+
+def test_remove_keeps_recoverable_backup(installer_env) -> None:
+    env = installer_env
+    env["installer"].install()
+    result = env["installer"].remove()
+    assert result["changed"]
+    assert not env["installer"].status().installed
+    assert (env["project"] / "backups" / "craftcontrol-telemetry" / result["backup"] / "backup.json").is_file()
+
+
+def test_rejects_world_path_traversal(installer_env) -> None:
+    env = installer_env
+    with pytest.raises(FileNotFoundError):
+        env["installer"].status("../BedrockLevel")

@@ -52,11 +52,11 @@ def test_ignores_chat_and_unknown_players(parser_runtime) -> None:
 # ---------------------------------------------------------------------------
 
 def test_start_launches_three_daemon_threads() -> None:
-    runtime, _, _ = _make_runtime()
-    with patch("minecraft_manager.runtime.threading.Thread") as mock_thread:
-        instances = [MagicMock() for _ in range(3)]
-        mock_thread.side_effect = instances
-        runtime.start()
+    mock_thread = MagicMock()
+    instances = [MagicMock() for _ in range(3)]
+    mock_thread.side_effect = instances
+    runtime, _, _ = _make_runtime(thread_factory=mock_thread)
+    runtime.start()
     assert mock_thread.call_count == 3
     names = [c.kwargs["name"] for c in mock_thread.call_args_list]
     assert "bedrock-log-stream" in names
@@ -67,11 +67,10 @@ def test_start_launches_three_daemon_threads() -> None:
 
 
 def test_start_is_idempotent() -> None:
-    runtime, _, _ = _make_runtime()
-    with patch("minecraft_manager.runtime.threading.Thread") as mock_thread:
-        mock_thread.return_value = MagicMock()
-        runtime.start()
-        runtime.start()
+    mock_thread = MagicMock(return_value=MagicMock())
+    runtime, _, _ = _make_runtime(thread_factory=mock_thread)
+    runtime.start()
+    runtime.start()
     assert mock_thread.call_count == 3
 
 
@@ -95,7 +94,12 @@ def log_runtime():
     service = MagicMock()
     service.players.return_value = [{"name": "Nicole"}, {"name": "VonCrush"}]
     service.refreshing = False
-    runtime = EventRuntime(service=service, broker=broker, container="mc")
+    runtime, _, _ = _make_runtime(
+        docker_factory=MagicMock(side_effect=RuntimeError("docker not expected")),
+        timer_factory=MagicMock(return_value=MagicMock()),
+    )
+    runtime.service = service
+    runtime.broker = broker
     return runtime, broker, service
 
 
@@ -167,9 +171,7 @@ def test_gamerule_skipped_when_refreshing(log_runtime) -> None:
 
 def test_permission_line_triggers_refresh(log_runtime) -> None:
     runtime, broker, service = log_runtime
-    with patch("minecraft_manager.runtime.threading.Timer") as mock_timer:
-        mock_timer.return_value = MagicMock()
-        runtime._handle_log("[INFO] op PlayerName")
+    runtime._handle_log("[INFO] op PlayerName")
     broker.publish.assert_called_with("permissions.invalidated", "bedrock-log")
 
 
@@ -202,11 +204,13 @@ def test_logs_connects_and_publishes_connected_event() -> None:
         runtime._stop.set()
         raise Exception("stopped")
 
-    runtime, broker, service = _make_runtime(docker_factory=stop_after_first)
+    runtime, broker, service = _make_runtime(
+        docker_factory=stop_after_first,
+        timer_factory=MagicMock(return_value=MagicMock()),
+    )
     service.refreshing = False
 
-    with patch("minecraft_manager.runtime.threading.Timer"):
-        runtime._logs()
+    runtime._logs()
 
     broker.publish.assert_any_call("stream.logs.connected", "docker-logs")
 

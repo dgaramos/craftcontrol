@@ -1,24 +1,6 @@
 import { jest } from "@jest/globals";
 import { createSettingsFeature } from "../static/js/features/settings/index.js";
-
-function makeEl(extra = {}) {
-  return {
-    innerHTML: "",
-    textContent: "",
-    hidden: false,
-    value: "",
-    checked: false,
-    open: false,
-    close: jest.fn(),
-    addEventListener: jest.fn(),
-    dispatchEvent: jest.fn(),
-    querySelectorAll: jest.fn(() => []),
-    querySelector: jest.fn(() => null),
-    closest: jest.fn(() => null),
-    classList: { add: jest.fn(), remove: jest.fn(), toggle: jest.fn() },
-    ...extra,
-  };
-}
+import { makeEl } from "./helpers.js";
 
 function makeDeps(overrides = {}) {
   const state = {

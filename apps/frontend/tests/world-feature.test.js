@@ -1,17 +1,6 @@
 import { jest } from "@jest/globals";
 import { createWorldFeature } from "../static/js/features/world/index.js";
-
-function makeEl(extra = {}) {
-  return {
-    innerHTML: "",
-    onclick: null,
-    onchange: null,
-    value: "",
-    checked: false,
-    dataset: {},
-    ...extra,
-  };
-}
+import { makeEl } from "./helpers.js";
 
 function makeDeps(overrides = {}) {
   const elements = {};

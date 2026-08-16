@@ -53,7 +53,7 @@ def test_maps_activity_filters_to_application_service(analytics_client) -> None:
 
 
 def test_rejects_non_numeric_pagination(analytics_client) -> None:
-    client, manager = analytics_client
+    client, _manager = analytics_client
     response = client.get("/api/analytics/activity?page=not-a-number")
     assert response.status_code == 400
 

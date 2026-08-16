@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import argparse
 import json
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Callable
 
 from .config import Settings
 from .bedrock import BedrockClient
@@ -10,6 +12,30 @@ from .operations.backup import BackupService, docker_container_running
 from .auth.service import AuthService
 from .repository import StateRepository
 from .telemetry_installer import TelemetryPackInstaller
+
+
+@dataclass
+class CliDependencies:
+    """Composition seam for the CLI: production defaults, replaceable in tests."""
+
+    repository_factory: Callable[[Settings], StateRepository] = field(
+        default=lambda settings: StateRepository(settings.database)
+    )
+    auth_service_factory: Callable[[Settings], AuthService] = field(
+        default=lambda settings: AuthService(settings.database)
+    )
+    backup_service_factory: Callable[[Settings], BackupService] = field(
+        default=lambda settings: BackupService(
+            settings.database,
+            settings.project,
+            settings.backup_root,
+            BedrockClient(settings.container, [], settings.console_wait_seconds),
+            lambda: docker_container_running(settings.container),
+        )
+    )
+    installer_factory: Callable[[Settings, Path], TelemetryPackInstaller] = field(
+        default=lambda settings, project: TelemetryPackInstaller.bundled(project)
+    )
 
 
 def parser() -> argparse.ArgumentParser:
@@ -53,12 +79,18 @@ def parser() -> argparse.ArgumentParser:
     return root
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(
+    argv: list[str] | None = None,
+    *,
+    settings: Settings | None = None,
+    deps: CliDependencies | None = None,
+) -> int:
     arguments = parser().parse_args(argv)
-    settings = Settings.from_env()
+    settings = settings or Settings.from_env()
+    deps = deps or CliDependencies()
     if arguments.command == "auth":
-        StateRepository(settings.database).initialize()
-        service = AuthService(settings.database)
+        deps.repository_factory(settings).initialize()
+        service = deps.auth_service_factory(settings)
         if arguments.action == "bootstrap":
             player = arguments.player or settings.bootstrap_operator
             if not player:
@@ -77,13 +109,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if arguments.command == "backup":
-        service = BackupService(
-            settings.database,
-            settings.project,
-            settings.backup_root,
-            BedrockClient(settings.container, [], settings.console_wait_seconds),
-            lambda: docker_container_running(settings.container),
-        )
+        service = deps.backup_service_factory(settings)
         if arguments.action == "create":
             result = service.create(arguments.world)
         elif arguments.action == "list":
@@ -102,7 +128,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     project = arguments.project or settings.project
-    installer = TelemetryPackInstaller.bundled(project)
+    installer = deps.installer_factory(settings, project)
     if arguments.action == "status":
         result = {"changed": False, "action": "status", "status": installer.status(arguments.world).to_dict()}
     elif arguments.action in {"install", "upgrade"}:

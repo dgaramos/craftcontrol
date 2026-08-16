@@ -100,7 +100,7 @@ def test_filters_out_log_noise_after_list_marker() -> None:
         "[INFO] some gamerule output\n"
         "VonCrush\n"
     )
-    players, online, _ = BedrockClient.parse_players(logs, "")
+    players, _, _ = BedrockClient.parse_players(logs, "")
     assert players == ["VonCrush"]
 
 
@@ -109,7 +109,7 @@ def test_uses_last_list_marker_when_multiple_present() -> None:
         "There are 1/10 players online:\nOldPlayer\n"
         "There are 1/10 players online:\nVonCrush\n"
     )
-    players, online, _ = BedrockClient.parse_players(logs, "")
+    players, _, _ = BedrockClient.parse_players(logs, "")
     assert players == ["VonCrush"]
 
 
@@ -147,7 +147,7 @@ def test_reconnecting_player_remains_online() -> None:
         "Player disconnected: VonCrush, xuid: 1\n"
         "Player connected: VonCrush, xuid: 1\n"
     )
-    players, online, _ = BedrockClient.parse_players("", history)
+    players, _, _ = BedrockClient.parse_players("", history)
     assert players == ["VonCrush"]
 
 

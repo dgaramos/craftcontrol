@@ -6,14 +6,12 @@ from unittest.mock import MagicMock, patch
 import pytest
 from flask import Flask
 
-from minecraft_manager.auth.http import install_auth
 from minecraft_manager.http.analytics import analytics_api
 from minecraft_manager.http.core import core_api
 from minecraft_manager.http.players import players_api
 from minecraft_manager.http.server import server_api
 from minecraft_manager.http.telemetry import telemetry_api
-from minecraft_manager.repository import StateRepository
-from minecraft_manager.auth.service import AuthService
+from tests.conftest import make_auth_mock, wire_auth
 
 
 # ---------------------------------------------------------------------------
@@ -23,13 +21,8 @@ from minecraft_manager.auth.service import AuthService
 def _make_app(manager: MagicMock, *, auth_mode: str = "disabled") -> Flask:
     app = Flask(__name__, template_folder="../apps/frontend/templates")
     app.extensions["manager_service"] = manager
-    repo = MagicMock(spec=StateRepository)
-    auth = MagicMock(spec=AuthService)
-    auth.authenticate.return_value = {"id": "1", "name": "Steve", "role": "owner", "capabilities": ["*"]}
-    auth.verify_csrf.return_value = True
-    auth.csrf_token.return_value = "tok"
-    app.extensions["auth_service"] = auth
-    install_auth(app, auth, mode=auth_mode)
+    auth = make_auth_mock()
+    wire_auth(app, auth, mode=auth_mode)
     app.register_blueprint(core_api)
     app.register_blueprint(server_api)
     app.register_blueprint(players_api)

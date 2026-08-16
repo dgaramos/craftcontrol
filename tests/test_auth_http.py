@@ -6,25 +6,23 @@ from unittest.mock import MagicMock
 import pytest
 from flask import Flask, jsonify
 
-from minecraft_manager.auth.http import auth_api, install_auth, require
-from minecraft_manager.auth.service import AuthService
+from minecraft_manager.auth.http import auth_api, require
+from tests.conftest import make_auth_mock, wire_auth
 
 
 def _make_app(auth: MagicMock, *, mode: str = "local") -> Flask:
     app = Flask(__name__)
-    install_auth(app, auth, mode=mode, secure_cookie=False)
+    wire_auth(app, auth, mode=mode, secure_cookie=False)
     app.register_blueprint(auth_api)
     return app
 
 
 @pytest.fixture
 def auth() -> MagicMock:
-    mock = MagicMock(spec=AuthService)
-    mock.authenticate.return_value = {"id": "1", "name": "VonCrush", "role": "owner", "capabilities": ["*"]}
-    mock.verify_csrf.return_value = True
-    mock.csrf_token.return_value = "csrftoken"
-    mock.require_capability.return_value = None
-    return mock
+    return make_auth_mock(
+        authenticate=MagicMock(return_value={"id": "1", "name": "VonCrush", "role": "owner", "capabilities": ["*"]}),
+        csrf_token=MagicMock(return_value="csrftoken"),
+    )
 
 
 @pytest.fixture
@@ -158,7 +156,7 @@ def test_suspend_returns_400_on_last_owner(auth: MagicMock) -> None:
 
 def test_require_returns_401_when_no_user_in_context(auth: MagicMock) -> None:
     app = Flask(__name__)
-    install_auth(app, auth, mode="local", secure_cookie=False)
+    wire_auth(app, auth, mode="local", secure_cookie=False)
     auth.authenticate.return_value = None
 
     @app.get("/api/protected")

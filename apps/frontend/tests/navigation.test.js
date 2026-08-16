@@ -78,10 +78,7 @@ describe("createNavigation — renderTabs", () => {
     const { state, $, t, uiIcon, render, tabsEl } = makeEnv("__players__");
     const nav = createNavigation({ state, $, t, uiIcon, render });
     nav.renderTabs();
-    const activeIdx = tabsEl._html.indexOf('class="active"');
-    const playersIdx = tabsEl._html.indexOf('data-tab="players"');
-    expect(activeIdx).toBeGreaterThanOrEqual(0);
-    expect(Math.abs(activeIdx - playersIdx)).toBeLessThan(60);
+    expect(tabsEl._html).toContain('<button class="active" data-tab="players"');
   });
 
   test("server button uses settings translation key", () => {

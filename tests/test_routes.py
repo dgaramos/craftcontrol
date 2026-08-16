@@ -26,7 +26,7 @@ def routes() -> dict[str, set[str]]:
 def routes_client():
     app = Flask(__name__)
     app.register_blueprint(api)
-    return _collect_routes(app), app.test_client()
+    return app.test_client()
 
 
 def test_health_endpoint_registered(routes) -> None:
@@ -73,6 +73,6 @@ def test_all_routes_are_under_api_prefix_or_root(routes) -> None:
 
 
 def test_health_returns_200(routes_client) -> None:
-    routes_map, client = routes_client
-    response = client.get("/api/health")
+    response = routes_client.get("/api/health")
     assert response.status_code == 200
+    assert response.get_json()["ok"]

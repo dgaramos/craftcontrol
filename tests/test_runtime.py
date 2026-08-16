@@ -52,7 +52,7 @@ def test_ignores_chat_and_unknown_players(parser_runtime) -> None:
 
 def test_start_launches_three_daemon_threads() -> None:
     runtime, _, _ = _make_runtime()
-    with patch("threading.Thread") as mock_thread:
+    with patch("minecraft_manager.runtime.threading.Thread") as mock_thread:
         instances = [MagicMock() for _ in range(3)]
         mock_thread.side_effect = instances
         runtime.start()
@@ -67,7 +67,7 @@ def test_start_launches_three_daemon_threads() -> None:
 
 def test_start_is_idempotent() -> None:
     runtime, _, _ = _make_runtime()
-    with patch("threading.Thread") as mock_thread:
+    with patch("minecraft_manager.runtime.threading.Thread") as mock_thread:
         mock_thread.return_value = MagicMock()
         runtime.start()
         runtime.start()
@@ -166,7 +166,7 @@ def test_gamerule_skipped_when_refreshing(log_runtime) -> None:
 
 def test_permission_line_triggers_refresh(log_runtime) -> None:
     runtime, broker, service = log_runtime
-    with patch("threading.Timer") as mock_timer:
+    with patch("minecraft_manager.runtime.threading.Timer") as mock_timer:
         mock_timer.return_value = MagicMock()
         runtime._handle_log("[INFO] op PlayerName")
     broker.publish.assert_called_with("permissions.invalidated", "bedrock-log")
@@ -231,8 +231,9 @@ def test_logs_disconnects_on_exception_and_retries() -> None:
     fake_docker = MagicMock()
     fake_docker.from_env.side_effect = fake_from_env
 
-    with patch.dict("sys.modules", {"docker": fake_docker}):
-        runtime._logs()
+    with patch.object(stop_event, "wait", side_effect=lambda timeout=None: stop_event.is_set()):
+        with patch.dict("sys.modules", {"docker": fake_docker}):
+            runtime._logs()
 
     broker.publish.assert_any_call("stream.logs.disconnected", "docker-logs", ANY)
 
@@ -288,8 +289,9 @@ def test_docker_events_disconnects_on_error() -> None:
     fake_docker = MagicMock()
     fake_docker.from_env.side_effect = fake_from_env
 
-    with patch.dict("sys.modules", {"docker": fake_docker}):
-        runtime._docker_events()
+    with patch.object(stop_event, "wait", side_effect=lambda timeout=None: stop_event.is_set()):
+        with patch.dict("sys.modules", {"docker": fake_docker}):
+            runtime._docker_events()
 
     broker.publish.assert_any_call("stream.docker.disconnected", "docker-events", ANY)
 

@@ -5,9 +5,17 @@ import io
 import json
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+from minecraft_manager.cli import CliDependencies
+
+
+class _FakeRepository:
+    def initialize(self) -> None:
+        pass
 
 
 @pytest.fixture
@@ -113,20 +121,19 @@ def test_missing_command_exits(cli_parser) -> None:
 # Main auth tests
 # ---------------------------------------------------------------------------
 
-@patch("minecraft_manager.cli.Settings.from_env")
-@patch("minecraft_manager.cli.StateRepository")
-@patch("minecraft_manager.cli.AuthService")
-def test_auth_bootstrap_prints_json(MockAuth, MockRepo, MockSettings, tmp_path: Path) -> None:
-    s = MagicMock()
-    s.database = tmp_path / "db"
-    s.bootstrap_operator = "Steve"
-    MockSettings.return_value = s
-    MockAuth.return_value.bootstrap.return_value = "tok123"
+def test_auth_bootstrap_prints_json(tmp_path: Path) -> None:
+    settings = SimpleNamespace(database=tmp_path / "db", bootstrap_operator="Steve")
+    fake_auth = MagicMock()
+    fake_auth.bootstrap.return_value = "tok123"
+    deps = CliDependencies(
+        repository_factory=lambda settings: _FakeRepository(),
+        auth_service_factory=lambda settings: fake_auth,
+    )
 
     from minecraft_manager.cli import main
     captured = io.StringIO()
     with patch("sys.stdout", captured):
-        rc = main(["auth", "bootstrap", "--player", "Steve"])
+        rc = main(["auth", "bootstrap", "--player", "Steve"], settings=settings, deps=deps)
 
     assert rc == 0
     result = json.loads(captured.getvalue())
@@ -135,20 +142,19 @@ def test_auth_bootstrap_prints_json(MockAuth, MockRepo, MockSettings, tmp_path: 
     assert result["token"] == "tok123"
 
 
-@patch("minecraft_manager.cli.Settings.from_env")
-@patch("minecraft_manager.cli.StateRepository")
-@patch("minecraft_manager.cli.AuthService")
-def test_auth_invite_prints_json(MockAuth, MockRepo, MockSettings, tmp_path: Path) -> None:
-    s = MagicMock()
-    s.database = tmp_path / "db"
-    s.bootstrap_operator = None
-    MockSettings.return_value = s
-    MockAuth.return_value.create_invitation.return_value = "inv_tok"
+def test_auth_invite_prints_json(tmp_path: Path) -> None:
+    settings = SimpleNamespace(database=tmp_path / "db", bootstrap_operator=None)
+    fake_auth = MagicMock()
+    fake_auth.create_invitation.return_value = "inv_tok"
+    deps = CliDependencies(
+        repository_factory=lambda settings: _FakeRepository(),
+        auth_service_factory=lambda settings: fake_auth,
+    )
 
     from minecraft_manager.cli import main
     captured = io.StringIO()
     with patch("sys.stdout", captured):
-        rc = main(["auth", "invite", "Alex", "--role", "operator"])
+        rc = main(["auth", "invite", "Alex", "--role", "operator"], settings=settings, deps=deps)
 
     assert rc == 0
     result = json.loads(captured.getvalue())
@@ -156,20 +162,19 @@ def test_auth_invite_prints_json(MockAuth, MockRepo, MockSettings, tmp_path: Pat
     assert result["token"] == "inv_tok"
 
 
-@patch("minecraft_manager.cli.Settings.from_env")
-@patch("minecraft_manager.cli.StateRepository")
-@patch("minecraft_manager.cli.AuthService")
-def test_auth_recover_prints_json(MockAuth, MockRepo, MockSettings, tmp_path: Path) -> None:
-    s = MagicMock()
-    s.database = tmp_path / "db"
-    s.bootstrap_operator = None
-    MockSettings.return_value = s
-    MockAuth.return_value.create_recovery.return_value = ("rec_tok", "owner")
+def test_auth_recover_prints_json(tmp_path: Path) -> None:
+    settings = SimpleNamespace(database=tmp_path / "db", bootstrap_operator=None)
+    fake_auth = MagicMock()
+    fake_auth.create_recovery.return_value = ("rec_tok", "owner")
+    deps = CliDependencies(
+        repository_factory=lambda settings: _FakeRepository(),
+        auth_service_factory=lambda settings: fake_auth,
+    )
 
     from minecraft_manager.cli import main
     captured = io.StringIO()
     with patch("sys.stdout", captured):
-        rc = main(["auth", "recover", "Steve"])
+        rc = main(["auth", "recover", "Steve"], settings=settings, deps=deps)
 
     assert rc == 0
     result = json.loads(captured.getvalue())
@@ -177,143 +182,124 @@ def test_auth_recover_prints_json(MockAuth, MockRepo, MockSettings, tmp_path: Pa
     assert result["token"] == "rec_tok"
 
 
-@patch("minecraft_manager.cli.Settings.from_env")
-@patch("minecraft_manager.cli.StateRepository")
-@patch("minecraft_manager.cli.AuthService")
-def test_auth_bootstrap_no_player_raises(MockAuth, MockRepo, MockSettings, tmp_path: Path) -> None:
-    s = MagicMock()
-    s.database = tmp_path / "db"
-    s.bootstrap_operator = None
-    MockSettings.return_value = s
+def test_auth_bootstrap_no_player_raises(tmp_path: Path) -> None:
+    settings = SimpleNamespace(database=tmp_path / "db", bootstrap_operator=None)
+    deps = CliDependencies(
+        repository_factory=lambda settings: _FakeRepository(),
+        auth_service_factory=lambda settings: MagicMock(),
+    )
 
     from minecraft_manager.cli import main
     with pytest.raises(SystemExit):
-        main(["auth", "bootstrap"])
+        main(["auth", "bootstrap"], settings=settings, deps=deps)
 
 
 # ---------------------------------------------------------------------------
 # Main backup tests
 # ---------------------------------------------------------------------------
 
-@patch("minecraft_manager.cli.Settings.from_env")
-@patch("minecraft_manager.cli.BackupService")
-@patch("minecraft_manager.cli.BedrockClient")
-@patch("minecraft_manager.cli.docker_container_running", return_value=True)
-def test_backup_list_prints_json(mock_running, MockBedrock, MockBackup, MockSettings, tmp_path: Path) -> None:
-    s = MagicMock()
-    s.database = tmp_path / "db"
-    s.project = tmp_path
-    s.backup_root = tmp_path
-    s.container = "bedrock"
-    s.console_wait_seconds = 5
-    MockSettings.return_value = s
-    MockBackup.return_value.list.return_value = []
+def test_backup_list_prints_json(tmp_path: Path) -> None:
+    settings = SimpleNamespace(
+        database=tmp_path / "db",
+        project=tmp_path,
+        backup_root=tmp_path,
+        container="bedrock",
+        console_wait_seconds=5,
+    )
+    fake_backup = MagicMock()
+    fake_backup.list.return_value = []
+    deps = CliDependencies(backup_service_factory=lambda settings: fake_backup)
 
     from minecraft_manager.cli import main
     captured = io.StringIO()
     with patch("sys.stdout", captured):
-        rc = main(["backup", "list"])
+        rc = main(["backup", "list"], settings=settings, deps=deps)
 
     assert rc == 0
     result = json.loads(captured.getvalue())
     assert "backups" in result
 
 
-@patch("minecraft_manager.cli.Settings.from_env")
-@patch("minecraft_manager.cli.BackupService")
-@patch("minecraft_manager.cli.BedrockClient")
-@patch("minecraft_manager.cli.docker_container_running", return_value=True)
-def test_backup_restore_without_yes_raises(mock_running, MockBedrock, MockBackup, MockSettings, tmp_path: Path) -> None:
-    s = MagicMock()
-    s.database = tmp_path / "db"
-    s.project = tmp_path
-    s.backup_root = tmp_path
-    s.container = "bedrock"
-    s.console_wait_seconds = 5
-    MockSettings.return_value = s
+def test_backup_restore_without_yes_raises(tmp_path: Path) -> None:
+    settings = SimpleNamespace(
+        database=tmp_path / "db",
+        project=tmp_path,
+        backup_root=tmp_path,
+        container="bedrock",
+        console_wait_seconds=5,
+    )
+    deps = CliDependencies(backup_service_factory=lambda settings: MagicMock())
 
     from minecraft_manager.cli import main
     with pytest.raises(SystemExit):
-        main(["backup", "restore", "bak1"])
+        main(["backup", "restore", "bak1"], settings=settings, deps=deps)
 
 
 # ---------------------------------------------------------------------------
 # Main telemetry tests
 # ---------------------------------------------------------------------------
 
-@patch("minecraft_manager.cli.Settings.from_env")
-@patch("minecraft_manager.cli.TelemetryPackInstaller")
-def test_telemetry_status_prints_json(MockInstaller, MockSettings, tmp_path: Path) -> None:
-    s = MagicMock()
-    s.project = tmp_path
-    MockSettings.return_value = s
+def test_telemetry_status_prints_json(tmp_path: Path) -> None:
+    settings = SimpleNamespace(project=tmp_path)
     fake_status = MagicMock()
     fake_status.to_dict.return_value = {"installed": False}
-    MockInstaller.bundled.return_value.status.return_value = fake_status
+    fake_installer = MagicMock()
+    fake_installer.status.return_value = fake_status
+    deps = CliDependencies(installer_factory=lambda settings, project: fake_installer)
 
     from minecraft_manager.cli import main
     captured = io.StringIO()
     with patch("sys.stdout", captured):
-        rc = main(["telemetry", "status"])
+        rc = main(["telemetry", "status"], settings=settings, deps=deps)
 
     assert rc == 0
     result = json.loads(captured.getvalue())
     assert not result["changed"]
 
 
-@patch("minecraft_manager.cli.Settings.from_env")
-@patch("minecraft_manager.cli.TelemetryPackInstaller")
-def test_telemetry_remove_without_yes_raises(MockInstaller, MockSettings, tmp_path: Path) -> None:
-    s = MagicMock()
-    s.project = tmp_path
-    MockSettings.return_value = s
+def test_telemetry_remove_without_yes_raises(tmp_path: Path) -> None:
+    settings = SimpleNamespace(project=tmp_path)
+    deps = CliDependencies(installer_factory=lambda settings, project: MagicMock())
 
     from minecraft_manager.cli import main
     with pytest.raises(SystemExit):
-        main(["telemetry", "remove"])
+        main(["telemetry", "remove"], settings=settings, deps=deps)
 
 
-@patch("minecraft_manager.cli.Settings.from_env")
-@patch("minecraft_manager.cli.TelemetryPackInstaller")
-def test_telemetry_rollback_without_yes_raises(MockInstaller, MockSettings, tmp_path: Path) -> None:
-    s = MagicMock()
-    s.project = tmp_path
-    MockSettings.return_value = s
+def test_telemetry_rollback_without_yes_raises(tmp_path: Path) -> None:
+    settings = SimpleNamespace(project=tmp_path)
+    deps = CliDependencies(installer_factory=lambda settings, project: MagicMock())
 
     from minecraft_manager.cli import main
     with pytest.raises(SystemExit):
-        main(["telemetry", "rollback"])
+        main(["telemetry", "rollback"], settings=settings, deps=deps)
 
 
-@patch("minecraft_manager.cli.Settings.from_env")
-@patch("minecraft_manager.cli.TelemetryPackInstaller")
-def test_telemetry_install_prints_json(MockInstaller, MockSettings, tmp_path: Path) -> None:
-    s = MagicMock()
-    s.project = tmp_path
-    MockSettings.return_value = s
-    MockInstaller.bundled.return_value.install.return_value = {"changed": True}
+def test_telemetry_install_prints_json(tmp_path: Path) -> None:
+    settings = SimpleNamespace(project=tmp_path)
+    fake_installer = MagicMock()
+    fake_installer.install.return_value = {"changed": True}
+    deps = CliDependencies(installer_factory=lambda settings, project: fake_installer)
 
     from minecraft_manager.cli import main
     captured = io.StringIO()
     with patch("sys.stdout", captured):
-        rc = main(["telemetry", "install"])
+        rc = main(["telemetry", "install"], settings=settings, deps=deps)
 
     assert rc == 0
     result = json.loads(captured.getvalue())
     assert result["action"] == "install"
 
 
-@patch("minecraft_manager.cli.Settings.from_env")
-@patch("minecraft_manager.cli.TelemetryPackInstaller")
-def test_telemetry_disable_prints_json(MockInstaller, MockSettings, tmp_path: Path) -> None:
-    s = MagicMock()
-    s.project = tmp_path
-    MockSettings.return_value = s
-    MockInstaller.bundled.return_value.disable.return_value = {"changed": False, "action": "disable"}
+def test_telemetry_disable_prints_json(tmp_path: Path) -> None:
+    settings = SimpleNamespace(project=tmp_path)
+    fake_installer = MagicMock()
+    fake_installer.disable.return_value = {"changed": False, "action": "disable"}
+    deps = CliDependencies(installer_factory=lambda settings, project: fake_installer)
 
     from minecraft_manager.cli import main
     captured = io.StringIO()
     with patch("sys.stdout", captured):
-        rc = main(["telemetry", "disable"])
+        rc = main(["telemetry", "disable"], settings=settings, deps=deps)
 
     assert rc == 0

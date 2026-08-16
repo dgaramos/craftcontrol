@@ -1,13 +1,17 @@
 import { jest } from "@jest/globals";
 import { createNavigation } from "../static/js/core/navigation.js";
 
-// navigation.js calls window.scrollTo; route.js uses window.history/location — stub for node env
-if (typeof global.window === "undefined") {
-  global.window = {};
-}
-global.window.scrollTo = jest.fn();
-global.window.history = { replaceState: jest.fn() };
-global.window.location = { hash: "" };
+let _savedWindow;
+beforeEach(() => {
+  _savedWindow = global.window;
+  if (typeof global.window === "undefined") {
+    global.window = {};
+  }
+  global.window.scrollTo = jest.fn();
+  global.window.history = { replaceState: jest.fn() };
+  global.window.location = { hash: "" };
+});
+afterEach(() => { global.window = _savedWindow; });
 
 function makeButton(tab) {
   const btn = { dataset: { tab }, onclick: null, className: "" };

@@ -9,6 +9,11 @@ from .events import EventBroker
 from .files import ServerFiles
 from .repository import StateRepository
 from .runtime import EventRuntime
+
+
+def _docker_factory() -> object:
+    import docker as docker_sdk
+    return docker_sdk.from_env()
 from .schema import GAMERULES
 from .services import ManagerService
 from .players import PlayerService, SQLitePlayerRepository
@@ -35,5 +40,5 @@ def compose_manager(settings: Settings) -> ManagerService:
         player_service=players,
         telemetry_service=telemetry,
     )
-    manager.attach_runtime(EventRuntime(manager, broker, settings.container, settings.reconcile_seconds))
+    manager.attach_runtime(EventRuntime(manager, broker, settings.container, settings.reconcile_seconds, docker_factory=_docker_factory))
     return manager

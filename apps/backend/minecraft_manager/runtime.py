@@ -12,11 +12,6 @@ from .telemetry import PREFIX as TELEMETRY_PREFIX, parse_telemetry_line
 from .ports import EventPublisher, RuntimeApplication
 
 
-def _default_docker_factory() -> Any:
-    import docker as docker_sdk
-    return docker_sdk.from_env()
-
-
 class EventRuntime:
     DEATH_PHRASES = (
         "was slain by", "was shot by", "was killed by", "was blown up by", "was fireballed by",
@@ -37,7 +32,7 @@ class EventRuntime:
         self.broker = broker
         self.container = container
         self.reconcile_seconds = reconcile_seconds
-        self._docker_factory = docker_factory or _default_docker_factory
+        self._docker_factory = docker_factory
         self._started = False
         self._lock = threading.Lock()
         self._stop = threading.Event()

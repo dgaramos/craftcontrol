@@ -15,5 +15,5 @@ docker compose config --quiet
 docker compose --file docker-compose.split.yml config --quiet
 docker compose --file docker-compose.split.yml build
 bin/check-split-runtime
-"$PYTHON" -m unittest tests.test_architecture tests.test_deployment tests.test_documentation -v
+"$PYTHON" -m pytest tests/test_architecture.py tests/test_deployment.py tests/test_documentation.py -v
 echo "integration gate: ok"

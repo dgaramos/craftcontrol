@@ -11,6 +11,6 @@ done < <(rg --files apps/frontend/static -g '*.js' | sort)
 
 node apps/frontend/scripts/check-i18n.mjs
 node apps/frontend/scripts/check-dom-interactions.mjs
-"$PYTHON" -m unittest tests.test_brand -v
+"$PYTHON" -m pytest tests/test_brand.py -v
 (cd apps/frontend && npm ci && npm test)
 echo "frontend gate: ok"

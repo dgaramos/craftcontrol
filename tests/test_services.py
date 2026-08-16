@@ -484,14 +484,27 @@ def test_second_request_within_cooldown_is_coalesced(tmp_path: Path) -> None:
 # Player delegation
 # ---------------------------------------------------------------------------
 
-def test_players_returns_list(tmp_path: Path) -> None:
+def test_players_returns_known_player_fields(tmp_path: Path) -> None:
     service = _make_service(tmp_path)
-    assert isinstance(service.players(), list)
+    service.player_event("VonCrush", True, "xuid-1")
+    players = service.players()
+    assert len(players) == 1
+    assert players[0]["name"] == "VonCrush"
+    assert "online" in players[0]
 
 
 def test_player_profile_returns_none_for_unknown(tmp_path: Path) -> None:
     service = _make_service(tmp_path)
     assert service.player_profile("__nobody__") is None
+
+
+def test_player_profile_returns_profile_for_known_player(tmp_path: Path) -> None:
+    service = _make_service(tmp_path)
+    service.player_event("VonCrush", True, "xuid-1")
+    player_id = service.players()[0]["id"]
+    profile = service.player_profile(player_id)
+    assert profile is not None
+    assert profile["name"] == "VonCrush"
 
 
 def test_close_online_sessions_returns_list(tmp_path: Path) -> None:

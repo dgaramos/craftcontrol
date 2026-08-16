@@ -41,7 +41,15 @@ class FakeBedrock:
 
 
 class FakeDocker:
-    pass
+    def __init__(self) -> None:
+        self.actions: list[str] = []
+        self._status: dict = {"status": "running"}
+
+    def status(self) -> dict:
+        return self._status
+
+    def execute(self, action: str) -> None:
+        self.actions.append(action)
 
 
 class FakeRuntime:

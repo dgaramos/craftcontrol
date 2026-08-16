@@ -1,17 +1,23 @@
 from __future__ import annotations
 
-from pathlib import Path
 import subprocess
+from pathlib import Path
+from typing import Callable
 
 
 class DockerOperations:
-    def __init__(self, container: str, project: Path) -> None:
+    def __init__(
+        self,
+        container: str,
+        project: Path,
+        executor: Callable[..., subprocess.CompletedProcess] | None = None,
+    ) -> None:
         self.container = container
         self.project = project
+        self._executor = executor or subprocess.run
 
-    @staticmethod
-    def _run(*args: str, timeout: int = 30) -> subprocess.CompletedProcess[str]:
-        return subprocess.run(["docker", *args], capture_output=True, text=True, timeout=timeout, check=False)
+    def _run(self, *args: str, timeout: int = 30) -> subprocess.CompletedProcess[str]:
+        return self._executor(["docker", *args], capture_output=True, text=True, timeout=timeout, check=False)
 
     def status(self) -> dict[str, object]:
         result = self._run("inspect", "-f", "{{.State.Status}}", self.container)

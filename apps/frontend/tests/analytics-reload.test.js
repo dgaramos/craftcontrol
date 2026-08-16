@@ -1,5 +1,6 @@
 import { jest } from "@jest/globals";
 import { createAnalyticsFeature } from "../static/js/features/analytics/index.js";
+import { makeEl } from "./helpers.js";
 
 // analytics/index.js uses `"IntersectionObserver" in window` and `window.scrollTo`.
 // Define a minimal global.window for node environment.
@@ -14,21 +15,6 @@ afterEach(() => {
   delete global.window.IntersectionObserver;
 });
 
-function makeEl(extra = {}) {
-  return {
-    innerHTML: "",
-    textContent: "",
-    hidden: false,
-    value: "",
-    onchange: null,
-    onclick: null,
-    showModal: jest.fn(),
-    close: jest.fn(),
-    querySelector: jest.fn(() => null),
-    querySelectorAll: jest.fn(() => []),
-    ...extra,
-  };
-}
 
 function makeActivityResult(overrides = {}) {
   return {

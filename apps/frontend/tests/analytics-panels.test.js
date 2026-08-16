@@ -2,18 +2,8 @@ import { jest } from "@jest/globals";
 import { createCombatPanel } from "../static/js/features/analytics/combat.js";
 import { createExplorationPanel } from "../static/js/features/analytics/exploration.js";
 import { createTrendsPanel } from "../static/js/features/analytics/trends.js";
+import { makeEl } from "./helpers.js";
 
-function makeEl(extra = {}) {
-  return {
-    innerHTML: "",
-    textContent: "",
-    onclick: null,
-    onchange: null,
-    querySelectorAll: jest.fn(() => []),
-    querySelector: jest.fn(() => null),
-    ...extra,
-  };
-}
 
 function makeSharedDeps(stateOverrides = {}) {
   const elements = {};

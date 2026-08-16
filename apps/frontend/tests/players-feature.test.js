@@ -1,25 +1,7 @@
 import { jest } from "@jest/globals";
 import { createPlayersWorkspace } from "../static/js/features/players/workspace.js";
 import { createPlayersFeature } from "../static/js/features/players/index.js";
-
-function makeEl(extra = {}) {
-  return {
-    innerHTML: "",
-    textContent: "",
-    hidden: false,
-    value: "",
-    checked: false,
-    onclick: null,
-    oninput: null,
-    onchange: null,
-    className: "",
-    dataset: {},
-    classList: { add: jest.fn(), remove: jest.fn(), toggle: jest.fn() },
-    querySelector: jest.fn(() => null),
-    querySelectorAll: jest.fn(() => []),
-    ...extra,
-  };
-}
+import { makeEl } from "./helpers.js";
 
 function makePlayer(overrides = {}) {
   return {

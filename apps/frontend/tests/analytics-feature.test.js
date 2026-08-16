@@ -1,22 +1,6 @@
 import { jest } from "@jest/globals";
 import { createAnalyticsFeature } from "../static/js/features/analytics/index.js";
-
-function makeEl(extra = {}) {
-  return {
-    innerHTML: "",
-    textContent: "",
-    hidden: false,
-    value: "",
-    onchange: null,
-    onclick: null,
-    querySelectorAll: jest.fn(() => []),
-    querySelector: jest.fn(() => null),
-    close: jest.fn(),
-    showModal: jest.fn(),
-    dispatchEvent: jest.fn(),
-    ...extra,
-  };
-}
+import { makeEl } from "./helpers.js";
 
 function makeAnalyticsDeps(kindOverride = "rankings") {
   const elements = {};

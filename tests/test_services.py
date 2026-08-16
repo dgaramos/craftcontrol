@@ -239,24 +239,24 @@ def test_refresh_error_publishes_failed_event_and_reraises(tmp_path: Path) -> No
 def test_concurrent_refresh_is_skipped(tmp_path: Path) -> None:
     bedrock = FakeBedrock()
     service = _make_service(tmp_path, bedrock)
-    inside = threading.Barrier(2)
-    concurrent_done = threading.Event()
+    entered = threading.Event()
+    release = threading.Event()
     original_query = bedrock.query_state
     call_count = 0
 
     def slow_query():
         nonlocal call_count
         call_count += 1
-        inside.wait(timeout=2)
-        concurrent_done.wait(timeout=2)
+        entered.set()
+        release.wait(timeout=3)
         return original_query()
 
     bedrock.query_state = slow_query  # type: ignore[method-assign]
     t = threading.Thread(target=service.refresh, args=("bg",))
     t.start()
-    inside.wait(timeout=2)
+    assert entered.wait(timeout=3)
     service.refresh("concurrent")
-    concurrent_done.set()
+    release.set()
     t.join(timeout=3)
     assert call_count == 1
 

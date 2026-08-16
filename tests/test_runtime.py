@@ -185,9 +185,6 @@ def test_unknown_line_is_silent(log_runtime) -> None:
 # ---------------------------------------------------------------------------
 
 def test_logs_connects_and_publishes_connected_event() -> None:
-    runtime, broker, service = _make_runtime()
-    service.refreshing = False
-
     fake_container = MagicMock()
     fake_container.logs.return_value = iter([])
 
@@ -196,7 +193,7 @@ def test_logs_connects_and_publishes_connected_event() -> None:
 
     call_count = 0
 
-    def stop_after_first(*args, **kwargs):
+    def stop_after_first():
         nonlocal call_count
         call_count += 1
         if call_count == 1:
@@ -204,21 +201,17 @@ def test_logs_connects_and_publishes_connected_event() -> None:
         runtime._stop.set()
         raise Exception("stopped")
 
-    fake_docker = MagicMock()
-    fake_docker.from_env.side_effect = stop_after_first
+    runtime, broker, service = _make_runtime(docker_factory=stop_after_first)
+    service.refreshing = False
 
     with patch("minecraft_manager.runtime.threading.Timer"):
-        with patch.dict("sys.modules", {"docker": fake_docker}):
-            runtime._logs()
+        runtime._logs()
 
     broker.publish.assert_any_call("stream.logs.connected", "docker-logs")
 
 
 def test_logs_disconnects_on_exception_and_retries() -> None:
-    runtime, broker, _ = _make_runtime()
     stop_event = threading.Event()
-    runtime._stop = stop_event
-
     call_count = 0
 
     def fake_from_env():
@@ -228,30 +221,25 @@ def test_logs_disconnects_on_exception_and_retries() -> None:
             stop_event.set()
         raise Exception("docker gone")
 
-    fake_docker = MagicMock()
-    fake_docker.from_env.side_effect = fake_from_env
+    runtime, broker, _ = _make_runtime(docker_factory=fake_from_env)
+    runtime._stop = stop_event
 
     with patch.object(stop_event, "wait", side_effect=lambda timeout=None: stop_event.is_set()):
-        with patch.dict("sys.modules", {"docker": fake_docker}):
-            runtime._logs()
+        runtime._logs()
 
     broker.publish.assert_any_call("stream.logs.disconnected", "docker-logs", ANY)
 
 
 def test_docker_events_connects_and_publishes() -> None:
-    runtime, broker, service = _make_runtime()
-    service.refreshing = False
-
     start_event = {"Action": "start", "id": "abc123"}
     die_event = {"Action": "die", "id": "abc123"}
 
     fake_client = MagicMock()
     fake_client.events.return_value = iter([start_event, die_event])
-    service.close_online_sessions.return_value = ["Nicole"]
 
     call_count = 0
 
-    def stop_after_first(*args, **kwargs):
+    def stop_after_first():
         nonlocal call_count
         call_count += 1
         if call_count == 1:
@@ -259,11 +247,11 @@ def test_docker_events_connects_and_publishes() -> None:
         runtime._stop.set()
         raise Exception("stopped")
 
-    fake_docker = MagicMock()
-    fake_docker.from_env.side_effect = stop_after_first
+    runtime, broker, service = _make_runtime(docker_factory=stop_after_first)
+    service.refreshing = False
+    service.close_online_sessions.return_value = ["Nicole"]
 
-    with patch.dict("sys.modules", {"docker": fake_docker}):
-        runtime._docker_events()
+    runtime._docker_events()
 
     broker.publish.assert_any_call("stream.docker.connected", "docker-events")
     broker.publish.assert_any_call("server.start", "docker-events", {"container_id": "abc123"})
@@ -273,10 +261,7 @@ def test_docker_events_connects_and_publishes() -> None:
 
 
 def test_docker_events_disconnects_on_error() -> None:
-    runtime, broker, _ = _make_runtime()
     stop_event = threading.Event()
-    runtime._stop = stop_event
-
     call_count = 0
 
     def fake_from_env():
@@ -286,12 +271,11 @@ def test_docker_events_disconnects_on_error() -> None:
             stop_event.set()
         raise Exception("no docker")
 
-    fake_docker = MagicMock()
-    fake_docker.from_env.side_effect = fake_from_env
+    runtime, broker, _ = _make_runtime(docker_factory=fake_from_env)
+    runtime._stop = stop_event
 
     with patch.object(stop_event, "wait", side_effect=lambda timeout=None: stop_event.is_set()):
-        with patch.dict("sys.modules", {"docker": fake_docker}):
-            runtime._docker_events()
+        runtime._docker_events()
 
     broker.publish.assert_any_call("stream.docker.disconnected", "docker-events", ANY)
 
@@ -316,17 +300,14 @@ def test_periodic_reconciles_and_stops() -> None:
 
 
 def test_docker_events_state_changed_published_when_closed() -> None:
-    runtime, broker, service = _make_runtime()
-
     die_event = {"Action": "die", "id": "abc"}
-    service.close_online_sessions.return_value = ["VonCrush"]
 
     fake_client = MagicMock()
     fake_client.events.return_value = iter([die_event])
 
     call_count = 0
 
-    def stop_after_first(*args, **kwargs):
+    def stop_after_first():
         nonlocal call_count
         call_count += 1
         if call_count == 1:
@@ -334,11 +315,10 @@ def test_docker_events_state_changed_published_when_closed() -> None:
         runtime._stop.set()
         raise Exception("stopped")
 
-    fake_docker = MagicMock()
-    fake_docker.from_env.side_effect = stop_after_first
+    runtime, broker, service = _make_runtime(docker_factory=stop_after_first)
+    service.close_online_sessions.return_value = ["VonCrush"]
 
-    with patch.dict("sys.modules", {"docker": fake_docker}):
-        runtime._docker_events()
+    runtime._docker_events()
 
     broker.publish.assert_any_call(
         "state.changed", "docker-events",
@@ -347,17 +327,14 @@ def test_docker_events_state_changed_published_when_closed() -> None:
 
 
 def test_docker_events_no_state_changed_when_none_closed() -> None:
-    runtime, broker, service = _make_runtime()
-
     die_event = {"Action": "die", "id": "abc"}
-    service.close_online_sessions.return_value = []
 
     fake_client = MagicMock()
     fake_client.events.return_value = iter([die_event])
 
     call_count = 0
 
-    def stop_after_first(*args, **kwargs):
+    def stop_after_first():
         nonlocal call_count
         call_count += 1
         if call_count == 1:
@@ -365,11 +342,10 @@ def test_docker_events_no_state_changed_when_none_closed() -> None:
         runtime._stop.set()
         raise Exception("stopped")
 
-    fake_docker = MagicMock()
-    fake_docker.from_env.side_effect = stop_after_first
+    runtime, broker, service = _make_runtime(docker_factory=stop_after_first)
+    service.close_online_sessions.return_value = []
 
-    with patch.dict("sys.modules", {"docker": fake_docker}):
-        runtime._docker_events()
+    runtime._docker_events()
 
     calls = [str(c) for c in broker.publish.call_args_list]
     assert not any("state.changed" in c for c in calls)

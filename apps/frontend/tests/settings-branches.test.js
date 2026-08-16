@@ -1,53 +1,19 @@
 import { jest } from "@jest/globals";
 import { createSettingsFeature } from "../static/js/features/settings/index.js";
-import { makeEl } from "./helpers.js";
-
-function makeDeps(overrides = {}) {
-  const state = {
-    locale: "en",
-    tab: "world",
-    user: { role: "owner", capabilities: ["*"] },
-    changes: {},
-    config: {},
-    gamerules: {},
-    domains: {},
-    schema: { settings: {}, gamerules: {} },
-    ...overrides.state,
-  };
-  const elements = {};
-  const $ = jest.fn((sel) => {
-    if (!elements[sel]) elements[sel] = makeEl();
-    return elements[sel];
-  });
-  const content = { innerHTML: "", querySelectorAll: jest.fn(() => []) };
-  const t = (key, ...args) => args.length ? `${key}(${args.join(",")})` : key;
-  const api = jest.fn();
-  const escapeHtml = (s) => String(s ?? "").replace(/</g, "&lt;");
-  const toast = jest.fn();
-  const uiIcon = (name) => `<svg data-icon="${name}"/>`;
-  const optionLabel = (v) => String(v);
-  const localeTag = () => "en-US";
-  const groupLabel = (g) => g;
-  const render = jest.fn();
-  // document.querySelector stub for footer
-  global.document = { querySelector: jest.fn(() => ({ classList: { toggle: jest.fn() } })) };
-  return { state, $, content, t, api, escapeHtml, toast, uiIcon, optionLabel, localeTag, groupLabel, render, elements, ...overrides };
-}
+import { makeEl, makeSettingsDeps as makeDeps } from "./helpers.js";
 
 // ── renderChangesDrawer — removal handler ─────────────────────────────────────
 
 describe("renderChangesDrawer — removal handler", () => {
   test("clicking [data-remove-change] deletes entry from state.changes and calls render", () => {
     const deps = makeDeps({
-      state: {
-        changes: { max_players: "20" },
-        config: { max_players: "10" },
-        schema: {
-          settings: {
-            max_players: { group: "Geral", label: "Max Players", label_en: "Max Players", description: "d", description_en: "d", type: "number" },
-          },
-          gamerules: {},
+      changes: { max_players: "20" },
+      config: { max_players: "10" },
+      schema: {
+        settings: {
+          max_players: { group: "Geral", label: "Max Players", label_en: "Max Players", description: "d", description_en: "d", type: "number" },
         },
+        gamerules: {},
       },
     });
     const removeBtn = makeEl({ dataset: { removeChange: "max_players" } });
@@ -71,15 +37,13 @@ describe("renderChangesDrawer — removal handler", () => {
 describe("updateSaveLabel", () => {
   test("when drawer is open, calls renderChangesDrawer", () => {
     const deps = makeDeps({
-      state: {
-        changes: { max_players: "20" },
-        config: { max_players: "10" },
-        schema: {
-          settings: {
-            max_players: { group: "G", label: "Max", label_en: "Max", description: "d", description_en: "d", type: "number" },
-          },
-          gamerules: {},
+      changes: { max_players: "20" },
+      config: { max_players: "10" },
+      schema: {
+        settings: {
+          max_players: { group: "G", label: "Max", label_en: "Max", description: "d", description_en: "d", type: "number" },
         },
+        gamerules: {},
       },
     });
     const saveEl = makeEl({ hidden: false });
@@ -115,15 +79,13 @@ describe("updateSaveLabel", () => {
 describe("displayValue branches", () => {
   function renderWithFieldType(type, value, configValue) {
     const deps = makeDeps({
-      state: {
-        changes: { myfield: value },
-        config: { myfield: configValue ?? "old" },
-        schema: {
-          settings: {
-            myfield: { group: "G", label: "Field", label_en: "Field", description: "d", description_en: "d", type },
-          },
-          gamerules: {},
+      changes: { myfield: value },
+      config: { myfield: configValue ?? "old" },
+      schema: {
+        settings: {
+          myfield: { group: "G", label: "Field", label_en: "Field", description: "d", description_en: "d", type },
         },
+        gamerules: {},
       },
     });
     const changesListEl = makeEl({ querySelectorAll: jest.fn(() => []) });
@@ -160,17 +122,15 @@ describe("displayValue branches", () => {
 // ── bindSettingFields — persistent field ─────────────────────────────────────
 
 describe("bindSettingFields — persistent field", () => {
-  function makeSettingsDeps(fieldType = "number") {
+  function makeFieldDeps(fieldType = "number") {
     const deps = makeDeps({
-      state: {
-        changes: {},
-        config: { max_players: "10" },
-        schema: {
-          settings: {
-            max_players: { group: "Geral", label: "Max", label_en: "Max", description: "d", description_en: "d", type: fieldType },
-          },
-          gamerules: {},
+      changes: {},
+      config: { max_players: "10" },
+      schema: {
+        settings: {
+          max_players: { group: "Geral", label: "Max", label_en: "Max", description: "d", description_en: "d", type: fieldType },
         },
+        gamerules: {},
       },
     });
     const fieldEl = makeEl({ value: "20", checked: false });
@@ -182,7 +142,7 @@ describe("bindSettingFields — persistent field", () => {
   }
 
   test("change event with different value adds to state.changes", () => {
-    const { deps, fieldEl } = makeSettingsDeps();
+    const { deps, fieldEl } = makeFieldDeps();
     const { bindSettingFields } = createSettingsFeature(deps);
     bindSettingFields(["Geral"]);
     const handler = fieldEl.addEventListener.mock.calls.find(([ev]) => ev === "change")[1];
@@ -191,7 +151,7 @@ describe("bindSettingFields — persistent field", () => {
   });
 
   test("change event equal to config removes from state.changes", () => {
-    const { deps, fieldEl } = makeSettingsDeps();
+    const { deps, fieldEl } = makeFieldDeps();
     fieldEl.value = "10"; // same as config
     deps.state.changes["max_players"] = "10";
     const { bindSettingFields } = createSettingsFeature(deps);
@@ -202,7 +162,7 @@ describe("bindSettingFields — persistent field", () => {
   });
 
   test("boolean field calls updateToggleLabel on change", () => {
-    const { deps, fieldEl } = makeSettingsDeps("boolean");
+    const { deps, fieldEl } = makeFieldDeps("boolean");
     fieldEl.checked = true;
     const toggleControl = makeEl({
       querySelector: jest.fn(() => makeEl({ textContent: "", classList: { remove: jest.fn() } })),
@@ -221,15 +181,13 @@ describe("bindSettingFields — persistent field", () => {
 describe("bindSettingFields — live gamerule field", () => {
   function makeLiveDeps() {
     const deps = makeDeps({
-      state: {
-        changes: {},
-        config: {},
-        gamerules: { showcoordinates: "true" },
-        schema: {
-          settings: {},
-          gamerules: {
-            showcoordinates: { group: "Geral", label: "Show coords", label_en: "Show coords", description: "d", description_en: "d", type: "boolean" },
-          },
+      changes: {},
+      config: {},
+      gamerules: { showcoordinates: "true" },
+      schema: {
+        settings: {},
+        gamerules: {
+          showcoordinates: { group: "Geral", label: "Show coords", label_en: "Show coords", description: "d", description_en: "d", type: "boolean" },
         },
       },
     });

@@ -6,13 +6,32 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
+from flask import Flask
 
+from minecraft_manager.auth.http import install_auth
+from minecraft_manager.auth.service import AuthService
 from minecraft_manager.files import ServerFiles
 from minecraft_manager.repository import StateRepository
 from minecraft_manager.services import ManagerService
 from tests.fakes import FakeBedrock, FakeConsole, FakeDocker, FakeRuntime
 
 __all__ = ["FakeBedrock", "FakeConsole", "FakeDocker", "FakeRuntime"]
+
+
+def make_auth_mock(**overrides) -> MagicMock:
+    auth = MagicMock(spec=AuthService)
+    auth.authenticate.return_value = {"id": "1", "name": "Steve", "role": "owner", "capabilities": ["*"]}
+    auth.verify_csrf.return_value = True
+    auth.csrf_token.return_value = "tok"
+    auth.require_capability.return_value = None
+    for attr, value in overrides.items():
+        setattr(auth, attr, value)
+    return auth
+
+
+def wire_auth(app: Flask, auth: MagicMock, *, mode: str = "local", secure_cookie: bool = True) -> None:
+    app.extensions["auth_service"] = auth
+    install_auth(app, auth, mode=mode, secure_cookie=secure_cookie)
 
 
 # ---------------------------------------------------------------------------

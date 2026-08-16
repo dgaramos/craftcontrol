@@ -4,12 +4,17 @@ import re
 import json
 import threading
 import time
-from typing import Any
+from typing import Any, Callable
 
 from .events import EventBroker
 from .schema import GAMERULES
 from .telemetry import PREFIX as TELEMETRY_PREFIX, parse_telemetry_line
 from .ports import EventPublisher, RuntimeApplication
+
+
+def _default_docker_factory() -> Any:
+    import docker as docker_sdk
+    return docker_sdk.from_env()
 
 
 class EventRuntime:
@@ -20,11 +25,19 @@ class EventRuntime:
         "was struck by lightning", "froze to death", "was impaled by", "was squashed by",
         "died", "foi morto", "morreu", "afogou", "caiu de", "queimou", "tentou nadar em lava",
     )
-    def __init__(self, service: RuntimeApplication, broker: EventPublisher, container: str, reconcile_seconds: int = 900) -> None:
+    def __init__(
+        self,
+        service: RuntimeApplication,
+        broker: EventPublisher,
+        container: str,
+        reconcile_seconds: int = 900,
+        docker_factory: Callable[[], Any] | None = None,
+    ) -> None:
         self.service = service
         self.broker = broker
         self.container = container
         self.reconcile_seconds = reconcile_seconds
+        self._docker_factory = docker_factory or _default_docker_factory
         self._started = False
         self._lock = threading.Lock()
         self._stop = threading.Event()
@@ -42,13 +55,11 @@ class EventRuntime:
             threading.Thread(target=target, name=name, daemon=True).start()
 
     def _logs(self) -> None:
-        import docker as docker_sdk
-
         backoff = 2
         while not self._stop.is_set():
             client: Any = None
             try:
-                client = docker_sdk.from_env()
+                client = self._docker_factory()
                 container = client.containers.get(self.container)
                 self.broker.publish("stream.logs.connected", "docker-logs")
                 threading.Timer(3, lambda: self.service.refresh_async(reason="log-stream-connected")).start()
@@ -129,13 +140,11 @@ class EventRuntime:
         return player, cause[:240] or "unknown"
 
     def _docker_events(self) -> None:
-        import docker as docker_sdk
-
         backoff = 2
         while not self._stop.is_set():
             client: Any = None
             try:
-                client = docker_sdk.from_env()
+                client = self._docker_factory()
                 self.broker.publish("stream.docker.connected", "docker-events")
                 filters = {"type": "container", "container": self.container, "event": ["start", "restart", "die", "destroy"]}
                 for event in client.events(decode=True, filters=filters):

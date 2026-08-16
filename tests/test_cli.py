@@ -287,3 +287,6 @@ def test_telemetry_disable_prints_json(tmp_path: Path, capsys) -> None:
     rc = main(["telemetry", "disable"], settings=settings, deps=deps)
 
     assert rc == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result["changed"] is False
+    assert result["action"] == "disable"

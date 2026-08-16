@@ -6,20 +6,9 @@ from pathlib import Path
 import pytest
 
 from minecraft_manager.files import ServerFiles
-from minecraft_manager.repository import StateRepository
 from minecraft_manager.services import ManagerService
+from tests.conftest import make_manager_service as _make_service
 from tests.fakes import FakeBedrock, FakeDocker, FakeRuntime
-
-
-def _make_service(directory: Path, bedrock: FakeBedrock | None = None, docker: FakeDocker | None = None) -> ManagerService:
-    repo = StateRepository(directory / "state.db")
-    repo.initialize()
-    return ManagerService(
-        repo,
-        ServerFiles(directory / ".env", directory / "server.properties"),
-        bedrock or FakeBedrock(),  # type: ignore[arg-type]
-        docker or FakeDocker(),  # type: ignore[arg-type]
-    )
 
 
 # ---------------------------------------------------------------------------

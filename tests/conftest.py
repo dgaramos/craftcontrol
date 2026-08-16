@@ -34,6 +34,21 @@ def wire_auth(app: Flask, auth: MagicMock, *, mode: str = "local", secure_cookie
     install_auth(app, auth, mode=mode, secure_cookie=secure_cookie)
 
 
+def make_manager_service(
+    directory: Path,
+    bedrock: FakeBedrock | None = None,
+    docker: FakeDocker | None = None,
+) -> ManagerService:
+    repo = StateRepository(directory / "state.db")
+    repo.initialize()
+    return ManagerService(
+        repo,
+        ServerFiles(directory / ".env", directory / "server.properties"),
+        bedrock or FakeBedrock(),  # type: ignore[arg-type]
+        docker or FakeDocker(),  # type: ignore[arg-type]
+    )
+
+
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -67,11 +82,4 @@ def tmp_db(tmp_path: Path) -> StateRepository:
 
 @pytest.fixture
 def manager_service(tmp_path: Path, fake_bedrock: FakeBedrock, fake_docker: FakeDocker) -> ManagerService:
-    repository = StateRepository(tmp_path / "state.db")
-    repository.initialize()
-    return ManagerService(
-        repository,
-        ServerFiles(tmp_path / ".env", tmp_path / "server.properties"),
-        fake_bedrock,  # type: ignore[arg-type]
-        fake_docker,  # type: ignore[arg-type]
-    )
+    return make_manager_service(tmp_path, fake_bedrock, fake_docker)

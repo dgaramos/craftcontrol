@@ -1,209 +1,236 @@
 import sqlite3
-import tempfile
-from unittest.mock import patch
-import unittest
 from pathlib import Path
+from unittest.mock import patch
 
-from minecraft_manager.auth.service import AuthService
-from minecraft_manager.repository import StateRepository
-from minecraft_manager.auth.http import auth_api, install_auth, require
+import pytest
 from flask import Flask, jsonify
 
+from minecraft_manager.auth.http import auth_api, install_auth, require
+from minecraft_manager.auth.service import AuthService
+from minecraft_manager.repository import StateRepository
 
-class AuthServiceTest(unittest.TestCase):
-    def setUp(self) -> None:
-        self.temporary = tempfile.TemporaryDirectory()
-        self.path = Path(self.temporary.name) / "manager.db"
-        repository = StateRepository(self.path)
-        repository.initialize()
-        repository.observe_player("VonCrush", True, "123")
-        repository.observe_player("Nicole", False, "456")
-        self.auth = AuthService(self.path, idle_seconds=60, absolute_seconds=120)
 
-    def tearDown(self) -> None:
-        self.temporary.cleanup()
+@pytest.fixture
+def auth_db(tmp_path: Path) -> tuple[Path, AuthService]:
+    path = tmp_path / "manager.db"
+    repository = StateRepository(path)
+    repository.initialize()
+    repository.observe_player("VonCrush", True, "123")
+    repository.observe_player("Nicole", False, "456")
+    auth = AuthService(path, idle_seconds=60, absolute_seconds=120)
+    return path, auth
 
-    def test_bootstrap_claim_creates_first_owner_and_one_time_session(self) -> None:
-        invitation = self.auth.bootstrap("VonCrush")
-        session, user = self.auth.claim("VonCrush", invitation, "correct horse battery")
-        self.assertEqual(user["role"], "owner")
-        self.assertIn("*", user["capabilities"])
-        self.assertEqual(self.auth.authenticate(session)["name"], "VonCrush")
-        with self.assertRaisesRegex(ValueError, "invalid or expired"):
-            self.auth.claim("VonCrush", invitation, "another secure password")
-        with self.assertRaisesRegex(ValueError, "active owner"):
-            self.auth.bootstrap("VonCrush")
 
-    def test_login_logout_and_alias_identity(self) -> None:
-        invitation = self.auth.create_invitation("Nicole", "operator")
-        first_session, _ = self.auth.claim("Nicole", invitation, "a sufficiently long password")
-        self.auth.logout(first_session)
-        self.assertIsNone(self.auth.authenticate(first_session))
-        second_session, user = self.auth.login("Nicole", "a sufficiently long password")
-        self.assertEqual(user["role"], "operator")
-        self.assertIsNotNone(self.auth.authenticate(second_session))
+def test_bootstrap_claim_creates_first_owner_and_one_time_session(auth_db) -> None:
+    path, auth = auth_db
+    invitation = auth.bootstrap("VonCrush")
+    session, user = auth.claim("VonCrush", invitation, "correct horse battery")
+    assert user["role"] == "owner"
+    assert "*" in user["capabilities"]
+    assert auth.authenticate(session)["name"] == "VonCrush"
+    with pytest.raises(ValueError, match="invalid or expired"):
+        auth.claim("VonCrush", invitation, "another secure password")
+    with pytest.raises(ValueError, match="active owner"):
+        auth.bootstrap("VonCrush")
 
-    def test_authentication_throttles_session_writes(self) -> None:
-        self.auth.idle_seconds = 120
-        invitation = self.auth.create_invitation("Nicole", "operator")
-        session, _ = self.auth.claim("Nicole", invitation, "a sufficiently long password")
-        with sqlite3.connect(self.path) as connection:
-            before = connection.execute("SELECT last_seen_at FROM panel_sessions WHERE revoked_at IS NULL").fetchone()[0]
-        with patch("minecraft_manager.auth.service.time.time", return_value=before + 30):
-            self.assertIsNotNone(self.auth.authenticate(session))
-        with sqlite3.connect(self.path) as connection:
-            unchanged = connection.execute("SELECT last_seen_at FROM panel_sessions WHERE revoked_at IS NULL").fetchone()[0]
-        self.assertEqual(unchanged, before)
-        with patch("minecraft_manager.auth.service.time.time", return_value=before + 61):
-            self.assertIsNotNone(self.auth.authenticate(session))
-        with sqlite3.connect(self.path) as connection:
-            touched = connection.execute("SELECT last_seen_at FROM panel_sessions WHERE revoked_at IS NULL").fetchone()[0]
-        self.assertEqual(touched, before + 61)
 
-    def test_rejects_unknown_player_and_short_password(self) -> None:
-        with self.assertRaisesRegex(ValueError, "not been observed"):
-            self.auth.create_invitation("Stranger", "viewer")
-        invitation = self.auth.create_invitation("Nicole", "viewer")
-        with self.assertRaisesRegex(ValueError, "8 to 128"):
-            self.auth.claim("Nicole", invitation, "short")
+def test_login_logout_and_alias_identity(auth_db) -> None:
+    path, auth = auth_db
+    invitation = auth.create_invitation("Nicole", "operator")
+    first_session, _ = auth.claim("Nicole", invitation, "a sufficiently long password")
+    auth.logout(first_session)
+    assert auth.authenticate(first_session) is None
+    second_session, user = auth.login("Nicole", "a sufficiently long password")
+    assert user["role"] == "operator"
+    assert auth.authenticate(second_session) is not None
 
-    def test_accepts_eight_character_password(self) -> None:
-        invitation = self.auth.create_invitation("Nicole", "viewer")
-        session, user = self.auth.claim("Nicole", invitation, "12345678")
-        self.assertEqual(user["role"], "viewer")
-        self.assertIsNotNone(self.auth.authenticate(session))
 
-    def test_tokens_and_passwords_are_not_stored_in_plaintext(self) -> None:
-        invitation = self.auth.create_invitation("Nicole", "viewer")
-        self.auth.claim("Nicole", invitation, "a sufficiently long password")
-        with sqlite3.connect(self.path) as connection:
-            token_hash = connection.execute("SELECT token_hash FROM panel_invitations").fetchone()[0]
-            password_hash = connection.execute("SELECT password_hash FROM panel_accounts").fetchone()[0]
-        self.assertNotEqual(token_hash, invitation)
-        self.assertNotIn("sufficiently", password_hash)
-        self.assertTrue(password_hash.startswith("scrypt$"))
+def test_authentication_throttles_session_writes(auth_db) -> None:
+    path, auth = auth_db
+    auth.idle_seconds = 120
+    invitation = auth.create_invitation("Nicole", "operator")
+    session, _ = auth.claim("Nicole", invitation, "a sufficiently long password")
+    with sqlite3.connect(path) as connection:
+        before = connection.execute("SELECT last_seen_at FROM panel_sessions WHERE revoked_at IS NULL").fetchone()[0]
+    with patch("minecraft_manager.auth.service.time.time", return_value=before + 30):
+        assert auth.authenticate(session) is not None
+    with sqlite3.connect(path) as connection:
+        unchanged = connection.execute("SELECT last_seen_at FROM panel_sessions WHERE revoked_at IS NULL").fetchone()[0]
+    assert unchanged == before
+    with patch("minecraft_manager.auth.service.time.time", return_value=before + 61):
+        assert auth.authenticate(session) is not None
+    with sqlite3.connect(path) as connection:
+        touched = connection.execute("SELECT last_seen_at FROM panel_sessions WHERE revoked_at IS NULL").fetchone()[0]
+    assert touched == before + 61
 
-    def test_role_capabilities_are_enforced(self) -> None:
-        viewer = {"capabilities": ["server.read"]}
-        self.auth.require_capability(viewer, "server.read")
-        with self.assertRaises(PermissionError):
-            self.auth.require_capability(viewer, "world.manage")
 
-    def test_owner_can_list_access_and_last_owner_cannot_be_suspended(self) -> None:
-        invitation = self.auth.bootstrap("VonCrush")
-        self.auth.claim("VonCrush", invitation, "ownerpass")
-        access = {item["name"]: item for item in self.auth.access_list()}
-        self.assertEqual(access["VonCrush"]["role"], "owner")
-        with self.assertRaisesRegex(ValueError, "last active owner"):
-            self.auth.suspend("VonCrush", "test-owner")
+def test_rejects_unknown_player_and_short_password(auth_db) -> None:
+    path, auth = auth_db
+    with pytest.raises(ValueError, match="not been observed"):
+        auth.create_invitation("Stranger", "viewer")
+    invitation = auth.create_invitation("Nicole", "viewer")
+    with pytest.raises(ValueError, match="8 to 128"):
+        auth.claim("Nicole", invitation, "short")
 
-    def test_suspension_revokes_sessions_without_deleting_player(self) -> None:
-        invitation = self.auth.create_invitation("Nicole", "operator")
-        session, _ = self.auth.claim("Nicole", invitation, "operator1")
-        self.auth.suspend("Nicole", "test-owner")
-        self.assertIsNone(self.auth.authenticate(session))
-        access = {item["name"]: item for item in self.auth.access_list()}
-        self.assertEqual(access["Nicole"]["status"], "suspended")
 
-    def test_recovery_preserves_existing_role(self) -> None:
-        invitation = self.auth.create_invitation("Nicole", "viewer")
-        first_session, _ = self.auth.claim("Nicole", invitation, "a sufficiently long password")
-        self.auth.logout(first_session)
-        recovery, role = self.auth.create_recovery("Nicole")
-        self.assertEqual(role, "viewer")
-        _, user = self.auth.claim("Nicole", recovery, "a different secure password")
-        self.assertEqual(user["role"], "viewer")
+def test_accepts_eight_character_password(auth_db) -> None:
+    path, auth = auth_db
+    invitation = auth.create_invitation("Nicole", "viewer")
+    session, user = auth.claim("Nicole", invitation, "12345678")
+    assert user["role"] == "viewer"
+    assert auth.authenticate(session) is not None
 
-    def test_recovery_rejects_player_without_active_panel_account(self) -> None:
-        with self.assertRaisesRegex(ValueError, "no active panel account"):
-            self.auth.create_recovery("Nicole")
 
-    def test_http_boundary_rejects_anonymous_and_sets_secure_session_cookie(self) -> None:
-        invitation = self.auth.create_invitation("Nicole", "viewer")
-        app = Flask(__name__)
-        install_auth(app, self.auth, "local", secure_cookie=True)
-        app.register_blueprint(auth_api)
+def test_tokens_and_passwords_are_not_stored_in_plaintext(auth_db) -> None:
+    path, auth = auth_db
+    invitation = auth.create_invitation("Nicole", "viewer")
+    auth.claim("Nicole", invitation, "a sufficiently long password")
+    with sqlite3.connect(path) as connection:
+        token_hash = connection.execute("SELECT token_hash FROM panel_invitations").fetchone()[0]
+        password_hash = connection.execute("SELECT password_hash FROM panel_accounts").fetchone()[0]
+    assert token_hash != invitation
+    assert "sufficiently" not in password_hash
+    assert password_hash.startswith("scrypt$")
 
-        @app.get("/api/private")
-        def private():
-            return jsonify(ok=True)
 
-        @app.post("/api/world-test")
-        @require("world.manage")
-        def world_test():
-            return jsonify(ok=True)
+def test_role_capabilities_are_enforced(auth_db) -> None:
+    path, auth = auth_db
+    viewer = {"capabilities": ["server.read"]}
+    auth.require_capability(viewer, "server.read")
+    with pytest.raises(PermissionError):
+        auth.require_capability(viewer, "world.manage")
 
-        client = app.test_client()
-        self.assertEqual(client.get("/api/private").status_code, 401)
-        response = client.post("/api/auth/claim", json={
-            "player": "Nicole", "token": invitation, "password": "a sufficiently long password",
-        })
-        self.assertEqual(response.status_code, 200)
-        cookie = response.headers["Set-Cookie"]
-        self.assertIn("Secure", cookie)
-        self.assertIn("HttpOnly", cookie)
-        self.assertIn("SameSite=Lax", cookie)
-        self.assertEqual(client.get("/api/private", base_url="https://localhost").status_code, 200)
-        csrf_token = response.get_json()["csrf_token"]
-        missing = client.post("/api/world-test", base_url="https://localhost")
-        self.assertEqual(missing.status_code, 403)
-        self.assertEqual(missing.get_json()["error"], "invalid or missing CSRF token")
-        invalid = client.post("/api/world-test", base_url="https://localhost", headers={"X-CSRF-Token": "invalid"})
-        self.assertEqual(invalid.status_code, 403)
-        cross_origin = client.post(
-            "/api/world-test", base_url="https://localhost",
-            headers={"X-CSRF-Token": csrf_token, "Origin": "https://attacker.example"},
-        )
-        self.assertEqual(cross_origin.status_code, 403)
-        self.assertEqual(cross_origin.get_json()["error"], "invalid request origin")
-        authorized_csrf = client.post(
-            "/api/world-test", base_url="https://localhost",
-            headers={"X-CSRF-Token": csrf_token, "Origin": "https://localhost"},
-        )
-        self.assertEqual(authorized_csrf.status_code, 403)
-        self.assertEqual(authorized_csrf.get_json()["error"], "insufficient permission")
 
-    def test_csrf_token_is_session_bound_and_protects_logout(self) -> None:
-        invitation = self.auth.create_invitation("Nicole", "operator")
-        app = Flask(__name__)
-        install_auth(app, self.auth, "local", secure_cookie=False)
-        app.register_blueprint(auth_api)
-        client = app.test_client()
-        claim = client.post("/api/auth/claim", json={
-            "player": "Nicole", "token": invitation, "password": "a sufficiently long password",
-        })
-        csrf_token = claim.get_json()["csrf_token"]
-        self.assertEqual(len(csrf_token), 64)
-        self.assertEqual(client.post("/api/auth/logout").status_code, 403)
-        self.assertEqual(client.get("/api/auth/me").status_code, 200)
-        logout = client.post("/api/auth/logout", headers={"X-CSRF-Token": csrf_token})
-        self.assertEqual(logout.status_code, 200)
-        self.assertEqual(client.get("/api/auth/me").status_code, 401)
+def test_owner_can_list_access_and_last_owner_cannot_be_suspended(auth_db) -> None:
+    path, auth = auth_db
+    invitation = auth.bootstrap("VonCrush")
+    auth.claim("VonCrush", invitation, "ownerpass")
+    access = {item["name"]: item for item in auth.access_list()}
+    assert access["VonCrush"]["role"] == "owner"
+    with pytest.raises(ValueError, match="last active owner"):
+        auth.suspend("VonCrush", "test-owner")
 
-    def test_csrf_tokens_cannot_be_reused_across_sessions(self) -> None:
-        first, _ = self.auth.claim(
-            "Nicole", self.auth.create_invitation("Nicole", "operator"), "a sufficiently long password",
-        )
-        second, _ = self.auth.login("Nicole", "a sufficiently long password")
-        self.assertNotEqual(self.auth.csrf_token(first), self.auth.csrf_token(second))
-        self.assertFalse(self.auth.verify_csrf(second, self.auth.csrf_token(first)))
 
-    def test_expired_session_is_rejected_before_csrf_validation(self) -> None:
-        invitation = self.auth.create_invitation("Nicole", "operator")
-        app = Flask(__name__)
-        expired_auth = AuthService(self.path, idle_seconds=-1, absolute_seconds=120)
-        install_auth(app, expired_auth, "local", secure_cookie=False)
-        app.register_blueprint(auth_api)
+def test_suspension_revokes_sessions_without_deleting_player(auth_db) -> None:
+    path, auth = auth_db
+    invitation = auth.create_invitation("Nicole", "operator")
+    session, _ = auth.claim("Nicole", invitation, "operator1")
+    auth.suspend("Nicole", "test-owner")
+    assert auth.authenticate(session) is None
+    access = {item["name"]: item for item in auth.access_list()}
+    assert access["Nicole"]["status"] == "suspended"
 
-        @app.post("/api/mutation")
-        @require("server.configure")
-        def mutation():
-            return jsonify(ok=True)
 
-        client = app.test_client()
-        claim = client.post("/api/auth/claim", json={
-            "player": "Nicole", "token": invitation, "password": "a sufficiently long password",
-        })
-        response = client.post("/api/mutation", headers={"X-CSRF-Token": claim.get_json()["csrf_token"]})
-        self.assertEqual(response.status_code, 401)
-        self.assertEqual(response.get_json()["error"], "authentication required")
+def test_recovery_preserves_existing_role(auth_db) -> None:
+    path, auth = auth_db
+    invitation = auth.create_invitation("Nicole", "viewer")
+    first_session, _ = auth.claim("Nicole", invitation, "a sufficiently long password")
+    auth.logout(first_session)
+    recovery, role = auth.create_recovery("Nicole")
+    assert role == "viewer"
+    _, user = auth.claim("Nicole", recovery, "a different secure password")
+    assert user["role"] == "viewer"
+
+
+def test_recovery_rejects_player_without_active_panel_account(auth_db) -> None:
+    path, auth = auth_db
+    with pytest.raises(ValueError, match="no active panel account"):
+        auth.create_recovery("Nicole")
+
+
+def test_http_boundary_rejects_anonymous_and_sets_secure_session_cookie(auth_db) -> None:
+    path, auth = auth_db
+    invitation = auth.create_invitation("Nicole", "viewer")
+    app = Flask(__name__)
+    install_auth(app, auth, "local", secure_cookie=True)
+    app.register_blueprint(auth_api)
+
+    @app.get("/api/private")
+    def private():
+        return jsonify(ok=True)
+
+    @app.post("/api/world-test")
+    @require("world.manage")
+    def world_test():
+        return jsonify(ok=True)
+
+    client = app.test_client()
+    assert client.get("/api/private").status_code == 401
+    response = client.post("/api/auth/claim", json={
+        "player": "Nicole", "token": invitation, "password": "a sufficiently long password",
+    })
+    assert response.status_code == 200
+    cookie = response.headers["Set-Cookie"]
+    assert "Secure" in cookie
+    assert "HttpOnly" in cookie
+    assert "SameSite=Lax" in cookie
+    assert client.get("/api/private", base_url="https://localhost").status_code == 200
+    csrf_token = response.get_json()["csrf_token"]
+    missing = client.post("/api/world-test", base_url="https://localhost")
+    assert missing.status_code == 403
+    assert missing.get_json()["error"] == "invalid or missing CSRF token"
+    invalid = client.post("/api/world-test", base_url="https://localhost", headers={"X-CSRF-Token": "invalid"})
+    assert invalid.status_code == 403
+    cross_origin = client.post(
+        "/api/world-test", base_url="https://localhost",
+        headers={"X-CSRF-Token": csrf_token, "Origin": "https://attacker.example"},
+    )
+    assert cross_origin.status_code == 403
+    assert cross_origin.get_json()["error"] == "invalid request origin"
+    authorized_csrf = client.post(
+        "/api/world-test", base_url="https://localhost",
+        headers={"X-CSRF-Token": csrf_token, "Origin": "https://localhost"},
+    )
+    assert authorized_csrf.status_code == 403
+    assert authorized_csrf.get_json()["error"] == "insufficient permission"
+
+
+def test_csrf_token_is_session_bound_and_protects_logout(auth_db) -> None:
+    path, auth = auth_db
+    invitation = auth.create_invitation("Nicole", "operator")
+    app = Flask(__name__)
+    install_auth(app, auth, "local", secure_cookie=False)
+    app.register_blueprint(auth_api)
+    client = app.test_client()
+    claim = client.post("/api/auth/claim", json={
+        "player": "Nicole", "token": invitation, "password": "a sufficiently long password",
+    })
+    csrf_token = claim.get_json()["csrf_token"]
+    assert len(csrf_token) == 64
+    assert client.post("/api/auth/logout").status_code == 403
+    assert client.get("/api/auth/me").status_code == 200
+    logout = client.post("/api/auth/logout", headers={"X-CSRF-Token": csrf_token})
+    assert logout.status_code == 200
+    assert client.get("/api/auth/me").status_code == 401
+
+
+def test_csrf_tokens_cannot_be_reused_across_sessions(auth_db) -> None:
+    path, auth = auth_db
+    first, _ = auth.claim(
+        "Nicole", auth.create_invitation("Nicole", "operator"), "a sufficiently long password",
+    )
+    second, _ = auth.login("Nicole", "a sufficiently long password")
+    assert auth.csrf_token(first) != auth.csrf_token(second)
+    assert not auth.verify_csrf(second, auth.csrf_token(first))
+
+
+def test_expired_session_is_rejected_before_csrf_validation(auth_db) -> None:
+    path, auth = auth_db
+    invitation = auth.create_invitation("Nicole", "operator")
+    app = Flask(__name__)
+    expired_auth = AuthService(path, idle_seconds=-1, absolute_seconds=120)
+    install_auth(app, expired_auth, "local", secure_cookie=False)
+    app.register_blueprint(auth_api)
+
+    @app.post("/api/mutation")
+    @require("server.configure")
+    def mutation():
+        return jsonify(ok=True)
+
+    client = app.test_client()
+    claim = client.post("/api/auth/claim", json={
+        "player": "Nicole", "token": invitation, "password": "a sufficiently long password",
+    })
+    response = client.post("/api/mutation", headers={"X-CSRF-Token": claim.get_json()["csrf_token"]})
+    assert response.status_code == 401
+    assert response.get_json()["error"] == "authentication required"

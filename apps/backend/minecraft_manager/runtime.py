@@ -27,12 +27,16 @@ class EventRuntime:
         container: str,
         reconcile_seconds: int = 900,
         docker_factory: Callable[[], Any] | None = None,
+        thread_factory: Callable[..., Any] | None = None,
+        timer_factory: Callable[..., Any] | None = None,
     ) -> None:
         self.service = service
         self.broker = broker
         self.container = container
         self.reconcile_seconds = reconcile_seconds
         self._docker_factory = docker_factory
+        self._thread_factory = thread_factory or threading.Thread
+        self._timer_factory = timer_factory or threading.Timer
         self._started = False
         self._lock = threading.Lock()
         self._stop = threading.Event()
@@ -47,7 +51,7 @@ class EventRuntime:
             ("docker-event-stream", self._docker_events),
             ("safety-reconciler", self._periodic),
         ):
-            threading.Thread(target=target, name=name, daemon=True).start()
+            self._thread_factory(target=target, name=name, daemon=True).start()
 
     def _logs(self) -> None:
         backoff = 2
@@ -57,8 +61,8 @@ class EventRuntime:
                 client = self._docker_factory()
                 container = client.containers.get(self.container)
                 self.broker.publish("stream.logs.connected", "docker-logs")
-                threading.Timer(3, lambda: self.service.refresh_async(reason="log-stream-connected")).start()
-                threading.Timer(5, lambda: self.service.request_telemetry_snapshot_async("log-stream-connected")).start()
+                self._timer_factory(3, lambda: self.service.refresh_async(reason="log-stream-connected")).start()
+                self._timer_factory(5, lambda: self.service.request_telemetry_snapshot_async("log-stream-connected")).start()
                 for line in self._decoded_log_lines(container.logs(stream=True, follow=True, since=int(time.time()) - 2)):
                     if self._stop.is_set():
                         return
@@ -119,7 +123,7 @@ class EventRuntime:
                 self.service.refresh_gamerules_async(affected)
         if re.search(r"\b(op|deop|permission)\b", lowered):
             self.broker.publish("permissions.invalidated", "bedrock-log")
-            threading.Timer(2, self.service.refresh_permissions).start()
+            self._timer_factory(2, self.service.refresh_permissions).start()
 
     def _parse_death(self, line: str) -> tuple[str, str] | None:
         lowered = line.casefold()

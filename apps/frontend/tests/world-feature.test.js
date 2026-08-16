@@ -191,14 +191,17 @@ describe("renderTimePanel — bindings", () => {
 });
 
 describe("openTimeControls", () => {
-  test("sets state.tab and calls renderTabs and renderTimePanel", () => {
+  test("sets state.tab, calls renderTabs, renders time panel markup, and scrolls to top", () => {
     const deps = makeDeps();
     deps.content.querySelectorAll = jest.fn(() => []);
     deps.$ = jest.fn(() => makeEl());
-    global.window = { history: { replaceState: jest.fn() }, location: { hash: "" }, scrollTo: jest.fn() };
+    const scrollTo = jest.fn();
+    global.window = { history: { replaceState: jest.fn() }, location: { hash: "" }, scrollTo };
     const { openTimeControls } = createWorldFeature(deps);
     openTimeControls();
     expect(deps.state.tab).toBe("__time__");
     expect(deps.renderTabs).toHaveBeenCalled();
+    expect(deps.content.innerHTML).toContain("time-screen");
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: "smooth" });
   });
 });

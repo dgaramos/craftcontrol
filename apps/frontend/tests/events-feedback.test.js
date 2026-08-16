@@ -43,55 +43,56 @@ describe("connectEventStream", () => {
   });
 });
 
-// ── feedback.js (logic verification) ─────────────────────────────────────────
-// feedback.js imports $ from core/dom.js and is not easily isolated without ESM
-// mocking. We verify the logic directly by exercising the same operations the
-// function performs, using fake DOM elements.
+// ── feedback.js ───────────────────────────────────────────────────────────────
+// Mock core/dom.js so $ returns a fake element, then import the real toast.
 
-describe("toast logic", () => {
-  let element;
+const toastEl = {
+  textContent: "",
+  style: {},
+  classList: { add: jest.fn(), remove: jest.fn() },
+};
 
+jest.unstable_mockModule("../static/js/core/dom.js", () => ({
+  $: jest.fn(() => toastEl),
+  escapeHtml: (s) => String(s ?? "").replace(/[&<>'"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[c])),
+}));
+
+const { toast } = await import("../static/js/components/feedback.js");
+
+describe("toast", () => {
   beforeEach(() => {
     jest.useFakeTimers();
-    element = {
-      textContent: "",
-      style: {},
-      classList: { add: jest.fn(), remove: jest.fn() },
-    };
+    toastEl.textContent = "";
+    toastEl.style = {};
+    toastEl.classList.add.mockClear();
+    toastEl.classList.remove.mockClear();
   });
 
   afterEach(() => {
     jest.useRealTimers();
   });
 
-  function fakeToast(message, error = false) {
-    element.textContent = message;
-    element.style.background = error ? "#ffd2cf" : "#eef8ee";
-    element.classList.add("show");
-    setTimeout(() => element.classList.remove("show"), 2600);
-  }
-
   test("sets textContent and adds show class", () => {
-    fakeToast("hello");
-    expect(element.textContent).toBe("hello");
-    expect(element.classList.add).toHaveBeenCalledWith("show");
+    toast("hello");
+    expect(toastEl.textContent).toBe("hello");
+    expect(toastEl.classList.add).toHaveBeenCalledWith("show");
   });
 
   test("default background is success colour", () => {
-    fakeToast("ok");
-    expect(element.style.background).toBe("#eef8ee");
+    toast("ok");
+    expect(toastEl.style.background).toBe("#eef8ee");
   });
 
   test("error=true sets error background", () => {
-    fakeToast("oops", true);
-    expect(element.style.background).toBe("#ffd2cf");
+    toast("oops", true);
+    expect(toastEl.style.background).toBe("#ffd2cf");
   });
 
   test("show class removed after 2600 ms", () => {
-    fakeToast("msg");
+    toast("msg");
     jest.advanceTimersByTime(2599);
-    expect(element.classList.remove).not.toHaveBeenCalled();
+    expect(toastEl.classList.remove).not.toHaveBeenCalled();
     jest.advanceTimersByTime(1);
-    expect(element.classList.remove).toHaveBeenCalledWith("show");
+    expect(toastEl.classList.remove).toHaveBeenCalledWith("show");
   });
 });

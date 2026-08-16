@@ -1,6 +1,6 @@
-import unittest
-
 from flask import Flask
+
+import pytest
 
 from minecraft_manager.http.analytics import analytics_api
 
@@ -34,50 +34,60 @@ class FakeAnalyticsManager:
         return {"period_days": days, "totals": {}}
 
 
-class AnalyticsHttpTest(unittest.TestCase):
-    def setUp(self) -> None:
-        self.manager = FakeAnalyticsManager()
-        app = Flask(__name__)
-        app.extensions["manager_service"] = self.manager
-        app.register_blueprint(analytics_api)
-        self.client = app.test_client()
-
-    def test_maps_activity_filters_to_application_service(self) -> None:
-        response = self.client.get(
-            "/api/analytics/activity?kind=deaths&player=VonCrush&source=structured&search=zombie&days=7&page=2&page_size=20"
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(self.manager.arguments, ("deaths", "VonCrush", "structured", "zombie", 7, 2, 20))
-
-    def test_rejects_non_numeric_pagination(self) -> None:
-        response = self.client.get("/api/analytics/activity?page=not-a-number")
-        self.assertEqual(response.status_code, 400)
-
-    def test_maps_bounded_ranking_limit(self) -> None:
-        response = self.client.get("/api/analytics/rankings?limit=12")
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(self.manager.arguments, ("rankings", 12))
-
-    def test_maps_bounded_block_analytics_limit(self) -> None:
-        response = self.client.get("/api/analytics/blocks?limit=12")
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(self.manager.arguments, ("blocks", 12))
-
-    def test_maps_bounded_combat_analytics_limit(self) -> None:
-        response = self.client.get("/api/analytics/combat?limit=12")
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(self.manager.arguments, ("combat", 12))
-
-    def test_maps_bounded_exploration_analytics_limit(self) -> None:
-        response = self.client.get("/api/analytics/exploration?limit=12")
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(self.manager.arguments, ("exploration", 12))
-
-    def test_maps_daily_analytics_period_and_limit(self) -> None:
-        response = self.client.get("/api/analytics/periods?days=7&limit=12")
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(self.manager.arguments, ("periods", 7, 12))
+@pytest.fixture
+def analytics_client():
+    manager = FakeAnalyticsManager()
+    app = Flask(__name__)
+    app.extensions["manager_service"] = manager
+    app.register_blueprint(analytics_api)
+    return app.test_client(), manager
 
 
-if __name__ == "__main__":
-    unittest.main()
+def test_maps_activity_filters_to_application_service(analytics_client) -> None:
+    client, manager = analytics_client
+    response = client.get(
+        "/api/analytics/activity?kind=deaths&player=VonCrush&source=structured&search=zombie&days=7&page=2&page_size=20"
+    )
+    assert response.status_code == 200
+    assert manager.arguments == ("deaths", "VonCrush", "structured", "zombie", 7, 2, 20)
+
+
+def test_rejects_non_numeric_pagination(analytics_client) -> None:
+    client, manager = analytics_client
+    response = client.get("/api/analytics/activity?page=not-a-number")
+    assert response.status_code == 400
+
+
+def test_maps_bounded_ranking_limit(analytics_client) -> None:
+    client, manager = analytics_client
+    response = client.get("/api/analytics/rankings?limit=12")
+    assert response.status_code == 200
+    assert manager.arguments == ("rankings", 12)
+
+
+def test_maps_bounded_block_analytics_limit(analytics_client) -> None:
+    client, manager = analytics_client
+    response = client.get("/api/analytics/blocks?limit=12")
+    assert response.status_code == 200
+    assert manager.arguments == ("blocks", 12)
+
+
+def test_maps_bounded_combat_analytics_limit(analytics_client) -> None:
+    client, manager = analytics_client
+    response = client.get("/api/analytics/combat?limit=12")
+    assert response.status_code == 200
+    assert manager.arguments == ("combat", 12)
+
+
+def test_maps_bounded_exploration_analytics_limit(analytics_client) -> None:
+    client, manager = analytics_client
+    response = client.get("/api/analytics/exploration?limit=12")
+    assert response.status_code == 200
+    assert manager.arguments == ("exploration", 12)
+
+
+def test_maps_daily_analytics_period_and_limit(analytics_client) -> None:
+    client, manager = analytics_client
+    response = client.get("/api/analytics/periods?days=7&limit=12")
+    assert response.status_code == 200
+    assert manager.arguments == ("periods", 7, 12)

@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
-from typing import Callable
+from typing import Protocol
+
+
+class DockerExecutor(Protocol):
+    def __call__(self, cmd: list[str], *, capture_output: bool, text: bool, timeout: int, check: bool) -> subprocess.CompletedProcess[str]: ...
 
 
 class DockerOperations:
@@ -10,11 +14,11 @@ class DockerOperations:
         self,
         container: str,
         project: Path,
-        executor: Callable[..., subprocess.CompletedProcess] | None = None,
+        executor: DockerExecutor | None = None,
     ) -> None:
         self.container = container
         self.project = project
-        self._executor = executor or subprocess.run
+        self._executor: DockerExecutor = executor if executor is not None else subprocess.run
 
     def _run(self, *args: str, timeout: int = 30) -> subprocess.CompletedProcess[str]:
         return self._executor(["docker", *args], capture_output=True, text=True, timeout=timeout, check=False)

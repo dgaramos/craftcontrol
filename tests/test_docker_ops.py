@@ -28,7 +28,7 @@ def _ops(result: subprocess.CompletedProcess | None = None) -> tuple[DockerOpera
 # ---------------------------------------------------------------------------
 
 def test_status_running() -> None:
-    ops, executor = _ops(_completed(stdout="running\n"))
+    ops, _ = _ops(_completed(stdout="running\n"))
     result = ops.status()
     assert result["state"] == "running"
     assert result["online"]

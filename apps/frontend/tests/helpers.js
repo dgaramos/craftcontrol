@@ -81,3 +81,40 @@ export function makeAnalyticsDeps(stateOverrides = {}) {
     localeTag, api, openAnalyticsPlayer, requestRender, $, elements,
   };
 }
+
+export function makeSettingsDeps(stateOverrides = {}) {
+  const elements = {};
+  const $ = jest.fn((sel) => {
+    if (!elements[sel]) elements[sel] = makeEl();
+    return elements[sel];
+  });
+  // Stub document.querySelector used by updateSaveLabel footer logic
+  if (typeof global.document === "undefined") {
+    global.document = { querySelector: jest.fn(() => ({ classList: { toggle: jest.fn() } })) };
+  } else {
+    global.document.querySelector = jest.fn(() => ({ classList: { toggle: jest.fn() } }));
+  }
+  const state = {
+    locale: "en",
+    tab: "world",
+    user: { role: "owner", capabilities: ["*"] },
+    changes: {},
+    config: {},
+    gamerules: {},
+    domains: {},
+    schema: { settings: {}, gamerules: {} },
+    frontendVersion: null,
+    ...stateOverrides,
+  };
+  const content = { innerHTML: "", querySelectorAll: jest.fn(() => []) };
+  const t = (key, ...args) => (args.length ? `${key}(${args.join(",")})` : key);
+  const escapeHtml = (s) => String(s ?? "").replace(/[&<>'"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[c]);
+  const uiIcon = (name) => `<svg data-icon="${name}"/>`;
+  const optionLabel = (v) => v;
+  const localeTag = () => "en-US";
+  const groupLabel = (g) => g;
+  const api = jest.fn();
+  const toast = jest.fn();
+  const render = jest.fn();
+  return { state, $, content, t, escapeHtml, uiIcon, optionLabel, localeTag, groupLabel, toast, api, render, elements };
+}

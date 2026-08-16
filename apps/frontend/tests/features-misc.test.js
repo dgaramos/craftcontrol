@@ -2,6 +2,7 @@ import { jest } from "@jest/globals";
 import { createRulesFeature } from "../static/js/features/rules/index.js";
 import { createSettingsFeature } from "../static/js/features/settings/index.js";
 import { createServerFeature } from "../static/js/features/server/index.js";
+import { makeSettingsDeps } from "./helpers.js";
 
 // ─── createRulesFeature ────────────────────────────────────────────────────
 
@@ -20,63 +21,6 @@ describe("createRulesFeature", () => {
 });
 
 // ─── createSettingsFeature — additional coverage ───────────────────────────
-
-function makeSettingsDeps(extraState = {}) {
-  const domElements = {};
-  const makeFakeEl = () => ({
-    hidden: false,
-    textContent: "",
-    open: false,
-    innerHTML: "",
-    value: "",
-    checked: false,
-    closest: jest.fn(() => ({ querySelector: jest.fn(() => ({ textContent: "", classList: { remove: jest.fn() } })) })),
-    classList: { toggle: jest.fn(), remove: jest.fn() },
-    querySelector: jest.fn(() => null),
-    querySelectorAll: jest.fn(() => []),
-    addEventListener: jest.fn(),
-    dispatchEvent: jest.fn(),
-    close: jest.fn(),
-  });
-  const $ = jest.fn((sel) => {
-    if (!domElements[sel]) domElements[sel] = makeFakeEl();
-    return domElements[sel];
-  });
-
-  // Patch document.querySelector for footer (used by updateSaveLabel)
-  if (typeof global.document === "undefined") {
-    global.document = { querySelector: jest.fn(() => ({ classList: { toggle: jest.fn() } })) };
-  } else {
-    global.document.querySelector = jest.fn(() => ({ classList: { toggle: jest.fn() } }));
-  }
-
-  const state = {
-    locale: "en",
-    tab: "world",
-    user: { role: "owner", capabilities: ["*"] },
-    changes: {},
-    config: {},
-    gamerules: {},
-    domains: {},
-    schema: { settings: {}, gamerules: {} },
-    frontendVersion: null,
-    ...extraState,
-  };
-  const content = {
-    innerHTML: "",
-    querySelectorAll: jest.fn(() => []),
-  };
-  const t = (key, ...args) => args.length ? `${key}(${args.join(",")})` : key;
-  const escapeHtml = (s) => String(s ?? "").replace(/</g, "&lt;");
-  const uiIcon = (name) => `<svg icon="${name}"/>`;
-  const optionLabel = (v) => v;
-  const localeTag = () => "en-US";
-  const groupLabel = (g) => g;
-  const toast = jest.fn();
-  const api = jest.fn();
-  const render = jest.fn();
-  return { state, $, content, t, escapeHtml, uiIcon, optionLabel, localeTag, groupLabel, toast, api, render };
-}
 
 describe("createSettingsFeature — renderChangesDrawer", () => {
   test("closes drawer when no changes", () => {

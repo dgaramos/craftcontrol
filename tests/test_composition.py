@@ -1,10 +1,10 @@
 """Tests for the production composition root (composition.py)."""
 from __future__ import annotations
 
-import tempfile
-import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from minecraft_manager.config import Settings
 
@@ -20,48 +20,42 @@ def _minimal_settings(directory: str, bootstrap_operator: str = "") -> Settings:
     )
 
 
-class ComposeManagerTest(unittest.TestCase):
-    @patch("minecraft_manager.composition.EventRuntime")
-    @patch("minecraft_manager.composition.DockerOperations")
-    @patch("minecraft_manager.composition.BedrockClient")
-    def test_compose_manager_returns_manager_service(self, MockBedrock, MockDocker, MockRuntime) -> None:
-        from minecraft_manager.composition import compose_manager
-        from minecraft_manager.services import ManagerService
+@patch("minecraft_manager.composition.EventRuntime")
+@patch("minecraft_manager.composition.DockerOperations")
+@patch("minecraft_manager.composition.BedrockClient")
+def test_compose_manager_returns_manager_service(MockBedrock, MockDocker, MockRuntime, tmp_path: Path) -> None:
+    from minecraft_manager.composition import compose_manager
+    from minecraft_manager.services import ManagerService
 
-        with tempfile.TemporaryDirectory() as d:
-            settings = _minimal_settings(d)
-            manager = compose_manager(settings)
+    settings = _minimal_settings(str(tmp_path))
+    manager = compose_manager(settings)
 
-        self.assertIsInstance(manager, ManagerService)
-
-    @patch("minecraft_manager.composition.EventRuntime")
-    @patch("minecraft_manager.composition.DockerOperations")
-    @patch("minecraft_manager.composition.BedrockClient")
-    def test_compose_manager_attaches_runtime(self, MockBedrock, MockDocker, MockRuntime) -> None:
-        from minecraft_manager.composition import compose_manager
-
-        fake_runtime = MagicMock()
-        MockRuntime.return_value = fake_runtime
-
-        with tempfile.TemporaryDirectory() as d:
-            settings = _minimal_settings(d)
-            manager = compose_manager(settings)
-
-        MockRuntime.assert_called_once()
-        self.assertIs(manager.runtime, fake_runtime)
-
-    @patch("minecraft_manager.composition.EventRuntime")
-    @patch("minecraft_manager.composition.DockerOperations")
-    @patch("minecraft_manager.composition.BedrockClient")
-    def test_compose_manager_uses_bootstrap_operator(self, MockBedrock, MockDocker, MockRuntime) -> None:
-        from minecraft_manager.composition import compose_manager
-
-        with tempfile.TemporaryDirectory() as d:
-            settings = _minimal_settings(d, bootstrap_operator="Steve")
-            manager = compose_manager(settings)
-
-        self.assertEqual(manager.bootstrap_operator, "Steve")
+    assert isinstance(manager, ManagerService)
 
 
-if __name__ == "__main__":
-    unittest.main()
+@patch("minecraft_manager.composition.EventRuntime")
+@patch("minecraft_manager.composition.DockerOperations")
+@patch("minecraft_manager.composition.BedrockClient")
+def test_compose_manager_attaches_runtime(MockBedrock, MockDocker, MockRuntime, tmp_path: Path) -> None:
+    from minecraft_manager.composition import compose_manager
+
+    fake_runtime = MagicMock()
+    MockRuntime.return_value = fake_runtime
+
+    settings = _minimal_settings(str(tmp_path))
+    manager = compose_manager(settings)
+
+    MockRuntime.assert_called_once()
+    assert manager.runtime is fake_runtime
+
+
+@patch("minecraft_manager.composition.EventRuntime")
+@patch("minecraft_manager.composition.DockerOperations")
+@patch("minecraft_manager.composition.BedrockClient")
+def test_compose_manager_uses_bootstrap_operator(MockBedrock, MockDocker, MockRuntime, tmp_path: Path) -> None:
+    from minecraft_manager.composition import compose_manager
+
+    settings = _minimal_settings(str(tmp_path), bootstrap_operator="Steve")
+    manager = compose_manager(settings)
+
+    assert manager.bootstrap_operator == "Steve"

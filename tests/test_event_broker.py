@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import queue
 import threading
+import time
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -45,13 +46,10 @@ def test_publish_uses_empty_payload_when_none_given(broker: EventBroker, store: 
 
 def test_publish_delivers_to_active_subscriber(broker: EventBroker) -> None:
     received: list[Event] = []
-    registered = threading.Event()
     done = threading.Event()
 
     def consume():
-        gen = broker.stream(after_id=0)
-        registered.set()
-        for item in gen:
+        for item in broker.stream(after_id=0):
             if item is not None:
                 received.append(item)
                 break
@@ -59,11 +57,20 @@ def test_publish_delivers_to_active_subscriber(broker: EventBroker) -> None:
 
     t = threading.Thread(target=consume, daemon=True)
     t.start()
-    registered.wait(timeout=3)
+    # Poll under lock until the subscriber is registered inside stream()
+    deadline = time.monotonic() + 3.0
+    while time.monotonic() < deadline:
+        with broker._lock:
+            if broker._subscribers:
+                break
+        time.sleep(0.001)
     broker.publish("player.join", "bedrock-log", {"player": "VonCrush"})
-    done.wait(timeout=3)
-    assert len(received) == 1
-    assert received[0].topic == "player.join"
+    assert done.wait(timeout=3), "Consumer did not receive event in time"
+    try:
+        assert len(received) == 1
+        assert received[0].topic == "player.join"
+    finally:
+        t.join(timeout=3)
 
 
 def test_publish_skips_full_subscriber_queue(broker: EventBroker) -> None:

@@ -1,12 +1,10 @@
 """Tests for the craftcontrol CLI entrypoint (cli.py)."""
 from __future__ import annotations
 
-import io
 import json
-import sys
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -121,7 +119,7 @@ def test_missing_command_exits(cli_parser) -> None:
 # Main auth tests
 # ---------------------------------------------------------------------------
 
-def test_auth_bootstrap_prints_json(tmp_path: Path) -> None:
+def test_auth_bootstrap_prints_json(tmp_path: Path, capsys) -> None:
     settings = SimpleNamespace(database=tmp_path / "db", bootstrap_operator="Steve")
     fake_auth = MagicMock()
     fake_auth.bootstrap.return_value = "tok123"
@@ -131,18 +129,16 @@ def test_auth_bootstrap_prints_json(tmp_path: Path) -> None:
     )
 
     from minecraft_manager.cli import main
-    captured = io.StringIO()
-    with patch("sys.stdout", captured):
-        rc = main(["auth", "bootstrap", "--player", "Steve"], settings=settings, deps=deps)
+    rc = main(["auth", "bootstrap", "--player", "Steve"], settings=settings, deps=deps)
 
     assert rc == 0
-    result = json.loads(captured.getvalue())
+    result = json.loads(capsys.readouterr().out)
     assert result["action"] == "bootstrap"
     assert result["player"] == "Steve"
     assert result["token"] == "tok123"
 
 
-def test_auth_invite_prints_json(tmp_path: Path) -> None:
+def test_auth_invite_prints_json(tmp_path: Path, capsys) -> None:
     settings = SimpleNamespace(database=tmp_path / "db", bootstrap_operator=None)
     fake_auth = MagicMock()
     fake_auth.create_invitation.return_value = "inv_tok"
@@ -152,17 +148,15 @@ def test_auth_invite_prints_json(tmp_path: Path) -> None:
     )
 
     from minecraft_manager.cli import main
-    captured = io.StringIO()
-    with patch("sys.stdout", captured):
-        rc = main(["auth", "invite", "Alex", "--role", "operator"], settings=settings, deps=deps)
+    rc = main(["auth", "invite", "Alex", "--role", "operator"], settings=settings, deps=deps)
 
     assert rc == 0
-    result = json.loads(captured.getvalue())
+    result = json.loads(capsys.readouterr().out)
     assert result["action"] == "invite"
     assert result["token"] == "inv_tok"
 
 
-def test_auth_recover_prints_json(tmp_path: Path) -> None:
+def test_auth_recover_prints_json(tmp_path: Path, capsys) -> None:
     settings = SimpleNamespace(database=tmp_path / "db", bootstrap_operator=None)
     fake_auth = MagicMock()
     fake_auth.create_recovery.return_value = ("rec_tok", "owner")
@@ -172,12 +166,10 @@ def test_auth_recover_prints_json(tmp_path: Path) -> None:
     )
 
     from minecraft_manager.cli import main
-    captured = io.StringIO()
-    with patch("sys.stdout", captured):
-        rc = main(["auth", "recover", "Steve"], settings=settings, deps=deps)
+    rc = main(["auth", "recover", "Steve"], settings=settings, deps=deps)
 
     assert rc == 0
-    result = json.loads(captured.getvalue())
+    result = json.loads(capsys.readouterr().out)
     assert result["action"] == "recover"
     assert result["token"] == "rec_tok"
 
@@ -198,7 +190,7 @@ def test_auth_bootstrap_no_player_raises(tmp_path: Path) -> None:
 # Main backup tests
 # ---------------------------------------------------------------------------
 
-def test_backup_list_prints_json(tmp_path: Path) -> None:
+def test_backup_list_prints_json(tmp_path: Path, capsys) -> None:
     settings = SimpleNamespace(
         database=tmp_path / "db",
         project=tmp_path,
@@ -211,12 +203,10 @@ def test_backup_list_prints_json(tmp_path: Path) -> None:
     deps = CliDependencies(backup_service_factory=lambda settings: fake_backup)
 
     from minecraft_manager.cli import main
-    captured = io.StringIO()
-    with patch("sys.stdout", captured):
-        rc = main(["backup", "list"], settings=settings, deps=deps)
+    rc = main(["backup", "list"], settings=settings, deps=deps)
 
     assert rc == 0
-    result = json.loads(captured.getvalue())
+    result = json.loads(capsys.readouterr().out)
     assert "backups" in result
 
 
@@ -239,7 +229,7 @@ def test_backup_restore_without_yes_raises(tmp_path: Path) -> None:
 # Main telemetry tests
 # ---------------------------------------------------------------------------
 
-def test_telemetry_status_prints_json(tmp_path: Path) -> None:
+def test_telemetry_status_prints_json(tmp_path: Path, capsys) -> None:
     settings = SimpleNamespace(project=tmp_path)
     fake_status = MagicMock()
     fake_status.to_dict.return_value = {"installed": False}
@@ -248,12 +238,10 @@ def test_telemetry_status_prints_json(tmp_path: Path) -> None:
     deps = CliDependencies(installer_factory=lambda settings, project: fake_installer)
 
     from minecraft_manager.cli import main
-    captured = io.StringIO()
-    with patch("sys.stdout", captured):
-        rc = main(["telemetry", "status"], settings=settings, deps=deps)
+    rc = main(["telemetry", "status"], settings=settings, deps=deps)
 
     assert rc == 0
-    result = json.loads(captured.getvalue())
+    result = json.loads(capsys.readouterr().out)
     assert not result["changed"]
 
 
@@ -275,31 +263,27 @@ def test_telemetry_rollback_without_yes_raises(tmp_path: Path) -> None:
         main(["telemetry", "rollback"], settings=settings, deps=deps)
 
 
-def test_telemetry_install_prints_json(tmp_path: Path) -> None:
+def test_telemetry_install_prints_json(tmp_path: Path, capsys) -> None:
     settings = SimpleNamespace(project=tmp_path)
     fake_installer = MagicMock()
     fake_installer.install.return_value = {"changed": True}
     deps = CliDependencies(installer_factory=lambda settings, project: fake_installer)
 
     from minecraft_manager.cli import main
-    captured = io.StringIO()
-    with patch("sys.stdout", captured):
-        rc = main(["telemetry", "install"], settings=settings, deps=deps)
+    rc = main(["telemetry", "install"], settings=settings, deps=deps)
 
     assert rc == 0
-    result = json.loads(captured.getvalue())
+    result = json.loads(capsys.readouterr().out)
     assert result["action"] == "install"
 
 
-def test_telemetry_disable_prints_json(tmp_path: Path) -> None:
+def test_telemetry_disable_prints_json(tmp_path: Path, capsys) -> None:
     settings = SimpleNamespace(project=tmp_path)
     fake_installer = MagicMock()
     fake_installer.disable.return_value = {"changed": False, "action": "disable"}
     deps = CliDependencies(installer_factory=lambda settings, project: fake_installer)
 
     from minecraft_manager.cli import main
-    captured = io.StringIO()
-    with patch("sys.stdout", captured):
-        rc = main(["telemetry", "disable"], settings=settings, deps=deps)
+    rc = main(["telemetry", "disable"], settings=settings, deps=deps)
 
     assert rc == 0

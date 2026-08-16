@@ -18,6 +18,7 @@ def _make_runtime(**kwargs):
     broker = MagicMock()
     service = MagicMock()
     service.players.return_value = []
+    kwargs.setdefault("docker_factory", MagicMock(side_effect=RuntimeError("docker not expected")))
     return EventRuntime(service=service, broker=broker, container="mc", **kwargs), broker, service
 
 

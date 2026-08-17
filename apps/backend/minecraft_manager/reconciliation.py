@@ -32,6 +32,7 @@ class ReconciliationService:
         player_service: "PlayerService",
         telemetry_service: "TelemetryService",
         telemetry_snapshot_fn: Callable[[str], None] | None = None,
+        thread_factory: Callable[..., Any] | None = None,
     ) -> None:
         self.repository = repository
         self.files = files
@@ -45,6 +46,7 @@ class ReconciliationService:
         self._telemetry_snapshot_fn: Callable[[str], None] = (
             telemetry_snapshot_fn or self.request_telemetry_snapshot_async
         )
+        self._thread_factory = thread_factory or threading.Thread
 
         self._refresh_lock = threading.Lock()
         self._refreshing = False
@@ -113,7 +115,7 @@ class ReconciliationService:
                 self.broker.publish("telemetry.snapshot.trigger.failed", reason, {"error": str(error)[:240]})
 
     def refresh_async(self, reason: str = "manual") -> None:
-        threading.Thread(target=self.refresh, args=(reason,), name="state-refresh", daemon=True).start()
+        self._thread_factory(target=self.refresh, args=(reason,), name="state-refresh", daemon=True).start()
 
     # ------------------------------------------------------------------
     # Targeted gamerule refresh
@@ -158,7 +160,7 @@ class ReconciliationService:
                 if restart:
                     self.refresh_gamerules_async(set())
 
-        threading.Thread(target=work, name="gamerule-refresh", daemon=True).start()
+        self._thread_factory(target=work, name="gamerule-refresh", daemon=True).start()
 
     # ------------------------------------------------------------------
     # Telemetry snapshot
@@ -180,7 +182,7 @@ class ReconciliationService:
                 with self._telemetry_sync_lock:
                     self._telemetry_sync_running = False
 
-        threading.Thread(target=work, name="telemetry-sync", daemon=True).start()
+        self._thread_factory(target=work, name="telemetry-sync", daemon=True).start()
 
     def request_telemetry_snapshot(self, reason: str) -> int:
         try:

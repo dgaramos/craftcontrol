@@ -13,27 +13,46 @@ beforeEach(() => {
 });
 afterEach(() => { global.window = _savedWindow; });
 
-function makeButton(tab) {
-  const btn = { dataset: { tab }, onclick: null, className: "" };
-  btn.click = () => btn.onclick && btn.onclick();
-  return btn;
+// ── Stubs ─────────────────────────────────────────────────────────────────────
+
+function makeFakeNavTabButton(tab) {
+  const iEl = { innerHTML: "" };
+  const spanEl = { textContent: "" };
+  return {
+    dataset: { tab },
+    onclick: null,
+    className: "",
+    click() { if (this.onclick) this.onclick(); },
+    querySelector(sel) {
+      if (sel === "i") return iEl;
+      if (sel === "span") return spanEl;
+      return null;
+    },
+  };
+}
+
+function makeFakeNavTabTemplate() {
+  return {
+    content: {
+      cloneNode() {
+        const btn = makeFakeNavTabButton("");
+        return {
+          _button: btn,
+          querySelector: (sel) => (sel === "button" ? btn : null),
+        };
+      },
+    },
+  };
 }
 
 function makeTabsElement() {
   const buttons = [];
-  const el = {
-    get innerHTML() { return ""; },
-    set innerHTML(html) {
-      el._html = html;
-      el._buttons = [];
-    },
+  return {
     _buttons: buttons,
-    querySelectorAll: (sel) => {
-      if (sel === "button") return el._buttons;
-      return [];
-    },
+    replaceChildren() { buttons.length = 0; },
+    appendChild(fragment) { if (fragment._button) buttons.push(fragment._button); },
+    querySelectorAll(sel) { return sel === "button" ? buttons : []; },
   };
-  return el;
 }
 
 function makeEnv(initialTab = "home") {
@@ -42,87 +61,109 @@ function makeEnv(initialTab = "home") {
     tabs: ["home", "world", "players", "analytics", "rules", "server"],
   };
   const tabsEl = makeTabsElement();
-  const $ = (sel) => sel === "#tabs" ? tabsEl : null;
+  const tplNavTab = makeFakeNavTabTemplate();
+  const $ = (sel) => {
+    if (sel === "#tabs") return tabsEl;
+    if (sel === "#tpl-nav-tab") return tplNavTab;
+    return null;
+  };
   const t = (key) => key;
   const uiIcon = (name) => name;
   const render = jest.fn();
   return { state, $, t, uiIcon, render, tabsEl };
 }
 
+// ── renderTabs ────────────────────────────────────────────────────────────────
+
 describe("createNavigation — renderTabs", () => {
-  test("sets innerHTML on #tabs element", () => {
+  test("appends all 6 tab buttons to #tabs", () => {
     const { state, $, t, uiIcon, render, tabsEl } = makeEnv("home");
     const nav = createNavigation({ state, $, t, uiIcon, render });
     nav.renderTabs();
-    expect(typeof tabsEl._html).toBe("string");
-    expect(tabsEl._html.length).toBeGreaterThan(0);
+    expect(tabsEl._buttons).toHaveLength(6);
   });
 
-  test("generated html contains all 6 tabs", () => {
+  test("each button has the correct data-tab value", () => {
     const { state, $, t, uiIcon, render, tabsEl } = makeEnv("home");
     const nav = createNavigation({ state, $, t, uiIcon, render });
     nav.renderTabs();
-    for (const tab of ["home", "world", "players", "analytics", "rules", "server"]) {
-      expect(tabsEl._html).toContain(`data-tab="${tab}"`);
-    }
+    const tabs = tabsEl._buttons.map((btn) => btn.dataset.tab);
+    expect(tabs).toEqual(["home", "world", "players", "analytics", "rules", "server"]);
   });
 
-  test("active tab gets active class in html", () => {
+  test("active tab button has active class", () => {
     const { state, $, t, uiIcon, render, tabsEl } = makeEnv("world");
     const nav = createNavigation({ state, $, t, uiIcon, render });
     nav.renderTabs();
-    expect(tabsEl._html).toContain('<button class="active" data-tab="world"');
+    const worldBtn = tabsEl._buttons.find((btn) => btn.dataset.tab === "world");
+    expect(worldBtn.className).toBe("active");
+  });
+
+  test("inactive tabs have no active class", () => {
+    const { state, $, t, uiIcon, render, tabsEl } = makeEnv("world");
+    const nav = createNavigation({ state, $, t, uiIcon, render });
+    nav.renderTabs();
+    const inactiveButtons = tabsEl._buttons.filter((btn) => btn.dataset.tab !== "world");
+    inactiveButtons.forEach((btn) => expect(btn.className).toBe(""));
   });
 
   test("__players__ state marks players button active", () => {
     const { state, $, t, uiIcon, render, tabsEl } = makeEnv("__players__");
     const nav = createNavigation({ state, $, t, uiIcon, render });
     nav.renderTabs();
-    expect(tabsEl._html).toContain('<button class="active" data-tab="players"');
+    const playersBtn = tabsEl._buttons.find((btn) => btn.dataset.tab === "players");
+    expect(playersBtn.className).toBe("active");
   });
 
   test("server button uses settings translation key", () => {
     const { state, $, t, uiIcon, render, tabsEl } = makeEnv("home");
-    const nav = createNavigation({ state, $, t, uiIcon, render });
+    const tFn = jest.fn((key) => key);
+    const nav = createNavigation({ state, $, t: tFn, uiIcon, render });
     nav.renderTabs();
-    expect(tabsEl._html).toContain("settings");
+    expect(tFn).toHaveBeenCalledWith("settings");
   });
 
   test("clicking players button sets tab to __players__", () => {
     const { state, $, t, uiIcon, render, tabsEl } = makeEnv("home");
-    const playersBtn = makeButton("players");
-    tabsEl.querySelectorAll = (sel) => sel === "button" ? [playersBtn] : [];
     const nav = createNavigation({ state, $, t, uiIcon, render });
     nav.renderTabs();
+    const playersBtn = tabsEl._buttons.find((btn) => btn.dataset.tab === "players");
     playersBtn.click();
     expect(state.tab).toBe("__players__");
   });
 
   test("clicking non-players button sets tab to button value", () => {
     const { state, $, t, uiIcon, render, tabsEl } = makeEnv("home");
-    const worldBtn = makeButton("world");
-    tabsEl.querySelectorAll = (sel) => sel === "button" ? [worldBtn] : [];
     const nav = createNavigation({ state, $, t, uiIcon, render });
     nav.renderTabs();
+    const worldBtn = tabsEl._buttons.find((btn) => btn.dataset.tab === "world");
     worldBtn.click();
     expect(state.tab).toBe("world");
   });
 
   test("clicking a tab calls render", () => {
     const { state, $, t, uiIcon, render, tabsEl } = makeEnv("home");
-    const btn = makeButton("world");
-    tabsEl.querySelectorAll = (sel) => sel === "button" ? [btn] : [];
     const nav = createNavigation({ state, $, t, uiIcon, render });
     nav.renderTabs();
-    btn.click();
+    const worldBtn = tabsEl._buttons.find((btn) => btn.dataset.tab === "world");
+    worldBtn.click();
     expect(render).toHaveBeenCalled();
+  });
+
+  test("replaceChildren is called to clear tabs on every render", () => {
+    const { state, $, t, uiIcon, render, tabsEl } = makeEnv("home");
+    const replaceChildrenSpy = jest.spyOn(tabsEl, "replaceChildren");
+    const nav = createNavigation({ state, $, t, uiIcon, render });
+    nav.renderTabs();
+    expect(replaceChildrenSpy).toHaveBeenCalled();
   });
 });
 
+// ── openPlayers ───────────────────────────────────────────────────────────────
+
 describe("createNavigation — openPlayers", () => {
   test("sets tab to __players__", () => {
-    const { state, $, t, uiIcon, render, tabsEl } = makeEnv("home");
-    tabsEl.querySelectorAll = () => [];
+    const { state, $, t, uiIcon, render } = makeEnv("home");
     const nav = createNavigation({ state, $, t, uiIcon, render });
     nav.renderTabs();
     nav.openPlayers();
@@ -130,8 +171,7 @@ describe("createNavigation — openPlayers", () => {
   });
 
   test("calls render", () => {
-    const { state, $, t, uiIcon, render, tabsEl } = makeEnv("home");
-    tabsEl.querySelectorAll = () => [];
+    const { state, $, t, uiIcon, render } = makeEnv("home");
     const nav = createNavigation({ state, $, t, uiIcon, render });
     nav.renderTabs();
     render.mockClear();

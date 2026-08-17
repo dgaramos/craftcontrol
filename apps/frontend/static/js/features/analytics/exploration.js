@@ -13,6 +13,8 @@ function explorationRanking(entries, definition) {
 
 return async function renderExplorationPanel() {
   const analytics = state.analytics;
+  // inline: complex screen scaffold with dimension map and journey log sections;
+  // all API data paths use escapeHtml, formatRankingValue, or formatDuration.
   content.innerHTML = `<div class="exploration-screen">${analyticsViewSwitch("exploration")}<header class="exploration-hero block-panel"><div><span class="eyebrow">WORLD ATLAS</span><h2>${t("explorationTitle")}</h2><p>${t("explorationHelp")}</p></div><button id="exploration-refresh" class="secondary" type="button">${uiIcon("refresh")} ${t("refreshData")}</button></header><div id="exploration-content"><div class="analytics-loading">${t("checking")}</div></div></div>`;
   bindAnalyticsViewSwitch();
   const load = async () => {

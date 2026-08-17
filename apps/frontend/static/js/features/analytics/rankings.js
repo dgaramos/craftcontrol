@@ -1,6 +1,8 @@
 export function createRankingsPanel({ state, content, t, uiIcon, api, $, escapeHtml, analyticsViewSwitch, bindAnalyticsViewSwitch, rankingDefinitions, formatRankingValue, formatDate, openAnalyticsPlayer }) {
 return async function renderRankingsPanel() {
   const analytics = state.analytics;
+  // inline: complex screen scaffold with podium, leaderboard, and records sections;
+  // all API data paths use escapeHtml or formatRankingValue.
   content.innerHTML = `<div class="rankings-screen">${analyticsViewSwitch("rankings")}<header class="rankings-hero block-panel"><div><span class="eyebrow">LIFETIME</span><h2>${t("rankingsTitle")}</h2><p>${t("rankingsHelp")}</p></div><button id="rankings-refresh" class="secondary" type="button">${uiIcon("refresh")} ${t("refreshData")}</button></header><div class="ranking-categories">${[["activity", "categoryActivity", "activity"], ["combat", "categoryCombat", "combat"], ["building", "categoryBuilding", "blocks"], ["exploration", "categoryExploration", "exploration"]].map(([category, label, icon]) => `<button data-ranking-category="${category}" class="${analytics.rankingCategory === category ? "active" : ""}" type="button"><span>${uiIcon(icon)}</span>${t(label)}</button>`).join("")}</div><div id="rankings-content" class="rankings-content"><div class="analytics-loading">${t("checking")}</div></div></div>`;
   bindAnalyticsViewSwitch();
   const load = async () => {

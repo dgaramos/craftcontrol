@@ -9,6 +9,8 @@ function playerBlockRanking(entries, title) {
 
 return async function renderBlocksPanel() {
   const analytics = state.analytics;
+  // inline: complex conditional screen scaffold with dynamic ore-grid and leaderboard sections;
+  // all API data paths use escapeHtml or formatRankingValue.
   content.innerHTML = `<div class="blocks-screen">${analyticsViewSwitch("blocks")}<header class="blocks-hero block-panel"><div><span class="eyebrow">WORLD STATISTICS</span><h2>${t("blocksTitle")}</h2><p>${t("blocksHelp")}</p></div><button id="blocks-refresh" class="secondary" type="button">${uiIcon("refresh")} ${t("refreshData")}</button></header><div class="blocks-mode"><button data-block-mode="mining" class="${analytics.blocksMode === "mining" ? "active" : ""}" type="button">${uiIcon("mining")} ${t("miningView")}</button><button data-block-mode="building" class="${analytics.blocksMode === "building" ? "active" : ""}" type="button">${uiIcon("building")} ${t("buildingView")}</button></div><div id="blocks-content"><div class="analytics-loading">${t("checking")}</div></div></div>`;
   bindAnalyticsViewSwitch();
   const load = async () => {

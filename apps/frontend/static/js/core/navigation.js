@@ -10,13 +10,23 @@ export function createNavigation({ state, $, t, uiIcon, render }) {
   function renderTabs() {
     const active = state.tab === "__time__" ? "world" : state.tab === "__players__" ? "players" : state.tab;
     const tabs = $("#tabs");
-    tabs.innerHTML = state.tabs.map((tab) => `<button class="${tab === active ? "active" : ""}" data-tab="${tab}"><i>${uiIcon(icons[tab])}</i><span>${t(tab === "server" ? "settings" : tab)}</span></button>`).join("");
-    tabs.querySelectorAll("button").forEach((button) => button.onclick = () => {
-      state.tab = button.dataset.tab === "players" ? "__players__" : button.dataset.tab;
-      persistTab(state.tab);
-      renderTabs();
-      render();
-      resetVerticalScroll();
+    tabs.replaceChildren();
+    const tpl = $("#tpl-nav-tab");
+    state.tabs.forEach((tab) => {
+      const clone = tpl.content.cloneNode(true);
+      const button = clone.querySelector("button");
+      button.className = tab === active ? "active" : "";
+      button.dataset.tab = tab;
+      button.querySelector("i").innerHTML = uiIcon(icons[tab]); // inline: uiIcon is internal trusted SVG markup
+      button.querySelector("span").textContent = t(tab === "server" ? "settings" : tab);
+      button.onclick = () => {
+        state.tab = button.dataset.tab === "players" ? "__players__" : button.dataset.tab;
+        persistTab(state.tab);
+        renderTabs();
+        render();
+        resetVerticalScroll();
+      };
+      tabs.appendChild(clone);
     });
   }
 

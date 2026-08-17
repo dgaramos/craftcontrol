@@ -93,7 +93,7 @@ export function startApplication() {
   function getPlayersFeature() {
     if (!playersFeature) {
       playersFeature = createPlayersFeature({
-        state, content, t, api, $, escapeHtml, toast, playerSettingsMarkup,
+        state, content, t, localized, api, $, escapeHtml, toast, playerSettingsMarkup,
         bindSegmentedControls, bindSettingFields, formatDuration, formatDate, sessionMoment,
         timelineTimestamp, gameLabel, gameIcon, gameTermMarkup, optionLabel,
         blockTermMarkup, dimensionName, formatRankingValue, uiIcon, booleanControl,

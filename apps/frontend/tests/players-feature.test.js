@@ -68,6 +68,7 @@ function makeWorkspaceDeps(overrides = {}) {
     insertAdjacentHTML: jest.fn(),
   };
   const t = (key) => key;
+  const localized = (pt, en, es = en) => state.locale === "pt" ? pt : state.locale === "es" ? es : en;
   const api = jest.fn().mockResolvedValue({ players: [] });
   const escapeHtml = (s) => String(s ?? "");
   const toast = jest.fn();
@@ -77,7 +78,7 @@ function makeWorkspaceDeps(overrides = {}) {
   const formatDuration = (s) => `${s ?? 0}s`;
   const formatDate = (ts) => ts ? "2024-01-01" : "—";
   const renderPlayerDetail = jest.fn();
-  return { state, $, content, t, api, escapeHtml, toast, playerSettingsMarkup, bindSegmentedControls, bindSettingFields, formatDuration, formatDate, renderPlayerDetail, elements, ...overrides };
+  return { state, $, content, t, localized, api, escapeHtml, toast, playerSettingsMarkup, bindSegmentedControls, bindSettingFields, formatDuration, formatDate, renderPlayerDetail, elements, ...overrides };
 }
 
 // ── workspace.js ──────────────────────────────────────────────────────────────
@@ -202,6 +203,7 @@ describe("createPlayersFeature — factory wiring", () => {
     const $ = jest.fn(() => makeEl());
     const content = { innerHTML: "", querySelector: jest.fn(() => makeEl()), querySelectorAll: jest.fn(() => []) };
     const t = (key) => key;
+    const localized = (pt, en, es = en) => state.locale === "pt" ? pt : state.locale === "es" ? es : en;
     const api = jest.fn().mockResolvedValue({ players: [] });
     const escapeHtml = (s) => String(s ?? "");
     const toast = jest.fn();
@@ -231,7 +233,7 @@ describe("createPlayersFeature — factory wiring", () => {
     const formatRankingValue = jest.fn((v) => String(v));
     const uiIcon = jest.fn(() => "");
     return {
-      state, $, content, t, api, escapeHtml, toast, playerSettingsMarkup, bindSegmentedControls,
+      state, $, content, t, localized, api, escapeHtml, toast, playerSettingsMarkup, bindSegmentedControls,
       bindSettingFields, formatDuration, formatDate, renderAnalyticsPanel, renderTabs,
       updateToggleLabel, booleanControl, panelAccessDetailMarkup, bindPlayerAccess,
       playerDataMarkup, profileMarkup, gameLabel, gameIcon, gameTermMarkup, optionLabel,

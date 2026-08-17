@@ -1,7 +1,9 @@
 import { jest } from "@jest/globals";
 
 export function makeEl(extra = {}) {
-  return {
+  // content.cloneNode returns a clone that itself has querySelector returning makeEl(),
+  // so template cloning in workspace/navigation code never throws on property access.
+  const el = {
     innerHTML: "",
     textContent: "",
     hidden: false,
@@ -29,6 +31,14 @@ export function makeEl(extra = {}) {
     setAttribute: jest.fn(),
     ...extra,
   };
+  // Add template content stub so any makeEl() can stand in for a <template>.
+  // deepEl() is a lazy recursive factory: each level of querySelector returns
+  // another deepEl(), so multi-level chains (e.g. span > b) never throw.
+  if (!el.content) {
+    const deepEl = () => makeEl({ querySelector: jest.fn(() => deepEl()), append: jest.fn() });
+    el.content = { cloneNode: () => deepEl() };
+  }
+  return el;
 }
 
 /**

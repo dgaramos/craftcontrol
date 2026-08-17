@@ -19,22 +19,47 @@ const state = { tab: "home", tabs: ["home", "players", "analytics"] };
 let rendered = 0;
 let buttons = [];
 const tabs = {
-  set innerHTML(value) {
-    this.markup = value;
-    buttons = state.tabs.map((tab) => ({ dataset: { tab }, onclick: null }));
+  replaceChildren() { buttons = []; },
+  appendChild(clone) {
+    if (clone._button) buttons.push(clone._button);
   },
   querySelectorAll: () => buttons,
 };
+// Fake <template> for tpl-nav-tab: cloneNode returns a fragment with a button stub.
+const tplNavTab = {
+  content: {
+    cloneNode() {
+      const iEl = { innerHTML: "" };
+      const spanEl = { textContent: "" };
+      const btn = {
+        dataset: {},
+        onclick: null,
+        className: "",
+        querySelector(sel) {
+          if (sel === "i") return iEl;
+          if (sel === "span") return spanEl;
+          return null;
+        },
+      };
+      return { _button: btn, querySelector: (sel) => sel === "button" ? btn : null };
+    },
+  },
+};
 const navigation = createNavigation({
   state,
-  $: (selector) => selector === "#tabs" ? tabs : null,
+  $: (selector) => {
+    if (selector === "#tabs") return tabs;
+    if (selector === "#tpl-nav-tab") return tplNavTab;
+    return null;
+  },
   t: (key) => key,
   uiIcon: (name) => `<svg data-icon="${name}"></svg>`,
   render: () => { rendered += 1; },
 });
 navigation.renderTabs();
-assert.match(tabs.markup, /data-tab="players"/);
-buttons[1].onclick();
+assert.ok(buttons.some((btn) => btn.dataset.tab === "players"), "players tab button must exist");
+const playersBtn = buttons.find((btn) => btn.dataset.tab === "players");
+playersBtn.onclick();
 assert.equal(state.tab, "__players__");
 assert.equal(rendered, 1);
 assert.equal(window.location.hash, "#/players");
@@ -114,7 +139,7 @@ const [auth, settings, players, analytics, css] = await Promise.all([
 ]);
 assert.match(auth, /password-toggle/);
 assert.match(settings, /addEventListener\("change"/);
-assert.match(players, /data-player-index/);
+assert.match(players, /player-roster-open/);
 assert.match(analytics, /data-analytics-view/);
 assert.match(css, /@media \(max-width:/);
 

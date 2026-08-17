@@ -13,13 +13,22 @@ O frontend é vanilla JS ESM sem bundler. A estrutura relevante:
 
 ```
 apps/frontend/static/js/
+├── api.js                  ← cliente HTTP (fetch wrapper)
+├── auth.js                 ← requireSession
+├── events.js               ← connectEventStream (SSE)
 ├── composition.js          ← raiz da aplicação; monta todas as features
+├── api-contract.d.ts       ← declarações de tipos da API
 ├── core/                   ← dom.js, state.js, navigation.js, invalidation.js, route.js
 ├── components/             ← feedback.js (toast), time.js (formatação de datas)
-├── features/               ← uma pasta por feature (analytics, players, settings, world, rules, server, auth)
-│   └── <feature>/
-│       └── index.js        ← export nomeado createXFeature({ deps })
-└── i18n/                   ← index.js (createI18n), game-terms.js (createGameTerms)
+├── features/
+│   ├── analytics/          ← index.js, activity.js, blocks.js, combat.js, exploration.js, rankings.js, trends.js
+│   ├── players/            ← index.js, access.js, history.js, profile.js, telemetry.js, workspace.js
+│   ├── auth/bootstrap.js
+│   ├── settings/index.js
+│   ├── world/index.js
+│   ├── rules/index.js
+│   └── server/index.js
+└── i18n/                   ← index.js (createI18n), game-terms.js (createGameTerms), en.js, es.js, pt.js
 ```
 
 ## Padrões obrigatórios
@@ -90,10 +99,14 @@ O CSS e o markup gerado devem funcionar em telas pequenas primeiro. Não assumir
 
 ### Setup obrigatório
 
-Todos os testes importam de `@jest/globals` — sem globals implícitos:
+Testes que usam APIs específicas do Jest (`jest.fn()`, `jest.spyOn()`, `jest.mock()`) devem importar `jest` explicitamente de `@jest/globals`. Globais básicos como `describe`, `test` e `expect` são fornecidos automaticamente pelo Jest no modo ESM e não precisam de import:
 
 ```js
-import { describe, it, expect, beforeEach, afterEach, jest } from "@jest/globals";
+// Quando usar jest.fn() ou outras APIs Jest:
+import { jest } from "@jest/globals";
+
+// Quando usar apenas describe/test/expect:
+// nenhum import necessário
 ```
 
 ### Helpers compartilhados
@@ -115,12 +128,19 @@ Se um helper não cobrir um caso novo, **estenda `helpers.js`** — não crie he
 
 ### Save/restore de globals
 
-Quando um teste precisa de `global.window` ou `global.document`, salvar e restaurar em `beforeEach`/`afterEach`:
+Quando um teste modifica `global.window` ou `global.document`, salvar e restaurar ambos em `beforeEach`/`afterEach` para evitar vazamento de estado entre testes:
 
 ```js
 let savedWindow;
-beforeEach(() => { savedWindow = global.window; });
-afterEach(() => { global.window = savedWindow; });
+let savedDocument;
+beforeEach(() => {
+  savedWindow = global.window;
+  savedDocument = global.document;
+});
+afterEach(() => {
+  global.window = savedWindow;
+  global.document = savedDocument;
+});
 ```
 
 ### Regras de teste

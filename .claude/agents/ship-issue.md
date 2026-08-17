@@ -89,10 +89,45 @@ Após o PR aberto, reporte ao usuário:
 - Jobs de CI disparados (`gh pr checks`)
 - Qualquer observação relevante sobre o diff
 
-**Pare aqui.** CI, CodeRabbit e merge são responsabilidade do usuário.
+**Pare aqui.** CI, review comments e merge são responsabilidade do usuário.
+
+---
+
+## Modo revisão (acionado manualmente)
+
+Quando o usuário trouxer findings de review (de qualquer fonte — CI, CodeRabbit, reviewer humano, etc.), retome o agente com os comentários e execute:
+
+### R1. Triagem
+
+Para cada finding recebido:
+- Verificar se ainda é válido no código atual
+- Classificar: **bloqueador** (corrigir agora) / **melhoria** (corrigir se simples) / **nitpick** (registrar, não bloquear)
+
+### R2. Aplicar correções
+
+Para cada item bloqueador ou melhoria simples:
+- Corrigir no código
+- `bin/check` local antes de commitar
+- Commit separado por conjunto lógico de fixes
+
+```bash
+git add <arquivos>
+git commit -m "fix(scope): endereçar findings de review"
+git push origin <branch>
+git push gitea <branch>
+```
+
+### R3. Reportar e parar novamente
+
+Reporte ao usuário:
+- O que foi corrigido e o que foi deixado (com justificativa)
+- Se CI precisa rodar novamente
+
+**Pare aqui.** Não faça merge sem confirmação explícita do usuário.
 
 ## Regras de ouro
 
 - Nunca push direto para `main`.
-- Nunca mergear — isso cabe ao usuário após CI e CodeRabbit.
+- Nunca mergear sem confirmação explícita do usuário.
 - Nunca commitar segredos — revisar `git diff --staged` antes de commitar.
+- Nunca ficar em loop monitorando CI ou aguardando reviews — age quando acionado.

@@ -96,11 +96,13 @@ class ReconciliationService:
             self.broker.publish("state.reconciliation.failed", reason, {"error": str(error)[:240]})
             raise
         finally:
-            self.broker.publish(
-                "state.reconciliation.finished", reason, {"duration_seconds": time.time() - started}
-            )
-            self._refreshing = False
-            self._refresh_lock.release()
+            try:
+                self.broker.publish(
+                    "state.reconciliation.finished", reason, {"duration_seconds": time.time() - started}
+                )
+            finally:
+                self._refreshing = False
+                self._refresh_lock.release()
 
         # Called outside the lock so a slow or synchronous callback cannot
         # block concurrent refresh attempts from being skipped.

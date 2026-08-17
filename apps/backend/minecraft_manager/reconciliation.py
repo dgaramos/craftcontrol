@@ -68,9 +68,9 @@ class ReconciliationService:
             return
         self._refreshing = True
         started = time.time()
-        self.broker.publish("state.reconciliation.started", reason, {"scope": "full"})
         trigger_telemetry = False
         try:
+            self.broker.publish("state.reconciliation.started", reason, {"scope": "full"})
             _, env_values = self.files.read_env()
             properties = self.files.read_properties()
             settings = {

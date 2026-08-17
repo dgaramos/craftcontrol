@@ -15,6 +15,8 @@ from .services import ManagerService
 from .players import PlayerService, SQLitePlayerRepository
 from .telemetry_service import TelemetryService
 from .telemetry_repository import SQLiteTelemetryRepository
+from .server import WorldService
+from .reconciliation import ReconciliationService
 
 
 def _docker_factory() -> object:
@@ -37,8 +39,19 @@ def compose_manager(
     if docker is None:
         docker = DockerOperations(settings.container, settings.project)
     broker = EventBroker(repository)
-    players = PlayerService(SQLitePlayerRepository(settings.database), files, bedrock, broker, settings.bootstrap_operator)
+    players = PlayerService(
+        SQLitePlayerRepository(settings.database), files, bedrock, broker, settings.bootstrap_operator
+    )
     telemetry = TelemetryService(SQLiteTelemetryRepository(settings.database), broker)
+    world = WorldService(bedrock, broker)
+    reconciliation = ReconciliationService(
+        repository=repository,
+        files=files,
+        bedrock=bedrock,
+        broker=broker,
+        player_service=players,
+        telemetry_service=telemetry,
+    )
     manager = ManagerService(
         repository=repository,
         files=files,
@@ -48,8 +61,12 @@ def compose_manager(
         broker=broker,
         player_service=players,
         telemetry_service=telemetry,
+        world_service=world,
+        reconciliation_service=reconciliation,
     )
     if runtime is None:
-        runtime = EventRuntime(manager, broker, settings.container, settings.reconcile_seconds, docker_factory=_docker_factory)
+        runtime = EventRuntime(
+            manager, broker, settings.container, settings.reconcile_seconds, docker_factory=_docker_factory
+        )
     manager.attach_runtime(runtime)
     return manager

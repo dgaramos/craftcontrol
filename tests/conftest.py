@@ -13,7 +13,9 @@ from minecraft_manager.auth.service import AuthService
 from minecraft_manager.events import EventBroker
 from minecraft_manager.files import ServerFiles
 from minecraft_manager.players import PlayerService, SQLitePlayerRepository
+from minecraft_manager.reconciliation import ReconciliationService
 from minecraft_manager.repository import StateRepository
+from minecraft_manager.server import WorldService
 from minecraft_manager.services import ManagerService
 from minecraft_manager.telemetry_repository import SQLiteTelemetryRepository
 from minecraft_manager.telemetry_service import TelemetryService
@@ -53,6 +55,15 @@ def make_manager_service(
     player_repo = SQLitePlayerRepository(db_path)
     player_service = PlayerService(player_repo, files, bedrock, broker)  # type: ignore[arg-type]
     telemetry_service = TelemetryService(SQLiteTelemetryRepository(db_path), broker)
+    world_service = WorldService(bedrock, broker)  # type: ignore[arg-type]
+    reconciliation_service = ReconciliationService(
+        repository=repo,
+        files=files,
+        bedrock=bedrock,  # type: ignore[arg-type]
+        broker=broker,
+        player_service=player_service,
+        telemetry_service=telemetry_service,
+    )
     return ManagerService(
         repo,
         files,
@@ -61,6 +72,8 @@ def make_manager_service(
         broker=broker,
         player_service=player_service,
         telemetry_service=telemetry_service,
+        world_service=world_service,
+        reconciliation_service=reconciliation_service,
     )
 
 

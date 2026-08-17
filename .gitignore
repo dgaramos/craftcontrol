@@ -1,5 +1,7 @@
 .env
 .claude/
+.codex/*
+!.codex/skills/
 __pycache__/
 *.py[cod]
 .pytest_cache/

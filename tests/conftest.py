@@ -10,9 +10,13 @@ from flask import Flask
 
 from minecraft_manager.auth.http import install_auth
 from minecraft_manager.auth.service import AuthService
+from minecraft_manager.events import EventBroker
 from minecraft_manager.files import ServerFiles
+from minecraft_manager.players import PlayerService, SQLitePlayerRepository
 from minecraft_manager.repository import StateRepository
 from minecraft_manager.services import ManagerService
+from minecraft_manager.telemetry_repository import SQLiteTelemetryRepository
+from minecraft_manager.telemetry_service import TelemetryService
 from tests.fakes import FakeBedrock, FakeConsole, FakeDocker, FakeRuntime
 
 __all__ = ["FakeBedrock", "FakeConsole", "FakeDocker", "FakeRuntime"]
@@ -39,13 +43,24 @@ def make_manager_service(
     bedrock: FakeBedrock | None = None,
     docker: FakeDocker | None = None,
 ) -> ManagerService:
-    repo = StateRepository(directory / "state.db")
+    db_path = directory / "state.db"
+    repo = StateRepository(db_path)
     repo.initialize()
+    files = ServerFiles(directory / ".env", directory / "server.properties")
+    bedrock = bedrock or FakeBedrock()  # type: ignore[assignment]
+    docker = docker or FakeDocker()  # type: ignore[assignment]
+    broker = EventBroker(repo)
+    player_repo = SQLitePlayerRepository(db_path)
+    player_service = PlayerService(player_repo, files, bedrock, broker)  # type: ignore[arg-type]
+    telemetry_service = TelemetryService(SQLiteTelemetryRepository(db_path), broker)
     return ManagerService(
         repo,
-        ServerFiles(directory / ".env", directory / "server.properties"),
-        bedrock or FakeBedrock(),  # type: ignore[arg-type]
-        docker or FakeDocker(),  # type: ignore[arg-type]
+        files,
+        bedrock,  # type: ignore[arg-type]
+        docker,  # type: ignore[arg-type]
+        broker=broker,
+        player_service=player_service,
+        telemetry_service=telemetry_service,
     )
 
 

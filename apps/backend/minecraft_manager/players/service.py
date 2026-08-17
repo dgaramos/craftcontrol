@@ -24,6 +24,11 @@ class PlayerService:
         self.events = events
         self.bootstrap_operator = bootstrap_operator
 
+    def reconcile_online_players(
+        self, players: list[str], xuids: dict[str, str], source: str
+    ) -> None:
+        self.repository.reconcile_online_players(players, xuids, source)
+
     def observe_presence(self, player: str, connected: bool, xuid: str = "") -> None:
         snapshot = self.repository.snapshot()
         players = {name.casefold(): name for name in snapshot["players"]}

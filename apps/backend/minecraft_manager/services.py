@@ -42,12 +42,21 @@ class ManagerService:
         self.bedrock = bedrock
         self.docker = docker
         self.bootstrap_operator = bootstrap_operator
-        # The default keeps direct construction backwards-compatible for tests and
-        # downstream imports. Production dependencies are assembled explicitly in
-        # composition.compose_manager().
         self.broker = broker or EventBroker(repository)
-        self.player_service = player_service or PlayerService(repository, files, bedrock, self.broker, bootstrap_operator)
-        self.telemetry_service = telemetry_service or TelemetryService(repository, self.broker)
+        if player_service is None:
+            raise TypeError(
+                "player_service is required. "
+                "Use composition.compose_manager() to build ManagerService "
+                "with all domain repositories injected."
+            )
+        self.player_service = player_service
+        if telemetry_service is None:
+            raise TypeError(
+                "telemetry_service is required. "
+                "Use composition.compose_manager() to build ManagerService "
+                "with all domain repositories injected."
+            )
+        self.telemetry_service = telemetry_service
         self.runtime = runtime
         self._refresh_lock = threading.Lock()
         self._refreshing = False
@@ -107,7 +116,7 @@ class ManagerService:
                 maximum = int(env_values.get("MAX_PLAYERS") or properties.get("max-players") or 0)
             if xuids:
                 self.repository.store("known_players", xuids, "bedrock-log")
-            self.repository.reconcile_online_players(players, xuids, "bedrock-console")
+            self.player_service.reconcile_online_players(players, xuids, "bedrock-console")
             self.repository.replace("players", {name: "online" for name in players}, "bedrock-console")
             self.repository.store("server", {"online": str(online), "max_players": str(maximum)}, "bedrock-console")
             self.refresh_permissions(publish=False)

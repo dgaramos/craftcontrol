@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from .config import Settings
-from .events import EventBroker
 from .ports import ContainerOperations, EventPublisher, RuntimeSupervisor, ServerConfiguration, ServerConsole, StateStore
 from .players import PlayerService
 from .telemetry_service import TelemetryService
@@ -24,9 +22,9 @@ class ManagerService:
         files: ServerConfiguration,
         bedrock: ServerConsole,
         docker: ContainerOperations,
+        broker: EventPublisher,
         bootstrap_operator: str = "",
         reconcile_seconds: int = 900,
-        broker: EventPublisher | None = None,
         runtime: RuntimeSupervisor | None = None,
         player_service: PlayerService | None = None,
         telemetry_service: TelemetryService | None = None,
@@ -38,7 +36,7 @@ class ManagerService:
         self.bedrock = bedrock
         self.docker = docker
         self.bootstrap_operator = bootstrap_operator
-        self.broker = broker or EventBroker(repository)
+        self.broker = broker
         if player_service is None:
             raise TypeError(
                 "player_service is required. "
@@ -68,13 +66,6 @@ class ManagerService:
                 "with all domain services injected."
             )
         self._reconciliation = reconciliation_service
-
-    @classmethod
-    def build(cls, settings: Settings) -> "ManagerService":
-        """Compatibility constructor; new code should use compose_manager()."""
-        from .composition import compose_manager
-
-        return compose_manager(settings)
 
     def attach_runtime(self, runtime: RuntimeSupervisor) -> None:
         if self.runtime is not None:

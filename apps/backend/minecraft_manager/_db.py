@@ -128,9 +128,26 @@ def player_identity(
                         f"UPDATE {table} SET identity=? WHERE identity=?",
                         (identity, temp),
                     )
+                # Merge temp daily rows into the target identity, aggregating
+                # counters so no accumulated data is lost even if a player_daily
+                # row for the target identity already exists (e.g. written by
+                # telemetry before the profile was promoted from temp).
+                fields = ", ".join(
+                    f"{f}={f}+excluded.{f}" for f in sorted(ALLOWED_DAILY_FIELDS)
+                )
                 connection.execute(
-                    "UPDATE OR REPLACE player_daily SET identity=? WHERE identity=?",
+                    "INSERT INTO player_daily(identity,day,updated_at,"
+                    + ",".join(sorted(ALLOWED_DAILY_FIELDS))
+                    + ") SELECT ?,day,updated_at,"
+                    + ",".join(sorted(ALLOWED_DAILY_FIELDS))
+                    + " FROM player_daily WHERE identity=?"
+                    + " ON CONFLICT(identity,day) DO UPDATE SET "
+                    + fields
+                    + ",updated_at=MAX(updated_at,excluded.updated_at)",
                     (identity, temp),
+                )
+                connection.execute(
+                    "DELETE FROM player_daily WHERE identity=?", (temp,)
                 )
         return identity
     row = connection.execute(

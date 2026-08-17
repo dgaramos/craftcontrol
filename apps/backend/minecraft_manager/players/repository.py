@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import Any
 
 from .._db import (
-    SQLITE_BUSY_TIMEOUT_MS,  # noqa: F401 — re-exported for consistency
     add_daily,
     allocate_daily_play,
     calendar_timezone,

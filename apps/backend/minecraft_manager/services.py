@@ -42,11 +42,14 @@ class ManagerService:
         self.bedrock = bedrock
         self.docker = docker
         self.bootstrap_operator = bootstrap_operator
-        # The default keeps direct construction backwards-compatible for tests and
-        # downstream imports. Production dependencies are assembled explicitly in
-        # composition.compose_manager().
         self.broker = broker or EventBroker(repository)
-        self.player_service = player_service or PlayerService(repository, files, bedrock, self.broker, bootstrap_operator)
+        if player_service is None:
+            raise TypeError(
+                "player_service is required. "
+                "Use composition.compose_manager() to build ManagerService "
+                "with all domain repositories injected."
+            )
+        self.player_service = player_service
         self.telemetry_service = telemetry_service or TelemetryService(repository, self.broker)
         self.runtime = runtime
         self._refresh_lock = threading.Lock()

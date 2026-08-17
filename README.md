@@ -322,7 +322,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for branch naming, PR title format, metad
 ### Codex skills
 
 If you use Codex, this repository ships equivalent workflow skills in
-`.codex/skills/`. Codex discovers each skill from its `SKILL.md` file:
+`.agents/skills/`. Codex discovers each skill from its `SKILL.md` file:
 
 | Skill | When to use |
 |---|---|
@@ -348,16 +348,17 @@ If you use Claude Code, this repository ships a set of skills in `.claude/agents
 
 | Skill | When to use |
 |---|---|
-| `/execute-issue <n>` | Executa uma issue do início ao merge — orquestra as três fases abaixo |
-| `/start-issue <n>` | Verifica metadados, lê contexto obrigatório, mapeia código, cria branch |
-| `/implement` | Detecta camada (backend/frontend), carrega skill especializada, implementa e testa |
-| `/ship-issue` | Commit, PR com metadados, CI, CodeRabbit, sync Gitea |
-| `/review-pr <n>` | Self-review ou triagem de findings — checklist por camada (backend, frontend, docs) |
-| `/backend` | Padrões Python: DI, Protocols, `is None`, composition root, fakes |
-| `/frontend` | Padrões JS: injeção de deps, helpers compartilhados, ESM, i18n |
-| `/create-issue` | Workshop PM/Dev Hat → cria issue bem formada com todos os metadados |
-| `/manage-project` | Adiciona/lista/audita issues nos project boards |
-| `/manage-milestone` | Atribui/lista/audita milestones, detecta backlog solto |
+| `$execute-issue <n>` | Executa uma issue do início ao merge — orquestra as três fases abaixo |
+| `$start-issue <n>` | Verifica metadados, lê contexto obrigatório, mapeia código, cria branch |
+| `$implement` | Detecta camada (backend$frontend), carrega skill especializada, implementa e testa |
+| `$handle-pr-findings` | Triagem explícita de findings, correções e respostas nas threads |
+| `$ship-issue` | Commit, PR com metadados, CI, CodeRabbit, sync Gitea |
+| `$review-pr <n>` | Self-review ou triagem de findings — checklist por camada (backend, frontend, docs) |
+| `$backend` | Padrões Python: DI, Protocols, `is None`, composition root, fakes |
+| `$frontend` | Padrões JS: injeção de deps, helpers compartilhados, ESM, i18n |
+| `$create-issue` | Workshop PM/Dev Hat → cria issue bem formada com todos os metadados |
+| `$manage-project` | Adiciona/lista/audita issues nos project boards |
+| `$manage-milestone` | Atribui/lista/audita milestones, detecta backlog solto |
 
 ## License and trademarks
 
@@ -368,3 +369,4 @@ applies to the original CraftControl source code, documentation, Telemetry Pack,
 and visual assets contained in this repository unless a file states otherwise.
 
 CraftControl is independent and is not affiliated with Mojang Studios or Microsoft. Minecraft is a trademark of Microsoft Corporation.
+

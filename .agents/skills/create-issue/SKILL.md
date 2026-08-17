@@ -40,7 +40,7 @@ Se a descrição inicial já responde essas perguntas, pule direto para o passo 
 
 ### 3. Escolher metadados
 
-Use `/manage-project` e `/manage-milestone` se precisar consultar o estado atual dos boards.
+Use `$manage-project` e `$manage-milestone` se precisar consultar o estado atual dos boards.
 
 **Projeto:**
 
@@ -139,3 +139,4 @@ Verifique: todos os 4 metadados presentes (Project, Milestone, Label, Assignee).
 - Nunca criar issue sem project — ela não aparecerá no board.
 - Se a issue depende de outra, adicione `blocked-by: #número` no body.
 - Acceptance criteria devem ser verificáveis de forma objetiva.
+

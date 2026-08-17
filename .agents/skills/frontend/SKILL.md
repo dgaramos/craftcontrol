@@ -1,6 +1,6 @@
 ---
 name: frontend
-description: Implementa, refatora e testa código JavaScript do frontend do CraftControl. Usar quando a issue tocar em arquivos em apps/frontend/static/js/ ou apps/frontend/tests/.
+description: Implementa, refatora e testa código JavaScript do frontend do CraftControl. Usar quando a issue tocar em arquivos em apps$frontend/static/js/ ou apps$frontend/tests/.
 ---
 
 # frontend
@@ -12,7 +12,7 @@ Agente de desenvolvimento frontend para o CraftControl. Cobre a arquitetura do m
 O frontend é vanilla JS ESM sem bundler. A estrutura relevante:
 
 ```text
-apps/frontend/static/js/
+apps$frontend/static/js/
 ├── api.js                  ← cliente HTTP (fetch wrapper)
 ├── auth.js                 ← requireSession
 ├── events.js               ← connectEventStream (SSE)
@@ -153,7 +153,7 @@ afterEach(() => {
 ### Rodar testes
 
 ```bash
-cd apps/frontend && npm test
+cd apps$frontend && npm test
 ```
 
 ## Checklist de implementação
@@ -165,3 +165,4 @@ Antes de commitar qualquer mudança de frontend:
 - [ ] Helpers de teste em `helpers.js`, não duplicados no arquivo de teste
 - [ ] `beforeEach`/`afterEach` com save/restore se o teste modificar globals
 - [ ] `npm test` passa sem warnings novos
+

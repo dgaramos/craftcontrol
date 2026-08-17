@@ -7,7 +7,7 @@ description: Commita, abre PR e para — CI, CodeRabbit e merge ficam com o usu�
 
 Terceira fase da execução de uma issue: commit, push e PR aberto.
 
-Assume que `/implement` já foi executado — implementação completa e gate verde.
+Assume que `$implement` já foi executado — implementação completa e gate verde.
 
 **Escopo deste agente:** commit → push → PR aberto. Ponto final.
 Não monitora CI, não aguarda CodeRabbit, não faz merge.

@@ -1,6 +1,6 @@
 ---
 name: backend
-description: Implementa, refatora e testa código Python do backend do CraftControl. Usar quando a issue tocar em arquivos em apps/backend/ ou tests/.
+description: Implementa, refatora e testa código Python do backend do CraftControl. Usar quando a issue tocar em arquivos em apps$backend/ ou tests/.
 ---
 
 # backend
@@ -12,7 +12,7 @@ Agente de desenvolvimento backend para o CraftControl. Cobre arquitetura em cama
 O backend é um monólito modular em Flask com runtime orientado a eventos. Estrutura relevante:
 
 ```text
-apps/backend/minecraft_manager/
+apps$backend/minecraft_manager/
 ├── composition.py       ← único composition root; monta o grafo de objetos real
 ├── ports.py             ← Protocols que definem as fronteiras substituíveis
 ├── services.py          ← ManagerService (orquestrador principal)
@@ -151,7 +151,7 @@ def test_preserves_falsy_injected_dep() -> None:
 ### Rodar testes
 
 ```bash
-PYTHONPATH=apps/backend:. pytest tests/ -q
+PYTHONPATH=apps$backend:. pytest tests/ -q
 # ou o gate completo:
 bin/check-backend
 ```
@@ -166,3 +166,4 @@ Antes de commitar qualquer mudança de backend:
 - [ ] Fake correspondente criado ou atualizado em `tests/fakes.py` se necessário
 - [ ] Teste cobre o comportamento com fake injetado
 - [ ] `bin/check-backend` passa sem erros novos
+

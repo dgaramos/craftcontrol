@@ -70,5 +70,5 @@ Formato obrigatório: `{issue-number}-{type}/{short-description}`.
 
 ## Saída
 
-Branch criada, contexto lido, arquivos afetados identificados e lidos. Pronto para `/implement`.
+Branch criada, contexto lido, arquivos afetados identificados e lidos. Pronto para `$implement`.
 

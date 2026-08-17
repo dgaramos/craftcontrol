@@ -1,8 +1,8 @@
 .env
 .claude/*
 !.claude/agents/
-.codex/*
-!.codex/skills/
+.agents/*
+!.agents/skills/
 __pycache__/
 *.py[cod]
 .pytest_cache/

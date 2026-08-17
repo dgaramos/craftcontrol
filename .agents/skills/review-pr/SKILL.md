@@ -7,7 +7,7 @@ description: Revisa um PR do CraftControl antes de abrir ou após receber findin
 
 Skill de code review para o CraftControl. Usada em dois momentos:
 
-1. **Self-review** — antes de abrir o PR, como último passo do `/implement`
+1. **Self-review** — antes de abrir o PR, como último passo do `$implement`
 2. **Triagem de findings** — ao receber comentários do CodeRabbit ou de outro revisor
 
 ## Entrada
@@ -35,8 +35,8 @@ Identifique os arquivos afetados e aplique o perfil correspondente. Um PR pode a
 
 | Arquivos afetados | Perfil |
 |---|---|
-| `apps/backend/` ou `tests/` | → **Backend** |
-| `apps/frontend/static/js/` ou `apps/frontend/tests/` | → **Frontend** |
+| `apps$backend/` ou `tests/` | → **Backend** |
+| `apps$frontend/static/js/` ou `apps$frontend/tests/` | → **Frontend** |
 | `docs/`, `*.md`, `CONTRIBUTING`, `README`, `AGENTS.md` | → **Docs** |
 
 ---
@@ -140,7 +140,7 @@ Identifique os arquivos afetados e aplique o perfil correspondente. Um PR pode a
 ### Links e referências
 
 - [ ] Links internos apontam para arquivos que existem
-- [ ] Referências a arquivos específicos usam o caminho correto (`apps/backend/minecraft_manager/composition.py`, não `minecraft_manager/composition.py`)
+- [ ] Referências a arquivos específicos usam o caminho correto (`apps$backend/minecraft_manager/composition.py`, não `minecraft_manager/composition.py`)
 
 ### Cobertura
 

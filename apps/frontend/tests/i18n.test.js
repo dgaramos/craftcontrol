@@ -26,6 +26,12 @@ describe("createI18n — translation lookup (t)", () => {
 
   test("fieldUpdated is callable", () =>
     expect(i18n.t("fieldUpdated", "Difficulty")).toBe("Difficulty updated"));
+
+  test("period day labels pluralize in all supported locales", () => {
+    expect(i18n.t("periodDaysLabel", 1)).toBe("1 day");
+    expect(createI18n(() => "pt").t("periodDaysLabel", 2)).toBe("2 dias");
+    expect(createI18n(() => "es").t("periodDaysLabel", 1)).toBe("1 día");
+  });
 });
 
 describe("createI18n — locale fallback", () => {

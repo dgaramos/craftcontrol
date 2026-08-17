@@ -145,6 +145,10 @@ class ReconciliationService:
                                     "state.changed", "targeted-console",
                                     {"domains": ["gamerules"], "keys": sorted(values)},
                                 )
+                        except Exception:
+                            with self._pending_rules_lock:
+                                self._pending_rules.update(pending)
+                            raise
                         finally:
                             self._refreshing = False
             finally:

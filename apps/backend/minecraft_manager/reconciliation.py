@@ -196,7 +196,7 @@ class ReconciliationService:
                     continue
                 envelope = parse_telemetry_line(line)
                 if envelope:
-                    self.telemetry_service.ingest(envelope, self.request_telemetry_snapshot_async)
+                    self.telemetry_service.ingest(envelope, self._telemetry_snapshot_fn)
                     accepted += 1
             self.broker.publish("telemetry.snapshot.requested", reason)
             self.broker.publish("telemetry.snapshot.read", reason, {"envelopes": accepted})

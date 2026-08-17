@@ -9,6 +9,8 @@ const eventDefinitions = {
   "player.permission.changed": { icon: "shield", pt: "Permissão alterada", en: "Permission changed", es: "Permiso modificado", tone: "permission" },
 };
 
+import { renderMarkup } from "../../core/render.js";
+
 export function createActivityView({ state, t, optionLabel, uiIcon, gameTermMarkup, timelineTimestamp }) {
   const presentationFor = (event) => eventDefinitions[event.topic]
     || { icon: "activity", pt: event.topic, en: event.topic, es: event.topic, tone: "default" };
@@ -41,8 +43,8 @@ export function createActivityView({ state, t, optionLabel, uiIcon, gameTermMark
   const showDeathDetails = (event) => {
     const dialog = $("#analytics-death-dialog");
     const presentation = presentationFor(event);
-    dialog.querySelector("h2").innerHTML = `${uiIcon(presentation.icon)} ${escapeHtml(event.player?.name || "—")}`;
-    dialog.querySelector(".analytics-death-content").innerHTML = `<p>${escapeHtml(presentation[state.locale])}</p>${detailsMarkup(event)}<div class="analytics-death-meta"><span>${event.source === "behavior-pack" ? t("sourceStructured") : t("sourceServer")}</span>${timelineTimestamp(event.timestamp)}</div>`;
+    renderMarkup(dialog.querySelector("h2"), `${uiIcon(presentation.icon)} ${escapeHtml(event.player?.name || "—")}`);
+    renderMarkup(dialog.querySelector(".analytics-death-content"), `<p>${escapeHtml(presentation[state.locale])}</p>${detailsMarkup(event)}<div class="analytics-death-meta"><span>${event.source === "behavior-pack" ? t("sourceStructured") : t("sourceServer")}</span>${timelineTimestamp(event.timestamp)}</div>`);
     dialog.showModal();
   };
 

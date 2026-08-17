@@ -52,8 +52,8 @@ Use `/manage-project` e `/manage-milestone` se precisar consultar o estado atual
 | 4 | Security & Account Management | Auth, sessões, RBAC, convites |
 | 5 | Observability & Diagnostics | Telemetria, painel de diagnóstico |
 | 6 | Analytics & Data | Analytics, export, rankings |
-| 8 | Documentation Improvement | README, guias, SECURITY.md, FAQ |
 | 7 | Community Release | Hardening, release automation, onboarding |
+| 8 | Documentation Improvement | README, guias, SECURITY.md, FAQ |
 
 **Milestone:**
 

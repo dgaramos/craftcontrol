@@ -31,7 +31,7 @@ Carregue a skill correspondente e siga os padrões que ela define. O checklist d
 - [ ] Não adicione abstrações, refactors ou features além do escopo
 - [ ] Prefira editar arquivos existentes; crie arquivo novo apenas quando a responsabilidade for genuinamente distinta e a modularização for justificada
 
-### 3. Escrever ou atualizar testes
+### 4. Escrever ou atualizar testes
 
 - [ ] Testes escritos junto da implementação — nunca depois
 - [ ] Teste comportamento observável, não implementação interna
@@ -39,7 +39,7 @@ Carregue a skill correspondente e siga os padrões que ela define. O checklist d
 
 Padrões específicos de teste estão em `/backend` e `/frontend` — consulte a skill da camada afetada.
 
-### 3. Quality gate
+### 5. Quality gate
 
 ```bash
 # Backend (sempre rodar se tocar Python):
@@ -58,7 +58,7 @@ bin/check-backend
 
 **Não avance para `/ship-issue` se o gate falhar.** Corrija primeiro.
 
-### 4. Self-review
+### 6. Self-review
 
 Antes de chamar `/ship-issue`, rodar `/review-pr` no diff local (incluindo arquivos novos):
 

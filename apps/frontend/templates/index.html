@@ -70,6 +70,74 @@
       <div class="dialog-actions"><button data-server="start" data-i18n="start">Iniciar</button><button data-server="restart" data-i18n="restart">Reiniciar</button><button data-server="stop" class="danger" data-i18n="stop">Parar</button></div>
       <button id="close-dialog" class="secondary wide" data-i18n="close">Fechar</button>
     </dialog>
+  <!-- ── Native templates ──────────────────────────────────────────────────── -->
+
+  <!-- tpl-identity: topbar user chip (name, role, logout button) -->
+  <template id="tpl-identity">
+    <span></span>
+    <small></small>
+    <button id="logout" type="button">
+      <svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=7#ui-logout"></use></svg>
+      <span></span>
+    </button>
+  </template>
+
+  <!-- tpl-nav-tab: one navigation tab button -->
+  <template id="tpl-nav-tab">
+    <button><i></i><span></span></button>
+  </template>
+
+  <!-- tpl-player-overview-stat: one stat cell in the player overview bar -->
+  <template id="tpl-player-overview-stat">
+    <span><b></b></span>
+  </template>
+
+  <!-- tpl-player-roster-row: one player card in the roster list -->
+  <template id="tpl-player-roster-row">
+    <article>
+      <button class="player-roster-open" type="button">
+        <span class="player-avatar" aria-hidden="true"></span>
+        <span class="player-roster-identity">
+          <strong></strong>
+          <small></small>
+        </span>
+        <span class="player-roster-badges">
+          <b class="game-role-badge"></b>
+          <b class="panel-role-badge"></b>
+        </span>
+        <span class="player-roster-summary">
+          <small></small>
+          <b></b>
+        </span>
+        <span class="player-roster-arrow" aria-hidden="true">›</span>
+      </button>
+    </article>
+  </template>
+
+  <!-- tpl-players-screen: static scaffold for the players panel -->
+  <template id="tpl-players-screen">
+    <div class="players-screen block-panel">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow"></span>
+          <h3></h3>
+          <p></p>
+        </div>
+      </div>
+      <div id="player-overview" class="player-overview" hidden></div>
+      <div class="player-toolbar" hidden>
+        <input id="player-search" type="search" autocomplete="off">
+        <div class="player-filters">
+          <button class="active" data-player-filter="all"></button>
+          <button data-player-filter="online"></button>
+          <button data-player-filter="offline"></button>
+          <button data-player-filter="operator"></button>
+        </div>
+      </div>
+      <div class="loading-players"></div>
+    </div>
+  </template>
+
   <script type="module" src="/static/app.js?v=64"></script>
   </body>
 </html>

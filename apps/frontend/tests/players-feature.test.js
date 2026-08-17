@@ -1,7 +1,7 @@
 import { jest } from "@jest/globals";
 import { createPlayersWorkspace } from "../static/js/features/players/workspace.js";
 import { createPlayersFeature } from "../static/js/features/players/index.js";
-import { makeEl } from "./helpers.js";
+import { makeEl, makeTemplateStub } from "./helpers.js";
 
 function makePlayer(overrides = {}) {
   return {
@@ -17,14 +17,43 @@ function makePlayer(overrides = {}) {
   };
 }
 
+// Minimal stubs for the three templates used by workspace.js.
+function makeWorkspaceTemplateStubs() {
+  const overviewStatClone = makeEl({
+    querySelector: (sel) => {
+      if (sel === "span") {
+        const span = makeEl({ querySelector: (s) => (s === "b" ? makeEl() : null), append: jest.fn() });
+        return span;
+      }
+      return makeEl();
+    },
+  });
+  const rosterRowClone = makeEl({
+    querySelector: (sel) => {
+      const el = makeEl({ classList: { add: jest.fn(), remove: jest.fn(), toggle: jest.fn() }, dataset: {} });
+      return el;
+    },
+  });
+  const screenClone = makeEl({
+    querySelector: (sel) => makeEl({ placeholder: "" }),
+  });
+  return {
+    "#tpl-players-screen": { content: { cloneNode: () => screenClone } },
+    "#tpl-player-overview-stat": { content: { cloneNode: () => overviewStatClone } },
+    "#tpl-player-roster-row": { content: { cloneNode: () => rosterRowClone } },
+  };
+}
+
 function makeWorkspaceDeps(overrides = {}) {
   const elements = {};
+  const templateStubs = makeWorkspaceTemplateStubs();
   const state = {
     locale: "en",
     user: { role: "viewer", capabilities: [] },
     ...overrides.state,
   };
   const $ = jest.fn((sel) => {
+    if (sel in templateStubs) return templateStubs[sel];
     if (!elements[sel]) elements[sel] = makeEl();
     return elements[sel];
   });
@@ -35,8 +64,11 @@ function makeWorkspaceDeps(overrides = {}) {
       return elements[sel];
     }),
     querySelectorAll: jest.fn(() => []),
+    replaceChildren: jest.fn(),
+    insertAdjacentHTML: jest.fn(),
   };
   const t = (key) => key;
+  const localized = (pt, en, es = en) => state.locale === "pt" ? pt : state.locale === "es" ? es : en;
   const api = jest.fn().mockResolvedValue({ players: [] });
   const escapeHtml = (s) => String(s ?? "");
   const toast = jest.fn();
@@ -46,17 +78,17 @@ function makeWorkspaceDeps(overrides = {}) {
   const formatDuration = (s) => `${s ?? 0}s`;
   const formatDate = (ts) => ts ? "2024-01-01" : "—";
   const renderPlayerDetail = jest.fn();
-  return { state, $, content, t, api, escapeHtml, toast, playerSettingsMarkup, bindSegmentedControls, bindSettingFields, formatDuration, formatDate, renderPlayerDetail, elements, ...overrides };
+  return { state, $, content, t, localized, api, escapeHtml, toast, playerSettingsMarkup, bindSegmentedControls, bindSettingFields, formatDuration, formatDate, renderPlayerDetail, elements, ...overrides };
 }
 
 // ── workspace.js ──────────────────────────────────────────────────────────────
 
 describe("renderPlayersPanel — happy path", () => {
-  test("content.innerHTML contains players-screen", async () => {
+  test("clones players-screen template into content", async () => {
     const deps = makeWorkspaceDeps();
     const renderPlayersPanel = createPlayersWorkspace(deps);
     await renderPlayersPanel();
-    expect(deps.content.innerHTML).toContain("players-screen");
+    expect(deps.content.replaceChildren).toHaveBeenCalled();
   });
 
   test("empty player list renders noHistory message", async () => {
@@ -171,6 +203,7 @@ describe("createPlayersFeature — factory wiring", () => {
     const $ = jest.fn(() => makeEl());
     const content = { innerHTML: "", querySelector: jest.fn(() => makeEl()), querySelectorAll: jest.fn(() => []) };
     const t = (key) => key;
+    const localized = (pt, en, es = en) => state.locale === "pt" ? pt : state.locale === "es" ? es : en;
     const api = jest.fn().mockResolvedValue({ players: [] });
     const escapeHtml = (s) => String(s ?? "");
     const toast = jest.fn();
@@ -200,7 +233,7 @@ describe("createPlayersFeature — factory wiring", () => {
     const formatRankingValue = jest.fn((v) => String(v));
     const uiIcon = jest.fn(() => "");
     return {
-      state, $, content, t, api, escapeHtml, toast, playerSettingsMarkup, bindSegmentedControls,
+      state, $, content, t, localized, api, escapeHtml, toast, playerSettingsMarkup, bindSegmentedControls,
       bindSettingFields, formatDuration, formatDate, renderAnalyticsPanel, renderTabs,
       updateToggleLabel, booleanControl, panelAccessDetailMarkup, bindPlayerAccess,
       playerDataMarkup, profileMarkup, gameLabel, gameIcon, gameTermMarkup, optionLabel,

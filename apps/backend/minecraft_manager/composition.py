@@ -37,8 +37,8 @@ def compose_manager(
     if docker is None:
         docker = DockerOperations(settings.container, settings.project)
     broker = EventBroker(repository)
-    players = PlayerService(SQLitePlayerRepository(repository), files, bedrock, broker, settings.bootstrap_operator)
-    telemetry = TelemetryService(SQLiteTelemetryRepository(repository), broker)
+    players = PlayerService(SQLitePlayerRepository(settings.database), files, bedrock, broker, settings.bootstrap_operator)
+    telemetry = TelemetryService(SQLiteTelemetryRepository(settings.database), broker)
     manager = ManagerService(
         repository=repository,
         files=files,

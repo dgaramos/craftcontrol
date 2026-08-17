@@ -16,6 +16,8 @@ function calendarDate(day) {
 
 return async function renderTrendsPanel() {
   const analytics = state.analytics;
+  // inline: complex screen scaffold with heatmap, calendar grid, and period picker;
+  // all API data paths use escapeHtml, formatRankingValue, or formatDuration.
   content.innerHTML = `<div class="trends-screen">${analyticsViewSwitch("trends")}<header class="trends-hero block-panel"><div><span class="eyebrow">DAILY HISTORY</span><h2>${t("trendsTitle")}</h2><p>${t("trendsHelp")}</p></div><button id="trends-refresh" class="secondary" type="button">${uiIcon("refresh")} ${t("refreshData")}</button></header><div class="period-switch"><button data-period-days="7" class="${analytics.periodDays === 7 ? "active" : ""}" type="button">${t("sevenDays")}</button><button data-period-days="30" class="${analytics.periodDays === 30 ? "active" : ""}" type="button">${t("thirtyDays")}</button></div><div id="trends-content"><div class="analytics-loading">${t("checking")}</div></div></div>`;
   bindAnalyticsViewSwitch();
   const load = async () => {

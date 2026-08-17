@@ -68,7 +68,8 @@ def test_player_workspace_separates_roster_profile_and_permission_scopes() -> No
         path.read_text()
         for path in sorted((FRONTEND / "static" / "js" / "features" / "players").glob("*.js"))
     )
-    assert 'class="player-roster-row' in players
+    index_html = (FRONTEND / "templates" / "index.html").read_text()
+    assert "tpl-player-roster-row" in index_html  # markup extracted to native template
     assert 'class="player-detail-screen"' in players
     assert "Minecraft permission" in players
     assert "CraftControl access" in players
@@ -218,7 +219,8 @@ def test_mobile_topbar_prioritizes_status_and_icon_actions() -> None:
     assert '.language-picker > button span, .language-picker > button b { display: none; }' in stylesheet
     assert "nav { top: 60px; }" in stylesheet
     assert "#identity button > span { display: none; }" in auth_stylesheet
-    assert "#ui-logout" in auth_script
+    index_html = (FRONTEND / "templates" / "index.html").read_text()
+    assert "#ui-logout" in index_html  # icon moved to tpl-identity native template
 
 
 def test_mobile_page_scroll_is_bounded_and_navigation_resets_position() -> None:

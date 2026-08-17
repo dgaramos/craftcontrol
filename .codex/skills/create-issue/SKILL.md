@@ -52,8 +52,8 @@ Use `/manage-project` e `/manage-milestone` se precisar consultar o estado atual
 | 4 | Security & Account Management | Auth, sessões, RBAC, convites |
 | 5 | Observability & Diagnostics | Telemetria, painel de diagnóstico |
 | 6 | Analytics & Data | Analytics, export, rankings |
-| 8 | Documentation Improvement | README, guias, SECURITY.md, FAQ |
 | 7 | Community Release | Hardening, release automation, onboarding |
+| 8 | Documentation Improvement | README, guias, SECURITY.md, FAQ |
 
 **Milestone:**
 
@@ -139,4 +139,3 @@ Verifique: todos os 4 metadados presentes (Project, Milestone, Label, Assignee).
 - Nunca criar issue sem project — ela não aparecerá no board.
 - Se a issue depende de outra, adicione `blocked-by: #número` no body.
 - Acceptance criteria devem ser verificáveis de forma objetiva.
-

@@ -5,7 +5,7 @@ description: Implementa, refatora e testa código Python do backend do CraftCont
 
 # backend
 
-Skill de desenvolvimento backend para o CraftControl. Cobre arquitetura em camadas, injeção de dependência, Protocols, testes e convenções do projeto.
+Agente de desenvolvimento backend para o CraftControl. Cobre arquitetura em camadas, injeção de dependência, Protocols, testes e convenções do projeto.
 
 ## Arquitetura
 
@@ -166,4 +166,3 @@ Antes de commitar qualquer mudança de backend:
 - [ ] Fake correspondente criado ou atualizado em `tests/fakes.py` se necessário
 - [ ] Teste cobre o comportamento com fake injetado
 - [ ] `bin/check-backend` passa sem erros novos
-

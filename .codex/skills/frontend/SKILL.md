@@ -5,7 +5,7 @@ description: Implementa, refatora e testa código JavaScript do frontend do Craf
 
 # frontend
 
-Skill de desenvolvimento frontend para o CraftControl. Cobre a arquitetura do módulo JS, padrões de composição, testes e convenções do projeto.
+Agente de desenvolvimento frontend para o CraftControl. Cobre a arquitetura do módulo JS, padrões de composição, testes e convenções do projeto.
 
 ## Arquitetura
 
@@ -165,4 +165,3 @@ Antes de commitar qualquer mudança de frontend:
 - [ ] Helpers de teste em `helpers.js`, não duplicados no arquivo de teste
 - [ ] `beforeEach`/`afterEach` com save/restore se o teste modificar globals
 - [ ] `npm test` passa sem warnings novos
-

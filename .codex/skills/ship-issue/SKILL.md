@@ -1,13 +1,16 @@
 ---
 name: ship-issue
-description: Commita, abre PR e acompanha CI e CodeRabbit até o merge de uma issue do CraftControl.
+description: Commita, abre PR e para — CI, CodeRabbit e merge ficam com o usuário.
 ---
 
 # ship-issue
 
-Terceira fase da execução de uma issue: commit, PR, CI, CodeRabbit e sync Gitea.
+Terceira fase da execução de uma issue: commit, push e PR aberto.
 
 Assume que `/implement` já foi executado — implementação completa e gate verde.
+
+**Escopo deste agente:** commit → push → PR aberto. Ponto final.
+Não monitora CI, não aguarda CodeRabbit, não faz merge.
 
 ## Protocolo
 
@@ -20,7 +23,6 @@ git add <arquivos específicos — nunca git add -A sem revisar>
 git commit -m "$(cat <<'EOF'
 type(scope): descrição
 
-Co-Authored-By: 
 EOF
 )"
 ```
@@ -30,13 +32,16 @@ EOF
 
 ### 2. Push
 
+Peça confirmação explícita ao usuário antes de publicar a branch.
+
 ```bash
 git push -u origin <branch>
+git push gitea <branch>
 ```
 
-Peça confirmação explícita ao usuário imediatamente antes de executar esse push.
+- [ ] Branch no GitHub e no Gitea
 
-- [ ] Branch no remote
+Peça confirmação explícita ao usuário antes de criar o PR.
 
 ### 3. Abrir PR
 
@@ -80,46 +85,54 @@ Metadados obrigatórios:
 - [ ] `--milestone` preenchido com o milestone da issue
 - [ ] `--label` preenchido com a label da issue
 
-### 4. Aguardar CI
+### 4. Reportar e parar
+
+Após o PR aberto, reporte ao usuário:
+- URL do PR
+- Jobs de CI disparados (`gh pr checks`)
+- Qualquer observação relevante sobre o diff
+
+**Pare aqui.** CI, review comments e merge são responsabilidade do usuário.
+
+---
+
+## Modo revisão (acionado manualmente)
+
+Quando o usuário trouxer findings de review (de qualquer fonte — CI, CodeRabbit, reviewer humano, etc.), retome o agente com os comentários e execute:
+
+### R1. Triagem
+
+Para cada finding recebido:
+- Verificar se ainda é válido no código atual
+- Classificar: **bloqueador** (corrigir agora) / **melhoria** (corrigir se simples) / **nitpick** (registrar, não bloquear)
+
+### R2. Aplicar correções
+
+Para cada item bloqueador ou melhoria simples:
+- Corrigir no código
+- `bin/check` local antes de commitar
+- Commit separado por conjunto lógico de fixes
 
 ```bash
-gh run watch --exit-status
+git add <arquivos>
+git commit -m "fix(scope): endereçar findings de review"
+git push origin <branch>
+git push gitea <branch>
 ```
 
-- [ ] CI verde em todos os jobs
-- [ ] Se falhar: `gh run view <id> --job <job-id> --log`, corrigir, novo commit, push
+### R3. Reportar e parar novamente
 
-### 5. Endereçar CodeRabbit
+Reporte ao usuário:
+- O que foi corrigido e o que foi deixado (com justificativa)
+- Se CI precisa rodar novamente
 
-Ao receber findings, usar `/review-pr` para triagem antes de aplicar:
-
-- [ ] Ler todos os findings postados pelo CodeRabbit
-- [ ] Para cada finding: verificar se ainda é válido no código atual
-- [ ] Aplicar todos os bloqueadores e importantes — nenhum finding aberto
-- [ ] Novo commit + push para cada correção
-
-### 6. Merge e sync Gitea
-
-Após aprovação e CI verde, peça confirmação explícita antes de mergear o PR pelo GitHub. Depois confirme o merge antes de sincronizar:
-
-```bash
-gh pr merge <número> --merge
-
-# Confirmar que o merge foi concluído antes de continuar:
-gh pr view <número> --json state,mergedAt --jq -e 'select(.state == "MERGED" and .mergedAt != null)' || { echo "merge não confirmado; interrompendo antes do sync Gitea" >&2; exit 1; }
-
-git checkout main && git pull
-# Só executar após nova confirmação explícita do usuário:
-git push gitea main
-```
-
-- [ ] PR mergeado (state === MERGED confirmado)
-- [ ] Gitea sincronizado
+**Pare aqui.** Não faça merge sem confirmação explícita do usuário.
 
 ## Regras de ouro
 
 - Nunca push direto para `main`.
-- Nunca mergear com CI vermelho.
-- Nunca mergear com findings abertos do CodeRabbit.
+- Nunca mergear sem confirmação explícita do usuário.
 - Nunca commitar segredos — revisar `git diff --staged` antes de commitar.
+- Nunca ficar em loop monitorando CI ou aguardando reviews — age quando acionado.
+
 

@@ -330,6 +330,7 @@ If you use Codex, this repository ships equivalent workflow skills in
 | `start-issue` | Verifica metadados, lê contexto, mapeia código e cria branch |
 | `implement` | Detecta a camada, implementa, testa e faz self-review |
 | `ship-issue` | Commit, PR, CI, CodeRabbit e sync Gitea |
+| `handle-pr-findings` | Triagem explícita de findings, correções e respostas nas threads |
 | `review-pr` | Self-review ou triagem de findings por camada |
 | `backend` | Padrões Python: DI, Protocols, `is None`, composition root e fakes |
 | `frontend` | Padrões JS: injeção de deps, ESM, i18n e testes |

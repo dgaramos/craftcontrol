@@ -49,7 +49,7 @@ PYTHONPATH=apps/backend:. pytest tests/ -q
 cd apps/frontend && npm test
 
 # Gate completo:
-bin/check-backend
+bin/check
 ```
 
 - [ ] Todos os testes passam

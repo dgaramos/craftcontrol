@@ -19,11 +19,11 @@ Número da issue (ex: `42`).
 
 ## Uso
 
-```
+```text
 /execute-issue 42
 ```
 
-Equivale a rodar `/start-issue 42` → `/implement` → `/ship-issue` sem interrupção.
+Equivale a rodar `/start-issue 42` → `/implement` → `/ship-issue` sequencialmente, respeitando as paradas obrigatórias definidas acima antes de cada fase.
 
 Use as skills individuais quando quiser controle por fase — por exemplo, `/start-issue` + pausa para explorar o código manualmente + `/implement` quando estiver pronto.
 

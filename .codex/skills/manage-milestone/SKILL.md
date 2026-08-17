@@ -63,7 +63,7 @@ gh api "repos/dgaramos/craftcontrol/milestones/<número>" \
 ### Listar issues sem milestone (backlog solto)
 
 ```bash
-gh issue list --state open --json number,title,milestone \
+gh issue list --state open --limit 1000 --json number,title,milestone \
   --jq '.[] | select(.milestone == null) | "\(.number)\t\(.title)"'
 ```
 

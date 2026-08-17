@@ -34,6 +34,8 @@ EOF
 git push -u origin <branch>
 ```
 
+Peça confirmação explícita ao usuário imediatamente antes de executar esse push.
+
 - [ ] Branch no remote
 
 ### 3. Abrir PR
@@ -81,7 +83,7 @@ Metadados obrigatórios:
 ### 4. Aguardar CI
 
 ```bash
-gh run watch
+gh run watch --exit-status
 ```
 
 - [ ] CI verde em todos os jobs
@@ -98,15 +100,16 @@ Ao receber findings, usar `/review-pr` para triagem antes de aplicar:
 
 ### 6. Merge e sync Gitea
 
-Após aprovação e CI verde, mergear o PR pelo GitHub e confirmar o merge antes de sincronizar:
+Após aprovação e CI verde, peça confirmação explícita antes de mergear o PR pelo GitHub. Depois confirme o merge antes de sincronizar:
 
 ```bash
 gh pr merge <número> --merge
 
 # Confirmar que o merge foi concluído antes de continuar:
-gh pr view <número> --json state,mergedAt --jq 'select(.state == "MERGED")'
+gh pr view <número> --json state,mergedAt --jq -e 'select(.state == "MERGED" and .mergedAt != null)' || { echo "merge não confirmado; interrompendo antes do sync Gitea" >&2; exit 1; }
 
 git checkout main && git pull
+# Só executar após nova confirmação explícita do usuário:
 git push gitea main
 ```
 

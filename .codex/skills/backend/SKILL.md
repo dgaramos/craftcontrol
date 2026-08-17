@@ -11,7 +11,7 @@ Skill de desenvolvimento backend para o CraftControl. Cobre arquitetura em camad
 
 O backend é um monólito modular em Flask com runtime orientado a eventos. Estrutura relevante:
 
-```
+```text
 apps/backend/minecraft_manager/
 ├── composition.py       ← único composition root; monta o grafo de objetos real
 ├── ports.py             ← Protocols que definem as fronteiras substituíveis
@@ -84,7 +84,7 @@ docker = DockerOperations(container, project)
 
 ### Direção das dependências
 
-```
+```text
 HTTP (Flask routes) → ManagerService → ports/adapters
 ```
 

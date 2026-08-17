@@ -88,7 +88,7 @@ Estrutura obrigatória:
 ## Acceptance criteria
 
 - [ ] <Given [contexto] When [ação] Then [resultado esperado]>
-- [ ] Quality gate passa (`bin/check-backend` ou `npm test`)
+- [ ] Quality gate passa (`bin/check`)
 ```
 
 Critérios de aceite no formato Given/When/Then — verificáveis objetivamente. Não use "melhorar" ou "refatorar" sem critério concreto.
@@ -115,15 +115,13 @@ EOF
 )" \
   --assignee dgaramos \
   --label "<label>" \
-  --milestone "<nome-do-milestone>"
+  --milestone "<nome-do-milestone>" \
+  --project "<nome-do-project>"
 
-# Verificar autenticação e escopo project antes de adicionar ao board:
+# Validar autenticação e acesso ao Project antes de criar a issue:
 gh auth status
-# Se o escopo project não estiver disponível:
-# gh auth refresh -s project
-
-# Atribuir ao project board:
-gh project item-add <número-do-project> --owner dgaramos --url <url-da-issue>
+# Interromper se a autenticação ou o acesso ao Project falhar:
+gh project list --owner dgaramos >/dev/null
 ```
 
 ### 6. Confirmar

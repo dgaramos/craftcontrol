@@ -42,7 +42,7 @@ gh project item-add 2 --owner dgaramos --url https://github.com/dgaramos/craftco
 ### Listar itens de um project
 
 ```bash
-gh project item-list <número-do-project> --owner dgaramos --limit 50
+gh project item-list <número-do-project> --owner dgaramos --limit 1000
 ```
 
 ### Verificar se uma issue está em algum project
@@ -65,7 +65,7 @@ gh project item-edit --project-id <project-id> --id <item-id> --field-id <field-
 
 ```bash
 # Listar itens para encontrar o item-id
-gh project item-list <número-do-project> --owner dgaramos --format json | \
+gh project item-list <número-do-project> --owner dgaramos --limit 1000 --format json | \
   jq '.items[] | select(.content.number == <número-da-issue>) | .id'
 
 # Remover

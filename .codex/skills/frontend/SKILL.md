@@ -11,7 +11,7 @@ Skill de desenvolvimento frontend para o CraftControl. Cobre a arquitetura do m�
 
 O frontend é vanilla JS ESM sem bundler. A estrutura relevante:
 
-```
+```text
 apps/frontend/static/js/
 ├── api.js                  ← cliente HTTP (fetch wrapper)
 ├── auth.js                 ← requireSession
@@ -35,7 +35,7 @@ apps/frontend/static/js/
 
 ### Composição por injeção de dependência
 
-Features recebem todas as suas dependências via objeto no construtor — nunca importam globais diretamente:
+Features recebem todas as suas dependências via objeto na função de fábrica — nunca importam globais diretamente:
 
 ```js
 // ✅ Correto
@@ -146,7 +146,7 @@ afterEach(() => {
 ### Regras de teste
 
 - [ ] Teste comportamento observável — não implementação interna
-- [ ] Não use `@patch` onde injeção resolve — passe um fake como dep
+- [ ] Prefira fakes injetados; quando mocking for necessário, use `jest.spyOn` para métodos e `jest.mock` para módulos
 - [ ] Testes determinísticos — sem `setTimeout` real, sem ordem de execução implícita
 - [ ] Um `describe` por feature ou comportamento; `it` com descrição do comportamento esperado
 

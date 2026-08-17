@@ -172,7 +172,7 @@ Priorize findings em três níveis:
 
 Formato de cada finding:
 
-```
+```text
 [arquivo:linha] Categoria: descrição curta
 Atual: <o que está errado>
 Sugerido: <como corrigir>

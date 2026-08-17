@@ -39,6 +39,9 @@ Se acceptance criteria forem vagos ou o escopo for ambíguo, pergunte ao autor �
 
 Leia nesta ordem:
 
+- [ ] `README.md`
+- [ ] Todos os arquivos Markdown sob `roadmap/`, quando o diretório existir
+
 - [ ] `CLAUDE.md` — constraints e regras do projeto
 - [ ] `AGENTS.md` — arquitetura, padrões e decisões de design
 - [ ] `CONTRIBUTING.md` — workflow de PR, convenções de commit e checklist

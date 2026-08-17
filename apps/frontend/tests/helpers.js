@@ -24,7 +24,9 @@ export function makeEl(extra = {}) {
     closest: jest.fn(() => null),
     classList: { add: jest.fn(), remove: jest.fn(), toggle: jest.fn() },
     // DOM mutation methods needed by template cloning
-    replaceChildren: jest.fn(),
+    replaceChildren: jest.fn(function (...children) {
+      this.innerHTML = children.map((child) => typeof child === "string" ? child : child?.textContent || "").join("");
+    }),
     appendChild: jest.fn(),
     insertAdjacentHTML: jest.fn(),
     append: jest.fn(),
@@ -87,7 +89,7 @@ export function makeAnalyticsDeps(stateOverrides = {}) {
       ...stateOverrides,
     },
   };
-  const content = { innerHTML: "", querySelectorAll: jest.fn(() => []) };
+  const content = { innerHTML: "", replaceChildren(markup) { this.innerHTML = String(markup); }, querySelectorAll: jest.fn(() => []) };
   const t = (key, ...args) => (args.length ? `${key}(${args.join(",")})` : key);
   const escapeHtml = (s) => String(s ?? "").replace(/[&<>'"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[c]);
   const uiIcon = (name) => `<svg icon="${name}"/>`;

@@ -1,11 +1,11 @@
 export function renderMarkup(target, markup) {
-  if (typeof document === "undefined" || typeof target.replaceChildren !== "function") {
-    target.innerHTML = markup;
+  if (typeof target.replaceChildren !== "function") throw new TypeError("Target does not support DOM replacement");
+  if (typeof document === "undefined") {
+    target.replaceChildren(markup);
     return;
   }
-  const template = document.createElement("template");
-  template.innerHTML = markup;
-  target.replaceChildren(template.content.cloneNode(true));
+  const fragment = document.createRange().createContextualFragment(markup);
+  target.replaceChildren(fragment);
 }
 
 export function renderTemplate(target, templateId, setup) {

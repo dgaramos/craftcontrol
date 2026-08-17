@@ -1,5 +1,6 @@
 .env
-.claude/
+.claude/*
+!.claude/agents/
 .codex/*
 !.codex/skills/
 __pycache__/

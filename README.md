@@ -341,6 +341,23 @@ As skills são instruções do repositório: o Codex continua seguindo
 `AGENTS.md`, as instruções de segurança e a confirmação do usuário para
 ações externas como push, merge e deploy.
 
+### Claude Code skills
+
+If you use Claude Code, this repository ships a set of skills in `.claude/agents/` that encode the project's workflow and conventions. Invoke them with `/skill-name`:
+
+| Skill | When to use |
+|---|---|
+| `/execute-issue <n>` | Executa uma issue do início ao merge — orquestra as três fases abaixo |
+| `/start-issue <n>` | Verifica metadados, lê contexto obrigatório, mapeia código, cria branch |
+| `/implement` | Detecta camada (backend/frontend), carrega skill especializada, implementa e testa |
+| `/ship-issue` | Commit, PR com metadados, CI, CodeRabbit, sync Gitea |
+| `/review-pr <n>` | Self-review ou triagem de findings — checklist por camada (backend, frontend, docs) |
+| `/backend` | Padrões Python: DI, Protocols, `is None`, composition root, fakes |
+| `/frontend` | Padrões JS: injeção de deps, helpers compartilhados, ESM, i18n |
+| `/create-issue` | Workshop PM/Dev Hat → cria issue bem formada com todos os metadados |
+| `/manage-project` | Adiciona/lista/audita issues nos project boards |
+| `/manage-milestone` | Atribui/lista/audita milestones, detecta backlog solto |
+
 ## License and trademarks
 
 Copyright 2026 Danilo Ramos.

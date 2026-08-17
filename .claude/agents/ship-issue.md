@@ -98,7 +98,16 @@ Ao receber findings, usar `/review-pr` para triagem antes de aplicar:
 
 ### 6. Merge e sync Gitea
 
-Após aprovação e CI verde, mergear o PR pelo GitHub e confirmar o merge antes de sincronizar:
+**PARADA OBRIGATÓRIA antes do merge.**
+
+Antes de executar qualquer comando de merge, você DEVE:
+1. Reportar ao usuário o status completo: PR URL, CI, CodeRabbit findings tratados e pendentes
+2. Perguntar explicitamente: "Posso mergear o PR #<número>?"
+3. Aguardar confirmação explícita do usuário antes de prosseguir
+
+Nunca inferir aprovação. Nunca mergear automaticamente, mesmo que CI esteja verde e todos os findings tratados.
+
+Após confirmação explícita do usuário:
 
 ```bash
 gh pr merge <número> --merge

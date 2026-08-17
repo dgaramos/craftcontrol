@@ -1,10 +1,10 @@
-export function createPlayersWorkspace({ state, content, t, api, $, escapeHtml, toast, playerSettingsMarkup, bindSegmentedControls, bindSettingFields, formatDuration, formatDate, renderPlayerDetail }) {
+export function createPlayersWorkspace({ state, content, t, localized, api, $, escapeHtml, toast, playerSettingsMarkup, bindSegmentedControls, bindSettingFields, formatDuration, formatDate, renderPlayerDetail }) {
 return async function renderPlayersPanel() {
   const tplScreen = $("#tpl-players-screen");
   const clone = tplScreen.content.cloneNode(true);
-  clone.querySelector(".eyebrow").textContent = state.locale === "pt" ? "JOGADORES" : "PLAYERS";
+  clone.querySelector(".eyebrow").textContent = localized("JOGADORES", "PLAYERS", "JUGADORES");
   clone.querySelector("h3").textContent = t("allPlayers");
-  clone.querySelector("p").textContent = state.locale === "pt" ? "Selecione uma pessoa para abrir sua ficha, histórico e permissões." : "Select a person to open their profile, history, and permissions.";
+  clone.querySelector("p").textContent = localized("Selecione uma pessoa para abrir sua ficha, histórico e permissões.", "Select a person to open their profile, history, and permissions.", "Selecciona una persona para ver su ficha, historial y permisos.");
   clone.querySelector("#player-search").placeholder = t("searchPlayers");
   clone.querySelector("[data-player-filter=all]").textContent = t("filterAll");
   clone.querySelector("[data-player-filter=online]").textContent = t("filterOnline");
@@ -82,8 +82,8 @@ function renderPlayerCards(container, list, access = {}) {
   const tpl = $("#tpl-player-roster-row");
   list.forEach((player) => {
     const account = access[player.name.toLocaleLowerCase()];
-    const gameRole = player.operator ? (state.locale === "pt" ? "Operador Minecraft" : "Minecraft operator") : (state.locale === "pt" ? "Membro Minecraft" : "Minecraft member");
-    const panelRole = account?.status === "active" ? `CraftControl · ${account.role}` : (state.locale === "pt" ? "Sem acesso ao painel" : "No panel access");
+    const gameRole = player.operator ? localized("Operador Minecraft", "Minecraft operator", "Operador de Minecraft") : localized("Membro Minecraft", "Minecraft member", "Miembro de Minecraft");
+    const panelRole = account?.status === "active" ? `CraftControl · ${account.role}` : localized("Sem acesso ao painel", "No panel access", "Sin acceso al panel");
     const clone = tpl.content.cloneNode(true);
     const article = clone.querySelector("article");
     article.className = `player-roster-row ${player.online ? "is-online" : "is-offline"}`;

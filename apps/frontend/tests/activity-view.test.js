@@ -1,3 +1,4 @@
+import { jest } from "@jest/globals";
 import { createActivityView } from "../static/js/features/analytics/activity.js";
 
 function makeDeps(locale = "en") {
@@ -74,6 +75,24 @@ describe("createActivityView — eventsMarkup", () => {
 });
 
 describe("createActivityView — eventsMarkup event details", () => {
+  test("showDeathDetails populates dialog and opens it", () => {
+    const heading = { replaceChildren: jest.fn() };
+    const details = { replaceChildren: jest.fn() };
+    const dialog = { querySelector: jest.fn((selector) => selector === "h2" ? heading : details), showModal: jest.fn() };
+    const deps = { ...makeDeps(), $: jest.fn(() => dialog) };
+    const { showDeathDetails } = createActivityView(deps);
+    const previousDocument = globalThis.document;
+    globalThis.document = { querySelector: jest.fn(() => dialog), createRange: () => ({ createContextualFragment: () => ({}) }) };
+    try {
+      showDeathDetails({ topic: "player.death", timestamp: 1700000000, player: { name: "Hero" }, source: "server", details: { cause: "fall" } });
+      expect(heading.replaceChildren).toHaveBeenCalled();
+      expect(details.replaceChildren).toHaveBeenCalled();
+      expect(dialog.showModal).toHaveBeenCalled();
+    } finally {
+      globalThis.document = previousDocument;
+    }
+  });
+
   test("death cause appears in details", () => {
     const { eventsMarkup } = createActivityView(makeDeps());
     const events = [{ topic: "player.death", timestamp: 1700000000, player: { id: "u1", name: "P" }, source: "server", details: { cause: "fall" } }];

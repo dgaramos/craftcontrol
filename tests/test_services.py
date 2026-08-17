@@ -274,13 +274,13 @@ def test_refreshing_flag_is_false_after_refresh(tmp_path: Path) -> None:
 def test_initialize_without_runtime_starts_refresh(tmp_path: Path) -> None:
     refreshed = threading.Event()
     service = _make_service(tmp_path)
-    original = service.refresh
+    original = service._reconciliation.refresh
 
     def refresh_and_signal(reason: str = "manual") -> None:
         original(reason)
         refreshed.set()
 
-    service.refresh = refresh_and_signal  # type: ignore[method-assign]
+    service._reconciliation.refresh = refresh_and_signal  # type: ignore[method-assign]
     service.initialize()
     assert refreshed.wait(timeout=10), "refresh did not run"
 
@@ -288,13 +288,13 @@ def test_initialize_without_runtime_starts_refresh(tmp_path: Path) -> None:
 def test_initialize_starts_runtime_when_attached(tmp_path: Path) -> None:
     refreshed = threading.Event()
     service = _make_service(tmp_path)
-    original = service.refresh
+    original = service._reconciliation.refresh
 
     def refresh_and_signal(reason: str = "manual") -> None:
         original(reason)
         refreshed.set()
 
-    service.refresh = refresh_and_signal  # type: ignore[method-assign]
+    service._reconciliation.refresh = refresh_and_signal  # type: ignore[method-assign]
     runtime = FakeRuntime()
     service.attach_runtime(runtime)  # type: ignore[arg-type]
     service.initialize()
@@ -454,7 +454,7 @@ def test_second_request_within_cooldown_is_coalesced(tmp_path: Path) -> None:
     service = _make_service(tmp_path)
     first_started = threading.Event()
     call_count = 0
-    original_snapshot = service.request_telemetry_snapshot
+    original_snapshot = service._reconciliation.request_telemetry_snapshot
 
     def counted_snapshot(reason: str) -> int:
         nonlocal call_count
@@ -462,7 +462,7 @@ def test_second_request_within_cooldown_is_coalesced(tmp_path: Path) -> None:
         first_started.set()
         return original_snapshot(reason)
 
-    service.request_telemetry_snapshot = counted_snapshot  # type: ignore[method-assign]
+    service._reconciliation.request_telemetry_snapshot = counted_snapshot  # type: ignore[method-assign]
 
     events: list[str] = []
     original_publish = service.broker.publish

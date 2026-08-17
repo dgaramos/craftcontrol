@@ -1,28 +1,22 @@
 from __future__ import annotations
 
-import threading
-import re
-import time
 from typing import Any
 
 from .config import Settings
-from .schema import GAMERULES, PROPERTY_NAMES, SETTINGS, validate_value
 from .events import EventBroker
 from .ports import ContainerOperations, EventPublisher, RuntimeSupervisor, ServerConfiguration, ServerConsole, StateStore
 from .players import PlayerService
-from .telemetry import PREFIX as TELEMETRY_PREFIX, parse_telemetry_line
 from .telemetry_service import TelemetryService
+from .server import WorldService
+from .reconciliation import ReconciliationService
 
 
 class ManagerService:
-    WORLD_ACTIONS = {
-        "day": ["time", "set", "day"],
-        "night": ["time", "set", "night"],
-        "clear-weather": ["weather", "clear"],
-    }
-    TIME_PRESETS = {"sunrise", "day", "noon", "sunset", "night", "midnight"}
-    WEATHER_TYPES = {"clear", "rain", "thunder"}
-    TIME_QUERIES = {"daytime", "gametime", "day"}
+    # Class-level constants preserved for callers that reference them directly.
+    WORLD_ACTIONS = WorldService.WORLD_ACTIONS
+    TIME_PRESETS = WorldService.TIME_PRESETS
+    WEATHER_TYPES = WorldService.WEATHER_TYPES
+    TIME_QUERIES = WorldService.TIME_QUERIES
 
     def __init__(
         self,
@@ -36,6 +30,8 @@ class ManagerService:
         runtime: RuntimeSupervisor | None = None,
         player_service: PlayerService | None = None,
         telemetry_service: TelemetryService | None = None,
+        world_service: WorldService | None = None,
+        reconciliation_service: ReconciliationService | None = None,
     ) -> None:
         self.repository = repository
         self.files = files
@@ -58,14 +54,16 @@ class ManagerService:
             )
         self.telemetry_service = telemetry_service
         self.runtime = runtime
-        self._refresh_lock = threading.Lock()
-        self._refreshing = False
-        self._pending_rules: set[str] = set()
-        self._pending_rules_lock = threading.Lock()
-        self._gamerule_worker_running = False
-        self._telemetry_sync_lock = threading.Lock()
-        self._telemetry_sync_running = False
-        self._telemetry_last_request = 0.0
+
+        self._world = world_service or WorldService(self.bedrock, self.broker)
+        self._reconciliation = reconciliation_service or ReconciliationService(
+            repository=self.repository,
+            files=self.files,
+            bedrock=self.bedrock,
+            broker=self.broker,
+            player_service=self.player_service,
+            telemetry_service=self.telemetry_service,
+        )
 
     @classmethod
     def build(cls, settings: Settings) -> "ManagerService":
@@ -85,12 +83,16 @@ class ManagerService:
             self.runtime.start()
         self.refresh_async(reason="manager-startup")
 
+    # ------------------------------------------------------------------
+    # State
+    # ------------------------------------------------------------------
+
     @property
     def refreshing(self) -> bool:
-        return self._refreshing
+        return self._reconciliation.refreshing
 
     def state(self) -> dict[str, Any]:
-        return self.repository.snapshot(self._refreshing)
+        return self.repository.snapshot(self._reconciliation.refreshing)
 
     def public_state(self) -> dict[str, Any]:
         snapshot = self.state()
@@ -98,138 +100,48 @@ class ManagerService:
         snapshot.pop("bootstrap", None)
         return snapshot
 
+    # ------------------------------------------------------------------
+    # Reconciliation delegates
+    # ------------------------------------------------------------------
+
     def refresh(self, reason: str = "manual") -> None:
-        if not self._refresh_lock.acquire(blocking=False):
-            return
-        self._refreshing = True
-        started = time.time()
-        self.broker.publish("state.reconciliation.started", reason, {"scope": "full"})
-        try:
-            _, env_values = self.files.read_env()
-            properties = self.files.read_properties()
-            settings = {key: env_values.get(key) or properties.get(PROPERTY_NAMES.get(key, ""), "") for key in SETTINGS}
-            self.repository.store("settings", settings, "env+server.properties")
-            gamerules, players, online, maximum, xuids = self.bedrock.query_state()
-            if gamerules:
-                self.repository.store("gamerules", gamerules, "bedrock-console")
-            if maximum == 0:
-                maximum = int(env_values.get("MAX_PLAYERS") or properties.get("max-players") or 0)
-            if xuids:
-                self.repository.store("known_players", xuids, "bedrock-log")
-            self.player_service.reconcile_online_players(players, xuids, "bedrock-console")
-            self.repository.replace("players", {name: "online" for name in players}, "bedrock-console")
-            self.repository.store("server", {"online": str(online), "max_players": str(maximum)}, "bedrock-console")
-            self.refresh_permissions(publish=False)
-            self.player_service.bootstrap(players)
-            self.broker.publish("state.changed", reason, {"domains": ["settings", "gamerules", "players", "server"]})
-            self.request_telemetry_snapshot_async(reason)
-        except Exception as error:
-            self.broker.publish("state.reconciliation.failed", reason, {"error": str(error)[:240]})
-            raise
-        finally:
-            self.broker.publish("state.reconciliation.finished", reason, {"duration_seconds": time.time() - started})
-            self._refreshing = False
-            self._refresh_lock.release()
+        self._reconciliation.refresh(reason)
 
     def refresh_async(self, reason: str = "manual") -> None:
-        threading.Thread(target=self.refresh, args=(reason,), name="state-refresh", daemon=True).start()
+        self._reconciliation.refresh_async(reason)
 
     def refresh_gamerules_async(self, rules: set[str]) -> None:
-        with self._pending_rules_lock:
-            self._pending_rules.update(rules)
-            if self._gamerule_worker_running:
-                return
-            self._gamerule_worker_running = True
+        self._reconciliation.refresh_gamerules_async(rules)
 
-        def work() -> None:
-            try:
-                while True:
-                    time.sleep(2)
-                    with self._pending_rules_lock:
-                        pending = set(self._pending_rules)
-                        self._pending_rules.clear()
-                    if not pending:
-                        return
-                    with self._refresh_lock:
-                        self._refreshing = True
-                        try:
-                            values = self.bedrock.query_gamerules(pending)
-                            if values:
-                                self.repository.store("gamerules", values, "targeted-console")
-                                self.broker.publish("state.changed", "targeted-console", {"domains": ["gamerules"], "keys": sorted(values)})
-                        finally:
-                            self._refreshing = False
-            finally:
-                with self._pending_rules_lock:
-                    self._gamerule_worker_running = False
-                    restart = bool(self._pending_rules)
-                if restart:
-                    self.refresh_gamerules_async(set())
-        threading.Thread(target=work, name="gamerule-refresh", daemon=True).start()
+    def request_telemetry_snapshot_async(self, reason: str) -> None:
+        self._reconciliation.request_telemetry_snapshot_async(reason)
 
-    def player_event(self, player: str, connected: bool, xuid: str = "") -> None:
-        self.player_service.observe_presence(player, connected, xuid)
+    def request_telemetry_snapshot(self, reason: str) -> int:
+        return self._reconciliation.request_telemetry_snapshot(reason)
 
-    def close_online_sessions(self, reason: str) -> list[str]:
-        """Application boundary used by lifecycle supervisors on abrupt stops."""
-        return self.player_service.close_online_sessions(reason)
-
-    def player_death_event(self, player: str, cause: str, raw: str) -> bool:
-        return self.player_service.record_derived_death(player, cause, raw)
+    # ------------------------------------------------------------------
+    # Telemetry event ingestion
+    # ------------------------------------------------------------------
 
     def telemetry_event(self, envelope: dict[str, Any]) -> None:
         self.telemetry_service.ingest(envelope, self.request_telemetry_snapshot_async)
 
-    def request_telemetry_snapshot_async(self, reason: str) -> None:
-        with self._telemetry_sync_lock:
-            now = time.monotonic()
-            if self._telemetry_sync_running or now - self._telemetry_last_request < 5:
-                self.broker.publish("telemetry.snapshot.coalesced", reason)
-                return
-            self._telemetry_sync_running = True
-            self._telemetry_last_request = now
+    # ------------------------------------------------------------------
+    # World and time delegates
+    # ------------------------------------------------------------------
 
-        def work() -> None:
-            try:
-                self.request_telemetry_snapshot(reason)
-            finally:
-                with self._telemetry_sync_lock:
-                    self._telemetry_sync_running = False
+    def run_world_action(self, action: str) -> None:
+        self._world.run_world_action(action)
 
-        threading.Thread(target=work, name="telemetry-sync", daemon=True).start()
+    def time_action(self, action: str, payload: Any) -> dict[str, Any]:
+        return self._world.time_action(action, payload)
 
-    def request_telemetry_snapshot(self, reason: str) -> int:
-        try:
-            self.repository.store("telemetry", {
-                "status": "syncing", "sync_reason": reason, "last_request_at": str(time.time()),
-            }, "manager")
-            logs = self.bedrock.request_telemetry_snapshot()
-            accepted = 0
-            for line in logs.splitlines():
-                if TELEMETRY_PREFIX not in line:
-                    continue
-                envelope = parse_telemetry_line(line)
-                if envelope:
-                    self.telemetry_event(envelope)
-                    accepted += 1
-            self.broker.publish("telemetry.snapshot.requested", reason)
-            self.broker.publish("telemetry.snapshot.read", reason, {"envelopes": accepted})
-            if accepted == 0 or self.state().get("telemetry", {}).get("status") != "healthy":
-                message = "snapshot returned no envelopes" if accepted == 0 else "snapshot did not finish"
-                self.repository.store("telemetry", {"status": "degraded", "last_error": message}, "manager")
-                self.broker.publish("telemetry.snapshot.incomplete", reason, {"envelopes": accepted, "error": message})
-            return accepted
-        except Exception as error:
-            self.repository.store("telemetry", {
-                "status": "degraded", "last_error": str(error)[:240],
-            }, "manager")
-            self.broker.publish("telemetry.snapshot.failed", reason, {"error": str(error)[:240]})
-            return 0
-
-    def refresh_permissions(self, publish: bool = True) -> None:
-        self.player_service.refresh_permissions(publish)
+    # ------------------------------------------------------------------
+    # Settings and gamerules
+    # ------------------------------------------------------------------
 
     def save_settings(self, payload: Any) -> list[str]:
+        from .schema import SETTINGS, validate_value
         if not isinstance(payload, dict):
             raise TypeError("Formato inválido")
         changes = {key: validate_value(SETTINGS[key], value) for key, value in payload.items() if key in SETTINGS}
@@ -241,6 +153,7 @@ class ManagerService:
         return list(changes)
 
     def set_gamerule(self, rule: str, value: Any) -> str:
+        from .schema import GAMERULES, validate_value
         if rule not in GAMERULES:
             raise KeyError(rule)
         validated = validate_value(GAMERULES[rule], value)
@@ -249,13 +162,22 @@ class ManagerService:
         self.broker.publish("state.changed", "manager", {"domains": ["gamerules"], "keys": [rule]})
         return validated
 
-    def run_world_action(self, action: str) -> None:
-        if action not in self.WORLD_ACTIONS:
-            raise KeyError(action)
-        self.bedrock.send(self.WORLD_ACTIONS[action])
+    # ------------------------------------------------------------------
+    # Player delegates
+    # ------------------------------------------------------------------
 
-    def _bootstrap_operator(self, players: list[str]) -> None:
-        self.player_service.bootstrap(players)
+    def player_event(self, player: str, connected: bool, xuid: str = "") -> None:
+        self.player_service.observe_presence(player, connected, xuid)
+
+    def close_online_sessions(self, reason: str) -> list[str]:
+        """Application boundary used by lifecycle supervisors on abrupt stops."""
+        return self.player_service.close_online_sessions(reason)
+
+    def player_death_event(self, player: str, cause: str, raw: str) -> bool:
+        return self.player_service.record_derived_death(player, cause, raw)
+
+    def refresh_permissions(self, publish: bool = True) -> None:
+        self.player_service.refresh_permissions(publish)
 
     def players(self) -> list[dict[str, Any]]:
         return self.player_service.list_profiles()
@@ -283,46 +205,3 @@ class ManagerService:
 
     def set_player_operator(self, player: str, enabled: bool) -> None:
         self.player_service.set_operator(player, enabled)
-
-    def time_action(self, action: str, payload: Any) -> dict[str, Any]:
-        payload = payload if isinstance(payload, dict) else {}
-        if action == "preset" and payload.get("value") in self.TIME_PRESETS:
-            value = payload["value"]
-            self.bedrock.send(["time", "set", value])
-            self.broker.publish("state.changed", "manager", {"domains": ["time"], "action": action})
-            return {"action": action, "value": value}
-        if action in {"set", "add"}:
-            value = int(payload.get("value"))
-            minimum, maximum = (0, 24000) if action == "set" else (1, 240000)
-            if value < minimum or value > maximum:
-                raise ValueError("valor fora do intervalo")
-            self.bedrock.send(["time", action, str(value)])
-            self.broker.publish("state.changed", "manager", {"domains": ["time"], "action": action})
-            return {"action": action, "value": value}
-        if action == "reset-days":
-            self.bedrock.send(["time", "set", "0"])
-            self.broker.publish("state.changed", "manager", {"domains": ["time"], "action": action})
-            return {"action": action, "value": 0}
-        if action == "query" and payload.get("value") in self.TIME_QUERIES:
-            query = payload["value"]
-            output = self.bedrock.send_and_read(["time", "query", query])
-            numbers = re.findall(r"-?\d+", output)
-            return {"action": action, "query": query, "value": int(numbers[-1]) if numbers else None}
-        if action == "weather" and payload.get("value") in self.WEATHER_TYPES:
-            weather = payload["value"]
-            parts = ["weather", weather]
-            duration = payload.get("duration")
-            if duration not in (None, ""):
-                ticks = int(duration)
-                if ticks < 1 or ticks > 1000000:
-                    raise ValueError("valor fora do intervalo")
-                parts.append(str(ticks))
-            self.bedrock.send(parts)
-            self.broker.publish("state.changed", "manager", {"domains": ["weather"], "action": action})
-            return {"action": action, "value": weather, "duration": duration}
-        if action == "weather-query":
-            output = self.bedrock.send_and_read(["weather", "query"])
-            lowered = output.lower()
-            weather = next((item for item in self.WEATHER_TYPES if item in lowered), "unknown")
-            return {"action": action, "value": weather}
-        raise KeyError(action)

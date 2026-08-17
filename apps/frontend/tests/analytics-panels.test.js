@@ -21,7 +21,8 @@ function makeSharedDeps(stateOverrides = {}) {
       ...stateOverrides,
     },
   };
-  const content = { innerHTML: "", replaceChildren(markup) { this.innerHTML = String(markup); }, querySelectorAll: jest.fn(() => []) };
+  const content = { renderedMarkup: "", children: [], replaceChildren(...children) { this.children = children; this.renderedMarkup = children.filter((child) => typeof child === "string").join(""); }, querySelectorAll: jest.fn(() => []) };
+  Object.defineProperty(content, "innerHTML", { get: () => content.renderedMarkup, set: (value) => { content.renderedMarkup = String(value); } });
   const t = (key) => key === "weekdayShort" ? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] : key;
   const uiIcon = (name) => `<svg icon="${name}"/>`;
   const escapeHtml = (s) => String(s ?? "").replace(/</g, "&lt;");

@@ -50,7 +50,7 @@ gh issue edit 108 --milestone "Fundação Confiável"
 ### Remover milestone de uma issue
 
 ```bash
-gh issue edit <número> --milestone ""
+gh issue edit <número> --remove-milestone
 ```
 
 ### Ver progresso detalhado de um milestone

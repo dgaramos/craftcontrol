@@ -52,7 +52,7 @@ gh pr create \
 
 ## Tipo de mudança
 
-- [ ] feat / fix / refactor / test / docs / ci
+- [ ] feat / fix / refactor / test / docs / ci / chore
 
 ## Checklist
 
@@ -98,14 +98,19 @@ Ao receber findings, usar `/review-pr` para triagem antes de aplicar:
 
 ### 6. Merge e sync Gitea
 
-Após aprovação e CI verde:
+Após aprovação e CI verde, mergear o PR pelo GitHub e confirmar o merge antes de sincronizar:
 
 ```bash
+gh pr merge <número> --merge
+
+# Confirmar que o merge foi concluído antes de continuar:
+gh pr view <número> --json state,mergedAt --jq 'select(.state == "MERGED")'
+
 git checkout main && git pull
 git push gitea main
 ```
 
-- [ ] PR mergeado
+- [ ] PR mergeado (state === MERGED confirmado)
 - [ ] Gitea sincronizado
 
 ## Regras de ouro

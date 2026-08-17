@@ -23,9 +23,10 @@ Número do PR (ex: `107`) ou diff local (`git diff main`).
 gh pr view <número> --json title,body,files
 gh pr diff <número>
 
-# Self-review antes de abrir:
+# Self-review antes de abrir (inclui arquivos novos não rastreados):
 git diff main
 git diff --staged
+git ls-files --others --exclude-standard
 ```
 
 ### 2. Detectar camada e aplicar checklist

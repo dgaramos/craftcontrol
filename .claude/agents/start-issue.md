@@ -16,17 +16,22 @@ Número da issue (ex: `42`).
 ### 1. Verificar a issue
 
 ```bash
-gh issue view <número>
+gh issue view <número> --json number,title,assignees,labels,milestone,projectItems \
+  | jq -e '
+      if (.assignees | length) == 0 then error("assignee ausente")
+      elif (.labels | length) == 0 then error("label ausente")
+      elif .milestone == null then error("milestone ausente")
+      elif (.projectItems | length) == 0 then error("project ausente")
+      else . end
+    '
 ```
 
-Confirme que a issue tem todos os metadados obrigatórios:
+Se algum campo estiver vazio, o comando acima falha — adicione o metadado faltante antes de continuar:
 
-- [ ] Project
-- [ ] Milestone
-- [ ] Label
-- [ ] Assignee
-
-Se faltar algum, adicione antes de continuar.
+- [ ] Assignee presente
+- [ ] Label presente
+- [ ] Milestone presente
+- [ ] Project presente
 
 Se acceptance criteria forem vagos ou o escopo for ambíguo, pergunte ao autor — não interprete por conta própria.
 

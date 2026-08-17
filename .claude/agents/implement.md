@@ -60,10 +60,12 @@ bin/check-backend
 
 ### 4. Self-review
 
-Antes de chamar `/ship-issue`, rodar `/review-pr` no diff local:
+Antes de chamar `/ship-issue`, rodar `/review-pr` no diff local (incluindo arquivos novos):
 
 ```bash
 git diff main
+git diff --staged
+git ls-files --others --exclude-standard
 ```
 
 - [ ] Nenhum bloqueador identificado

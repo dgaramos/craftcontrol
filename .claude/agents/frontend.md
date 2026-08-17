@@ -81,7 +81,7 @@ O CSS e o markup gerado devem funcionar em telas pequenas primeiro. Não assumir
 ## MUST NOT DO
 
 - Usar `var` — sempre `const` ou `let`
-- Usar callbacks — prefer Promises e `async`/`await`
+- Usar callbacks para controle de fluxo assíncrono — usar Promises e `async`/`await` (callbacks de eventos como `addEventListener`, `onclick`, e callbacks síncronos como `map`, `filter`, `forEach` são permitidos)
 - Importar `state`, `api`, `$` diretamente dentro de features
 - Hardcodar strings visíveis ao usuário
 - Criar classes onde funções de fábrica resolvem

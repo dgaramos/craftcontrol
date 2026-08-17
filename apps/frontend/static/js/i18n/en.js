@@ -28,7 +28,7 @@ export const en = {
     queryUnavailable: "The server did not return a readable value.",
     onlinePlayers: "Online players", operatorAccess: "Operator", operatorHelp: "Can use administrative commands in the game.",
     noOnlinePlayers: "No players are online right now.", permissionUpdated: "Permission updated",
-    allPlayers: "All players", playerHistoryHelp: "Permanent profile for everyone who has joined the server.",
+    allPlayers: "All players", playerHistoryHelp: "Permanent profile for everyone who has joined the server.", playersEyebrow: "PLAYERS", selectPlayerPrompt: "Select a person to open their profile, history, and permissions.",
     offline: "Offline", sessions: "Sessions", playTime: "Play time", deaths: "Deaths", firstSeen: "First seen",
     lastSeen: "Last seen", viewHistory: "View history", hideHistory: "Hide history", noHistory: "No events recorded.",
     historyUnavailable: "The server did not return a valid profile for this player.",

@@ -2,9 +2,9 @@ export function createPlayersWorkspace({ state, content, t, api, $, escapeHtml, 
 return async function renderPlayersPanel() {
   const tplScreen = $("#tpl-players-screen");
   const clone = tplScreen.content.cloneNode(true);
-  clone.querySelector(".eyebrow").textContent = state.locale === "pt" ? "JOGADORES" : "PLAYERS";
+  clone.querySelector(".eyebrow").textContent = t("playersEyebrow");
   clone.querySelector("h3").textContent = t("allPlayers");
-  clone.querySelector("p").textContent = state.locale === "pt" ? "Selecione uma pessoa para abrir sua ficha, histórico e permissões." : "Select a person to open their profile, history, and permissions.";
+  clone.querySelector("p").textContent = t("selectPlayerPrompt");
   clone.querySelector("#player-search").placeholder = t("searchPlayers");
   clone.querySelector("[data-player-filter=all]").textContent = t("filterAll");
   clone.querySelector("[data-player-filter=online]").textContent = t("filterOnline");

@@ -50,7 +50,13 @@ class ManagerService:
                 "with all domain repositories injected."
             )
         self.player_service = player_service
-        self.telemetry_service = telemetry_service or TelemetryService(repository, self.broker)
+        if telemetry_service is None:
+            raise TypeError(
+                "telemetry_service is required. "
+                "Use composition.compose_manager() to build ManagerService "
+                "with all domain repositories injected."
+            )
+        self.telemetry_service = telemetry_service
         self.runtime = runtime
         self._refresh_lock = threading.Lock()
         self._refreshing = False

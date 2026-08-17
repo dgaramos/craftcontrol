@@ -26,6 +26,15 @@ function sessionCount(value) {
   return Number.isFinite(sessions) && sessions >= 0 ? sessions : 0;
 }
 
+function metricValue(value) {
+  const metric = Number(value);
+  return Number.isFinite(metric) && metric >= 0 ? metric : 0;
+}
+
+function levelFor(value, maximum) {
+  return Math.max(0, Math.min(4, Math.ceil((metricValue(value) / maximum) * 4)));
+}
+
 function appendText(parent, tag, text, className = "") {
   const element = document.createElement(tag);
   if (className) element.className = className;
@@ -38,7 +47,7 @@ function renderCalendar(target, days, maxDay, formatDuration, sessionsLabel, dat
   const calendar = target.querySelector("[data-trends-calendar]");
   if (!calendar || typeof document === "undefined") return;
   days.forEach((day) => {
-    const level = Math.ceil((Number(day.play_seconds || 0) / maxDay) * 4);
+    const level = levelFor(day.play_seconds, maxDay);
     const article = document.createElement("article");
     article.className = `level-${level}`;
     article.title = dateLabel(day.day);
@@ -58,7 +67,7 @@ function renderHeatmap(target, heatmap, weekdays, maxHeat, formatDuration) {
     appendText(grid, "strong", weekday);
     heatmap.filter((cell) => cell.weekday === weekdayIndex).forEach((cell) => {
       const hour = validHour(cell.hour);
-      const level = Math.ceil((Number(cell.seconds || 0) / maxHeat) * 4);
+      const level = levelFor(cell.seconds, maxHeat);
       const item = appendText(grid, "i", "", `level-${level}`);
       item.title = `${weekday} ${String(hour).padStart(2, "0")}:00 · ${formatDuration(cell.seconds)}`;
     });
@@ -76,9 +85,9 @@ return async function renderTrendsPanel() {
       const definition = periodDefinitions[analytics.periodMetric] || periodDefinitions.play_seconds;
       const ranking = result.rankings?.[analytics.periodMetric] || [];
       const days = result.calendar || [];
-      const maxDay = Math.max(1, ...days.map((day) => Number(day.play_seconds || 0)));
+      const maxDay = Math.max(1, ...days.map((day) => metricValue(day.play_seconds)));
       const heatmap = (result.heatmap || []).filter((cell) => validHour(cell.hour) !== null);
-      const maxHeat = Math.max(1, ...heatmap.map((cell) => Number(cell.seconds || 0)));
+      const maxHeat = Math.max(1, ...heatmap.map((cell) => metricValue(cell.seconds)));
       const weekdays = t("weekdayShort");
       const totals = result.totals || {};
       renderMarkup(target, `<p class="trends-note">${t("collectionStarted")}<small>${escapeHtml(result.timezone || "")} · ${t("updated")} ${formatDate(result.generated_at)}</small></p><section class="trends-summary"><article><small>${t("playTime")}</small><b>${formatDuration(totals.play_seconds || 0)}</b></article><article><small>${t("explorationSessions")}</small><b>${formatRankingValue(totals.sessions, "number")}</b></article><article><small>${t("dailyBlocks")}</small><b>${formatRankingValue((totals.blocks_broken || 0) + (totals.blocks_placed || 0), "number")}</b></article><article><small>${t("dailyKills")}</small><b>${formatRankingValue((totals.mob_kills || 0) + (totals.player_kills || 0), "number")}</b></article><article><small>${t("mostActiveDay")}</small><b>${result.most_active_day ? calendarDate(result.most_active_day.day) : "—"}</b></article></section><div class="period-metric-picker">${Object.entries(periodDefinitions).map(([key, item]) => `<button data-period-metric="${key}" class="${analytics.periodMetric === key ? "active" : ""}" type="button">${t(item.label)}</button>`).join("")}</div><div class="trends-main-grid"><section class="period-ranking block-panel"><div class="ranking-section-title"><span class="eyebrow">${t("periodDaysLabel", analytics.periodDays)}</span><h3>${t("periodRanking")}: ${t(definition.label)}</h3></div>${ranking.length ? `<ol>${ranking.map((entry, index) => `<li><b>${index + 1}</b><button data-period-player="${escapeHtml(entry.player.id)}" type="button">${escapeHtml(entry.player.name)}</button><strong>${formatRankingValue(entry.value, definition.format)}</strong></li>`).join("")}</ol>` : `<div class="trends-zero"><span>${uiIcon("periods")}</span><p>${t("noPeriodData")}</p></div>`}</section><section class="activity-calendar block-panel"><div class="ranking-section-title"><span class="eyebrow">${t("periodDaysLabel", analytics.periodDays)}</span><h3>${t("activityCalendar")}</h3></div><div class="calendar-grid" data-trends-calendar></div></section></div><section class="heatmap-panel block-panel"><div class="ranking-section-title"><span class="eyebrow">${escapeHtml(result.timezone || "")}</span><h3>${t("sessionHeatmap")}</h3></div><div class="heatmap-scroll"><div class="heatmap-grid" data-trends-heatmap></div></div><div class="heatmap-legend"><span>${t("lessActive")}</span><i class="level-0"></i><i class="level-1"></i><i class="level-2"></i><i class="level-3"></i><i class="level-4"></i><span>${t("moreActive")}</span></div></section>`);

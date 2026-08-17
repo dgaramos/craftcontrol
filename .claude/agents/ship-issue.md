@@ -1,13 +1,16 @@
 ---
 name: ship-issue
-description: Commita, abre PR e acompanha CI e CodeRabbit até o merge de uma issue do CraftControl.
+description: Commita, abre PR e para — CI, CodeRabbit e merge ficam com o usuário.
 ---
 
 # ship-issue
 
-Terceira fase da execução de uma issue: commit, PR, CI, CodeRabbit e sync Gitea.
+Terceira fase da execução de uma issue: commit, push e PR aberto.
 
 Assume que `/implement` já foi executado — implementação completa e gate verde.
+
+**Escopo deste agente:** commit → push → PR aberto. Ponto final.
+Não monitora CI, não aguarda CodeRabbit, não faz merge.
 
 ## Protocolo
 
@@ -32,9 +35,10 @@ EOF
 
 ```bash
 git push -u origin <branch>
+git push gitea <branch>
 ```
 
-- [ ] Branch no remote
+- [ ] Branch no GitHub e no Gitea
 
 ### 3. Abrir PR
 
@@ -78,53 +82,52 @@ Metadados obrigatórios:
 - [ ] `--milestone` preenchido com o milestone da issue
 - [ ] `--label` preenchido com a label da issue
 
-### 4. Aguardar CI
+### 4. Reportar e parar
+
+Após o PR aberto, reporte ao usuário:
+- URL do PR
+- Jobs de CI disparados (`gh pr checks`)
+- Qualquer observação relevante sobre o diff
+
+**Pare aqui.** CI, review comments e merge são responsabilidade do usuário.
+
+---
+
+## Modo revisão (acionado manualmente)
+
+Quando o usuário trouxer findings de review (de qualquer fonte — CI, CodeRabbit, reviewer humano, etc.), retome o agente com os comentários e execute:
+
+### R1. Triagem
+
+Para cada finding recebido:
+- Verificar se ainda é válido no código atual
+- Classificar: **bloqueador** (corrigir agora) / **melhoria** (corrigir se simples) / **nitpick** (registrar, não bloquear)
+
+### R2. Aplicar correções
+
+Para cada item bloqueador ou melhoria simples:
+- Corrigir no código
+- `bin/check` local antes de commitar
+- Commit separado por conjunto lógico de fixes
 
 ```bash
-gh run watch
+git add <arquivos>
+git commit -m "fix(scope): endereçar findings de review"
+git push origin <branch>
+git push gitea <branch>
 ```
 
-- [ ] CI verde em todos os jobs
-- [ ] Se falhar: `gh run view <id> --job <job-id> --log`, corrigir, novo commit, push
+### R3. Reportar e parar novamente
 
-### 5. Endereçar CodeRabbit
+Reporte ao usuário:
+- O que foi corrigido e o que foi deixado (com justificativa)
+- Se CI precisa rodar novamente
 
-Ao receber findings, usar `/review-pr` para triagem antes de aplicar:
-
-- [ ] Ler todos os findings postados pelo CodeRabbit
-- [ ] Para cada finding: verificar se ainda é válido no código atual
-- [ ] Aplicar todos os bloqueadores e importantes — nenhum finding aberto
-- [ ] Novo commit + push para cada correção
-
-### 6. Merge e sync Gitea
-
-**PARADA OBRIGATÓRIA antes do merge.**
-
-Antes de executar qualquer comando de merge, você DEVE:
-1. Reportar ao usuário o status completo: PR URL, CI, CodeRabbit findings tratados e pendentes
-2. Perguntar explicitamente: "Posso mergear o PR #<número>?"
-3. Aguardar confirmação explícita do usuário antes de prosseguir
-
-Nunca inferir aprovação. Nunca mergear automaticamente, mesmo que CI esteja verde e todos os findings tratados.
-
-Após confirmação explícita do usuário:
-
-```bash
-gh pr merge <número> --merge
-
-# Confirmar que o merge foi concluído antes de continuar:
-gh pr view <número> --json state,mergedAt --jq 'select(.state == "MERGED")'
-
-git checkout main && git pull
-git push gitea main
-```
-
-- [ ] PR mergeado (state === MERGED confirmado)
-- [ ] Gitea sincronizado
+**Pare aqui.** Não faça merge sem confirmação explícita do usuário.
 
 ## Regras de ouro
 
 - Nunca push direto para `main`.
-- Nunca mergear com CI vermelho.
-- Nunca mergear com findings abertos do CodeRabbit.
+- Nunca mergear sem confirmação explícita do usuário.
 - Nunca commitar segredos — revisar `git diff --staged` antes de commitar.
+- Nunca ficar em loop monitorando CI ou aguardando reviews — age quando acionado.

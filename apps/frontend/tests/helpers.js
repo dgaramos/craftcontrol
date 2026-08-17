@@ -4,7 +4,7 @@ export function makeEl(extra = {}) {
   // content.cloneNode returns a clone that itself has querySelector returning makeEl(),
   // so template cloning in workspace/navigation code never throws on property access.
   const el = {
-    innerHTML: "",
+    renderedMarkup: "",
     textContent: "",
     hidden: false,
     value: "",
@@ -24,13 +24,22 @@ export function makeEl(extra = {}) {
     closest: jest.fn(() => null),
     classList: { add: jest.fn(), remove: jest.fn(), toggle: jest.fn() },
     // DOM mutation methods needed by template cloning
-    replaceChildren: jest.fn(),
+    children: [],
+    replaceChildren: jest.fn(function (...children) {
+      this.children = children;
+      this.renderedMarkup = children.filter((child) => typeof child === "string").join("");
+    }),
     appendChild: jest.fn(),
     insertAdjacentHTML: jest.fn(),
     append: jest.fn(),
     setAttribute: jest.fn(),
     ...extra,
   };
+  Object.defineProperty(el, "innerHTML", {
+    configurable: true,
+    get: () => el.renderedMarkup,
+    set: (value) => { el.renderedMarkup = String(value); },
+  });
   // Add template content stub so any makeEl() can stand in for a <template>.
   // deepEl() is a lazy recursive factory: each level of querySelector returns
   // another deepEl(), so multi-level chains (e.g. span > b) never throw.
@@ -87,7 +96,8 @@ export function makeAnalyticsDeps(stateOverrides = {}) {
       ...stateOverrides,
     },
   };
-  const content = { innerHTML: "", querySelectorAll: jest.fn(() => []) };
+  const content = { renderedMarkup: "", children: [], replaceChildren(...children) { this.children = children; this.renderedMarkup = children.filter((child) => typeof child === "string").join(""); }, querySelectorAll: jest.fn(() => []) };
+  Object.defineProperty(content, "innerHTML", { get: () => content.renderedMarkup, set: (value) => { content.renderedMarkup = String(value); } });
   const t = (key, ...args) => (args.length ? `${key}(${args.join(",")})` : key);
   const escapeHtml = (s) => String(s ?? "").replace(/[&<>'"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[c]);
   const uiIcon = (name) => `<svg icon="${name}"/>`;

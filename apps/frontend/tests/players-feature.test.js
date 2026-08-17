@@ -201,7 +201,8 @@ describe("createPlayersFeature — factory wiring", () => {
   function makeFullDeps() {
     const state = { locale: "en", user: { role: "viewer", capabilities: [] }, analytics: { kind: "all", player: "", page: 1 }, tab: "players" };
     const $ = jest.fn(() => makeEl());
-    const content = { innerHTML: "", querySelector: jest.fn(() => makeEl()), querySelectorAll: jest.fn(() => []) };
+    const content = { renderedMarkup: "", children: [], replaceChildren(...children) { this.children = children; this.renderedMarkup = children.filter((child) => typeof child === "string").join(""); }, querySelector: jest.fn(() => makeEl()), querySelectorAll: jest.fn(() => []) };
+    Object.defineProperty(content, "innerHTML", { get: () => content.renderedMarkup, set: (value) => { content.renderedMarkup = String(value); } });
     const t = (key) => key;
     const localized = (pt, en, es = en) => state.locale === "pt" ? pt : state.locale === "es" ? es : en;
     const api = jest.fn().mockResolvedValue({ players: [] });

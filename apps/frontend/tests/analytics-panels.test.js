@@ -21,7 +21,8 @@ function makeSharedDeps(stateOverrides = {}) {
       ...stateOverrides,
     },
   };
-  const content = { innerHTML: "", querySelectorAll: jest.fn(() => []) };
+  const content = { renderedMarkup: "", children: [], replaceChildren(...children) { this.children = children; this.renderedMarkup = children.filter((child) => typeof child === "string").join(""); }, querySelectorAll: jest.fn(() => []) };
+  Object.defineProperty(content, "innerHTML", { get: () => content.renderedMarkup, set: (value) => { content.renderedMarkup = String(value); } });
   const t = (key) => key === "weekdayShort" ? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] : key;
   const uiIcon = (name) => `<svg icon="${name}"/>`;
   const escapeHtml = (s) => String(s ?? "").replace(/</g, "&lt;");
@@ -278,5 +279,39 @@ describe("renderTrendsPanel — happy path", () => {
     const render = createTrendsPanel(deps);
     await render();
     expect(target.innerHTML).toContain("trends api fail");
+  });
+
+  test("renders calendar and heatmap values through DOM properties", async () => {
+    const deps = makeSharedDeps();
+    const target = makeEl();
+    const calendar = makeEl({ append: jest.fn() });
+    const heatmap = makeEl({ append: jest.fn() });
+    target.querySelector = jest.fn((selector) => selector.includes("calendar") ? calendar : heatmap);
+    deps.$ = jest.fn((sel) => sel === "#trends-content" ? target : makeEl());
+    deps.content.querySelectorAll = jest.fn(() => []);
+    deps.api = jest.fn().mockResolvedValue(trendsResult({
+      calendar: [{ day: "2024-01-15", play_seconds: "bad", sessions: Infinity }],
+      heatmap: [{ weekday: 1, hour: 14, seconds: NaN }, { weekday: 1, hour: 99, seconds: 20 }],
+    }));
+    const created = [];
+    const previousDocument = globalThis.document;
+    globalThis.document = {
+      createRange: () => ({ createContextualFragment: () => ({}) }),
+      createElement: (tag) => {
+        const element = { tagName: tag, children: [], append(child) { this.children.push(child); }, textContent: "", className: "", title: "" };
+        created.push(element);
+        return element;
+      },
+    };
+    try {
+      await createTrendsPanel(deps)();
+      expect(calendar.append).toHaveBeenCalled();
+      expect(heatmap.append).toHaveBeenCalled();
+      expect(created.some((node) => node.className === "level-0")).toBe(true);
+      expect(created.some((node) => node.title.includes("14:00"))).toBe(true);
+      expect(created.some((node) => node.title.includes("99"))).toBe(false);
+    } finally {
+      globalThis.document = previousDocument;
+    }
   });
 });

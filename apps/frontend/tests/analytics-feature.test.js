@@ -31,6 +31,20 @@ describe("createAnalyticsFeature — factory setup", () => {
     expect(deps.content.innerHTML).toContain("rankings-screen");
   });
 
+  test("analytics view switch resets page and requests render", async () => {
+    const deps = makeAnalyticsDeps({ kind: "all", page: 4 });
+    const switchButton = makeEl({ dataset: { analyticsView: "deaths" } });
+    deps.content.querySelectorAll = jest.fn((selector) => selector === "[data-analytics-view]" ? [switchButton] : []);
+    deps.api = jest.fn().mockResolvedValue({ events: [], pages: 1, page: 1, total: 0, summary: {}, players: [] });
+    deps.$ = jest.fn(() => makeEl());
+    const { render } = createAnalyticsFeature(deps);
+    await render();
+    switchButton.onclick();
+    expect(deps.state.analytics.kind).toBe("deaths");
+    expect(deps.state.analytics.page).toBe(1);
+    expect(deps.requestRender).toHaveBeenCalled();
+  });
+
   test("render delegates to renderBlocksPanel for blocks kind", async () => {
     const deps = makeAnalyticsDeps({ kind: "blocks" });
     deps.api = jest.fn().mockResolvedValue({

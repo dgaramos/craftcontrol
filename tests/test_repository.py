@@ -2,7 +2,16 @@ import sqlite3
 import time
 from pathlib import Path
 
+from minecraft_manager.players.repository import SQLitePlayerRepository
 from minecraft_manager.repository import StateRepository
+from minecraft_manager.telemetry_repository import SQLiteTelemetryRepository
+
+
+def _init(tmp_path: Path) -> tuple[StateRepository, SQLitePlayerRepository, SQLiteTelemetryRepository]:
+    path = tmp_path / "state.db"
+    repo = StateRepository(path)
+    repo.initialize()
+    return repo, SQLitePlayerRepository(path), SQLiteTelemetryRepository(path)
 
 
 def test_builds_api_snapshot(tmp_path: Path) -> None:
@@ -31,15 +40,14 @@ def test_records_and_replays_events(tmp_path: Path) -> None:
 
 
 def test_keeps_offline_player_history(tmp_path: Path) -> None:
-    repository = StateRepository(tmp_path / "state.db")
-    repository.initialize()
-    repository.observe_player("VonCrush", True, "99", occurred_at=100)
-    repository.observe_player("VonCrush", False, "99", occurred_at=160)
-    profile = repository.player_profiles()[0]
+    _, player_repo, _ = _init(tmp_path)
+    player_repo.observe_player("VonCrush", True, "99", occurred_at=100)
+    player_repo.observe_player("VonCrush", False, "99", occurred_at=160)
+    profile = player_repo.player_profiles()[0]
     assert not profile["online"]
     assert profile["sessions_count"] == 1
     assert profile["total_play_seconds"] == 60
-    detail = repository.player_profile(profile["id"])
+    detail = player_repo.player_profile(profile["id"])
     assert [event["topic"] for event in detail["history"]] == ["player.disconnected", "player.connected"]
     assert detail["sessions"][0]["duration_seconds"] == 60
     assert not detail["sessions"][0]["active"]
@@ -47,27 +55,25 @@ def test_keeps_offline_player_history(tmp_path: Path) -> None:
 
 
 def test_xuid_unifies_a_temporary_name_profile(tmp_path: Path) -> None:
-    repository = StateRepository(tmp_path / "state.db")
-    repository.initialize()
-    repository.observe_player("Nicole", True, occurred_at=100)
-    repository.observe_player("Nicole", True, "123", occurred_at=110)
-    assert len(repository.player_profiles()) == 1
-    public_id = repository.player_profiles()[0]["id"]
+    _, player_repo, _ = _init(tmp_path)
+    player_repo.observe_player("Nicole", True, occurred_at=100)
+    player_repo.observe_player("Nicole", True, "123", occurred_at=110)
+    assert len(player_repo.player_profiles()) == 1
+    public_id = player_repo.player_profiles()[0]["id"]
     assert "123" not in public_id
-    assert repository.player_profile(public_id) is not None
+    assert player_repo.player_profile(public_id) is not None
 
 
 def test_global_activity_is_filtered_paginated_and_sanitized(tmp_path: Path) -> None:
-    repository = StateRepository(tmp_path / "state.db")
-    repository.initialize()
-    repository.observe_player("VonCrush", True, "private-xuid")
-    repository.observe_player("VonCrush", False, "private-xuid")
-    repository.record_player_death(
+    _, player_repo, _ = _init(tmp_path)
+    player_repo.observe_player("VonCrush", True, "private-xuid")
+    player_repo.observe_player("VonCrush", False, "private-xuid")
+    player_repo.record_player_death(
         "VonCrush", "was slain by Zombie", "private raw log evidence", "bedrock-log", "death-1",
     )
-    repository.set_player_permission("VonCrush", "operator")
+    player_repo.set_player_permission("VonCrush", "operator")
 
-    first = repository.player_activity("all", "VonCrush", "all", "", 0, 1, 2)
+    first = player_repo.player_activity("all", "VonCrush", "all", "", 0, 1, 2)
     assert first["total"] == 4
     assert first["pages"] == 2
     assert len(first["events"]) == 2
@@ -75,24 +81,23 @@ def test_global_activity_is_filtered_paginated_and_sanitized(tmp_path: Path) -> 
     assert "private-xuid" not in serialized
     assert "private raw log evidence" not in serialized
 
-    deaths = repository.player_activity("deaths", "", "server", "", 0, 1, 25)
+    deaths = player_repo.player_activity("deaths", "", "server", "", 0, 1, 25)
     assert deaths["total"] == 1
     assert deaths["summary"]["deaths"] == 1
     assert deaths["events"][0]["details"]["cause"] == "was slain by Zombie"
-    searched = repository.player_activity("deaths", "", "all", "zombie", 0, 1, 25)
+    searched = player_repo.player_activity("deaths", "", "all", "zombie", 0, 1, 25)
     assert searched["total"] == 1
 
 
 def test_global_activity_distinguishes_structured_deaths(tmp_path: Path) -> None:
-    repository = StateRepository(tmp_path / "state.db")
-    repository.initialize()
-    repository.observe_player("Nicole", True, "456")
-    repository.ingest_telemetry({
+    _, player_repo, telemetry_repo = _init(tmp_path)
+    player_repo.observe_player("Nicole", True, "456")
+    telemetry_repo.ingest_telemetry({
         "schema": 1, "sequence": 1, "type": "entity.died", "timestamp": 1,
         "player": {"name": "Nicole"},
         "data": {"victim": "Nicole", "killerType": "minecraft:zombie", "cause": "entityAttack"},
     })
-    structured = repository.player_activity("deaths", "", "structured", "", 0, 1, 25)
+    structured = player_repo.player_activity("deaths", "", "structured", "", 0, 1, 25)
     assert structured["total"] == 1
     assert structured["events"][0]["source"] == "behavior-pack"
     assert structured["events"][0]["details"]["killer"] == "minecraft:zombie"
@@ -100,16 +105,15 @@ def test_global_activity_distinguishes_structured_deaths(tmp_path: Path) -> None
 
 def test_global_activity_prefers_structured_death_without_deleting_derived_evidence(tmp_path: Path) -> None:
     path = tmp_path / "state.db"
-    repository = StateRepository(path)
-    repository.initialize()
-    repository.observe_player("Nicole", True, "456")
-    repository.record_player_death("Nicole", "died", "raw evidence", "bedrock-log", "derived")
-    repository.ingest_telemetry({
+    _, player_repo, telemetry_repo = _init(tmp_path)
+    player_repo.observe_player("Nicole", True, "456")
+    player_repo.record_player_death("Nicole", "died", "raw evidence", "bedrock-log", "derived")
+    telemetry_repo.ingest_telemetry({
         "schema": 1, "sequence": 2, "type": "entity.died", "timestamp": 1,
         "player": {"name": "Nicole"},
         "data": {"victim": "Nicole", "killerType": "minecraft:zombie", "cause": "entityAttack"},
     })
-    result = repository.player_activity("deaths", "", "all", "", 0, 1, 25)
+    result = player_repo.player_activity("deaths", "", "all", "", 0, 1, 25)
     assert result["total"] == 1
     assert result["events"][0]["source"] == "behavior-pack"
     with sqlite3.connect(path) as connection:
@@ -118,23 +122,22 @@ def test_global_activity_prefers_structured_death_without_deleting_derived_evide
 
 
 def test_rankings_combine_manager_and_telemetry_aggregates(tmp_path: Path) -> None:
-    repository = StateRepository(tmp_path / "state.db")
-    repository.initialize()
-    repository.observe_player("VonCrush", True, "private-ranking-xuid", occurred_at=100)
-    repository.observe_player("VonCrush", False, "private-ranking-xuid", occurred_at=220)
-    repository.observe_player("Nicole", True, "456", occurred_at=100)
-    repository.observe_player("Nicole", False, "456", occurred_at=160)
-    repository.ingest_telemetry({
+    _, player_repo, telemetry_repo = _init(tmp_path)
+    player_repo.observe_player("VonCrush", True, "private-ranking-xuid", occurred_at=100)
+    player_repo.observe_player("VonCrush", False, "private-ranking-xuid", occurred_at=220)
+    player_repo.observe_player("Nicole", True, "456", occurred_at=100)
+    player_repo.observe_player("Nicole", False, "456", occurred_at=160)
+    telemetry_repo.ingest_telemetry({
         "schema": 1, "sequence": 1, "type": "snapshot.player", "timestamp": 1,
         "player": {"name": "VonCrush"},
         "data": {"deaths": 2, "mobKills": 8, "blocksBroken": 40, "distance": 123.5, "dimensions": {"overworld": 1, "nether": 1}},
     })
-    repository.ingest_telemetry({
+    telemetry_repo.ingest_telemetry({
         "schema": 1, "sequence": 2, "type": "snapshot.player", "timestamp": 2,
         "player": {"name": "Nicole"},
         "data": {"deaths": 3, "mobKills": 2, "blocksBroken": 60, "distance": 80, "dimensions": {"overworld": 1}},
     })
-    rankings = repository.player_rankings()
+    rankings = player_repo.player_rankings()
     assert rankings["period"] == "lifetime"
     assert rankings["metrics"]["play_time"][0]["player"]["name"] == "VonCrush"
     assert rankings["metrics"]["longest_session"][0]["value"] == 120
@@ -145,21 +148,20 @@ def test_rankings_combine_manager_and_telemetry_aggregates(tmp_path: Path) -> No
 
 
 def test_block_analytics_aggregates_types_ores_and_players(tmp_path: Path) -> None:
-    repository = StateRepository(tmp_path / "state.db")
-    repository.initialize()
-    repository.observe_player("VonCrush", False, "private-99")
-    repository.observe_player("Nicole", False, "private-456")
-    repository.ingest_telemetry({
+    _, player_repo, telemetry_repo = _init(tmp_path)
+    player_repo.observe_player("VonCrush", False, "private-99")
+    player_repo.observe_player("Nicole", False, "private-456")
+    telemetry_repo.ingest_telemetry({
         "schema": 1, "sequence": 1, "type": "snapshot.player", "timestamp": 1,
         "player": {"name": "VonCrush"},
         "data": {"blocksBroken": 5, "blocksPlaced": 4, "brokenByType": {"minecraft:diamond_ore": 3, "minecraft:iron_ore": 2}, "placedByType": {"minecraft:stone": 4}},
     })
-    repository.ingest_telemetry({
+    telemetry_repo.ingest_telemetry({
         "schema": 1, "sequence": 2, "type": "snapshot.player", "timestamp": 2,
         "player": {"name": "Nicole"},
         "data": {"blocksBroken": 5, "blocksPlaced": 2, "brokenByType": {"minecraft:deepslate_diamond_ore": 5}, "placedByType": {"minecraft:oak_planks": 2}},
     })
-    result = repository.block_analytics()
+    result = player_repo.block_analytics()
     assert result["totals"] == {"broken": 10, "placed": 6}
     assert result["ores"]["diamond"] == 8
     assert result["rankings"]["miners"][0]["player"]["name"] == "Nicole"
@@ -170,9 +172,8 @@ def test_block_analytics_aggregates_types_ores_and_players(tmp_path: Path) -> No
 
 
 def test_combat_analytics_has_complete_zero_state(tmp_path: Path) -> None:
-    repository = StateRepository(tmp_path / "state.db")
-    repository.initialize()
-    result = repository.combat_analytics()
+    _, player_repo, _ = _init(tmp_path)
+    result = player_repo.combat_analytics()
     assert result["totals"] == {"deaths": 0, "player_kills": 0, "mob_kills": 0, "damage_dealt": 0, "damage_taken": 0}
     assert result["breakdowns"] == {"causes": [], "opponents": [], "projectiles": []}
     assert result["pvp"] == []
@@ -180,26 +181,25 @@ def test_combat_analytics_has_complete_zero_state(tmp_path: Path) -> None:
 
 
 def test_combat_analytics_aggregates_snapshots_and_structured_deaths(tmp_path: Path) -> None:
-    repository = StateRepository(tmp_path / "state.db")
-    repository.initialize()
-    repository.observe_player("VonCrush", True, "private-99")
-    repository.observe_player("Nicole", True, "private-456")
-    repository.ingest_telemetry({
+    _, player_repo, telemetry_repo = _init(tmp_path)
+    player_repo.observe_player("VonCrush", True, "private-99")
+    player_repo.observe_player("Nicole", True, "private-456")
+    telemetry_repo.ingest_telemetry({
         "schema": 1, "sequence": 1, "type": "snapshot.player", "timestamp": 1,
         "player": {"name": "VonCrush"},
         "data": {"deaths": 1, "playerKills": 2, "mobKills": 8, "damageDealt": 42.5, "damageTaken": 12, "killsByType": {"minecraft:zombie": 6, "minecraft:skeleton": 2}},
     })
-    repository.ingest_telemetry({
+    telemetry_repo.ingest_telemetry({
         "schema": 1, "sequence": 2, "type": "snapshot.player", "timestamp": 2,
         "player": {"name": "Nicole"},
         "data": {"deaths": 3, "playerKills": 1, "mobKills": 4, "damageDealt": 20, "damageTaken": 30},
     })
-    repository.ingest_telemetry({
+    telemetry_repo.ingest_telemetry({
         "schema": 1, "sequence": 3, "type": "entity.died", "timestamp": 3,
         "player": {"name": "Nicole"},
         "data": {"victim": "Nicole", "killer": "VonCrush", "killerType": "minecraft:player", "projectileType": "minecraft:arrow", "cause": "projectile"},
     })
-    result = repository.combat_analytics()
+    result = player_repo.combat_analytics()
     assert result["totals"]["mob_kills"] == 12
     assert result["totals"]["damage_dealt"] == 62.5
     assert result["rankings"]["player_kills"][0]["player"]["name"] == "VonCrush"
@@ -212,9 +212,8 @@ def test_combat_analytics_aggregates_snapshots_and_structured_deaths(tmp_path: P
 
 
 def test_exploration_analytics_has_complete_zero_state(tmp_path: Path) -> None:
-    repository = StateRepository(tmp_path / "state.db")
-    repository.initialize()
-    result = repository.exploration_analytics()
+    _, player_repo, _ = _init(tmp_path)
+    result = player_repo.exploration_analytics()
     assert result["totals"] == {"distance": 0, "dimensions": 0, "dimension_visits": 0, "play_seconds": 0, "sessions": 0, "active_seconds": 0}
     assert result["dimensions"] == []
     assert result["transitions"] == []
@@ -222,27 +221,26 @@ def test_exploration_analytics_has_complete_zero_state(tmp_path: Path) -> None:
 
 
 def test_exploration_analytics_combines_telemetry_and_manager_presence(tmp_path: Path) -> None:
-    repository = StateRepository(tmp_path / "state.db")
-    repository.initialize()
-    repository.observe_player("VonCrush", True, "private-99", occurred_at=100)
-    repository.observe_player("VonCrush", False, "private-99", occurred_at=220)
-    repository.observe_player("Nicole", True, "private-456", occurred_at=100)
-    repository.observe_player("Nicole", False, "private-456", occurred_at=160)
-    repository.ingest_telemetry({
+    _, player_repo, telemetry_repo = _init(tmp_path)
+    player_repo.observe_player("VonCrush", True, "private-99", occurred_at=100)
+    player_repo.observe_player("VonCrush", False, "private-99", occurred_at=220)
+    player_repo.observe_player("Nicole", True, "private-456", occurred_at=100)
+    player_repo.observe_player("Nicole", False, "private-456", occurred_at=160)
+    telemetry_repo.ingest_telemetry({
         "schema": 1, "sequence": 1, "type": "snapshot.player", "timestamp": 1,
         "player": {"name": "VonCrush"},
         "data": {"distance": 120.5, "dimensions": {"minecraft:overworld": 3, "minecraft:nether": 2}, "distanceByDimension": {"minecraft:overworld": 80.5, "minecraft:nether": 40}, "activeTimeByDimension": {"minecraft:overworld": 60, "minecraft:nether": 30}, "firstDimensionVisitAt": {"minecraft:overworld": 1000000000000}, "lastDimensionVisitAt": {"minecraft:overworld": 1000000005000}},
     })
-    repository.ingest_telemetry({
+    telemetry_repo.ingest_telemetry({
         "schema": 1, "sequence": 2, "type": "snapshot.player", "timestamp": 2,
         "player": {"name": "Nicole"},
         "data": {"distance": 80, "dimensions": {"minecraft:overworld": 1}},
     })
-    repository.ingest_telemetry({
+    telemetry_repo.ingest_telemetry({
         "schema": 1, "sequence": 3, "type": "player.dimension.changed", "timestamp": 3,
         "player": {"name": "VonCrush"}, "data": {"from": "minecraft:overworld", "to": "minecraft:nether"},
     })
-    result = repository.exploration_analytics()
+    result = player_repo.exploration_analytics()
     assert result["totals"]["distance"] == 200.5
     assert result["totals"]["play_seconds"] == 180
     assert result["totals"]["dimensions"] == 2
@@ -258,11 +256,10 @@ def test_exploration_analytics_combines_telemetry_and_manager_presence(tmp_path:
 
 
 def test_daily_analytics_records_sessions_and_incremental_telemetry(tmp_path: Path) -> None:
-    repository = StateRepository(tmp_path / "state.db")
-    repository.initialize()
+    _, player_repo, telemetry_repo = _init(tmp_path)
     now = time.time()
-    repository.observe_player("VonCrush", True, "private-daily", occurred_at=now - 120)
-    repository.ingest_telemetry({
+    player_repo.observe_player("VonCrush", True, "private-daily", occurred_at=now - 120)
+    telemetry_repo.ingest_telemetry({
         "schema": 1, "sequence": 1, "type": "snapshot.player", "timestamp": 1,
         "player": {"name": "VonCrush"}, "data": {"blocksBroken": 10, "damageDealt": 5, "distance": 20},
     })
@@ -270,14 +267,14 @@ def test_daily_analytics_records_sessions_and_incremental_telemetry(tmp_path: Pa
         "schema": 1, "sequence": 2, "type": "block.broken", "timestamp": 2,
         "player": {"name": "VonCrush"}, "data": {"blockType": "minecraft:stone"},
     }
-    repository.ingest_telemetry(block)
-    assert not repository.ingest_telemetry(block)[0]
-    repository.ingest_telemetry({
+    telemetry_repo.ingest_telemetry(block)
+    assert not telemetry_repo.ingest_telemetry(block)[0]
+    telemetry_repo.ingest_telemetry({
         "schema": 1, "sequence": 3, "type": "snapshot.player", "timestamp": 3,
         "player": {"name": "VonCrush"}, "data": {"blocksBroken": 11, "damageDealt": 8.5, "distance": 27},
     })
-    repository.observe_player("VonCrush", False, "private-daily", occurred_at=now)
-    result = repository.period_analytics(7)
+    player_repo.observe_player("VonCrush", False, "private-daily", occurred_at=now)
+    result = player_repo.period_analytics(7)
     assert result["period_days"] == 7
     assert result["totals"]["sessions"] == 1
     assert result["totals"]["joins"] == 1

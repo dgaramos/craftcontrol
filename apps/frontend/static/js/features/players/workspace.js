@@ -1,6 +1,18 @@
 export function createPlayersWorkspace({ state, content, t, api, $, escapeHtml, toast, playerSettingsMarkup, bindSegmentedControls, bindSettingFields, formatDuration, formatDate, renderPlayerDetail }) {
 return async function renderPlayersPanel() {
-  content.innerHTML = `<div class="players-screen block-panel"><div class="section-heading"><div><span class="eyebrow">${state.locale === "pt" ? "JOGADORES" : "PLAYERS"}</span><h3>${t("allPlayers")}</h3><p>${state.locale === "pt" ? "Selecione uma pessoa para abrir sua ficha, histórico e permissões." : "Select a person to open their profile, history, and permissions."}</p></div></div><div id="player-overview" class="player-overview" hidden></div><div class="player-toolbar" hidden><input id="player-search" type="search" placeholder="${t("searchPlayers")}" autocomplete="off"><div class="player-filters"><button class="active" data-player-filter="all">${t("filterAll")}</button><button data-player-filter="online">${t("filterOnline")}</button><button data-player-filter="offline">${t("filterOffline")}</button><button data-player-filter="operator">${t("filterOperators")}</button></div></div><div class="loading-players">${t("checking")}</div></div>${playerSettingsMarkup()}`;
+  const tplScreen = $("#tpl-players-screen");
+  const clone = tplScreen.content.cloneNode(true);
+  clone.querySelector(".eyebrow").textContent = t("playersEyebrow");
+  clone.querySelector("h3").textContent = t("allPlayers");
+  clone.querySelector("p").textContent = t("selectPlayerPrompt");
+  clone.querySelector("#player-search").placeholder = t("searchPlayers");
+  clone.querySelector("[data-player-filter=all]").textContent = t("filterAll");
+  clone.querySelector("[data-player-filter=online]").textContent = t("filterOnline");
+  clone.querySelector("[data-player-filter=offline]").textContent = t("filterOffline");
+  clone.querySelector("[data-player-filter=operator]").textContent = t("filterOperators");
+  clone.querySelector(".loading-players").textContent = t("checking");
+  content.replaceChildren(clone);
+  content.insertAdjacentHTML("beforeend", playerSettingsMarkup());
   bindSegmentedControls();
   bindSettingFields(["Jogadores"]);
   try {
@@ -41,23 +53,54 @@ function renderPlayerOverview(list) {
   const online = list.filter((player) => player.online).length;
   const deaths = list.reduce((total, player) => total + Number(player.deaths_count || 0), 0);
   const seconds = list.reduce((total, player) => total + Number(player.total_play_seconds || 0), 0);
-  overview.innerHTML = `<span><b>${list.length}</b>${t("totalPlayers")}</span><span><b>${online}</b>${t("online")}</span><span><b>${deaths}</b>${t("totalDeaths")}</span><span><b>${formatDuration(seconds)}</b>${t("totalPlayTime")}</span>`;
+  const tpl = $("#tpl-player-overview-stat");
+  const items = [
+    [String(list.length), t("totalPlayers")],
+    [String(online), t("online")],
+    [String(deaths), t("totalDeaths")],
+    [formatDuration(seconds), t("totalPlayTime")],
+  ];
+  overview.replaceChildren();
+  items.forEach(([value, label]) => {
+    const clone = tpl.content.cloneNode(true);
+    const span = clone.querySelector("span");
+    span.querySelector("b").textContent = value;
+    span.append(label);
+    overview.appendChild(clone);
+  });
   overview.hidden = false;
 }
 
 function renderPlayerCards(container, list, access = {}) {
-  if (!list.length) { container.innerHTML = `<p class="no-player-results">${t("noPlayersFound")}</p>`; return; }
-  container.innerHTML = list.map((player, index) => {
+  container.replaceChildren();
+  if (!list.length) {
+    // inline: single element, no user data
+    container.innerHTML = '<p class="no-player-results"></p>';
+    container.querySelector("p").textContent = t("noPlayersFound");
+    return;
+  }
+  const tpl = $("#tpl-player-roster-row");
+  list.forEach((player) => {
     const account = access[player.name.toLocaleLowerCase()];
     const gameRole = player.operator ? (state.locale === "pt" ? "Operador Minecraft" : "Minecraft operator") : (state.locale === "pt" ? "Membro Minecraft" : "Minecraft member");
     const panelRole = account?.status === "active" ? `CraftControl · ${account.role}` : (state.locale === "pt" ? "Sem acesso ao painel" : "No panel access");
-    return `<article class="player-roster-row ${player.online ? "is-online" : "is-offline"}"><button class="player-roster-open" data-player-index="${index}" type="button"><span class="player-avatar" aria-hidden="true">${escapeHtml(player.name.slice(0, 1).toUpperCase())}</span><span class="player-roster-identity"><strong>${escapeHtml(player.name)}</strong><small>${player.online ? "● " + t("online") : "○ " + t("offline")} · ${player.online ? formatDuration(Date.now() / 1000 - player.connected_at) : formatDate(player.last_seen_at)}</small></span><span class="player-roster-badges"><b class="game-role-badge">${escapeHtml(gameRole)}</b><b class="panel-role-badge ${account?.status === "active" ? "has-access" : ""}">${escapeHtml(panelRole)}</b></span><span class="player-roster-summary"><small>${t("playTime")}</small><b>${formatDuration(player.total_play_seconds)}</b></span><span class="player-roster-arrow" aria-hidden="true">›</span></button></article>`;
-  }).join("");
-  container.querySelectorAll("[data-player-index]").forEach((button) => {
-    button.onclick = () => {
-      const player = list[Number(button.dataset.playerIndex)];
-      renderPlayerDetail(player, access[player.name.toLocaleLowerCase()]);
-    };
+    const clone = tpl.content.cloneNode(true);
+    const article = clone.querySelector("article");
+    article.className = `player-roster-row ${player.online ? "is-online" : "is-offline"}`;
+    clone.querySelector(".player-avatar").textContent = player.name.slice(0, 1).toUpperCase();
+    clone.querySelector(".player-roster-identity strong").textContent = player.name;
+    clone.querySelector(".player-roster-identity small").textContent = player.online
+      ? `● ${t("online")} · ${formatDuration(Date.now() / 1000 - player.connected_at)}`
+      : `○ ${t("offline")} · ${formatDate(player.last_seen_at)}`;
+    clone.querySelector(".game-role-badge").textContent = gameRole;
+    const panelBadge = clone.querySelector(".panel-role-badge");
+    panelBadge.textContent = panelRole;
+    if (account?.status === "active") panelBadge.classList.add("has-access");
+    clone.querySelector(".player-roster-summary small").textContent = t("playTime");
+    clone.querySelector(".player-roster-summary b").textContent = formatDuration(player.total_play_seconds);
+    const button = clone.querySelector(".player-roster-open");
+    button.onclick = () => renderPlayerDetail(player, access[player.name.toLocaleLowerCase()]);
+    container.appendChild(clone);
   });
 }
 

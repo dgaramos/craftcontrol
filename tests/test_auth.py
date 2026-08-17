@@ -7,16 +7,17 @@ from flask import Flask, jsonify
 
 from minecraft_manager.auth.http import auth_api, install_auth, require
 from minecraft_manager.auth.service import AuthService
+from minecraft_manager.players.repository import SQLitePlayerRepository
 from minecraft_manager.repository import StateRepository
 
 
 @pytest.fixture
 def auth_db(tmp_path: Path) -> tuple[Path, AuthService]:
     path = tmp_path / "manager.db"
-    repository = StateRepository(path)
-    repository.initialize()
-    repository.observe_player("VonCrush", True, "123")
-    repository.observe_player("Nicole", False, "456")
+    StateRepository(path).initialize()
+    player_repo = SQLitePlayerRepository(path)
+    player_repo.observe_player("VonCrush", True, "123")
+    player_repo.observe_player("Nicole", False, "456")
     auth = AuthService(path, idle_seconds=60, absolute_seconds=120)
     return path, auth
 

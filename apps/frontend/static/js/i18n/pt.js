@@ -28,7 +28,7 @@ export const pt = {
     queryUnavailable: "O servidor não retornou um valor legível.",
     onlinePlayers: "Jogadores online", operatorAccess: "Operador", operatorHelp: "Pode usar comandos administrativos dentro do jogo.",
     noOnlinePlayers: "Nenhum jogador online no momento.", permissionUpdated: "Permissão atualizada",
-    allPlayers: "Todos os jogadores", playerHistoryHelp: "Ficha permanente de todos que já passaram pelo servidor.",
+    allPlayers: "Todos os jogadores", playerHistoryHelp: "Ficha permanente de todos que já passaram pelo servidor.", playersEyebrow: "JOGADORES", selectPlayerPrompt: "Selecione uma pessoa para abrir sua ficha, histórico e permissões.",
     offline: "Offline", sessions: "Sessões", playTime: "Tempo jogado", deaths: "Mortes", firstSeen: "Primeiro acesso",
     lastSeen: "Último acesso", viewHistory: "Ver histórico", hideHistory: "Ocultar histórico", noHistory: "Nenhum evento registrado.",
     historyUnavailable: "O servidor não retornou uma ficha válida para este jogador.",

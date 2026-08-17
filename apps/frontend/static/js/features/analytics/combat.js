@@ -18,6 +18,8 @@ function combatPlayerRanking(entries, title) {
 
 return async function renderCombatPanel() {
   const analytics = state.analytics;
+  // inline: complex screen scaffold with conditional PvP section and multiple metric tabs;
+  // all API data paths use escapeHtml or formatRankingValue.
   content.innerHTML = `<div class="combat-screen">${analyticsViewSwitch("combat")}<header class="combat-hero block-panel"><div><span class="eyebrow">COMBAT LOG</span><h2>${t("combatTitle")}</h2><p>${t("combatHelp")}</p></div><button id="combat-refresh" class="secondary" type="button">${uiIcon("refresh")} ${t("refreshData")}</button></header><div id="combat-content"><div class="analytics-loading">${t("checking")}</div></div></div>`;
   bindAnalyticsViewSwitch();
   const load = async () => {

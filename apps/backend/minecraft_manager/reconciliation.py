@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import threading
 import time
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 from .ports import EventPublisher, ServerConfiguration, ServerConsole, StateStore
@@ -30,7 +31,7 @@ class ReconciliationService:
         broker: EventPublisher,
         player_service: "PlayerService",
         telemetry_service: "TelemetryService",
-        telemetry_snapshot_fn: Any = None,
+        telemetry_snapshot_fn: Callable[[str], None] | None = None,
     ) -> None:
         self.repository = repository
         self.files = files
@@ -41,7 +42,9 @@ class ReconciliationService:
         # Callback used when a refresh wants to trigger a telemetry snapshot.
         # Defaults to self.request_telemetry_snapshot_async so this class is
         # self-contained when used standalone.
-        self._telemetry_snapshot_fn = telemetry_snapshot_fn or self.request_telemetry_snapshot_async
+        self._telemetry_snapshot_fn: Callable[[str], None] = (
+            telemetry_snapshot_fn or self.request_telemetry_snapshot_async
+        )
 
         self._refresh_lock = threading.Lock()
         self._refreshing = False
@@ -66,6 +69,7 @@ class ReconciliationService:
         self._refreshing = True
         started = time.time()
         self.broker.publish("state.reconciliation.started", reason, {"scope": "full"})
+        trigger_telemetry = False
         try:
             _, env_values = self.files.read_env()
             properties = self.files.read_properties()
@@ -87,7 +91,7 @@ class ReconciliationService:
             self.player_service.refresh_permissions(publish=False)
             self.player_service.bootstrap(players)
             self.broker.publish("state.changed", reason, {"domains": ["settings", "gamerules", "players", "server"]})
-            self._telemetry_snapshot_fn(reason)
+            trigger_telemetry = True
         except Exception as error:
             self.broker.publish("state.reconciliation.failed", reason, {"error": str(error)[:240]})
             raise
@@ -97,6 +101,14 @@ class ReconciliationService:
             )
             self._refreshing = False
             self._refresh_lock.release()
+
+        # Called outside the lock so a slow or synchronous callback cannot
+        # block concurrent refresh attempts from being skipped.
+        if trigger_telemetry:
+            try:
+                self._telemetry_snapshot_fn(reason)
+            except Exception as error:
+                self.broker.publish("telemetry.snapshot.trigger.failed", reason, {"error": str(error)[:240]})
 
     def refresh_async(self, reason: str = "manual") -> None:
         threading.Thread(target=self.refresh, args=(reason,), name="state-refresh", daemon=True).start()

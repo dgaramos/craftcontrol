@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from types import MappingProxyType
 from typing import Any
 
 from ..ports import EventPublisher, ServerConsole
@@ -11,14 +12,16 @@ from ..ports import EventPublisher, ServerConsole
 class WorldService:
     """Handles time, weather, and world preset actions via the Bedrock console."""
 
-    WORLD_ACTIONS: dict[str, list[str]] = {
-        "day": ["time", "set", "day"],
-        "night": ["time", "set", "night"],
-        "clear-weather": ["weather", "clear"],
-    }
+    WORLD_ACTIONS: MappingProxyType[str, tuple[str, ...]] = MappingProxyType({
+        "day": ("time", "set", "day"),
+        "night": ("time", "set", "night"),
+        "clear-weather": ("weather", "clear"),
+    })
     TIME_PRESETS: frozenset[str] = frozenset({"sunrise", "day", "noon", "sunset", "night", "midnight"})
     WEATHER_TYPES: frozenset[str] = frozenset({"clear", "rain", "thunder"})
     TIME_QUERIES: frozenset[str] = frozenset({"daytime", "gametime", "day"})
+    # Deterministic priority order for weather-query: most severe first.
+    WEATHER_QUERY_ORDER: tuple[str, ...] = ("thunder", "rain", "clear")
 
     def __init__(self, bedrock: ServerConsole, broker: EventPublisher) -> None:
         self.bedrock = bedrock
@@ -27,7 +30,7 @@ class WorldService:
     def run_world_action(self, action: str) -> None:
         if action not in self.WORLD_ACTIONS:
             raise KeyError(action)
-        self.bedrock.send(self.WORLD_ACTIONS[action])
+        self.bedrock.send(list(self.WORLD_ACTIONS[action]))
 
     def time_action(self, action: str, payload: Any) -> dict[str, Any]:
         payload = payload if isinstance(payload, dict) else {}
@@ -68,6 +71,6 @@ class WorldService:
         if action == "weather-query":
             output = self.bedrock.send_and_read(["weather", "query"])
             lowered = output.lower()
-            weather = next((item for item in self.WEATHER_TYPES if item in lowered), "unknown")
+            weather = next((w for w in self.WEATHER_QUERY_ORDER if w in lowered), "unknown")
             return {"action": action, "value": weather}
         raise KeyError(action)

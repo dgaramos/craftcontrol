@@ -54,16 +54,20 @@ class ManagerService:
             )
         self.telemetry_service = telemetry_service
         self.runtime = runtime
-
-        self._world = world_service or WorldService(self.bedrock, self.broker)
-        self._reconciliation = reconciliation_service or ReconciliationService(
-            repository=self.repository,
-            files=self.files,
-            bedrock=self.bedrock,
-            broker=self.broker,
-            player_service=self.player_service,
-            telemetry_service=self.telemetry_service,
-        )
+        if world_service is None:
+            raise TypeError(
+                "world_service is required. "
+                "Use composition.compose_manager() to build ManagerService "
+                "with all domain services injected."
+            )
+        self._world = world_service
+        if reconciliation_service is None:
+            raise TypeError(
+                "reconciliation_service is required. "
+                "Use composition.compose_manager() to build ManagerService "
+                "with all domain services injected."
+            )
+        self._reconciliation = reconciliation_service
 
     @classmethod
     def build(cls, settings: Settings) -> "ManagerService":

@@ -319,6 +319,28 @@ Remaining hardening work:
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for branch naming, PR title format, metadata requirements, Conventional Commits, quality gate, and CodeRabbit interaction.
 
+### Codex skills
+
+If you use Codex, this repository ships equivalent workflow skills in
+`.codex/skills/`. Codex discovers each skill from its `SKILL.md` file:
+
+| Skill | When to use |
+|---|---|
+| `execute-issue` | Executa uma issue do início ao merge |
+| `start-issue` | Verifica metadados, lê contexto, mapeia código e cria branch |
+| `implement` | Detecta a camada, implementa, testa e faz self-review |
+| `ship-issue` | Commit, PR, CI, CodeRabbit e sync Gitea |
+| `review-pr` | Self-review ou triagem de findings por camada |
+| `backend` | Padrões Python: DI, Protocols, `is None`, composition root e fakes |
+| `frontend` | Padrões JS: injeção de deps, ESM, i18n e testes |
+| `create-issue` | Workshop para criar issues bem formadas |
+| `manage-project` | Gerencia issues nos GitHub Project boards |
+| `manage-milestone` | Gerencia milestones e audita backlog |
+
+As skills são instruções do repositório: o Codex continua seguindo
+`AGENTS.md`, as instruções de segurança e a confirmação do usuário para
+ações externas como push, merge e deploy.
+
 ### Claude Code skills
 
 If you use Claude Code, this repository ships a set of skills in `.claude/agents/` that encode the project's workflow and conventions. Invoke them with `/skill-name`:

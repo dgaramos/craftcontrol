@@ -135,4 +135,3 @@ Reporte ao usuário:
 - Nunca commitar segredos — revisar `git diff --staged` antes de commitar.
 - Nunca ficar em loop monitorando CI ou aguardando reviews — age quando acionado.
 
-

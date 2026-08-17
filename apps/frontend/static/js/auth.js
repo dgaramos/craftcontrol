@@ -28,8 +28,17 @@ function showIdentity(user) {
   if (!container) return;
   container.hidden = false;
   const logoutLabel = copy[locale()].logout;
-  container.innerHTML = `<span>${escape(user.name)}</span><small>${escape(user.role)}</small><button id="logout" type="button" aria-label="${logoutLabel}" title="${logoutLabel}"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=7#ui-logout"></use></svg><span>${logoutLabel}</span></button>`;
-  document.querySelector("#logout").onclick = async () => { await api("/api/auth/logout", { method: "POST" }); window.location.reload(); };
+  const tpl = document.querySelector("#tpl-identity");
+  const clone = tpl.content.cloneNode(true);
+  const spans = clone.querySelectorAll("span");
+  spans[0].textContent = user.name;
+  clone.querySelector("small").textContent = user.role;
+  const logoutBtn = clone.querySelector("button");
+  logoutBtn.setAttribute("aria-label", logoutLabel);
+  logoutBtn.setAttribute("title", logoutLabel);
+  logoutBtn.querySelector("span").textContent = logoutLabel;
+  container.replaceChildren(clone);
+  container.querySelector("#logout").onclick = async () => { await api("/api/auth/logout", { method: "POST" }); window.location.reload(); };
 }
 
 function showAuth() {

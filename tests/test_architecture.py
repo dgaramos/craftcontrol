@@ -5,7 +5,7 @@ import pytest
 from minecraft_manager import frontend_root
 from minecraft_manager.events import EventBroker
 from minecraft_manager.files import ServerFiles
-from minecraft_manager.players import PlayerService
+from minecraft_manager.players import PlayerService, SQLitePlayerRepository
 from minecraft_manager.repository import StateRepository
 
 
@@ -34,14 +34,16 @@ def test_frontend_and_backend_have_explicit_application_boundaries() -> None:
 
 
 def test_player_use_cases_accept_injected_boundary_adapters(tmp_path: Path) -> None:
-    repository = StateRepository(tmp_path / "manager.db")
-    repository.initialize()
+    db_path = tmp_path / "manager.db"
+    state_repo = StateRepository(db_path)
+    state_repo.initialize()
+    player_repo = SQLitePlayerRepository(db_path)
     console = FakeConsole()
     service = PlayerService(
-        repository,
+        player_repo,
         ServerFiles(tmp_path / ".env", tmp_path / "server.properties"),
         console,  # type: ignore[arg-type]
-        EventBroker(repository),
+        EventBroker(state_repo),
     )
 
     service.observe_presence("VonCrush", True, "123")

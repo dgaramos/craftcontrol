@@ -107,7 +107,7 @@ class ManagerService:
                 maximum = int(env_values.get("MAX_PLAYERS") or properties.get("max-players") or 0)
             if xuids:
                 self.repository.store("known_players", xuids, "bedrock-log")
-            self.repository.reconcile_online_players(players, xuids, "bedrock-console")
+            self.player_service.reconcile_online_players(players, xuids, "bedrock-console")
             self.repository.replace("players", {name: "online" for name in players}, "bedrock-console")
             self.repository.store("server", {"online": str(online), "max_players": str(maximum)}, "bedrock-console")
             self.refresh_permissions(publish=False)

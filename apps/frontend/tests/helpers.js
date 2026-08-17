@@ -21,7 +21,33 @@ export function makeEl(extra = {}) {
     querySelectorAll: jest.fn(() => []),
     closest: jest.fn(() => null),
     classList: { add: jest.fn(), remove: jest.fn(), toggle: jest.fn() },
+    // DOM mutation methods needed by template cloning
+    replaceChildren: jest.fn(),
+    appendChild: jest.fn(),
+    insertAdjacentHTML: jest.fn(),
+    append: jest.fn(),
+    setAttribute: jest.fn(),
     ...extra,
+  };
+}
+
+/**
+ * Creates a minimal stub that behaves like a <template> element.
+ * The `content.cloneNode(true)` call returns a clone whose querySelector
+ * delegates to a provided selector map — any unlisted selector returns a makeEl().
+ *
+ * @param {Record<string, object>} [selMap] Optional map of CSS selector → stub element.
+ */
+export function makeTemplateStub(selMap = {}) {
+  return {
+    content: {
+      cloneNode: () => ({
+        querySelector: (sel) => (sel in selMap ? selMap[sel] : makeEl()),
+        querySelectorAll: jest.fn(() => []),
+        replaceChildren: jest.fn(),
+        appendChild: jest.fn(),
+      }),
+    },
   };
 }
 

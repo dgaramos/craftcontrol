@@ -1,125 +1,149 @@
-"""Tests for SQLitePlayerRepository — delegation to StateRepository."""
+"""Tests for SQLitePlayerRepository — autonomous SQL adapter."""
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+from pathlib import Path
 
 import pytest
 
 from minecraft_manager.players.repository import SQLitePlayerRepository
+from minecraft_manager.repository import StateRepository
 
 
 @pytest.fixture
-def db() -> MagicMock:
-    return MagicMock()
+def db_path(tmp_path: Path) -> Path:
+    path = tmp_path / "state.db"
+    StateRepository(path).initialize()
+    return path
 
 
 @pytest.fixture
-def repo(db: MagicMock) -> SQLitePlayerRepository:
-    return SQLitePlayerRepository(db)
+def repo(db_path: Path) -> SQLitePlayerRepository:
+    return SQLitePlayerRepository(db_path)
 
 
-def test_snapshot_delegates(repo: SQLitePlayerRepository, db: MagicMock) -> None:
-    db.snapshot.return_value = {"players": {}}
-    result = repo.snapshot()
-    db.snapshot.assert_called_once_with(False)
-    assert result == {"players": {}}
+def test_observe_player_creates_profile(repo: SQLitePlayerRepository) -> None:
+    result = repo.observe_player("VonCrush", True, "999", "bedrock-log", 1000.0)
+    assert result["changed"] is True
+    profiles = repo.player_profiles()
+    assert len(profiles) == 1
+    assert profiles[0]["name"] == "VonCrush"
+    assert profiles[0]["online"] is True
 
 
-def test_snapshot_refreshing_flag_forwarded(repo: SQLitePlayerRepository, db: MagicMock) -> None:
-    repo.snapshot(refreshing=True)
-    db.snapshot.assert_called_once_with(True)
+def test_observe_player_disconnect_closes_session(repo: SQLitePlayerRepository) -> None:
+    repo.observe_player("VonCrush", True, "999", occurred_at=100.0)
+    repo.observe_player("VonCrush", False, "999", occurred_at=160.0)
+    profile = repo.player_profiles()[0]
+    assert profile["online"] is False
+    assert profile["sessions_count"] == 1
+    assert profile["total_play_seconds"] == 60
 
 
-def test_store_delegates(repo: SQLitePlayerRepository, db: MagicMock) -> None:
+def test_store_and_snapshot(repo: SQLitePlayerRepository) -> None:
     repo.store("players", {"VonCrush": "online"}, "bedrock-log")
-    db.store.assert_called_once_with("players", {"VonCrush": "online"}, "bedrock-log")
+    snapshot = repo.snapshot()
+    assert "VonCrush" in snapshot["players"]
 
 
-def test_replace_delegates(repo: SQLitePlayerRepository, db: MagicMock) -> None:
+def test_replace_updates_state(repo: SQLitePlayerRepository) -> None:
     repo.replace("permissions", {"voncrush": "member"}, "permissions.json")
-    db.replace.assert_called_once_with("permissions", {"voncrush": "member"}, "permissions.json")
+    snapshot = repo.snapshot()
+    assert snapshot.get("permissions", {}).get("voncrush") == "member"
 
 
-def test_observe_player_delegates(repo: SQLitePlayerRepository, db: MagicMock) -> None:
-    repo.observe_player("VonCrush", True, "999", "bedrock-log", 1000.0)
-    db.observe_player.assert_called_once_with("VonCrush", True, "999", "bedrock-log", 1000.0)
+def test_close_online_sessions(repo: SQLitePlayerRepository) -> None:
+    repo.observe_player("VonCrush", True, "999", occurred_at=100.0)
+    names = repo.close_online_sessions("shutdown")
+    assert "VonCrush" in names
+    assert repo.player_profiles()[0]["online"] is False
 
 
-def test_observe_player_default_args(repo: SQLitePlayerRepository, db: MagicMock) -> None:
-    repo.observe_player("VonCrush", False)
-    db.observe_player.assert_called_once_with("VonCrush", False, "", "bedrock-log", None)
+def test_record_player_death(repo: SQLitePlayerRepository) -> None:
+    repo.observe_player("VonCrush", True, "999")
+    inserted = repo.record_player_death("VonCrush", "creeper", "VonCrush was blown up", "bedrock-log", "abc123")
+    assert inserted is True
+    profile = repo.player_profiles()[0]
+    assert profile["deaths_count"] == 1
 
 
-def test_close_online_sessions_delegates(repo: SQLitePlayerRepository, db: MagicMock) -> None:
-    db.close_online_sessions.return_value = ["VonCrush"]
-    result = repo.close_online_sessions("shutdown", "docker-events")
-    db.close_online_sessions.assert_called_once_with("shutdown", "docker-events")
-    assert result == ["VonCrush"]
+def test_record_player_death_idempotent(repo: SQLitePlayerRepository) -> None:
+    repo.observe_player("VonCrush", True, "999")
+    assert repo.record_player_death("VonCrush", "creeper", "raw", "bedrock-log", "key1") is True
+    assert repo.record_player_death("VonCrush", "creeper", "raw", "bedrock-log", "key1") is False
 
 
-def test_record_player_death_delegates(repo: SQLitePlayerRepository, db: MagicMock) -> None:
-    db.record_player_death.return_value = True
-    result = repo.record_player_death("VonCrush", "creeper", "VonCrush was blown up", "bedrock-log", "abc123")
-    db.record_player_death.assert_called_once_with("VonCrush", "creeper", "VonCrush was blown up", "bedrock-log", "abc123")
-    assert result is True
-
-
-def test_set_player_permission_delegates(repo: SQLitePlayerRepository, db: MagicMock) -> None:
+def test_set_player_permission(repo: SQLitePlayerRepository) -> None:
+    repo.observe_player("VonCrush", True, "999")
     repo.set_player_permission("VonCrush", "operator", "manager")
-    db.set_player_permission.assert_called_once_with("VonCrush", "operator", "manager")
+    profile = repo.player_profiles()[0]
+    assert profile["permission"] == "operator"
+    assert profile["operator"] is True
 
 
-def test_player_profiles_delegates(repo: SQLitePlayerRepository, db: MagicMock) -> None:
-    db.player_profiles.return_value = [{"name": "VonCrush"}]
-    result = repo.player_profiles()
-    db.player_profiles.assert_called_once()
-    assert result[0]["name"] == "VonCrush"
+def test_player_profiles_returns_list(repo: SQLitePlayerRepository) -> None:
+    assert repo.player_profiles() == []
+    repo.observe_player("VonCrush", True)
+    assert len(repo.player_profiles()) == 1
 
 
-def test_player_profile_delegates(repo: SQLitePlayerRepository, db: MagicMock) -> None:
-    db.player_profile.return_value = {"name": "VonCrush"}
-    result = repo.player_profile("some-uuid")
-    db.player_profile.assert_called_once_with("some-uuid", 100, 50)
-    assert result is not None
+def test_player_profile_returns_detail(repo: SQLitePlayerRepository) -> None:
+    repo.observe_player("VonCrush", True, "999", occurred_at=100.0)
+    repo.observe_player("VonCrush", False, "999", occurred_at=160.0)
+    profiles = repo.player_profiles()
+    detail = repo.player_profile(profiles[0]["id"])
+    assert detail is not None
+    assert detail["name"] == "VonCrush"
+    assert len(detail["history"]) == 2
+    assert len(detail["sessions"]) == 1
 
 
-def test_player_activity_delegates(repo: SQLitePlayerRepository, db: MagicMock) -> None:
-    db.player_activity.return_value = {"events": []}
+def test_player_profile_unknown_returns_none(repo: SQLitePlayerRepository) -> None:
+    assert repo.player_profile("nonexistent-id") is None
+
+
+def test_player_activity_returns_paginated(repo: SQLitePlayerRepository) -> None:
+    repo.observe_player("VonCrush", True, "999")
+    repo.observe_player("VonCrush", False, "999")
     result = repo.player_activity("all", "VonCrush", "all", "", 0, 1, 10)
-    db.player_activity.assert_called_once_with("all", "VonCrush", "all", "", 0, 1, 10)
-    assert result == {"events": []}
+    assert result["total"] == 2
+    assert len(result["events"]) == 2
 
 
-def test_player_rankings_delegates(repo: SQLitePlayerRepository, db: MagicMock) -> None:
-    db.player_rankings.return_value = {"top": ["VonCrush"]}
+def test_player_rankings_is_shaped(repo: SQLitePlayerRepository) -> None:
     result = repo.player_rankings(5)
-    db.player_rankings.assert_called_once_with(5)
-    assert result == {"top": ["VonCrush"]}
+    assert result["period"] == "lifetime"
+    assert "play_time" in result["metrics"]
 
 
-def test_block_analytics_delegates(repo: SQLitePlayerRepository, db: MagicMock) -> None:
-    db.block_analytics.return_value = {"mined": 42}
+def test_block_analytics_returns_structure(repo: SQLitePlayerRepository) -> None:
     result = repo.block_analytics(5)
-    db.block_analytics.assert_called_once_with(5)
-    assert result == {"mined": 42}
+    assert "totals" in result
+    assert "ores" in result
 
 
-def test_combat_analytics_delegates(repo: SQLitePlayerRepository, db: MagicMock) -> None:
-    db.combat_analytics.return_value = {"kills": 7}
+def test_combat_analytics_zero_state(repo: SQLitePlayerRepository) -> None:
     result = repo.combat_analytics(5)
-    db.combat_analytics.assert_called_once_with(5)
-    assert result == {"kills": 7}
+    assert result["totals"]["deaths"] == 0
+    assert result["pvp"] == []
 
 
-def test_exploration_analytics_delegates(repo: SQLitePlayerRepository, db: MagicMock) -> None:
-    db.exploration_analytics.return_value = {"biomes": 3}
+def test_exploration_analytics_zero_state(repo: SQLitePlayerRepository) -> None:
     result = repo.exploration_analytics(5)
-    db.exploration_analytics.assert_called_once_with(5)
-    assert result == {"biomes": 3}
+    assert result["totals"]["distance"] == 0
+    assert result["players"] == []
 
 
-def test_period_analytics_delegates(repo: SQLitePlayerRepository, db: MagicMock) -> None:
-    db.period_analytics.return_value = {"sessions": 12}
-    result = repo.period_analytics(30, 5)
-    db.period_analytics.assert_called_once_with(30, 5)
-    assert result == {"sessions": 12}
+def test_period_analytics_returns_calendar(repo: SQLitePlayerRepository) -> None:
+    result = repo.period_analytics(7, 5)
+    assert result["period_days"] == 7
+    assert len(result["calendar"]) == 7
+    assert len(result["heatmap"]) == 168
+
+
+def test_reconcile_online_marks_absent_players_offline(repo: SQLitePlayerRepository) -> None:
+    repo.observe_player("VonCrush", True, "111")
+    repo.observe_player("Nicole", True, "222")
+    repo.reconcile_online_players(["Nicole"], {"Nicole": "222"}, "reconcile")
+    profiles = {p["name"]: p for p in repo.player_profiles()}
+    assert profiles["VonCrush"]["online"] is False
+    assert profiles["Nicole"]["online"] is True

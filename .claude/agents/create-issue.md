@@ -115,7 +115,12 @@ EOF
 )" \
   --assignee dgaramos \
   --label "<label>" \
-  --milestone "<número-do-milestone>"
+  --milestone "<nome-do-milestone>"
+
+# Verificar autenticação e escopo project antes de adicionar ao board:
+gh auth status
+# Se o escopo project não estiver disponível:
+# gh auth refresh -s project
 
 # Atribuir ao project board:
 gh project item-add <número-do-project> --owner dgaramos --url <url-da-issue>

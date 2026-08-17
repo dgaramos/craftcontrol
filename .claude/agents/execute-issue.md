@@ -5,9 +5,11 @@ description: Executa uma issue do CraftControl do início ao merge, orquestrando
 
 # execute-issue
 
-Executa uma issue completa do início ao merge. Orquestra as três skills em sequência:
+Executa uma issue completa do início ao merge. Orquestra as três skills em sequência, com paradas obrigatórias entre fases:
 
 1. `/start-issue` — verificação, contexto, mapeamento de código, branch
+   - **Parar** se metadados incompletos (Project, Milestone, Label, Assignee)
+   - **Parar** se acceptance criteria vagos ou escopo ambíguo — pedir esclarecimento antes de continuar
 2. `/implement` — implementação, testes, quality gate
 3. `/ship-issue` — commit, PR, CI, CodeRabbit, Gitea
 

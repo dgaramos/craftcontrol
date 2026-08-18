@@ -7,7 +7,7 @@ cd "$ROOT"
 
 while IFS= read -r source; do
   node --check "$source"
-done < <(rg --files apps/frontend/static -g '*.js' | sort)
+done < <(find apps/frontend/static -type f -name '*.js' | sort)
 
 node apps/frontend/scripts/check-i18n.mjs
 node apps/frontend/scripts/check-dom-interactions.mjs

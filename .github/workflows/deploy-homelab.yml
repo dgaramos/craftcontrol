@@ -28,22 +28,5 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Verify and synchronize the release source
-        env:
-          GITEA_PUSH_URL: ${{ secrets.GITEA_PUSH_URL }}
-        run: |
-          set -euo pipefail
-          test -n "$GITEA_PUSH_URL"
-          git switch --force-create main "${{ github.event.workflow_run.head_sha }}"
-          test -z "$(git status --porcelain)"
-          git remote rename origin github
-          git remote add origin "$GITEA_PUSH_URL"
-          git push origin HEAD:refs/heads/main
-          test "$(git ls-remote github refs/heads/main | awk '{print $1}')" = "$(git rev-parse HEAD)"
-          test "$(git ls-remote origin refs/heads/main | awk '{print $1}')" = "$(git rev-parse HEAD)"
-
-      - name: Run guarded production preflight
-        run: bin/deploy-craftcontrol-release --check
-
-      - name: Deploy the pinned release pair
-        run: bin/deploy-craftcontrol-release
+      - name: Deploy the accepted revision locally
+        run: /usr/local/bin/craftcontrol-homelab-deploy "${{ github.event.workflow_run.head_sha }}"

@@ -5,8 +5,9 @@ GitHub `Quality gates` workflow finishes. The deployment job runs on the
 repository-scoped `craftcontrol-homelab` self-hosted runner inside the homelab;
 GitHub-hosted runners never receive Docker or LAN access.
 
-The workflow checks out the exact accepted commit, fast-forwards Gitea's
-`main`, and runs the guarded coordinated deployment:
+The workflow checks out the exact accepted commit and asks the runner's local
+deployment agent to fast-forward Gitea's `main` and run the guarded coordinated
+deployment:
 
 ```text
 merge to main -> Quality gates -> homelab runner -> Gitea sync -> preflight -> backup -> deploy -> canaries
@@ -26,11 +27,14 @@ because the guarded deployment command operates the local production Compose
 project. Do not attach these labels to a shared runner or use it for pull
 requests from untrusted repositories.
 
-Set the GitHub repository Actions secret `GITEA_PUSH_URL` to a local Gitea
-repository URL authenticated with a token restricted to repository writes, then start the runner Compose project at
+The runner reads the internal Gitea URL and credential only from its local
+deployment-agent configuration and credential store. Neither value is kept in
+the repository, GitHub Actions variables, GitHub Actions secrets, workflow
+logs, proxy configuration, or DNS.
+The runner Compose project lives at
 `/mnt/storage/docker/craftcontrol-github-runner`. Its registration token is
 short-lived and is used only for initial runner registration; persistent runner
-state is stored outside this repository.
+state and the local deployment agent remain outside this repository.
 
 ## Failure behavior
 

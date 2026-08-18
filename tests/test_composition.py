@@ -2,12 +2,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from minecraft_manager.config import Settings
-from minecraft_manager.composition import compose_manager
+from minecraft_manager.composition import _docker_factory, compose_manager
 from minecraft_manager.services import ManagerService
 
 
@@ -53,4 +53,38 @@ def test_compose_manager_preserves_falsy_injected_runtime(tmp_path: Path) -> Non
     fake_runtime = MagicMock()
     fake_runtime.__bool__ = lambda self: False
     manager = compose_manager(settings, bedrock=MagicMock(), docker=MagicMock(), runtime=fake_runtime)
+    assert manager.runtime is fake_runtime
+
+
+def test_docker_factory_calls_docker_from_env() -> None:
+    fake_client = MagicMock()
+    with patch("docker.from_env", return_value=fake_client) as mock_from_env:
+        result = _docker_factory()
+    mock_from_env.assert_called_once()
+    assert result is fake_client
+
+
+def test_compose_manager_builds_bedrock_when_none(tmp_path: Path) -> None:
+    settings = _minimal_settings(tmp_path)
+    fake_bedrock = MagicMock()
+    with patch("minecraft_manager.composition.BedrockClient", return_value=fake_bedrock) as mock_cls:
+        manager = compose_manager(settings, docker=MagicMock(), runtime=MagicMock())
+    mock_cls.assert_called_once_with(settings.container, list(mock_cls.call_args[0][1]), settings.console_wait_seconds)
+    assert manager.bedrock is fake_bedrock
+
+
+def test_compose_manager_builds_docker_when_none(tmp_path: Path) -> None:
+    settings = _minimal_settings(tmp_path)
+    fake_docker = MagicMock()
+    with patch("minecraft_manager.composition.DockerOperations", return_value=fake_docker) as mock_cls:
+        manager = compose_manager(settings, bedrock=MagicMock(), runtime=MagicMock())
+    mock_cls.assert_called_once_with(settings.container, settings.project)
+
+
+def test_compose_manager_builds_runtime_when_none(tmp_path: Path) -> None:
+    settings = _minimal_settings(tmp_path)
+    fake_runtime = MagicMock()
+    with patch("minecraft_manager.composition.EventRuntime", return_value=fake_runtime) as mock_cls:
+        manager = compose_manager(settings, bedrock=MagicMock(), docker=MagicMock())
+    mock_cls.assert_called_once()
     assert manager.runtime is fake_runtime

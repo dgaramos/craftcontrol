@@ -512,3 +512,175 @@ def test_close_online_sessions_returns_list(tmp_path: Path) -> None:
     service.player_event("Bob", True, "999")
     closed = service.close_online_sessions("server-stop")
     assert "Bob" in closed
+
+
+# ---------------------------------------------------------------------------
+# Constructor guard tests
+# ---------------------------------------------------------------------------
+
+def test_missing_player_service_raises_type_error(tmp_path: Path) -> None:
+    from minecraft_manager.events import EventBroker
+    from minecraft_manager.files import ServerFiles
+    from minecraft_manager.reconciliation import ReconciliationService
+    from minecraft_manager.repository import StateRepository
+    from minecraft_manager.server import WorldService
+    from minecraft_manager.telemetry_repository import SQLiteTelemetryRepository
+    from minecraft_manager.telemetry_service import TelemetryService
+    from tests.fakes import FakeBedrock, FakeDocker
+    db_path = tmp_path / "state.db"
+    repo = StateRepository(db_path)
+    repo.initialize()
+    files = ServerFiles(tmp_path / ".env", tmp_path / "server.properties")
+    bedrock = FakeBedrock()
+    docker = FakeDocker()
+    broker = EventBroker(repo)
+    telemetry_service = TelemetryService(SQLiteTelemetryRepository(db_path), broker)
+    world_service = WorldService(bedrock, broker)  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match="player_service is required"):
+        ManagerService(
+            repo, files, bedrock, docker, broker=broker,  # type: ignore[arg-type]
+            player_service=None,
+            telemetry_service=telemetry_service,
+            world_service=world_service,
+            reconciliation_service=None,
+        )
+
+
+def test_missing_telemetry_service_raises_type_error(tmp_path: Path) -> None:
+    from minecraft_manager.events import EventBroker
+    from minecraft_manager.files import ServerFiles
+    from minecraft_manager.players import PlayerService, SQLitePlayerRepository
+    from minecraft_manager.repository import StateRepository
+    from minecraft_manager.server import WorldService
+    from tests.fakes import FakeBedrock, FakeDocker
+    db_path = tmp_path / "state.db"
+    repo = StateRepository(db_path)
+    repo.initialize()
+    files = ServerFiles(tmp_path / ".env", tmp_path / "server.properties")
+    bedrock = FakeBedrock()
+    docker = FakeDocker()
+    broker = EventBroker(repo)
+    player_service = PlayerService(SQLitePlayerRepository(db_path), files, bedrock, broker)  # type: ignore[arg-type]
+    world_service = WorldService(bedrock, broker)  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match="telemetry_service is required"):
+        ManagerService(
+            repo, files, bedrock, docker, broker=broker,  # type: ignore[arg-type]
+            player_service=player_service,
+            telemetry_service=None,
+            world_service=world_service,
+            reconciliation_service=None,
+        )
+
+
+def test_missing_world_service_raises_type_error(tmp_path: Path) -> None:
+    from minecraft_manager.events import EventBroker
+    from minecraft_manager.files import ServerFiles
+    from minecraft_manager.players import PlayerService, SQLitePlayerRepository
+    from minecraft_manager.repository import StateRepository
+    from minecraft_manager.telemetry_repository import SQLiteTelemetryRepository
+    from minecraft_manager.telemetry_service import TelemetryService
+    from tests.fakes import FakeBedrock, FakeDocker
+    db_path = tmp_path / "state.db"
+    repo = StateRepository(db_path)
+    repo.initialize()
+    files = ServerFiles(tmp_path / ".env", tmp_path / "server.properties")
+    bedrock = FakeBedrock()
+    docker = FakeDocker()
+    broker = EventBroker(repo)
+    player_service = PlayerService(SQLitePlayerRepository(db_path), files, bedrock, broker)  # type: ignore[arg-type]
+    telemetry_service = TelemetryService(SQLiteTelemetryRepository(db_path), broker)
+    with pytest.raises(TypeError, match="world_service is required"):
+        ManagerService(
+            repo, files, bedrock, docker, broker=broker,  # type: ignore[arg-type]
+            player_service=player_service,
+            telemetry_service=telemetry_service,
+            world_service=None,
+            reconciliation_service=None,
+        )
+
+
+def test_missing_reconciliation_service_raises_type_error(tmp_path: Path) -> None:
+    from minecraft_manager.events import EventBroker
+    from minecraft_manager.files import ServerFiles
+    from minecraft_manager.players import PlayerService, SQLitePlayerRepository
+    from minecraft_manager.repository import StateRepository
+    from minecraft_manager.server import WorldService
+    from minecraft_manager.telemetry_repository import SQLiteTelemetryRepository
+    from minecraft_manager.telemetry_service import TelemetryService
+    from tests.fakes import FakeBedrock, FakeDocker
+    db_path = tmp_path / "state.db"
+    repo = StateRepository(db_path)
+    repo.initialize()
+    files = ServerFiles(tmp_path / ".env", tmp_path / "server.properties")
+    bedrock = FakeBedrock()
+    docker = FakeDocker()
+    broker = EventBroker(repo)
+    player_service = PlayerService(SQLitePlayerRepository(db_path), files, bedrock, broker)  # type: ignore[arg-type]
+    telemetry_service = TelemetryService(SQLiteTelemetryRepository(db_path), broker)
+    world_service = WorldService(bedrock, broker)  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match="reconciliation_service is required"):
+        ManagerService(
+            repo, files, bedrock, docker, broker=broker,  # type: ignore[arg-type]
+            player_service=player_service,
+            telemetry_service=telemetry_service,
+            world_service=world_service,
+            reconciliation_service=None,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Analytics delegation tests
+# ---------------------------------------------------------------------------
+
+def test_refresh_gamerules_async_delegates(tmp_path: Path) -> None:
+    service = _make_service(tmp_path)
+    called: list[set] = []
+    service._reconciliation.refresh_gamerules_async = called.append  # type: ignore[method-assign]
+    rules = {"keepInventory", "doFireTick"}
+    service.refresh_gamerules_async(rules)
+    assert called == [rules]
+
+
+def test_refresh_permissions_delegates(tmp_path: Path) -> None:
+    service = _make_service(tmp_path)
+    called: list[bool] = []
+    service.player_service.refresh_permissions = lambda publish=True: called.append(publish)  # type: ignore[method-assign]
+    service.refresh_permissions(publish=False)
+    assert called == [False]
+
+
+def test_player_activity_delegates(tmp_path: Path) -> None:
+    service = _make_service(tmp_path)
+    service.player_event("VonCrush", True, "x1")
+    result = service.player_activity("joins", "VonCrush", "all", "", 30, 1, 10)
+    assert "events" in result
+
+
+def test_player_rankings_delegates(tmp_path: Path) -> None:
+    service = _make_service(tmp_path)
+    result = service.player_rankings(limit=5)
+    assert isinstance(result, dict)
+
+
+def test_block_analytics_delegates(tmp_path: Path) -> None:
+    service = _make_service(tmp_path)
+    result = service.block_analytics(limit=5)
+    assert isinstance(result, dict)
+
+
+def test_combat_analytics_delegates(tmp_path: Path) -> None:
+    service = _make_service(tmp_path)
+    result = service.combat_analytics(limit=5)
+    assert isinstance(result, dict)
+
+
+def test_exploration_analytics_delegates(tmp_path: Path) -> None:
+    service = _make_service(tmp_path)
+    result = service.exploration_analytics(limit=5)
+    assert isinstance(result, dict)
+
+
+def test_period_analytics_delegates(tmp_path: Path) -> None:
+    service = _make_service(tmp_path)
+    result = service.period_analytics(days=7, limit=5)
+    assert isinstance(result, dict)

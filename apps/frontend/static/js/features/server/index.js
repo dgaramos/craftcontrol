@@ -1,4 +1,4 @@
-export function createServerFeature({ state, content, t, api, $, escapeHtml, uiIcon, formatDate, toast, renderSettingsGroups }) {
+export function createServerFeature({ state, content, t, api, $, escapeHtml, uiIcon, formatDate, toast, getSettingsFeature }) {
 function telemetryPackMarkup() {
   return `<section class="telemetry-pack-card block-panel"><div><span class="eyebrow">CRAFTCONTROL</span><h3>${t("telemetryPack")}</h3><p>${t("telemetryPackHelp")}</p></div><div id="telemetry-pack-state" class="telemetry-pack-state">${t("checking")}</div></section>`;
 }
@@ -47,7 +47,7 @@ async function loadFrontendVersion() {
 
 
   const renderServer = () => {
-    renderSettingsGroups(["Packs", "Rede", "Avançado"], telemetryPackMarkup());
+    getSettingsFeature().renderSettingsGroups(["Packs", "Rede", "Avançado"], telemetryPackMarkup());
     loadTelemetryPack();
   };
   return { renderServer, renderReleaseTags, loadFrontendVersion };

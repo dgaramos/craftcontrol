@@ -25,8 +25,10 @@ function makeDeps(overrides = {}) {
   const toast = jest.fn();
   const renderSettingsGroups = jest.fn();
   const renderTabs = jest.fn();
+  const getSettingsFeature = () => ({ booleanControl, updateToggleLabel, renderSettingsGroups });
+  const getNavigation = () => ({ renderTabs });
   const api = jest.fn().mockResolvedValue({});
-  return { state, content, t, api, $, uiIcon, booleanControl, updateToggleLabel, toast, renderSettingsGroups, renderTabs, elements, ...overrides };
+  return { state, content, t, api, $, uiIcon, toast, getSettingsFeature, getNavigation, booleanControl, updateToggleLabel, renderSettingsGroups, renderTabs, elements, ...overrides };
 }
 
 describe("createWorldFeature — factory", () => {

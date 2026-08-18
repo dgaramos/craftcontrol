@@ -1,4 +1,4 @@
-export function createPlayersWorkspace({ state, content, t, localized, api, $, escapeHtml, toast, playerSettingsMarkup, bindSegmentedControls, bindSettingFields, formatDuration, formatDate, renderPlayerDetail }) {
+export function createPlayersWorkspace({ state, content, t, localized, api, $, escapeHtml, toast, getSettingsFeature, formatDuration, formatDate, renderPlayerDetail }) {
 return async function renderPlayersPanel() {
   const tplScreen = $("#tpl-players-screen");
   const clone = tplScreen.content.cloneNode(true);
@@ -12,9 +12,9 @@ return async function renderPlayersPanel() {
   clone.querySelector("[data-player-filter=operator]").textContent = t("filterOperators");
   clone.querySelector(".loading-players").textContent = t("checking");
   content.replaceChildren(clone);
-  content.insertAdjacentHTML("beforeend", playerSettingsMarkup());
-  bindSegmentedControls();
-  bindSettingFields(["Jogadores"]);
+  content.insertAdjacentHTML("beforeend", getSettingsFeature().playerSettingsMarkup());
+  getSettingsFeature().bindSegmentedControls();
+  getSettingsFeature().bindSettingFields(["Jogadores"]);
   try {
     const result = await api("/api/players");
     const list = result.players || [];

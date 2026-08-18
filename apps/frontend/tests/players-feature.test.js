@@ -75,10 +75,11 @@ function makeWorkspaceDeps(overrides = {}) {
   const playerSettingsMarkup = jest.fn(() => "");
   const bindSegmentedControls = jest.fn();
   const bindSettingFields = jest.fn();
+  const getSettingsFeature = () => ({ playerSettingsMarkup, bindSegmentedControls, bindSettingFields });
   const formatDuration = (s) => `${s ?? 0}s`;
   const formatDate = (ts) => ts ? "2024-01-01" : "—";
   const renderPlayerDetail = jest.fn();
-  return { state, $, content, t, localized, api, escapeHtml, toast, playerSettingsMarkup, bindSegmentedControls, bindSettingFields, formatDuration, formatDate, renderPlayerDetail, elements, ...overrides };
+  return { state, $, content, t, localized, api, escapeHtml, toast, getSettingsFeature, playerSettingsMarkup, bindSegmentedControls, bindSettingFields, formatDuration, formatDate, renderPlayerDetail, elements, ...overrides };
 }
 
 // ── workspace.js ──────────────────────────────────────────────────────────────
@@ -263,6 +264,8 @@ describe("createPlayersFeature — factory wiring", () => {
     const renderTabs = jest.fn();
     const updateToggleLabel = jest.fn();
     const booleanControl = jest.fn(() => "");
+    const getSettingsFeature = () => ({ booleanControl, updateToggleLabel });
+    const getNavigation = () => ({ renderTabs });
     const panelAccessDetailMarkup = jest.fn(() => "");
     const bindPlayerAccess = jest.fn();
     const playerDataMarkup = jest.fn(() => "");
@@ -280,9 +283,9 @@ describe("createPlayersFeature — factory wiring", () => {
     const formatRankingValue = jest.fn((v) => String(v));
     const uiIcon = jest.fn(() => "");
     return {
-      state, $, content, t, localized, api, escapeHtml, toast, playerSettingsMarkup, bindSegmentedControls,
-      bindSettingFields, formatDuration, formatDate, renderAnalyticsPanel, renderTabs,
-      updateToggleLabel, booleanControl, panelAccessDetailMarkup, bindPlayerAccess,
+      state, $, content, t, localized, api, escapeHtml, toast, getSettingsFeature,
+      formatDuration, formatDate, renderAnalyticsPanel, getNavigation,
+      panelAccessDetailMarkup, bindPlayerAccess,
       playerDataMarkup, profileMarkup, gameLabel, gameIcon, gameTermMarkup, optionLabel,
       sessionMoment, timelineTimestamp, blockTermMarkup, blockIcon, oreLabel, dimensionName,
       formatRankingValue, uiIcon,

@@ -20,21 +20,21 @@ def _reconciliation(tmp_path: Path, bedrock: FakeBedrock | None = None):
 
 def test_gamerule_worker_queries_and_persists_result(tmp_path: Path) -> None:
     bedrock = FakeBedrock()
-    bedrock.gamerule_result = {"keepInventory": "true"}
+    bedrock.gamerule_result = {"keepinventory": "true"}
     svc, rec = _reconciliation(tmp_path, bedrock)
 
-    rec.refresh_gamerules_async({"keepInventory"})
+    rec.refresh_gamerules_async({"keepinventory"})
 
     deadline = time.time() + 5
     while time.time() < deadline:
         state = svc.state()
-        if state.get("gamerules", {}).get("keepInventory") == "true":
+        if state.get("gamerules", {}).get("keepinventory") == "true":
             break
         time.sleep(0.05)
     else:
         raise AssertionError("gamerule worker did not persist result in time")
 
-    assert svc.state()["gamerules"]["keepInventory"] == "true"
+    assert svc.state()["gamerules"]["keepinventory"] == "true"
 
 
 def test_gamerule_worker_exits_when_no_pending_rules_remain(tmp_path: Path) -> None:
@@ -42,7 +42,7 @@ def test_gamerule_worker_exits_when_no_pending_rules_remain(tmp_path: Path) -> N
     bedrock.gamerule_result = {}
     _, rec = _reconciliation(tmp_path, bedrock)
 
-    rec.refresh_gamerules_async({"keepInventory"})
+    rec.refresh_gamerules_async({"keepinventory"})
 
     # Worker should finish and set _gamerule_worker_running = False
     deadline = time.time() + 5
@@ -96,7 +96,7 @@ def test_gamerule_worker_restores_rules_on_query_failure(tmp_path: Path) -> None
         original_restart(rules)
 
     rec.refresh_gamerules_async = first_call_restart  # type: ignore[method-assign]
-    rec.refresh_gamerules_async({"keepInventory"})
+    rec.refresh_gamerules_async({"keepinventory"})
 
     assert rules_restored.wait(timeout=8), "rules were not restored to pending set after query_gamerules failure"
 
@@ -259,7 +259,7 @@ def test_gamerule_second_call_enqueues_without_starting_second_worker(tmp_path: 
     bedrock.query_gamerules = slow_query  # type: ignore[method-assign]
 
     _, rec = _reconciliation(tmp_path, bedrock)
-    rec.refresh_gamerules_async({"keepInventory"})
+    rec.refresh_gamerules_async({"keepinventory"})
 
     # Wait until worker is marked running
     deadline = time.time() + 3
@@ -270,7 +270,7 @@ def test_gamerule_second_call_enqueues_without_starting_second_worker(tmp_path: 
         time.sleep(0.02)
 
     # Second call while worker running — must not start a second worker
-    rec.refresh_gamerules_async({"doMobSpawning"})
+    rec.refresh_gamerules_async({"domobspawning"})
 
     # At this point only one thread should have called query_gamerules
     assert call_count <= 1
@@ -337,3 +337,77 @@ def test_snapshot_async_coalesces_rapid_calls(tmp_path: Path) -> None:
     rec.request_telemetry_snapshot_async("rapid")
 
     assert "telemetry.snapshot.coalesced" in events
+
+
+# ---------------------------------------------------------------------------
+# refresh_gamerules_async — unknown name validation
+# ---------------------------------------------------------------------------
+
+def test_refresh_gamerules_async_discards_unknown_names(tmp_path: Path) -> None:
+    bedrock = FakeBedrock()
+    queried: list[set[str]] = []
+
+    def capturing_query(rules):
+        queried.append(set(rules))
+        return {}
+
+    bedrock.query_gamerules = capturing_query
+    _, rec = _reconciliation(tmp_path, bedrock)
+
+    rec.refresh_gamerules_async({"notarule"})
+
+    deadline = time.time() + 5
+    while time.time() < deadline:
+        with rec._pending_rules_lock:
+            if not rec._gamerule_worker_running and queried == []:
+                break
+            if queried:
+                break
+        time.sleep(0.05)
+
+    # Unknown name must not reach the adapter
+    assert queried == [] or all("notarule" not in q for q in queried)
+
+
+def test_refresh_gamerules_async_discards_name_with_newline(tmp_path: Path) -> None:
+    bedrock = FakeBedrock()
+    queried: list[set[str]] = []
+
+    def capturing_query(rules):
+        queried.append(set(rules))
+        return {}
+
+    bedrock.query_gamerules = capturing_query
+    _, rec = _reconciliation(tmp_path, bedrock)
+
+    rec.refresh_gamerules_async({"pvp\nlist"})
+
+    deadline = time.time() + 5
+    while time.time() < deadline:
+        with rec._pending_rules_lock:
+            if not rec._gamerule_worker_running:
+                break
+        time.sleep(0.05)
+
+    assert all("pvp\nlist" not in q for q in queried)
+
+
+def test_refresh_gamerules_async_keeps_valid_discards_invalid(tmp_path: Path) -> None:
+    bedrock = FakeBedrock()
+    queried: list[set[str]] = []
+    done = threading.Event()
+
+    def capturing_query(rules):
+        queried.append(set(rules))
+        done.set()
+        return {r: "true" for r in rules}
+
+    bedrock.query_gamerules = capturing_query
+    _, rec = _reconciliation(tmp_path, bedrock)
+
+    rec.refresh_gamerules_async({"pvp", "badname"})
+    done.wait(timeout=5)
+
+    assert queried, "query_gamerules was never called"
+    assert "pvp" in queried[0]
+    assert "badname" not in queried[0]

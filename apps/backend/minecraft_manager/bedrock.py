@@ -4,8 +4,6 @@ import re
 import time
 from typing import Any, Callable
 
-from minecraft_manager.schema import GAMERULES
-
 
 def _default_docker_factory() -> Any:
     import docker as docker_sdk
@@ -142,9 +140,6 @@ class BedrockClient:
         return gamerules, players, online, maximum, self.parse_xuids(history)
 
     def query_gamerules(self, rules: set[str]) -> dict[str, str]:
-        unknown = rules - GAMERULES.keys()
-        if unknown:
-            raise ValueError(f"Unknown gamerule names: {sorted(unknown)}")
         client = self._docker_factory()
         try:
             container = client.containers.get(self.container_name)

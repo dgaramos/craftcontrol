@@ -41,6 +41,22 @@ describe("analytics branch coverage", () => {
     expect(deps.state.analytics.blocksMode).toBe("building");
   });
 
+  test("blocks renders building-only data without ore ranking", async () => {
+    const deps = withBindings(makeAnalyticsDeps({ blocksMode: "building", selectedOre: "diamond" }));
+    const target = makeEl();
+    deps.$ = jest.fn((selector) => selector === "#blocks-content" ? target : makeEl());
+    deps.api = jest.fn().mockResolvedValue({
+      rankings: { builders: [{ player: { id: "2", name: "B" }, value: 3 }] },
+      top_placed: [{ block: "brick", count: 3 }],
+      players: [{ player: { id: "2", name: "B" }, favorite_placed: { block: "brick", count: 3 } }],
+      totals: { placed: 3 },
+    });
+    await createBlocksPanel(deps)();
+    expect(target.innerHTML).toContain("builders");
+    expect(target.innerHTML).toContain("brick");
+    expect(target.innerHTML).not.toContain("ore-section");
+  });
+
   test("rankings handles empty category and API error", async () => {
     const deps = withBindings(makeAnalyticsDeps({ rankingCategory: "activity", rankingMetric: "missing" }));
     const target = makeEl();

@@ -19,7 +19,7 @@ The pre-migration backup is immutable: a retry does not overwrite it. Fresh empt
 ## Inspect the schema version
 
 ```bash
-docker compose exec craftcontrol python -c 'import sqlite3; connection=sqlite3.connect("/data/manager.db"); print(connection.execute("PRAGMA user_version").fetchone()[0])'
+docker compose -f docker-compose.split.yml exec craftcontrol-backend python3 -c 'import sqlite3; connection=sqlite3.connect("/data/manager.db"); print(connection.execute("PRAGMA user_version").fetchone()[0])'
 ```
 
 ## Recovery
@@ -28,4 +28,4 @@ If startup reports a migration failure, keep CraftControl stopped and preserve t
 
 Never lower `user_version` manually. Restore the pre-migration backup or run a documented forward repair migration instead.
 
-Schema version `2` adds bounded structured telemetry payload retention for recovery diagnostics. The migration preserves all existing state, profiles, sessions, history, aggregates, and telemetry deduplication keys; older rows remain valid with a null payload.
+Schema version `2` adds bounded structured telemetry payload retention for recovery diagnostics. Schema version `3` adds local accounts, invitations, sessions, login-attempt history, and audit records. Schema version `4` adds the bounded `player_daily` aggregates used by honest 7/30-day rankings. Each migration preserves prior state; older telemetry rows remain valid with a null payload.

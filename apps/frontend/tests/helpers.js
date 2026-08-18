@@ -50,6 +50,48 @@ export function makeEl(extra = {}) {
   return el;
 }
 
+export function makeDom() {
+  const createNode = (tagName = "fragment") => {
+    const node = {
+      tagName,
+      children: [],
+      textContent: "",
+      className: "",
+      dataset: {},
+      title: "",
+      id: "",
+      type: "",
+      onclick: null,
+      classList: {
+        toggle: jest.fn((name, active) => {
+          const classes = new Set(node.className.split(/\s+/).filter(Boolean));
+          if (active) classes.add(name); else classes.delete(name);
+          node.className = [...classes].join(" ");
+        }),
+      },
+      append(...children) { this.children.push(...children); },
+      replaceChildren(...children) { this.children = children; },
+      querySelectorAll(selector) {
+        const attribute = selector.match(/^\[data-([\w-]+)\]$/)?.[1];
+        const key = attribute?.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+        const descendants = this.children.flatMap((child) => [child, ...(child?.querySelectorAll ? child.querySelectorAll(selector) : [])]);
+        return key ? descendants.filter((child) => child?.dataset && key in child.dataset) : [];
+      },
+    };
+    return node;
+  };
+  const document = {
+    createElement: (tag) => createNode(tag),
+    createDocumentFragment: () => createNode(),
+    createRange: () => ({ createContextualFragment: () => createNode() }),
+  };
+  return { document, createNode };
+}
+
+export function findNodes(node, predicate) {
+  return [node, ...(node.children || []).flatMap((child) => findNodes(child, predicate))].filter(predicate);
+}
+
 /**
  * Creates a minimal stub that behaves like a <template> element.
  * The `content.cloneNode(true)` call returns a clone whose querySelector

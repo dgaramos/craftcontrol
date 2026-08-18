@@ -1,6 +1,6 @@
 import { jest } from "@jest/globals";
 import { createAnalyticsFeature } from "../static/js/features/analytics/index.js";
-import { makeEl, makeAnalyticsDeps } from "./helpers.js";
+import { makeDom, makeEl, makeAnalyticsDeps } from "./helpers.js";
 
 describe("createAnalyticsFeature — factory setup", () => {
   test("returns a render function", () => {
@@ -115,7 +115,13 @@ describe("createAnalyticsFeature — factory setup", () => {
     const deps = makeAnalyticsDeps({ kind: "trends" });
     deps.api = jest.fn().mockRejectedValue(new Error("api error"));
     deps.$ = jest.fn(() => makeEl());
-    const { render } = createAnalyticsFeature(deps);
-    await expect(render()).resolves.toBeUndefined();
+    const savedDocument = global.document;
+    global.document = makeDom().document;
+    try {
+      const { render } = createAnalyticsFeature(deps);
+      await expect(render()).resolves.toBeUndefined();
+    } finally {
+      global.document = savedDocument;
+    }
   });
 });

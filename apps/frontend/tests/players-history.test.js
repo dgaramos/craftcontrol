@@ -57,6 +57,14 @@ describe("createPlayerHistory — historyMarkup", () => {
     const html = historyMarkup(events);
     expect(html).toContain("Inferred from server state");
   });
+
+  test("handles missing evidence and permission changes", () => {
+    const { historyMarkup } = createPlayerHistory(makeDeps("pt"));
+    const html = historyMarkup([{}, { topic: "player.permission.changed", payload: { cause: "fire", inferred: true } }]);
+    expect(html).toContain("event");
+    expect(html).toContain("Permissão alterada");
+    expect(html).toContain("Encerramento inferido");
+  });
 });
 
 describe("createPlayerHistory — sessionsMarkup", () => {
@@ -95,6 +103,14 @@ describe("createPlayerHistory — sessionsMarkup", () => {
     const html = sessionsMarkup(sessions);
     expect(html).toContain("timeout");
   });
+
+  test("renders Portuguese current and closed session labels", () => {
+    const { sessionsMarkup } = createPlayerHistory(makeDeps("pt"));
+    const html = sessionsMarkup([{ active: true, duration_seconds: 1, connected_at: 1 }, { active: false, inferred: false, duration_seconds: 1, connected_at: 1, disconnected_at: 2, close_reason: "disconnect" }]);
+    expect(html).toContain("Sessão em andamento");
+    expect(html).toContain("Sessão encerrada");
+    expect(html).not.toContain(" · disconnect");
+  });
 });
 
 describe("createPlayerHistory — deathHistoryMarkup", () => {
@@ -122,6 +138,14 @@ describe("createPlayerHistory — deathHistoryMarkup", () => {
     const events = [{ topic: "player.death", timestamp: 1700000000, payload: { cause: "fall" }, source: "behavior-pack" }];
     const html = deathHistoryMarkup(events);
     expect(html).toContain("telemetrySource");
+  });
+
+  test("renders killer variants, projectile evidence, and fallback values", () => {
+    const { deathHistoryMarkup } = createPlayerHistory(makeDeps());
+    const html = deathHistoryMarkup([{ topic: "player.death", timestamp: 1, payload: { cause: "projectile", killerType: "skeleton", projectileType: "arrow" }, source: "behavior-pack" }, { topic: "player.death", timestamp: 2, payload: {}, source: "server" }]);
+    expect(html).toContain("skeleton");
+    expect(html).toContain("arrow");
+    expect(html).toContain("—");
   });
 });
 
@@ -175,5 +199,12 @@ describe("createPlayerHistory — profileMarkup", () => {
     };
     const html = profileMarkup(profile);
     expect(html).toContain("<b>1</b>");
+  });
+
+  test("uses collection fallbacks for incomplete profiles", () => {
+    const { profileMarkup } = createPlayerHistory(makeDeps("pt"));
+    const html = profileMarkup({ name: "Player", permission: "", aliases: null, history: null, sessions: null, last_death_at: null });
+    expect(html).toContain("member");
+    expect(html).toContain("—");
   });
 });

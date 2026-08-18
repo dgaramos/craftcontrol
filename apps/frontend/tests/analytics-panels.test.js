@@ -277,6 +277,44 @@ describe("renderTrendsPanel — happy path", () => {
     expect(findNodes(screen, (node) => node.className.includes("level-NaN"))).toHaveLength(0);
   });
 
+  test("normalizes an absent or malformed periods response", async () => {
+    const deps = makeSharedDeps();
+    deps.api = jest.fn().mockResolvedValue(null);
+
+    await createTrendsPanel(deps)();
+
+    const screen = deps.content.children[0];
+    expect(findNodes(screen, (node) => node.className === "trends-zero")).toHaveLength(1);
+    expect(findNodes(screen, (node) => node.textContent === "—").length).toBeGreaterThan(0);
+  });
+
+  test("keeps partial collections and invalid dates safe", async () => {
+    const deps = makeSharedDeps();
+    deps.t = (key) => key === "weekdayShort" ? "not-a-list" : key;
+    deps.api = jest.fn().mockResolvedValue({
+      rankings: { play_seconds: {} }, calendar: [{ day: null, play_seconds: -1, sessions: -1 }], heatmap: {}, totals: "invalid", timezone: null,
+      most_active_day: { day: null }, generated_at: null,
+    });
+
+    await createTrendsPanel(deps)();
+
+    const screen = deps.content.children[0];
+    expect(findNodes(screen, (node) => node.title === "—")).toHaveLength(1);
+    expect(findNodes(screen, (node) => node.className === "trends-zero")).toHaveLength(1);
+  });
+
+  test("handles missing ranking entries and message-less failures", async () => {
+    const deps = makeSharedDeps();
+    deps.api = jest.fn()
+      .mockResolvedValueOnce(trendsResult({ rankings: { play_seconds: [null] } }))
+      .mockRejectedValueOnce(null);
+    const render = createTrendsPanel(deps);
+    await render();
+    const refresh = findNodes(deps.content.children[0], (node) => node.id === "trends-refresh")[0];
+    await refresh.onclick();
+    expect(findNodes(deps.content.children[0], (node) => node.className === "analytics-empty")).toHaveLength(1);
+  });
+
   test("renders API errors as text content", async () => {
     const deps = makeSharedDeps();
     deps.api = jest.fn().mockRejectedValue(new Error("<b>trends api fail</b>"));

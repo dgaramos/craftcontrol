@@ -258,4 +258,35 @@ describe("updateToggleLabel", () => {
     updateToggleLabel(checkbox);
     expect(labelEl.textContent).toBe("disabled");
   });
+
+  test("renders locale, boolean, select, and numeric field variants", () => {
+    const deps = makeDeps({
+      locale: "es", tab: "server", user: { capabilities: [] },
+      changes: {}, config: { limit: null }, gamerules: {}, domains: { settings: {} },
+      schema: { settings: { limit: { group: "G", type: "number", label: "PT", label_en: "EN", label_es: "ES", description: "d", description_en: "de", description_es: "des", min: 1, max: 9, warning: "warn", warning_en: "warning" } }, gamerules: {} },
+    });
+    const feature = createSettingsFeature(deps);
+    expect(feature.booleanControl("detail-operator", "unknown")).toContain("Read only");
+    feature.renderSettingsGroups(["G"]);
+    expect(deps.content.innerHTML).toContain("serverIntro");
+    expect(deps.content.innerHTML).toContain('min="1"');
+    expect(deps.content.innerHTML).toContain("ES");
+  });
+
+  test("renders English controls with change overrides and observed domains", () => {
+    const deps = makeDeps({
+      locale: "en", tab: "rules", user: { capabilities: ["players.manage_permissions"] },
+      changes: { mode: "hard" }, config: { enabled: "false", mode: "easy" }, gamerules: { live: "true" },
+      domains: { settings: { observed_at: 1 } },
+      schema: { settings: {
+        enabled: { group: "G", type: "boolean", label: "PT", label_en: "Enabled", description: "d", description_en: "English" },
+        mode: { group: "G", type: "select", label: "PT", label_en: "Mode", description: "d", description_en: "English", options: ["easy", "hard"], warning_en: "Careful" },
+      }, gamerules: { live: { group: "G", type: "boolean", label: "Live", label_en: "Live", description: "d", description_en: "English" } } },
+    });
+    createSettingsFeature(deps).renderSettingsGroups(["G"]);
+    expect(deps.content.innerHTML).toContain("rulesIntro");
+    expect(deps.content.innerHTML).toContain("checked");
+    expect(deps.content.innerHTML).toContain('data-choice="hard"');
+    expect(deps.content.innerHTML).toContain("Careful");
+  });
 });

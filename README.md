@@ -304,6 +304,8 @@ bin/check                # complete local gate
 
 GitHub Actions and Gitea Actions run the four boundaries independently. Changes use Conventional Commits and production deployment is accepted only from clean, published `main`.
 
+See [Development setup](docs/development-setup.md) for prerequisites, environment configuration, and a guide to common development tasks.
+
 ## Security status
 
 Current safeguards include local player-backed accounts, role capabilities, hashed one-time credentials, revocable opaque sessions, login throttling, security audit records, session-bound CSRF, origin validation, strict command allowlists, input validation, atomic configuration writes, hidden XUIDs, and `no-new-privileges`.

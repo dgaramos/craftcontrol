@@ -8,7 +8,7 @@ import { makeAnalyticsDeps, makeEl } from "./helpers.js";
 describe("analytics branch coverage", () => {
   const withBindings = (deps) => ({ ...deps, analyticsViewSwitch: () => "", bindAnalyticsViewSwitch: jest.fn() });
 
-  test("blocks handles empty data, invalid ore selection and API error", async () => {
+  test("blocks handles empty data and an invalid ore selection", async () => {
     const deps = withBindings(makeAnalyticsDeps({ blocksMode: "mining", selectedOre: "invalid" }));
     const target = makeEl();
     deps.$ = jest.fn((selector) => selector === "#blocks-content" ? target : makeEl());
@@ -16,8 +16,13 @@ describe("analytics branch coverage", () => {
     await createBlocksPanel(deps)();
     expect(deps.state.analytics.selectedOre).toBe("iron");
     expect(target.innerHTML).toContain("noBlockData");
+  });
 
-    deps.api.mockRejectedValueOnce(new Error("blocks unavailable"));
+  test("blocks shows the API error", async () => {
+    const deps = withBindings(makeAnalyticsDeps());
+    const target = makeEl();
+    deps.$ = jest.fn((selector) => selector === "#blocks-content" ? target : makeEl());
+    deps.api = jest.fn().mockRejectedValue(new Error("blocks unavailable"));
     await createBlocksPanel(deps)();
     expect(target.innerHTML).toContain("blocks unavailable");
   });

@@ -96,8 +96,8 @@ export function startApplication() {
         state, content, t, localized, api, $, escapeHtml, toast, playerSettingsMarkup,
         bindSegmentedControls, bindSettingFields, formatDuration, formatDate, sessionMoment,
         timelineTimestamp, gameLabel, gameIcon, gameTermMarkup, optionLabel,
-        blockTermMarkup, dimensionName, formatRankingValue, uiIcon, booleanControl,
-        renderAnalyticsPanel, renderTabs, updateToggleLabel,
+        blockTermMarkup, dimensionName, formatRankingValue, uiIcon,
+        getSettingsFeature, getNavigation, renderAnalyticsPanel,
       });
     }
     return playersFeature;

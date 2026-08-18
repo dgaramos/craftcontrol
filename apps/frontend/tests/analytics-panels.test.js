@@ -281,6 +281,25 @@ describe("renderTrendsPanel — happy path", () => {
     expect(target.innerHTML).toContain("trends api fail");
   });
 
+  test("switching periods reloads the trends data and marks the selected period", async () => {
+    const deps = makeSharedDeps({ periodDays: 30 });
+    const target = makeEl();
+    const sevenDays = makeEl({ dataset: { periodDays: "7" }, classList: { toggle: jest.fn() } });
+    const thirtyDays = makeEl({ dataset: { periodDays: "30" }, classList: { toggle: jest.fn() } });
+    deps.$ = jest.fn((selector) => selector === "#trends-content" ? target : makeEl());
+    deps.content.querySelectorAll = jest.fn((selector) => selector === "[data-period-days]" ? [sevenDays, thirtyDays] : []);
+    deps.api = jest.fn().mockResolvedValue(trendsResult());
+
+    await createTrendsPanel(deps)();
+    sevenDays.onclick();
+    await Promise.resolve();
+
+    expect(deps.state.analytics.periodDays).toBe(7);
+    expect(sevenDays.classList.toggle).toHaveBeenCalledWith("active", true);
+    expect(thirtyDays.classList.toggle).toHaveBeenCalledWith("active", false);
+    expect(deps.api).toHaveBeenLastCalledWith("/api/analytics/periods?days=7&limit=10");
+  });
+
   test("renders calendar and heatmap values through DOM properties", async () => {
     const deps = makeSharedDeps();
     const target = makeEl();

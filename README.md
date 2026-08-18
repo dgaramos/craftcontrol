@@ -315,6 +315,8 @@ Remaining hardening work:
 3. continue removing compatibility overlays after tested migration windows;
 4. expand community installation, diagnostics, and release automation.
 
+For the full threat model, current safeguards, and hardening roadmap see [docs/security.md](docs/security.md). To report a vulnerability privately see [SECURITY.md](SECURITY.md).
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for branch naming, PR title format, metadata requirements, Conventional Commits, quality gate, and CodeRabbit interaction.

@@ -1,4 +1,5 @@
 <div align="center">
+  <p><a href="README.pt-BR.md">Leia em Português (Brasil)</a></p>
   <img src="apps/frontend/static/craftcontrol-mark.svg" width="112" alt="CraftControl logo">
   <h1>CraftControl</h1>
   <p><strong>A mobile-first control center for Minecraft Bedrock servers.</strong></p>

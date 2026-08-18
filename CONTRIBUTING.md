@@ -111,6 +111,9 @@ Every issue **and** every PR must have all four of the following set before requ
 
 ## Quality gate
 
+Changes to user-visible content in `README.md` must update the corresponding
+content in `README.pt-BR.md` in the same pull request.
+
 The quality gate **must pass** before requesting a merge:
 
 ```bash

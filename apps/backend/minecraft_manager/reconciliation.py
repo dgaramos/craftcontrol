@@ -8,7 +8,7 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 from .ports import EventPublisher, ServerConfiguration, ServerConsole, StateStore
-from .schema import PROPERTY_NAMES, SETTINGS
+from .schema import GAMERULES, PROPERTY_NAMES, SETTINGS
 from .telemetry import PREFIX as TELEMETRY_PREFIX, parse_telemetry_line
 
 if TYPE_CHECKING:
@@ -122,6 +122,13 @@ class ReconciliationService:
     # ------------------------------------------------------------------
 
     def refresh_gamerules_async(self, rules: set[str]) -> None:
+        unknown = rules - GAMERULES.keys()
+        if unknown:
+            import logging
+            logging.getLogger(__name__).warning(
+                "refresh_gamerules_async: ignoring unknown gamerule names: %s", sorted(unknown)
+            )
+            rules = rules - unknown
         with self._pending_rules_lock:
             self._pending_rules.update(rules)
             if self._gamerule_worker_running:

@@ -161,6 +161,16 @@ def test_query_gamerules_closes_client_on_exception() -> None:
     docker_client.close.assert_called_once()
 
 
+def test_query_gamerules_does_not_validate_names_in_adapter() -> None:
+    # Validation was moved to ReconciliationService; the adapter must not raise
+    # ValueError for unknown names — it just passes them through to Docker.
+    factory, docker_client, _container = _fake_docker(b"")
+    result = _client(factory).query_gamerules({"notarule"})
+    assert isinstance(result, dict)
+    factory.assert_called_once()
+    docker_client.close.assert_called_once()
+
+
 # ---------------------------------------------------------------------------
 # _write
 # ---------------------------------------------------------------------------

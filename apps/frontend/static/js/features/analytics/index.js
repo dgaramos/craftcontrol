@@ -19,13 +19,12 @@ export function createAnalyticsFeature(deps) {
       requestRender();
     });
   };
-  const shared = { ...deps, analyticsViewSwitch, bindAnalyticsViewSwitch };
   const activityView = createActivityView({ state, t, optionLabel, uiIcon, gameTermMarkup, timelineTimestamp });
-  const renderRankingsPanel = createRankingsPanel({ ...shared, rankingDefinitions });
-  const renderBlocksPanel = createBlocksPanel(shared);
-  const renderCombatPanel = createCombatPanel(shared);
-  const renderExplorationPanel = createExplorationPanel(shared);
-  const renderTrendsPanel = createTrendsPanel(shared);
+  const renderRankingsPanel = createRankingsPanel({ state, content, t, uiIcon, api, $, escapeHtml, analyticsViewSwitch, bindAnalyticsViewSwitch, rankingDefinitions, formatRankingValue, formatDate, openAnalyticsPlayer });
+  const renderBlocksPanel = createBlocksPanel({ state, content, t, uiIcon, api, $, escapeHtml, analyticsViewSwitch, bindAnalyticsViewSwitch, blockTermMarkup, blockIcon, oreLabel, formatRankingValue, openAnalyticsPlayer, formatDate });
+  const renderCombatPanel = createCombatPanel({ state, content, t, uiIcon, gameTermMarkup, api, $, escapeHtml, analyticsViewSwitch, bindAnalyticsViewSwitch, formatRankingValue, openAnalyticsPlayer, formatDate });
+  const renderExplorationPanel = createExplorationPanel({ state, content, t, uiIcon, api, $, escapeHtml, analyticsViewSwitch, bindAnalyticsViewSwitch, formatRankingValue, openAnalyticsPlayer, formatDate, formatDuration, dimensionName, timelineTimestamp });
+  const renderTrendsPanel = createTrendsPanel({ state, content, t, uiIcon, api, $, analyticsViewSwitch, bindAnalyticsViewSwitch, formatRankingValue, openAnalyticsPlayer, formatDate, formatDuration, localeTag });
   let activityObserver = null;
   let loadedEvents = [];
   let loadingActivity = false;

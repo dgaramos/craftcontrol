@@ -26,27 +26,17 @@ export function startApplication() {
   const { t, localeTag, localized, groupLabel, optionLabel } = createI18n(() => state.locale);
   let settingsFeature = null;
   function getSettingsFeature() {
-    if (!settingsFeature) settingsFeature = createSettingsFeature({ state, content, t, api, $, escapeHtml, toast, uiIcon, optionLabel, localeTag, groupLabel, render });
+    if (!settingsFeature) settingsFeature = createSettingsFeature({ state, content, t, api, $, escapeHtml, toast, uiIcon, optionLabel, localeTag, groupLabel, refreshActivePanel });
     return settingsFeature;
   }
-  function booleanControl(...args) { return getSettingsFeature().booleanControl(...args); }
-  function bindSegmentedControls(...args) { return getSettingsFeature().bindSegmentedControls(...args); }
-  function bindSettingFields(...args) { return getSettingsFeature().bindSettingFields(...args); }
-  function playerSettingsMarkup(...args) { return getSettingsFeature().playerSettingsMarkup(...args); }
-  function renderChangesDrawer(...args) { return getSettingsFeature().renderChangesDrawer(...args); }
-  function renderSettingsGroups(...args) { return getSettingsFeature().renderSettingsGroups(...args); }
-  function updateSaveLabel(...args) { return getSettingsFeature().updateSaveLabel(...args); }
-  function updateToggleLabel(...args) { return getSettingsFeature().updateToggleLabel(...args); }
 
   let navigation = null;
   function getNavigation() {
-    if (!navigation) navigation = createNavigation({ state, $, t, uiIcon, render });
+    if (!navigation) navigation = createNavigation({ state, $, t, uiIcon });
     return navigation;
   }
-  function renderTabs() { return getNavigation().renderTabs(); }
-  function openPlayers() { return getNavigation().openPlayers(); }
 
-  function render() {
+  function refreshActivePanel() {
     if (!state.schema) return;
     $("#hero").hidden = state.tab !== "home";
     if (state.tab === "__time__") return getWorldFeature().renderTimePanel();
@@ -63,17 +53,17 @@ export function startApplication() {
   let serverFeature = null;
 
   function getWorldFeature() {
-    if (!worldFeature) worldFeature = createWorldFeature({ state, content, t, api, $, uiIcon, booleanControl, updateToggleLabel, toast, renderSettingsGroups, renderTabs });
+    if (!worldFeature) worldFeature = createWorldFeature({ state, content, t, api, $, uiIcon, toast, getSettingsFeature, getNavigation });
     return worldFeature;
   }
 
   function getRulesFeature() {
-    if (!rulesFeature) rulesFeature = createRulesFeature({ renderSettingsGroups });
+    if (!rulesFeature) rulesFeature = createRulesFeature({ getSettingsFeature });
     return rulesFeature;
   }
 
   function getServerFeature() {
-    if (!serverFeature) serverFeature = createServerFeature({ state, content, t, api, $, escapeHtml, uiIcon, formatDate, toast, renderSettingsGroups });
+    if (!serverFeature) serverFeature = createServerFeature({ state, content, t, api, $, escapeHtml, uiIcon, formatDate, toast, getSettingsFeature });
     return serverFeature;
   }
 
@@ -199,9 +189,9 @@ export function startApplication() {
     $("#language use").setAttribute("href", `/static/craftcontrol-ui.svg?v=7#ui-flag-${languageFlags[state.locale]}`);
     $("#language").setAttribute("aria-label", t("language"));
     document.querySelectorAll("[data-locale]").forEach((option) => option.setAttribute("aria-selected", String(option.dataset.locale === state.locale)));
-    renderTabs();
-    render();
-    updateSaveLabel();
+    getNavigation().renderTabs();
+    refreshActivePanel();
+    getSettingsFeature().updateSaveLabel();
     if (state.status) setStatus(state.status);
     showPlayers({ players: state.players, online: state.online, max_players: state.maxPlayers, updated_at: state.updatedAt });
     updateBrand();
@@ -209,22 +199,23 @@ export function startApplication() {
 
   async function loadState() {
     const snapshot = await api("/api/state");
-    state.config = snapshot.settings || {};
-    state.gamerules = snapshot.gamerules || {};
-    state.domains = snapshot.domains || {};
-    updateBrand();
-    showPlayers(snapshot);
-    render();
+    state.batch(() => {
+      state.config = snapshot.settings || {};
+      state.gamerules = snapshot.gamerules || {};
+      state.domains = snapshot.domains || {};
+      showPlayers(snapshot);
+    });
   }
 
   async function boot() {
     const [schema, snapshot, status, releases] = await Promise.all([api("/api/schema"), api("/api/state"), api("/api/status"), api("/api/telemetry-pack").catch(() => ({})), getServerFeature().loadFrontendVersion()]);
-    state.schema = schema;
-    state.config = snapshot.settings || {};
-    state.gamerules = snapshot.gamerules || {};
-    state.domains = snapshot.domains || {};
-    updateBrand();
-    showPlayers(snapshot);
+    state.batch(() => {
+      state.schema = schema;
+      state.config = snapshot.settings || {};
+      state.gamerules = snapshot.gamerules || {};
+      state.domains = snapshot.domains || {};
+      showPlayers(snapshot);
+    });
     setStatus(status);
     getServerFeature().renderReleaseTags(releases);
     applyLocale();
@@ -234,6 +225,20 @@ export function startApplication() {
   function connectEvents() {
     connectInvalidation({ connectEventStream, loadState, refreshStatus: () => api("/api/status"), setStatus });
   }
+
+  state.subscribe("tab", () => {
+    getNavigation().renderTabs();
+    refreshActivePanel();
+  });
+  state.subscribe("locale", applyLocale);
+  state.subscribe("config", () => {
+    updateBrand();
+    if (["world", "rules", "server", "__time__"].includes(state.tab)) refreshActivePanel();
+  });
+  state.subscribe("gamerules", () => {
+    if (["world", "rules", "server", "__time__"].includes(state.tab)) refreshActivePanel();
+  });
+  state.subscribe("schema", refreshActivePanel);
 
   $("#language").onclick = () => {
     const menu = $("#language-menu");
@@ -245,7 +250,6 @@ export function startApplication() {
     localStorage.setItem("craftcontrol-locale", state.locale);
     $("#language-menu").hidden = true;
     $("#language").setAttribute("aria-expanded", "false");
-    applyLocale();
   });
   document.addEventListener("click", (event) => {
     if (!event.target.closest("#language-picker")) { $("#language-menu").hidden = true; $("#language").setAttribute("aria-expanded", "false"); }
@@ -253,7 +257,7 @@ export function startApplication() {
 
   $("#time-controls").onclick = () => getWorldFeature().openTimeControls();
 
-  $("#open-players").onclick = openPlayers;
+  $("#open-players").onclick = () => getNavigation().openPlayers();
 
   $("#refresh").onclick = async () => {
     try {
@@ -265,7 +269,7 @@ export function startApplication() {
   };
 
   $("#save").onclick = () => {
-    renderChangesDrawer();
+    getSettingsFeature().renderChangesDrawer();
     $("#changes-drawer").showModal();
   };
 
@@ -273,8 +277,8 @@ export function startApplication() {
   $("#discard-all").onclick = () => {
     state.changes = {};
     $("#changes-drawer").close();
-    render();
-    updateSaveLabel();
+    refreshActivePanel();
+    getSettingsFeature().updateSaveLabel();
   };
 
   $("#apply-changes").onclick = async () => {
@@ -287,7 +291,7 @@ export function startApplication() {
       Object.assign(state.config, state.changes);
       state.changes = {};
       $("#changes-drawer").close();
-      updateSaveLabel();
+      getSettingsFeature().updateSaveLabel();
       toast(t("serverUpdated"));
     } catch (error) { toast(error.message, true); }
     finally { $("#apply-changes").disabled = false; }

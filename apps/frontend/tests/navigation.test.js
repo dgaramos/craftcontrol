@@ -69,16 +69,15 @@ function makeEnv(initialTab = "home") {
   };
   const t = (key) => key;
   const uiIcon = (name) => name;
-  const render = jest.fn();
-  return { state, $, t, uiIcon, render, tabsEl };
+  return { state, $, t, uiIcon, tabsEl };
 }
 
 // ── renderTabs ────────────────────────────────────────────────────────────────
 
 describe("createNavigation — renderTabs", () => {
   test("appends all 6 tab buttons to #tabs", () => {
-    const { state, $, t, uiIcon, render, tabsEl } = makeEnv("home");
-    const nav = createNavigation({ state, $, t, uiIcon, render });
+    const { state, $, t, uiIcon, tabsEl } = makeEnv("home");
+    const nav = createNavigation({ state, $, t, uiIcon });
     nav.renderTabs();
     expect(tabsEl._buttons).toHaveLength(6);
   });
@@ -147,13 +146,13 @@ describe("createNavigation — renderTabs", () => {
     expect(state.tab).toBe("world");
   });
 
-  test("clicking a tab calls render", () => {
-    const { state, $, t, uiIcon, render, tabsEl } = makeEnv("home");
-    const nav = createNavigation({ state, $, t, uiIcon, render });
+  test("clicking a tab changes only the selected state", () => {
+    const { state, $, t, uiIcon, tabsEl } = makeEnv("home");
+    const nav = createNavigation({ state, $, t, uiIcon });
     nav.renderTabs();
     const worldBtn = tabsEl._buttons.find((btn) => btn.dataset.tab === "world");
     worldBtn.click();
-    expect(render).toHaveBeenCalled();
+    expect(state.tab).toBe("world");
   });
 
   test("replaceChildren is called to clear tabs on every render", () => {
@@ -176,12 +175,11 @@ describe("createNavigation — openPlayers", () => {
     expect(state.tab).toBe("__players__");
   });
 
-  test("calls render", () => {
-    const { state, $, t, uiIcon, render } = makeEnv("home");
-    const nav = createNavigation({ state, $, t, uiIcon, render });
+  test("leaves rendering to the tab subscription", () => {
+    const { state, $, t, uiIcon } = makeEnv("home");
+    const nav = createNavigation({ state, $, t, uiIcon });
     nav.renderTabs();
-    render.mockClear();
     nav.openPlayers();
-    expect(render).toHaveBeenCalled();
+    expect(state.tab).toBe("__players__");
   });
 });

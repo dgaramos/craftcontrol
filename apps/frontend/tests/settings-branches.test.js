@@ -5,7 +5,7 @@ import { makeEl, makeSettingsDeps as makeDeps } from "./helpers.js";
 // ── renderChangesDrawer — removal handler ─────────────────────────────────────
 
 describe("renderChangesDrawer — removal handler", () => {
-  test("clicking [data-remove-change] deletes entry from state.changes and calls render", () => {
+  test("clicking [data-remove-change] deletes entry and refreshes the active panel", () => {
     const deps = makeDeps({
       changes: { max_players: "20" },
       config: { max_players: "10" },
@@ -28,7 +28,7 @@ describe("renderChangesDrawer — removal handler", () => {
     renderChangesDrawer();
     removeBtn.onclick();
     expect(deps.state.changes).not.toHaveProperty("max_players");
-    expect(deps.render).toHaveBeenCalled();
+    expect(deps.refreshActivePanel).toHaveBeenCalled();
   });
 });
 
@@ -222,7 +222,7 @@ describe("bindSettingFields — live gamerule field", () => {
     expect(deps.toast).toHaveBeenCalled();
   });
 
-  test("api error rolls back gamerule and calls toast with error and render", async () => {
+  test("api error rolls back gamerule and refreshes the active panel", async () => {
     const { deps, fieldEl } = makeLiveDeps();
     deps.api = jest.fn().mockRejectedValue(new Error("PUT failed"));
     const { bindSettingFields } = createSettingsFeature(deps);
@@ -231,7 +231,7 @@ describe("bindSettingFields — live gamerule field", () => {
     await handler();
     expect(deps.state.gamerules.showcoordinates).toBe("true"); // rolled back
     expect(deps.toast).toHaveBeenCalledWith("PUT failed", true);
-    expect(deps.render).toHaveBeenCalled();
+    expect(deps.refreshActivePanel).toHaveBeenCalled();
   });
 });
 

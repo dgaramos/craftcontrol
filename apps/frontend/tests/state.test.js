@@ -77,4 +77,49 @@ describe("state module", () => {
     const { state } = await import("../static/js/core/state.js");
     expect(state.tabs).toEqual(["home", "world", "players", "analytics", "rules", "server"]);
   });
+
+  test("notifies only subscribers for the changed state key", async () => {
+    const { createState } = await import("../static/js/core/state.js");
+    const reactiveState = createState({ players: [], tab: "home" });
+    const playersChanged = jest.fn();
+    const tabChanged = jest.fn();
+    reactiveState.subscribe("players", playersChanged);
+    reactiveState.subscribe("tab", tabChanged);
+
+    reactiveState.players = ["Alex"];
+
+    expect(playersChanged).toHaveBeenCalledWith(["Alex"], []);
+    expect(tabChanged).not.toHaveBeenCalled();
+  });
+
+  test("stops notifying after a subscription is removed", async () => {
+    const { createState } = await import("../static/js/core/state.js");
+    const reactiveState = createState({ tab: "home" });
+    const callback = jest.fn();
+    const unsubscribe = reactiveState.subscribe("tab", callback);
+
+    unsubscribe();
+    reactiveState.tab = "world";
+
+    expect(callback).not.toHaveBeenCalled();
+  });
+
+  test("coalesces notifications made in one batch", async () => {
+    const { createState } = await import("../static/js/core/state.js");
+    const reactiveState = createState({ config: {}, gamerules: {} });
+    const configChanged = jest.fn();
+    const gamerulesChanged = jest.fn();
+    reactiveState.subscribe("config", configChanged);
+    reactiveState.subscribe("gamerules", gamerulesChanged);
+
+    reactiveState.batch(() => {
+      reactiveState.config = { SERVER_NAME: "Craft" };
+      reactiveState.config = { SERVER_NAME: "Control" };
+      reactiveState.gamerules = { keepinventory: "true" };
+    });
+
+    expect(configChanged).toHaveBeenCalledTimes(1);
+    expect(configChanged).toHaveBeenCalledWith({ SERVER_NAME: "Control" });
+    expect(gamerulesChanged).toHaveBeenCalledWith({ keepinventory: "true" });
+  });
 });

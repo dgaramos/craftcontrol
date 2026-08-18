@@ -174,35 +174,15 @@ docker compose -f docker-compose.split.yml exec craftcontrol-backend craftcontro
 
 Veja [Integração do Telemetry Pack](docs/telemetry-pack.md) para o ciclo de vida e o runbook de recuperação.
 
-## Instalação e cutover de produção
+## Instalação
 
-### Requisitos
+O CraftControl requer Docker Engine com o plugin Compose e uma implantação
+existente de `itzg/minecraft-bedrock-server`. Ele roda ao lado do projeto
+Bedrock e deve ser implantado pelos comandos protegidos. Nunca execute
+`docker compose up` sem opções a partir de um checkout de desenvolvimento.
 
-- Docker Engine com o plugin Compose;
-- uma implantação existente de `itzg/minecraft-bedrock-server`;
-- CraftControl e o projeto Bedrock como diretórios irmãos, ou uma montagem de projeto explicitamente configurada;
-- terminação HTTPS se `AUTH_COOKIE_SECURE=true`.
-
-Layout padrão:
-
-```text
-/mnt/storage/docker/
-├── minecraft-bedrock/
-└── craftcontrol/
-```
-
-Em uma instalação nova, copie `.env.example`, revise cada caminho e configuração de segurança e valide a topologia dividida:
-
-```bash
-cp .env.example .env
-docker compose -f docker-compose.split.yml config --quiet
-bin/cutover-craftcontrol-split --check
-bin/cutover-craftcontrol-split
-```
-
-Abra `https://craftcontrol.example` pelo proxy reverso, ou `http://HOST_IP:8082` apenas em uma LAN confiável quando cookies seguros forem desativados deliberadamente.
-
-Nunca execute `docker compose up` sem opções a partir de um checkout de desenvolvimento em produção. Montagens relativas podem apontar para estado de desenvolvimento. Comandos de produção exigem `main` limpo e publicado e protegem `.env`, o mundo e `manager.db`.
+Veja [Instalação](docs/installation.pt-BR.md) para pré-requisitos, layout esperado,
+configuração, cutover, acesso, verificações pós-instalação e solução de problemas.
 
 ## Configuração
 

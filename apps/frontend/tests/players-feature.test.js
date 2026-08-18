@@ -93,7 +93,7 @@ describe("renderPlayersPanel — happy path", () => {
 
   test("empty player list renders noHistory message", async () => {
     const deps = makeWorkspaceDeps();
-    const loadingEl = makeEl();
+    const loadingEl = makeEl({ querySelector: jest.fn(() => makeEl()) });
     deps.content.querySelector = jest.fn(() => loadingEl);
     const renderPlayersPanel = createPlayersWorkspace(deps);
     await renderPlayersPanel();
@@ -141,6 +141,28 @@ describe("renderPlayersPanel — happy path", () => {
     expect(deps.api).toHaveBeenCalledWith("/api/auth/access");
   });
 
+  test("owner handles missing player and access collections safely", async () => {
+    const deps = makeWorkspaceDeps({ state: { locale: "en", user: { role: "owner", capabilities: [] } } });
+    deps.api = jest.fn().mockResolvedValueOnce({}).mockResolvedValueOnce({});
+    const loadingEl = makeEl();
+    deps.content.querySelector = jest.fn(() => loadingEl);
+    await createPlayersWorkspace(deps)();
+    expect(loadingEl.textContent).toBe("noHistory");
+  });
+
+  test("owner roster marks active panel access", async () => {
+    const deps = makeWorkspaceDeps({ state: { locale: "en", user: { role: "owner", capabilities: [] } } });
+    deps.api = jest.fn()
+      .mockResolvedValueOnce({ players: [makePlayer()] })
+      .mockResolvedValueOnce({ players: [{ name: "Alice", status: "active", role: "owner" }] });
+    const loadingEl = makeEl();
+    deps.content.querySelector = jest.fn((selector) => selector === ".loading-players" ? loadingEl : makeEl({ hidden: true }));
+    deps.content.querySelectorAll = jest.fn(() => []);
+    await createPlayersWorkspace(deps)();
+    expect(loadingEl.appendChild).toHaveBeenCalled();
+  });
+
+
   test("API error sets error message on loading element", async () => {
     const deps = makeWorkspaceDeps();
     deps.api = jest.fn().mockRejectedValue(new Error("server down"));
@@ -149,6 +171,14 @@ describe("renderPlayersPanel — happy path", () => {
     const renderPlayersPanel = createPlayersWorkspace(deps);
     await renderPlayersPanel();
     expect(loadingEl.textContent).toBe("server down");
+  });
+
+  test("API error falls back to toast when the loading element is absent", async () => {
+    const deps = makeWorkspaceDeps();
+    deps.api = jest.fn().mockRejectedValue(new Error("server down"));
+    deps.content.querySelector = jest.fn(() => null);
+    await createPlayersWorkspace(deps)();
+    expect(deps.toast).toHaveBeenCalledWith("server down", true);
   });
 });
 
@@ -159,8 +189,10 @@ describe("renderPlayersPanel — filters", () => {
     const filterButtons = [
       makeEl({ dataset: { playerFilter: "all" }, classList: { toggle: jest.fn(), add: jest.fn(), remove: jest.fn() } }),
       makeEl({ dataset: { playerFilter: "online" }, classList: { toggle: jest.fn(), add: jest.fn(), remove: jest.fn() } }),
+      makeEl({ dataset: { playerFilter: "offline" }, classList: { toggle: jest.fn(), add: jest.fn(), remove: jest.fn() } }),
+      makeEl({ dataset: { playerFilter: "operator" }, classList: { toggle: jest.fn(), add: jest.fn(), remove: jest.fn() } }),
     ];
-    const loadingEl = makeEl();
+    const loadingEl = makeEl({ querySelector: jest.fn(() => makeEl()) });
     deps.content.querySelector = jest.fn((sel) => {
       if (sel === ".loading-players") return loadingEl;
       if (sel === ".player-toolbar") return makeEl({ hidden: true });
@@ -192,6 +224,20 @@ describe("renderPlayersPanel — filters", () => {
     const renderPlayersPanel = createPlayersWorkspace(deps);
     await renderPlayersPanel();
     expect(typeof filterButtons[0].onclick).toBe("function");
+  });
+
+  test("search and every roster filter update the visible player list", async () => {
+    const { deps, filterButtons, searchEl } = setupWithPlayers([
+      makePlayer({ name: "Alice", online: true, operator: true, connected_at: 100 }),
+      makePlayer({ name: "Bob", online: false, operator: false }),
+    ]);
+    await createPlayersWorkspace(deps)();
+    searchEl.value = "alice";
+    searchEl.oninput();
+    filterButtons.slice(1).forEach((button) => button.onclick());
+    expect(filterButtons[1].classList.toggle).toHaveBeenCalledWith("active", true);
+    expect(filterButtons[2].classList.toggle).toHaveBeenCalledWith("active", true);
+    expect(filterButtons[3].classList.toggle).toHaveBeenCalledWith("active", true);
   });
 });
 

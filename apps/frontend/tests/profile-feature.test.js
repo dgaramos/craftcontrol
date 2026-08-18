@@ -43,4 +43,28 @@ describe("createPlayerProfile", () => {
     await createPlayerProfile(deps)({ id: "player-1" }, {});
     expect(deps.content.innerHTML).toContain("profile unavailable");
   });
+
+  test("rejects a profile without history", async () => {
+    const deps = makeDeps();
+    deps.api.mockResolvedValueOnce({ profile: { name: "Alice" } });
+    await createPlayerProfile(deps)({ id: "player-1" }, {});
+    expect(deps.content.innerHTML).toContain("historyUnavailable");
+  });
+
+  test("handles an offline operator update failure", async () => {
+    const deps = makeDeps();
+    deps.api = jest.fn()
+      .mockResolvedValueOnce({ profile: { name: "Alice", history: [], online: false, operator: true } })
+      .mockRejectedValueOnce(new Error("operator unavailable"));
+    await createPlayerProfile(deps)({ id: "player-1" }, {});
+    await deps.elements["#detail-operator"].onchange({ target: { checked: false } });
+    expect(deps.toast).toHaveBeenCalledWith("operator unavailable", true);
+  });
+
+  test("renders a profile without an operator control", async () => {
+    const deps = makeDeps();
+    deps.$ = jest.fn((selector) => selector === "#detail-operator" ? null : deps.elements[selector] ||= makeEl());
+    await createPlayerProfile(deps)({ id: "player-1" }, {});
+    expect(deps.content.innerHTML).toContain("player-detail-screen");
+  });
 });

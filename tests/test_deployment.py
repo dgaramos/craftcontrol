@@ -80,7 +80,7 @@ def test_successful_main_quality_run_triggers_the_guarded_homelab_release() -> N
     assert "git push origin HEAD:refs/heads/main" in workflow
     assert "bin/deploy-craftcontrol-release --check" in workflow
     assert "bin/deploy-craftcontrol-release" in workflow
-    assert "GITEA_REPOSITORY_URL" in workflow
+    assert "secrets.GITEA_PUSH_URL" in workflow
     assert "GitHub-hosted runners never receive Docker or LAN access" in runbook
 
 

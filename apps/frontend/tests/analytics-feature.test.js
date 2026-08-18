@@ -45,6 +45,39 @@ describe("createAnalyticsFeature — factory setup", () => {
     expect(deps.requestRender).toHaveBeenCalled();
   });
 
+  test("activity load-more restores the page and offers a retry after an append failure", async () => {
+    const deps = makeAnalyticsDeps({ kind: "all" });
+    const previousWindow = global.window;
+    const target = makeEl();
+    const sentinel = makeEl();
+    const loadMore = makeEl();
+    deps.$ = jest.fn((selector) => ({
+      "#analytics-results": target,
+      "#activity-scroll-sentinel": sentinel,
+      "#activity-load-more": loadMore,
+    })[selector] || makeEl());
+    deps.api = jest.fn()
+      .mockResolvedValueOnce({ events: [], pages: 2, page: 1, total: 1, summary: {} })
+      .mockResolvedValueOnce({ players: [] })
+      .mockRejectedValueOnce(new Error("next page unavailable"))
+      .mockResolvedValueOnce({ players: [] });
+    global.window = {};
+
+    try {
+      const { render } = createAnalyticsFeature(deps);
+      await render();
+      loadMore.onclick();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(deps.state.analytics.page).toBe(1);
+      expect(sentinel.innerHTML).toContain("next page unavailable");
+      expect(loadMore.onclick).toEqual(expect.any(Function));
+    } finally {
+      global.window = previousWindow;
+    }
+  });
+
   test("render delegates to renderBlocksPanel for blocks kind", async () => {
     const deps = makeAnalyticsDeps({ kind: "blocks" });
     deps.api = jest.fn().mockResolvedValue({

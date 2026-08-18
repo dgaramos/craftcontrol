@@ -51,6 +51,20 @@ describe("api — non-CSRF-protected URLs", () => {
 });
 
 describe("api — POST mutation with CSRF", () => {
+  test("CSRF bootstrap failure exposes the server error and status", async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: async () => ({ error: "sign in required" }),
+    });
+
+    const error = await api("/api/protected", { method: "POST" }).catch((reason) => reason);
+
+    expect(error).toBeInstanceOf(Error);
+    expect(error.message).toBe("sign in required");
+    expect(error.status).toBe(401);
+  });
+
   test("POST sends X-CSRF-Token header", async () => {
     global.fetch = jest.fn().mockImplementation((url) => {
       if (url === "/api/auth/me") return meResponse();

@@ -69,6 +69,21 @@ def test_coordinated_release_uses_the_pinned_pair_and_component_commands() -> No
     assert "--rollback FRONTEND_VERSION BACKEND_VERSION" in script
 
 
+def test_successful_main_quality_run_triggers_the_guarded_homelab_release() -> None:
+    workflow = (ROOT / ".github" / "workflows" / "deploy-homelab.yml").read_text()
+    runbook = (ROOT / "docs" / "automated-deployment.md").read_text()
+    assert "workflow_run:" in workflow
+    assert "workflows: [Quality gates]" in workflow
+    assert "github.event.workflow_run.conclusion == 'success'" in workflow
+    assert "runs-on: [self-hosted, homelab, craftcontrol]" in workflow
+    assert "craftcontrol-homelab-production" in workflow
+    assert "git push origin HEAD:refs/heads/main" in workflow
+    assert "bin/deploy-craftcontrol-release --check" in workflow
+    assert "bin/deploy-craftcontrol-release" in workflow
+    assert "GITEA_REPOSITORY_URL" in workflow
+    assert "GitHub-hosted runners never receive Docker or LAN access" in runbook
+
+
 def test_cutover_proves_auth_csrf_sse_and_persistent_state() -> None:
     canary = (ROOT / "bin" / "check-split-auth").read_text()
     cutover = (ROOT / "bin" / "cutover-craftcontrol-split").read_text()

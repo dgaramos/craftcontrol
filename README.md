@@ -304,6 +304,11 @@ bin/check                # complete local gate
 
 GitHub Actions and Gitea Actions run the four boundaries independently. Changes use Conventional Commits and production deployment is accepted only from clean, published `main`.
 
+Successful GitHub `main` quality runs deploy automatically through the
+repository-scoped homelab runner. The workflow synchronizes Gitea and invokes
+the same guarded release command used for manual operations; see [Automated
+homelab deployment](docs/automated-deployment.md).
+
 See [Development setup](docs/development-setup.md) for prerequisites, environment configuration, and a guide to common development tasks.
 
 ## Security status
@@ -373,4 +378,3 @@ applies to the original CraftControl source code, documentation, Telemetry Pack,
 and visual assets contained in this repository unless a file states otherwise.
 
 CraftControl is independent and is not affiliated with Mojang Studios or Microsoft. Minecraft is a trademark of Microsoft Corporation.
-

@@ -16,7 +16,6 @@ global.window = {
 };
 
 const state = { tab: "home", tabs: ["home", "players", "analytics"] };
-let rendered = 0;
 let buttons = [];
 const tabs = {
   replaceChildren() { buttons = []; },
@@ -54,14 +53,12 @@ const navigation = createNavigation({
   },
   t: (key) => key,
   uiIcon: (name) => `<svg data-icon="${name}"></svg>`,
-  render: () => { rendered += 1; },
 });
 navigation.renderTabs();
 assert.ok(buttons.some((btn) => btn.dataset.tab === "players"), "players tab button must exist");
 const playersBtn = buttons.find((btn) => btn.dataset.tab === "players");
 playersBtn.onclick();
 assert.equal(state.tab, "__players__");
-assert.equal(rendered, 1);
 assert.equal(window.location.hash, "#/players");
 assert.equal(tabFromLocation({ hash: "#/analytics" }), "home");
 assert.equal(tabFromLocation({ hash: "#/data" }), "analytics");

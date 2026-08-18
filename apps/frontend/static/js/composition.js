@@ -288,8 +288,9 @@ export function startApplication() {
       await api("/api/config", { method: "PUT", body: JSON.stringify(state.changes) });
       toast(t("saved"));
       await api("/api/server/apply", { method: "POST" });
-      Object.assign(state.config, state.changes);
+      const appliedChanges = state.changes;
       state.changes = {};
+      state.config = { ...state.config, ...appliedChanges };
       $("#changes-drawer").close();
       getSettingsFeature().updateSaveLabel();
       toast(t("serverUpdated"));

@@ -66,7 +66,8 @@ describe("analytics branch coverage", () => {
       rankings: { damage_dealt: [{ player: { id: "1", name: "A" }, value: 4 }] },
       breakdowns: { causes: [{ key: "fall", count: 1 }], opponents: [{ key: "zombie", count: 1 }], projectiles: [{ key: "arrow", count: 1 }] },
       pvp: [{ attacker: { id: "1", name: "A" }, victim: { id: "2", name: "B" }, count: 1 }],
-      players: [{ player: { id: "1", name: "A" }, damage_dealt: 4, favorite_target: { key: "zombie", count: 1 }, telemetry_available: false }],
+      top_targets: [{ target: "zombie", kills: 2 }],
+      players: [{ player: { id: "1", name: "A" }, mob_kills: 1, player_kills: 1, deaths: 1, damage_dealt: 4, favorite_target: { target: "zombie" }, telemetry_available: true, updated_at: 1 }],
     });
     await createCombatPanel(deps)();
     combatPlayer.onclick();

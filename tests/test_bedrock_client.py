@@ -161,6 +161,27 @@ def test_query_gamerules_closes_client_on_exception() -> None:
     docker_client.close.assert_called_once()
 
 
+def test_query_gamerules_rejects_unknown_rule_name() -> None:
+    factory, docker_client, _container = _fake_docker()
+    with pytest.raises(ValueError, match="Unknown gamerule names"):
+        _client(factory).query_gamerules({"notarule"})
+    docker_client.close.assert_not_called()
+
+
+def test_query_gamerules_rejects_name_with_newline() -> None:
+    factory, docker_client, _container = _fake_docker()
+    with pytest.raises(ValueError, match="Unknown gamerule names"):
+        _client(factory).query_gamerules({"pvp\nlist"})
+    docker_client.close.assert_not_called()
+
+
+def test_query_gamerules_rejects_mix_of_valid_and_invalid() -> None:
+    factory, docker_client, _container = _fake_docker()
+    with pytest.raises(ValueError, match="Unknown gamerule names"):
+        _client(factory).query_gamerules({"pvp", "badname"})
+    docker_client.close.assert_not_called()
+
+
 # ---------------------------------------------------------------------------
 # _write
 # ---------------------------------------------------------------------------

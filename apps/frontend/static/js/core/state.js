@@ -27,9 +27,10 @@ export function createState(initialState) {
       try { return callback(); }
       finally {
         batching -= 1;
-        if (batching) return;
-        [...pending].forEach((key) => subscriptions.get(key)?.forEach((listener) => listener(target[key])));
-        pending.clear();
+        if (!batching) {
+          [...pending].forEach((key) => subscriptions.get(key)?.forEach((listener) => listener(target[key])));
+          pending.clear();
+        }
       }
     } },
   });

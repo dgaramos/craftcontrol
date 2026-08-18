@@ -122,4 +122,13 @@ describe("state module", () => {
     expect(configChanged).toHaveBeenCalledWith({ SERVER_NAME: "Control" });
     expect(gamerulesChanged).toHaveBeenCalledWith({ keepinventory: "true" });
   });
+
+  test("preserves errors raised by a nested batch", async () => {
+    const { createState } = await import("../static/js/core/state.js");
+    const reactiveState = createState({ config: {} });
+
+    expect(() => reactiveState.batch(() => reactiveState.batch(() => {
+      throw new Error("nested failure");
+    }))).toThrow("nested failure");
+  });
 });

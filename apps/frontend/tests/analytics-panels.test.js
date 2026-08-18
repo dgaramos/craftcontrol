@@ -2,7 +2,7 @@ import { jest } from "@jest/globals";
 import { createCombatPanel } from "../static/js/features/analytics/combat.js";
 import { createExplorationPanel } from "../static/js/features/analytics/exploration.js";
 import { createTrendsPanel } from "../static/js/features/analytics/trends.js";
-import { makeEl } from "./helpers.js";
+import { findNodes, makeDom, makeEl } from "./helpers.js";
 
 
 function makeSharedDeps(stateOverrides = {}) {
@@ -226,111 +226,98 @@ describe("renderTrendsPanel — happy path", () => {
     };
   }
 
-  test("content.innerHTML contains trends-screen", async () => {
+  let savedDocument;
+
+  beforeEach(() => {
+    savedDocument = global.document;
+    global.document = makeDom().document;
+  });
+
+  afterEach(() => {
+    global.document = savedDocument;
+  });
+
+  test("renders API values through safe DOM properties", async () => {
     const deps = makeSharedDeps();
     deps.api = jest.fn().mockResolvedValue(trendsResult());
-    deps.elements["#trends-content"] = makeEl();
-    deps.content.querySelectorAll = jest.fn(() => []);
-    const render = createTrendsPanel(deps);
-    await render();
-    expect(deps.content.innerHTML).toContain("trends-screen");
+
+    await createTrendsPanel(deps)();
+
+    const screen = deps.content.children[0];
+    expect(screen.className).toBe("trends-screen");
+    expect(findNodes(screen, (node) => node.textContent === "Alice")).toHaveLength(1);
+    expect(findNodes(screen, (node) => node.className === "level-4").length).toBeGreaterThan(0);
   });
 
-  test("calendarDate is exercised via most_active_day", async () => {
+  test("keeps malformed values as safe zero-level DOM values", async () => {
     const deps = makeSharedDeps();
-    const target = makeEl();
-    deps.$ = jest.fn((sel) => sel === "#trends-content" ? target : makeEl());
-    deps.content.querySelectorAll = jest.fn(() => []);
-    deps.api = jest.fn().mockResolvedValue(trendsResult());
-    const render = createTrendsPanel(deps);
-    await render();
-    // most_active_day.day = "2024-01-15" → calendarDate renders a date string
-    expect(target.innerHTML).toContain("mostActiveDay");
+    deps.api = jest.fn().mockResolvedValue(trendsResult({
+      rankings: { play_seconds: [{ player: { id: '<img src=x>', name: '<script>bad</script>' }, value: Infinity }] },
+      calendar: [{ day: "2024-01-15", play_seconds: "bad", sessions: Infinity }],
+      heatmap: [{ weekday: 1, hour: 14, seconds: NaN }, { weekday: 1, hour: 99, seconds: 20 }],
+    }));
+
+    await createTrendsPanel(deps)();
+
+    const screen = deps.content.children[0];
+    const malicious = findNodes(screen, (node) => node.textContent === "<script>bad</script>")[0];
+    expect(malicious.tagName).toBe("button");
+    expect(findNodes(screen, (node) => node.title?.includes("99:00"))).toHaveLength(0);
+    expect(findNodes(screen, (node) => node.className === "level-0").length).toBeGreaterThan(0);
   });
 
-  test("heatmap with entries renders grid rows", async () => {
+  test("renders empty ranking and calendar without invalid classes", async () => {
     const deps = makeSharedDeps();
-    const target = makeEl();
-    deps.$ = jest.fn((sel) => sel === "#trends-content" ? target : makeEl());
-    deps.content.querySelectorAll = jest.fn(() => []);
-    deps.api = jest.fn().mockResolvedValue(trendsResult());
-    const render = createTrendsPanel(deps);
-    await render();
-    expect(target.innerHTML).toContain("level-");
+    deps.api = jest.fn().mockResolvedValue(trendsResult({ rankings: { play_seconds: [] }, calendar: [], heatmap: [] }));
+
+    await createTrendsPanel(deps)();
+
+    const screen = deps.content.children[0];
+    expect(findNodes(screen, (node) => node.className === "trends-zero")).toHaveLength(1);
+    expect(findNodes(screen, (node) => node.className.includes("level-NaN"))).toHaveLength(0);
   });
 
-  test("empty calendar renders gracefully", async () => {
+  test("renders API errors as text content", async () => {
     const deps = makeSharedDeps();
-    const target = makeEl();
-    deps.$ = jest.fn((sel) => sel === "#trends-content" ? target : makeEl());
-    deps.content.querySelectorAll = jest.fn(() => []);
-    deps.api = jest.fn().mockResolvedValue(trendsResult({ calendar: [], heatmap: [] }));
-    const render = createTrendsPanel(deps);
-    await render();
-    expect(target.innerHTML).toContain("trends-summary");
-  });
+    deps.api = jest.fn().mockRejectedValue(new Error("<b>trends api fail</b>"));
 
-  test("API error renders error message", async () => {
-    const deps = makeSharedDeps();
-    const target = makeEl();
-    deps.$ = jest.fn((sel) => sel === "#trends-content" ? target : makeEl());
-    deps.content.querySelectorAll = jest.fn(() => []);
-    deps.api = jest.fn().mockRejectedValue(new Error("trends api fail"));
-    const render = createTrendsPanel(deps);
-    await render();
-    expect(target.innerHTML).toContain("trends api fail");
+    await createTrendsPanel(deps)();
+
+    const error = findNodes(deps.content.children[0], (node) => node.textContent === "<b>trends api fail</b>")[0];
+    expect(error.tagName).toBe("p");
   });
 
   test("switching periods reloads the trends data and marks the selected period", async () => {
     const deps = makeSharedDeps({ periodDays: 30 });
-    const target = makeEl();
-    const sevenDays = makeEl({ dataset: { periodDays: "7" }, classList: { toggle: jest.fn() } });
-    const thirtyDays = makeEl({ dataset: { periodDays: "30" }, classList: { toggle: jest.fn() } });
-    deps.$ = jest.fn((selector) => selector === "#trends-content" ? target : makeEl());
-    deps.content.querySelectorAll = jest.fn((selector) => selector === "[data-period-days]" ? [sevenDays, thirtyDays] : []);
     deps.api = jest.fn().mockResolvedValue(trendsResult());
 
     await createTrendsPanel(deps)();
+    const screen = deps.content.children[0];
+    const [sevenDays, thirtyDays] = findNodes(screen, (node) => node.dataset.periodDays).sort((a, b) => Number(a.dataset.periodDays) - Number(b.dataset.periodDays));
     sevenDays.onclick();
     await Promise.resolve();
 
     expect(deps.state.analytics.periodDays).toBe(7);
-    expect(sevenDays.classList.toggle).toHaveBeenCalledWith("active", true);
-    expect(thirtyDays.classList.toggle).toHaveBeenCalledWith("active", false);
+    expect(sevenDays.className).toContain("active");
+    expect(thirtyDays.className).not.toContain("active");
     expect(deps.api).toHaveBeenLastCalledWith("/api/analytics/periods?days=7&limit=10");
   });
 
-  test("renders calendar and heatmap values through DOM properties", async () => {
+  test("opens a ranking player and reloads when the metric changes", async () => {
     const deps = makeSharedDeps();
-    const target = makeEl();
-    const calendar = makeEl({ append: jest.fn() });
-    const heatmap = makeEl({ append: jest.fn() });
-    target.querySelector = jest.fn((selector) => selector.includes("calendar") ? calendar : heatmap);
-    deps.$ = jest.fn((sel) => sel === "#trends-content" ? target : makeEl());
-    deps.content.querySelectorAll = jest.fn(() => []);
-    deps.api = jest.fn().mockResolvedValue(trendsResult({
-      calendar: [{ day: "2024-01-15", play_seconds: "bad", sessions: Infinity }],
-      heatmap: [{ weekday: 1, hour: 14, seconds: NaN }, { weekday: 1, hour: 99, seconds: 20 }],
-    }));
-    const created = [];
-    const previousDocument = globalThis.document;
-    globalThis.document = {
-      createRange: () => ({ createContextualFragment: () => ({}) }),
-      createElement: (tag) => {
-        const element = { tagName: tag, children: [], append(child) { this.children.push(child); }, textContent: "", className: "", title: "" };
-        created.push(element);
-        return element;
-      },
-    };
-    try {
-      await createTrendsPanel(deps)();
-      expect(calendar.append).toHaveBeenCalled();
-      expect(heatmap.append).toHaveBeenCalled();
-      expect(created.some((node) => node.className === "level-0")).toBe(true);
-      expect(created.some((node) => node.title.includes("14:00"))).toBe(true);
-      expect(created.some((node) => node.title.includes("99"))).toBe(false);
-    } finally {
-      globalThis.document = previousDocument;
-    }
+    deps.api = jest.fn().mockResolvedValue(trendsResult());
+
+    await createTrendsPanel(deps)();
+
+    const screen = deps.content.children[0];
+    const player = findNodes(screen, (node) => node.dataset.periodPlayer === "1")[0];
+    const metric = findNodes(screen, (node) => node.dataset.periodMetric === "sessions")[0];
+    player.onclick();
+    metric.onclick();
+    await Promise.resolve();
+
+    expect(deps.openAnalyticsPlayer).toHaveBeenCalledWith("1");
+    expect(deps.state.analytics.periodMetric).toBe("sessions");
+    expect(deps.api).toHaveBeenLastCalledWith("/api/analytics/periods?days=30&limit=10");
   });
 });

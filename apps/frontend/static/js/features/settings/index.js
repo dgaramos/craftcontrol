@@ -1,4 +1,4 @@
-export function createSettingsFeature({ state, content, t, api, $, escapeHtml, toast, uiIcon, optionLabel, localeTag, groupLabel, render }) {
+export function createSettingsFeature({ state, content, t, api, $, escapeHtml, toast, uiIcon, optionLabel, localeTag, groupLabel, refreshActivePanel }) {
   function can(capability) {
     const capabilities = state.user?.capabilities || [];
     return capabilities.includes("*") || capabilities.includes(capability);
@@ -80,7 +80,7 @@ export function createSettingsFeature({ state, content, t, api, $, escapeHtml, t
     }).join("");
     $("#changes-list").querySelectorAll("[data-remove-change]").forEach((button) => button.onclick = () => {
       delete state.changes[button.dataset.removeChange];
-      render();
+      refreshActivePanel();
       updateSaveLabel();
     });
   }
@@ -154,7 +154,7 @@ export function createSettingsFeature({ state, content, t, api, $, escapeHtml, t
         } catch (error) {
           state.gamerules[key] = previous;
           toast(error.message, true);
-          render();
+          refreshActivePanel();
         }
       });
     });

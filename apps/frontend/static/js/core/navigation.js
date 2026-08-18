@@ -1,6 +1,6 @@
 import { persistTab } from "./route.js?v=7";
 
-export function createNavigation({ state, $, t, uiIcon, render }) {
+export function createNavigation({ state, $, t, uiIcon }) {
   const icons = { home: "home", world: "world", players: "players", analytics: "data", rules: "rules", server: "server" };
 
   function resetVerticalScroll() {
@@ -22,8 +22,6 @@ export function createNavigation({ state, $, t, uiIcon, render }) {
       button.onclick = () => {
         state.tab = button.dataset.tab === "players" ? "__players__" : button.dataset.tab;
         persistTab(state.tab);
-        renderTabs();
-        render();
         resetVerticalScroll();
       };
       tabs.appendChild(clone);
@@ -33,8 +31,6 @@ export function createNavigation({ state, $, t, uiIcon, render }) {
   function openPlayers() {
     state.tab = "__players__";
     persistTab(state.tab);
-    renderTabs();
-    render();
     resetVerticalScroll();
   }
 

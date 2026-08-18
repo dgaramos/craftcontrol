@@ -203,8 +203,8 @@ export function makeSettingsDeps(stateOverrides = {}) {
   const groupLabel = (g) => g;
   const api = jest.fn();
   const toast = jest.fn();
-  const render = jest.fn();
-  return { state, $, content, t, escapeHtml, uiIcon, optionLabel, localeTag, groupLabel, toast, api, render, elements };
+  const refreshActivePanel = jest.fn();
+  return { state, $, content, t, escapeHtml, uiIcon, optionLabel, localeTag, groupLabel, toast, api, render: refreshActivePanel, refreshActivePanel, elements };
 }
 
 export class FakeEventSource {

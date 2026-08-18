@@ -77,10 +77,8 @@ def test_successful_main_quality_run_triggers_the_guarded_homelab_release() -> N
     assert "github.event.workflow_run.conclusion == 'success'" in workflow
     assert "runs-on: [self-hosted, homelab, craftcontrol]" in workflow
     assert "craftcontrol-homelab-production" in workflow
-    assert "git push origin HEAD:refs/heads/main" in workflow
-    assert "bin/deploy-craftcontrol-release --check" in workflow
-    assert "bin/deploy-craftcontrol-release" in workflow
-    assert "secrets.GITEA_PUSH_URL" in workflow
+    assert "/usr/local/bin/craftcontrol-homelab-deploy" in workflow
+    assert "GITEA_PUSH_URL" not in workflow
     assert "GitHub-hosted runners never receive Docker or LAN access" in runbook
 
 

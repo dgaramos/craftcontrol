@@ -97,4 +97,14 @@ describe("analytics branch coverage", () => {
     expect(target.innerHTML).toContain("exploration-summary");
     expect(deps.openAnalyticsPlayer).toHaveBeenCalledWith("1");
   });
+
+  test("exploration renders zero states for missing collections and falls back metric", async () => {
+    const deps = withBindings(makeAnalyticsDeps({ explorationMetric: "unknown" }));
+    const target = makeEl();
+    deps.$ = jest.fn((selector) => selector === "#exploration-content" ? target : makeEl());
+    deps.api = jest.fn().mockResolvedValue({ totals: {} });
+    await createExplorationPanel(deps)();
+    expect(target.innerHTML).toContain("noExplorationEvidence");
+    expect(target.innerHTML).toContain("distanceTraveled");
+  });
 });

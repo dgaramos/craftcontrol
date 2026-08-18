@@ -30,14 +30,14 @@ jobs:
 
       - name: Verify and synchronize the release source
         env:
-          GITEA_REPOSITORY_URL: ${{ vars.GITEA_REPOSITORY_URL }}
+          GITEA_PUSH_URL: ${{ secrets.GITEA_PUSH_URL }}
         run: |
           set -euo pipefail
-          test -n "$GITEA_REPOSITORY_URL"
+          test -n "$GITEA_PUSH_URL"
           git switch --force-create main "${{ github.event.workflow_run.head_sha }}"
           test -z "$(git status --porcelain)"
           git remote rename origin github
-          git remote add origin "$GITEA_REPOSITORY_URL"
+          git remote add origin "$GITEA_PUSH_URL"
           git push origin HEAD:refs/heads/main
           test "$(git ls-remote github refs/heads/main | awk '{print $1}')" = "$(git rev-parse HEAD)"
           test "$(git ls-remote origin refs/heads/main | awk '{print $1}')" = "$(git rev-parse HEAD)"

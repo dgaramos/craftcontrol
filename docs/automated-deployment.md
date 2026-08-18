@@ -26,8 +26,8 @@ because the guarded deployment command operates the local production Compose
 project. Do not attach these labels to a shared runner or use it for pull
 requests from untrusted repositories.
 
-Set the GitHub repository Actions variable `GITEA_REPOSITORY_URL` to the local
-Gitea clone/push URL, then start the runner Compose project at
+Set the GitHub repository Actions secret `GITEA_PUSH_URL` to a local Gitea
+repository URL authenticated with a token restricted to repository writes, then start the runner Compose project at
 `/mnt/storage/docker/craftcontrol-github-runner`. Its registration token is
 short-lived and is used only for initial runner registration; persistent runner
 state is stored outside this repository.

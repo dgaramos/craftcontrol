@@ -13,9 +13,11 @@ function makeDeps() {
     state, content, $, api, elements,
     t: (key) => key, localized: (pt, en) => en, escapeHtml: (value) => String(value),
     formatDate: () => "2024-01-01", formatDuration: (value) => `${value}s`,
-    playerDataMarkup: jest.fn(() => ""), profileMarkup: jest.fn(() => ""), booleanControl: jest.fn(() => ""),
+    playerDataMarkup: jest.fn(() => ""), profileMarkup: jest.fn(() => ""),
     panelAccessDetailMarkup: jest.fn(() => ""), renderPlayersPanel: jest.fn(), renderAnalyticsPanel: jest.fn(),
-    renderTabs: jest.fn(), updateToggleLabel: jest.fn(), toast: jest.fn(), bindPlayerAccess: jest.fn(),
+    toast: jest.fn(), bindPlayerAccess: jest.fn(),
+    getSettingsFeature: () => ({ booleanControl: jest.fn(() => ""), updateToggleLabel: jest.fn() }),
+    getNavigation: () => ({ renderTabs: jest.fn() }),
   };
 }
 

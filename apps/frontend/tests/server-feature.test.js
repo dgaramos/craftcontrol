@@ -11,7 +11,7 @@ function makeDeps(overrides = {}) {
   return {
     state, content, $, elements, api, t: (key) => key, escapeHtml: (value) => String(value ?? ""),
     uiIcon: (name) => `<svg>${name}</svg>`, formatDate: (value) => value ? "2024-01-01" : "—",
-    toast: jest.fn(), renderSettingsGroups: jest.fn(), ...overrides,
+    toast: jest.fn(), getSettingsFeature: () => ({ renderSettingsGroups: jest.fn() }), ...overrides,
   };
 }
 

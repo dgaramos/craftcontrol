@@ -9,7 +9,8 @@ import { makeSettingsDeps } from "./helpers.js";
 describe("createRulesFeature", () => {
   test("renderRules calls renderSettingsGroups with the six rule groups", () => {
     const renderSettingsGroups = jest.fn();
-    const { renderRules } = createRulesFeature({ renderSettingsGroups });
+    const getSettingsFeature = () => ({ renderSettingsGroups });
+    const { renderRules } = createRulesFeature({ getSettingsFeature });
     renderRules();
     expect(renderSettingsGroups).toHaveBeenCalledTimes(1);
     const [groups] = renderSettingsGroups.mock.calls[0];
@@ -154,7 +155,7 @@ describe("createServerFeature — renderReleaseTags", () => {
       uiIcon: () => "",
       formatDate: () => "—",
       toast: jest.fn(),
-      renderSettingsGroups: jest.fn(),
+      getSettingsFeature: () => ({ renderSettingsGroups: jest.fn() }),
     };
     const { renderReleaseTags } = createServerFeature(deps);
     expect(() => renderReleaseTags({})).not.toThrow();
@@ -173,7 +174,7 @@ describe("createServerFeature — renderReleaseTags", () => {
       uiIcon: () => "",
       formatDate: () => "2024-01-01",
       toast: jest.fn(),
-      renderSettingsGroups: jest.fn(),
+      getSettingsFeature: () => ({ renderSettingsGroups: jest.fn() }),
     };
     const { renderReleaseTags } = createServerFeature(deps);
     renderReleaseTags({ application: { version: "2.0.0", started_at: 0 }, runtime_version: "1.0", last_response_at: 0 });
@@ -200,7 +201,7 @@ describe("createServerFeature — loadFrontendVersion", () => {
       uiIcon: () => "",
       formatDate: () => "—",
       toast: jest.fn(),
-      renderSettingsGroups: jest.fn(),
+      getSettingsFeature: () => ({ renderSettingsGroups: jest.fn() }),
     };
     const { loadFrontendVersion } = createServerFeature(deps);
     await loadFrontendVersion();
@@ -220,7 +221,7 @@ describe("createServerFeature — loadFrontendVersion", () => {
       uiIcon: () => "",
       formatDate: () => "—",
       toast: jest.fn(),
-      renderSettingsGroups: jest.fn(),
+      getSettingsFeature: () => ({ renderSettingsGroups: jest.fn() }),
     };
     const { loadFrontendVersion } = createServerFeature(deps);
     await loadFrontendVersion();
@@ -240,7 +241,7 @@ describe("createServerFeature — loadFrontendVersion", () => {
       uiIcon: () => "",
       formatDate: () => "—",
       toast: jest.fn(),
-      renderSettingsGroups: jest.fn(),
+      getSettingsFeature: () => ({ renderSettingsGroups: jest.fn() }),
     };
     const { loadFrontendVersion } = createServerFeature(deps);
     await expect(loadFrontendVersion()).resolves.toBeUndefined();

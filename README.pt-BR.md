@@ -181,7 +181,7 @@ existente de `itzg/minecraft-bedrock-server`. Ele roda ao lado do projeto
 Bedrock e deve ser implantado pelos comandos protegidos. Nunca execute
 `docker compose up` sem opções a partir de um checkout de desenvolvimento.
 
-Veja [Instalação](docs/installation.md) para pré-requisitos, layout esperado,
+Veja [Instalação](docs/installation.pt-BR.md) para pré-requisitos, layout esperado,
 configuração, cutover, acesso, verificações pós-instalação e solução de problemas.
 
 ## Configuração

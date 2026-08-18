@@ -129,7 +129,7 @@ def test_telemetry_line_dispatched(log_runtime) -> None:
     runtime, broker, service = log_runtime
     from minecraft_manager.telemetry import PREFIX
     service.telemetry_event = MagicMock()
-    with patch("minecraft_manager.runtime.parse_telemetry_line") as mock_parse:
+    with patch("minecraft_manager.runtime.supervisor.parse_telemetry_line") as mock_parse:
         mock_parse.return_value = {"type": "snapshot"}
         runtime._handle_log(f"[INFO] {PREFIX} {{\"type\": \"snapshot\"}}")
     service.telemetry_event.assert_called_once_with({"type": "snapshot"})
@@ -138,7 +138,7 @@ def test_telemetry_line_dispatched(log_runtime) -> None:
 def test_telemetry_json_error_publishes_rejected(log_runtime) -> None:
     runtime, broker, service = log_runtime
     from minecraft_manager.telemetry import PREFIX
-    with patch("minecraft_manager.runtime.parse_telemetry_line", side_effect=json.JSONDecodeError("bad", "", 0)):
+    with patch("minecraft_manager.runtime.supervisor.parse_telemetry_line", side_effect=json.JSONDecodeError("bad", "", 0)):
         runtime._handle_log(f"[INFO] {PREFIX} bad")
     broker.publish.assert_called_with("telemetry.event.rejected", "bedrock-log", ANY)
 
@@ -146,7 +146,7 @@ def test_telemetry_json_error_publishes_rejected(log_runtime) -> None:
 def test_telemetry_none_return_skips_service(log_runtime) -> None:
     runtime, broker, service = log_runtime
     from minecraft_manager.telemetry import PREFIX
-    with patch("minecraft_manager.runtime.parse_telemetry_line", return_value=None):
+    with patch("minecraft_manager.runtime.supervisor.parse_telemetry_line", return_value=None):
         runtime._handle_log(f"[INFO] {PREFIX} something")
     service.telemetry_event.assert_not_called()
 

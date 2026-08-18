@@ -115,6 +115,12 @@ describe("createNavigation — renderTabs", () => {
     expect(playersBtn.className).toBe("active");
   });
 
+  test("__time__ state marks world button active", () => {
+    const { state, $, t, uiIcon, render, tabsEl } = makeEnv("__time__");
+    createNavigation({ state, $, t, uiIcon, render }).renderTabs();
+    expect(tabsEl._buttons.find((btn) => btn.dataset.tab === "world").className).toBe("active");
+  });
+
   test("server button uses settings translation key", () => {
     const { state, $, t, uiIcon, render, tabsEl } = makeEnv("home");
     const tFn = jest.fn((key) => key);

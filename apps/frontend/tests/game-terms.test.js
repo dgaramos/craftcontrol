@@ -110,6 +110,17 @@ describe("createGameTerms — blockIcon", () => {
     expect(svg).toContain('role="img"');
     expect(svg).toContain("water label");
   });
+
+  test("classifies the remaining block icon families", () => {
+    const terms = makeTerms("en");
+    const cases = {
+      emerald_ore: "emerald", deepslate: "deepslate", moss_block: "grass", mud: "dirt",
+      gravel: "sand", oak_stairs: "planks", vine: "leaves", ice: "glass", redstone_ore: "redstone",
+    };
+    Object.entries(cases).forEach(([identifier, icon]) => {
+      expect(terms.blockIcon(identifier)).toContain(`block-icon-${icon}`);
+    });
+  });
 });
 
 describe("createGameTerms — dimensionName", () => {
@@ -201,5 +212,13 @@ describe("createGameTerms — uiIcon", () => {
     const svg = terms.uiIcon("home", "Go home");
     expect(svg).toContain("Go home");
     expect(svg).toContain('role="img"');
+  });
+
+  test("renders game icons and markup with safe fallbacks", () => {
+    const terms = makeTerms("en");
+    expect(terms.gameIcon("zombie", "entity", "Zombie")).toContain("mob-icon-zombie");
+    expect(terms.gameIcon("new_entity", "unknown-kind")).toContain("mob-icon-unknown");
+    expect(terms.gameTermMarkup("fall", "cause")).toContain("Fall");
+    expect(terms.uiIcon("home", "", "large")).toContain("cc-icon-home large");
   });
 });

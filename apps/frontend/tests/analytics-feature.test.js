@@ -45,6 +45,17 @@ describe("createAnalyticsFeature — factory setup", () => {
     expect(deps.requestRender).toHaveBeenCalled();
   });
 
+  test("renders empty activity results with deaths filter values", async () => {
+    const deps = makeAnalyticsDeps({ kind: "deaths", days: 7, source: "server", player: "", search: "" });
+    deps.api = jest.fn()
+      .mockResolvedValueOnce({ events: [], pages: 1, page: 1, total: 0, summary: {} })
+      .mockResolvedValueOnce({});
+    deps.$ = jest.fn(() => makeEl());
+    const { render } = createAnalyticsFeature(deps);
+    await render();
+    expect(deps.$).toHaveBeenCalledWith("#analytics-kind");
+  });
+
   test("activity load-more restores the page and offers a retry after an append failure", async () => {
     const deps = makeAnalyticsDeps({ kind: "all" });
     const previousWindow = global.window;

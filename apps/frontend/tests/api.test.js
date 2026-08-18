@@ -25,6 +25,18 @@ describe("api — GET request", () => {
     expect(init.headers["X-CSRF-Token"]).toBeUndefined();
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });
+
+  test("HEAD and OPTIONS remain read-only requests", async () => {
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({}) });
+    await api("/api/status", { method: "HEAD" });
+    await api("/api/status", { method: "OPTIONS" });
+    global.fetch.mock.calls.forEach(([, init]) => expect(init.headers["X-CSRF-Token"]).toBeUndefined());
+  });
+
+  test("uses the generic error when an error payload has no message", async () => {
+    global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 500, json: async () => ({}) });
+    await expect(api("/api/status")).rejects.toMatchObject({ message: "Request failed", status: 500 });
+  });
 });
 
 describe("api — non-CSRF-protected URLs", () => {
@@ -63,6 +75,11 @@ describe("api — POST mutation with CSRF", () => {
     expect(error).toBeInstanceOf(Error);
     expect(error.message).toBe("sign in required");
     expect(error.status).toBe(401);
+  });
+
+  test("CSRF bootstrap uses the authentication fallback without an error payload", async () => {
+    global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 401, json: async () => ({}) });
+    await expect(api("/api/protected-fallback", { method: "POST" })).rejects.toMatchObject({ message: "Authentication required", status: 401 });
   });
 
   test("POST sends X-CSRF-Token header", async () => {

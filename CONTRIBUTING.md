@@ -8,9 +8,10 @@ AI agents should also read [`AGENTS.md`](AGENTS.md) for architecture, data invar
 
 ## Before you start
 
-1. Open or find the GitHub Issue that describes the work.
-2. Make sure it has a **Project**, **Milestone**, **Label**, and **Assignee** (see [Metadata](#metadata) below).
-3. Create a branch from `main` following the naming convention below.
+1. Follow the [Development setup](docs/development-setup.md) guide to get the stack running and the quality gate passing locally.
+2. Open or find the GitHub Issue that describes the work.
+3. Make sure it has a **Project**, **Milestone**, **Label**, and **Assignee** (see [Metadata](#metadata) below).
+4. Create a branch from `main` following the naming convention below.
 
 ---
 

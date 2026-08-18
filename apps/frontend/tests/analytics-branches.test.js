@@ -57,15 +57,31 @@ describe("analytics branch coverage", () => {
     expect(target.innerHTML).not.toContain("ore-section");
   });
 
-  test("rankings handles empty category and API error", async () => {
+  test("rankings falls back to the first metric for a populated category", async () => {
     const deps = withBindings(makeAnalyticsDeps({ rankingCategory: "activity", rankingMetric: "missing" }));
     const target = makeEl();
     deps.$ = jest.fn((selector) => selector === "#rankings-content" ? target : makeEl());
     deps.api = jest.fn().mockResolvedValue({ metrics: {}, generated_at: 0 });
     await createRankingsPanel(deps)();
     expect(target.innerHTML).toContain("noRankingData");
+    expect(deps.state.analytics.rankingMetric).toBe("play_time");
+  });
 
-    deps.api.mockRejectedValueOnce(new Error("rankings unavailable"));
+  test("rankings handles a category with no metric definitions", async () => {
+    const deps = withBindings(makeAnalyticsDeps({ rankingCategory: "combat", rankingMetric: "missing" }));
+    const target = makeEl();
+    deps.$ = jest.fn((selector) => selector === "#rankings-content" ? target : makeEl());
+    deps.api = jest.fn().mockResolvedValue({ metrics: {}, generated_at: 0 });
+    await createRankingsPanel(deps)();
+    expect(target.innerHTML).toContain("noRankingData");
+    expect(target.innerHTML).not.toContain("TypeError");
+  });
+
+  test("rankings shows the API error", async () => {
+    const deps = withBindings(makeAnalyticsDeps());
+    const target = makeEl();
+    deps.$ = jest.fn((selector) => selector === "#rankings-content" ? target : makeEl());
+    deps.api = jest.fn().mockRejectedValue(new Error("rankings unavailable"));
     await createRankingsPanel(deps)();
     expect(target.innerHTML).toContain("rankings unavailable");
   });

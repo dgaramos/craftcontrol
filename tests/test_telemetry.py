@@ -147,6 +147,27 @@ def test_block_deltas_update_bounded_type_maps_and_are_idempotent(
     assert stats["placedByType"]["minecraft:oak_planks"] == 1
 
 
+@pytest.mark.parametrize("raw_suffix,match", [
+    ("X" * 65537, "too large"),
+    ('{"schema":2,"sequence":1,"type":"snapshot.finished","player":null,"data":{}}', "schema"),
+    ('{"schema":1,"sequence":-1,"type":"snapshot.finished","player":null,"data":{}}', "sequence"),
+    ('{"schema":1,"sequence":"a","type":"snapshot.finished","player":null,"data":{}}', "sequence"),
+    ('{"schema":1,"sequence":1,"type":"snapshot.finished","player":"notadict","data":{}}', "player"),
+    ('{"schema":1,"sequence":1,"type":"snapshot.finished","player":{"name":123},"data":{}}', "player"),
+    ('{"schema":1,"sequence":1,"type":"snapshot.finished","player":{"name":""},"data":{}}', "player"),
+    ('{"schema":1,"sequence":1,"type":"snapshot.finished","player":{"name":"' + "a" * 33 + '"},"data":{}}', "player"),
+    ('{"schema":1,"sequence":1,"type":"snapshot.finished","player":null,"data":"notadict"}', "data"),
+])
+def test_parse_telemetry_line_raises_on_invalid_payload(raw_suffix: str, match: str) -> None:
+    line = f"[BEDROCK_TELEMETRY] {raw_suffix}"
+    with pytest.raises(ValueError, match=match):
+        parse_telemetry_line(line)
+
+
+def test_parse_telemetry_line_returns_none_when_prefix_absent() -> None:
+    assert parse_telemetry_line("no prefix here") is None
+
+
 def test_batched_block_deltas_update_totals_maps_and_daily_buckets(
     player_repo: SQLitePlayerRepository,
     telemetry_repo: SQLiteTelemetryRepository,

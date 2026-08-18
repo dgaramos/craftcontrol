@@ -35,6 +35,26 @@ describe("connectInvalidation", () => {
     expect(schedule).toHaveBeenCalled();
   });
 
+  test("uses default scheduling dependencies and refreshes only state on state.changed", async () => {
+    let listener;
+    const connectEventStream = jest.fn((callback) => { listener = callback; });
+    const loadState = jest.fn().mockResolvedValue();
+    const refreshStatus = jest.fn();
+    const setStatus = jest.fn();
+    connectInvalidation({ connectEventStream, loadState, refreshStatus, setStatus });
+
+    listener({ topic: "ignored" });
+    expect(loadState).not.toHaveBeenCalled();
+
+    const schedule = jest.fn((callback) => callback());
+    connectInvalidation({ connectEventStream, loadState, refreshStatus, setStatus, schedule });
+    listener({ topic: "state.changed" });
+    await Promise.resolve();
+    expect(loadState).toHaveBeenCalled();
+    expect(refreshStatus).not.toHaveBeenCalled();
+    expect(setStatus).not.toHaveBeenCalled();
+  });
+
   test("schedules loadState on server.* topics", () => {
     const { listener, schedule } = makeSetup();
     listener({ topic: "server.started" });

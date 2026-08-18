@@ -177,6 +177,25 @@ describe("renderTimePanel — bindings", () => {
     await deps.elements["#reset-days"].onclick();
     expect(deps.api).toHaveBeenCalledWith("/api/time/reset-days", expect.anything());
   });
+
+  test("weather and time queries use translated values and safe fallbacks", async () => {
+    const { deps, buttons } = makeSetup();
+    deps.t = jest.fn((key) => key === "rain" ? "Rain" : key);
+    deps.api = jest.fn()
+      .mockResolvedValueOnce({ value: "rain" })
+      .mockResolvedValueOnce({ value: undefined })
+      .mockResolvedValueOnce({ value: "1200" });
+    const { renderTimePanel } = createWorldFeature(deps);
+    renderTimePanel();
+
+    await deps.elements["#weather-query"].onclick();
+    await buttons[2].onclick();
+    await buttons[2].onclick();
+
+    expect(deps.elements["#time-query-result"].textContent).toContain("1200");
+    expect(deps.api).toHaveBeenCalledWith("/api/time/weather-query", expect.anything());
+    expect(deps.api).toHaveBeenCalledWith("/api/time/query", expect.anything());
+  });
 });
 
 describe("openTimeControls", () => {

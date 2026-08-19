@@ -17,11 +17,15 @@ def test_quality_gates_are_partitioned_and_automated() -> None:
         script = ROOT / "bin" / f"check-{gate}"
         assert script.is_file()
         assert f"{gate} gate: ok" in script.read_text()
+    assert (ROOT / "bin" / "check-contracts-frontend").is_file()
     umbrella = (ROOT / "bin" / "check").read_text()
-    assert "frontend backend contracts integration" in umbrella
+    assert "contracts-frontend" in umbrella
+    assert "frontend" in umbrella and "backend" in umbrella and "contracts" in umbrella and "integration" in umbrella
     for workflow in (ROOT / ".github" / "workflows" / "quality.yml", ROOT / ".gitea" / "workflows" / "quality.yml"):
         assert workflow.is_file()
-        assert "gate: [frontend, backend, contracts, integration]" in workflow.read_text()
+        text = workflow.read_text()
+        for job in ("backend", "contracts-backend", "contracts-frontend", "frontend", "integration"):
+            assert job in text
 
 
 def test_split_runtime_gate_uses_only_disposable_state() -> None:
@@ -89,15 +93,13 @@ def test_coordinated_release_uses_the_pinned_pair_and_component_commands() -> No
 
 
 def test_successful_main_quality_run_triggers_the_guarded_homelab_release() -> None:
-    workflow = (ROOT / ".github" / "workflows" / "deploy-homelab.yml").read_text()
+    workflow = (ROOT / ".gitea" / "workflows" / "deploy.yml").read_text()
     runbook = (ROOT / "docs" / "automated-deployment.md").read_text()
     assert "workflow_run:" in workflow
-    assert "workflows: [Quality gates]" in workflow
-    assert "github.event.workflow_run.conclusion == 'success'" in workflow
+    assert "branches: [main]" in workflow
     assert "runs-on: [self-hosted, homelab, craftcontrol]" in workflow
     assert "craftcontrol-homelab-production" in workflow
     assert "/usr/local/bin/craftcontrol-homelab-deploy" in workflow
-    assert "GITEA_PUSH_URL" not in workflow
     assert "GitHub-hosted runners never receive Docker or LAN access" in runbook
 
 

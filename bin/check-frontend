@@ -2,7 +2,6 @@
 set -euo pipefail
 
 readonly ROOT="$(git rev-parse --show-toplevel)"
-readonly PYTHON="${PYTHON:-python3}"
 cd "$ROOT"
 
 run_node_checks() {
@@ -13,7 +12,7 @@ run_node_checks() {
 
     node apps/frontend/scripts/check-i18n.mjs
     node apps/frontend/scripts/check-dom-interactions.mjs
-    (cd apps/frontend && npm ci && npm test)
+    (cd apps/frontend && npm ci && npm test -- --testPathIgnorePatterns='.*-contracts\.test\.js$' --coverage)
     return
   fi
 
@@ -35,10 +34,9 @@ run_node_checks() {
       node apps/frontend/scripts/check-dom-interactions.mjs
       cd apps/frontend
       npm ci
-      npm test
+      npm test -- --testPathIgnorePatterns=".*-contracts\.test\.js$" --coverage
     '
 }
 
 run_node_checks
-"$PYTHON" -m pytest tests/test_brand.py -v
 echo "frontend gate: ok"

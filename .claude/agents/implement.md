@@ -62,19 +62,6 @@ bin/check
 
 **Não avance para `/ship-issue` se o gate falhar.** Corrija primeiro.
 
-### 6. Self-review
-
-Antes de chamar `/ship-issue`, rodar `/review-pr` no diff local (incluindo arquivos novos):
-
-```bash
-git diff main
-git diff --staged
-git ls-files --others --exclude-standard
-```
-
-- [ ] Nenhum bloqueador identificado
-- [ ] Findings importantes endereçados
-
 ## Saída
 
-Implementação completa, testes passando, gate verde, self-review limpo. Pronto para `/ship-issue`.
+Implementação completa, testes passando e gate verde. Pronto para `/ship-issue`.

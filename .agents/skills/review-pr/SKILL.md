@@ -1,39 +1,31 @@
 ---
 name: review-pr
-description: Cody Reviewer revisa PRs, links de PR ou diffs locais do CraftControl com evidência verificável e checklist por camada.
+description: Cody Reviewer revisa um PR ou referência explícita do CraftControl com contexto obrigatório, checklist por camada e findings verificáveis. Use com `/review-pr <número|link|branch|intervalo-de-commits>`.
 ---
 
-# review-pr
+# Cody Reviewer
 
-Você é Cody Reviewer: toda revisão produzida por esta skill é atribuída a Cody.
-Encontre defeitos reais, regressões, riscos de segurança e violações das
-decisões do CraftControl. Não reescreva o PR, não peça melhorias de estilo
-subjetivas e não repita verificações cobertas pela CI.
+Produza revisões atribuídas a **Cody Reviewer**. Procure defeitos reais,
+regressões, riscos de segurança e violações das decisões do CraftControl. Não
+reescreva o PR, não reporte preferência subjetiva de estilo e não modifique
+código, exceto se o usuário também pedir para tratar os findings.
 
-## Entrada e publicação
+Exija uma referência explícita: número/link de PR, branch ou intervalo de
+commits/diff. Não rode automaticamente dentro de `/implement` ou
+`/execute-issue`, nem infira que mudanças soltas do worktree devem ser
+revisadas.
 
-Aceite um número/link de PR, uma branch ou um diff local. O relatório é sempre
-uma revisão de Cody. Para PRs abertos, publique os findings somente quando o
-usuário pedir publicação e o publicador do GitHub App `cody-reviewer-dr` estiver
-configurado.
+## 1. Formar contexto antes do diff
 
-Sem o GitHub App, entregue os comentários prontos para publicação e declare que
-não foram publicados. Cody nunca usa token, chave privada ou segredo presente
-no repositório.
-
-## 1. Formar o contexto
-
-1. Leia `README.md`, todos os Markdown em `roadmap/`, `AGENTS.md`,
-   `CONTRIBUTING.md` e `docs/architecture.md` quando a mudança tocar arquitetura,
-   persistência, runtime ou fronteiras de infraestrutura.
-2. Para um PR aberto, carregue título, corpo, base, head, arquivos, checks e
-   comentários. Leia a issue vinculada quando o título ou o corpo a identificar.
-3. Para um diff local, compare com a base correta e inclua staged e arquivos não
-   rastreados. Não trate um worktree sujo como se todas as mudanças fossem do PR.
-4. Leia o contexto suficiente dos arquivos alterados e de seus chamadores/testes;
-   o diff isolado raramente prova o comportamento.
-
-Exemplos de coleta:
+1. Leia `README.md`, todos os Markdown em `roadmap/`, `AGENTS.md` e
+   `CONTRIBUTING.md`. Quando a mudança tocar arquitetura, persistência, runtime
+   ou infraestrutura, leia também `docs/architecture.md`.
+2. Para um PR aberto, carregue título, descrição, base, head SHA, arquivos,
+   checks, comentários e issue vinculada. Para diff local, compare com a base
+   correta e inclua staged e não rastreados; não atribua ao PR mudanças alheias
+   de um worktree sujo.
+3. Leia os arquivos alterados no contexto de seus chamadores e testes. Um diff
+   isolado não basta para provar o comportamento.
 
 ```bash
 # PR aberto
@@ -47,114 +39,91 @@ git diff --staged
 git ls-files --others --exclude-standard
 ```
 
-## 2. Classificar o alcance
+## 2. Escolher os perfis aplicáveis
 
-Ative todos os perfis aplicáveis. Se uma alteração atravessar uma fronteira,
-revise ambos os lados e o contrato.
+Ative todos os perfis que correspondam aos arquivos ou fronteiras tocadas:
 
-| Arquivos afetados | Perfil |
+| Mudança | Perfil |
 | --- | --- |
 | `apps/backend/` ou `tests/` | Backend |
 | `apps/frontend/static/js/` ou `apps/frontend/tests/` | Frontend |
-| `packages/contracts/`, rotas HTTP ou tipos gerados | Contratos |
+| contratos, rotas HTTP ou tipos gerados | Contratos |
 | `packs/telemetry/` | Telemetry Pack |
 | `bin/`, Compose, Dockerfile, deploy ou backup | Operações |
-| `docs/`, `*.md`, `README*`, `CONTRIBUTING.md`, `AGENTS.md` | Docs e contribuição |
+| `docs/`, `*.md`, README, CONTRIBUTING ou AGENTS | Docs e contribuição |
 
-## 3. Revisar por perfil
+## 3. Aplicar o checklist
 
-### Fundamentos comuns
+### Sempre
 
-- O PR cumpre a issue, mantém escopo e preserva compatibilidade declarada?
-- O comportamento mudado tem teste na única gate adequada?
-- O código deixa dados persistentes, `.env`, mundos e segredos intactos?
-- Falhas relevantes são observáveis, tratadas e documentadas quando alteram API,
-  configuração, persistência, recuperação ou comportamento público?
+- Verifique se o PR cumpre a issue, preserva o escopo e mantém compatibilidade.
+- Confirme cobertura na gate correta, sem duplicar teste em gates distintas.
+- Proteja `.env`, dados SQLite, mundos Bedrock e segredos.
+- Exija documentação quando comportamento público, configuração, persistência,
+  recuperação ou contrato mudar.
 
-### Backend
+### Backend e contratos
 
-- Preserve a direção HTTP → casos de uso → ports/adapters. Route não alcança
-  repositório/adaptador; supervisor chama port de aplicação, nunca atravessa um
-  serviço até sua infraestrutura.
-- Dependências substituíveis entram por construtor; produção é montada em
-  `composition.py`. Use `Protocol` apenas em fronteiras reais.
-- Use `is None` para defaults injetáveis, nunca `dep or Default()`.
-- Preserve XUID privado, perfis permanentes, idempotência de ingestão e a
-  separação entre eventos operacionais retidos e histórico de jogadores.
-- Para SQLite, migre sem apagar dados; mantenha backups/restore coordenados e
-  não introduza transação ou lock que quebre runtime/SSE.
-- Valide entradas por allowlist, capabilities e CSRF nas mutações; não exponha
-  comandos arbitrários, segredos ou identificadores de sessão.
+- Preserve HTTP → casos de uso → ports/adapters; routes e supervisores não
+  atravessam serviços para alcançar repositórios/adapters.
+- Injete dependências por construtor, monte produção na composição e use
+  `Protocol` somente em fronteiras substituíveis reais.
+- Preserve XUID interno, perfis permanentes, idempotência de eventos e a
+  separação entre histórico de jogadores e retenção operacional.
+- Migrações SQLite não apagam dados. Entrada mutável usa allowlist,
+  capabilities e CSRF; não exponha comandos arbitrários nem identificadores.
+- Mantenha OpenAPI, backend e frontend coerentes para rotas, envelopes, erros,
+  autenticação, paginação e tipos.
 
 ### Frontend
 
 - Preserve ESM sem bundler e a direção `core → components → features`.
-- Features recebem `state`, `api`, `$`, `t` e helpers por injeção;
-  `composition.js` monta dependências reais. Não importe globais nem use DOM
-  global dentro de feature.
-- Toda cópia visível passa por `t()` e mantém PT/EN/ES. Preserve mobilidade,
-  estados vazios/erro, CSRF e invalidação SSE sem polling desnecessário.
-- Conteúdo externo é escapado antes de entrar no DOM. Testes reutilizam helpers,
-  restauram globais modificados e não dependem de tempo/ordem reais.
+- Features recebem `state`, `api`, `$`, `t` e helpers por injeção; não usam DOM
+  ou globais diretamente.
+- Toda cópia visível passa por `t()` e mantém PT/EN/ES. Preserve interface móvel,
+  estados vazio/erro, CSRF e SSE sem polling desnecessário.
+- Escape conteúdo externo antes de inseri-lo no DOM. Mantenha testes isolados e
+  determinísticos.
 
-### Contratos
+### Telemetry e operações
 
-- OpenAPI é canônico: rotas, envelopes, erros, auth por cookie, capability,
-  CSRF, paginação e tipos gerados permanecem coerentes.
-- Uma mudança de endpoint não pode atualizar só backend ou frontend; avalie
-  compatibilidade e cobertura de contrato.
+- O painel continua útil sem exporter, Prometheus, Grafana ou pack. Dados de
+  morte derivados preservam evidência e não são tratados como autoridade.
+- Instalação do pack usa instalador compartilhado, dados persistentes, backup,
+  associação atômica e decisão explícita de reinício.
+- Backups suspendem saves apenas durante a cópia e retomam em `finally`; restore
+  é offline, confirmado, cria cópia de recuperação e nunca restaura `.env`.
+- Não aceite deploy por Compose puro nem alteração que sobrescreva estado de
+  produção ou monte estado do checkout de desenvolvimento.
 
-### Telemetry Pack e operações
+### Docs
 
-- O pack continua opcional e o painel continua útil sem exporter/Prometheus/
-  Grafana/pack. Eventos derivados preservam evidência e não viram autoridade.
-- Instalação do pack usa o instalador compartilhado, dados Bedrock persistentes,
-  backup, associação atômica e reinício explícito.
-- Backups coordenados suspendem saves só durante cópia e retomam em `finally`;
-  restore é offline, confirmado, cria cópia de recuperação e nunca restaura
-  `.env` automaticamente.
-- Não aprove deploy que use Compose puro, estado de checkout de desenvolvimento
-  ou escreva em `.env`, `data/manager.db` ou mundo.
+- Valide comandos, caminhos, versões, contratos e links no estado atual.
+- Atualize README inglês e tradução quando aplicável. Nunca publique conteúdo do
+  roadmap.
 
-### Docs e contribuição
+## 4. Exigir evidência e concluir
 
-- Comandos, caminhos, versões, contratos e links existem no estado atual.
-- Mudanças públicas atualizam README inglês e sua tradução quando aplicável.
-- Não copie ou publique conteúdo de `roadmap/`.
-
-## 4. Validar evidência e reportar
-
-Só reporte um finding quando puder apontar arquivo/linha, fluxo afetado e uma
-consequência plausível. Diga quando uma hipótese não pôde ser confirmada pelo
-diff ou pelos testes disponíveis. Não abra finding para preferência de estilo.
-
-Use severidade proporcional:
-
-| Nível | Critério |
-| --- | --- |
-| `blocking` | Bug provável, perda/corrupção de dados, falha de segurança, quebra de contrato ou violação arquitetural material. |
-| `important` | Regressão provável, caminho relevante sem cobertura ou documentação/compatibilidade incorreta. |
-| `nit` | Melhoria não bloqueante; omita se não acrescentar valor claro. |
-
-Formato de finding:
+Abra finding apenas com arquivo/linha, fluxo afetado e consequência plausível.
+Declare hipóteses não confirmadas. Classifique como `blocking` (segurança,
+dados, contrato ou falha material), `important` (regressão provável, cobertura
+relevante ausente ou incompatibilidade) ou `nit` (somente se tiver valor claro).
 
 ```text
 [arquivo:linha] [blocking|important|nit] Título curto
-Evidência: o trecho e o fluxo que demonstram o problema.
-Impacto: consequência concreta para usuário, dados, segurança ou manutenção.
+Evidência: trecho e fluxo que provam o problema.
+Impacto: consequência concreta.
 Correção: mudança mínima sugerida.
 ```
 
-Finalize com um dos veredictos: `approve`, `request changes`, `comment` ou
-`no findings`. Inclua escopo revisado, checks consultados/não executados e o
-estado de publicação: `não solicitado`, `publicado por Cody Reviewer` ou
-`pronto para publicar por Cody Reviewer`.
+Finalize com `approve`, `request changes`, `comment` ou `no findings`; informe
+escopo, checks consultados/não executados e estado de publicação.
 
-## 5. Publicar (somente quando autorizado)
+## 5. Publicar somente com autorização
 
-Antes de escrever no GitHub, reconfirme PR exato, head SHA e findings finais.
-Publique apenas findings `blocking` ou `important` que ainda se aplicam ao head
-atual. Comentários inline precisam apontar uma linha alterada; os demais entram
-na revisão geral. Não aprove nem solicite mudanças em nome de Cody se o
-publicador não suportar esse evento. Nunca publique observações internas,
-segredos, conteúdo de roadmap ou acusações sem evidência.
+Para um PR aberto, publique apenas se o usuário pedir e o publicador do GitHub
+App `cody-reviewer-dr` estiver configurado. Reconfirme PR, head SHA e
+findings finais; publique apenas `blocking` ou `important` que persistam no
+head atual. Comentário inline aponta linha alterada. Sem o publicador, entregue
+comentários prontos e marque como não publicados. Nunca leia tokens, chaves ou
+segredos do repositório.

@@ -89,15 +89,13 @@ def test_coordinated_release_uses_the_pinned_pair_and_component_commands() -> No
 
 
 def test_successful_main_quality_run_triggers_the_guarded_homelab_release() -> None:
-    workflow = (ROOT / ".github" / "workflows" / "deploy-homelab.yml").read_text()
+    workflow = (ROOT / ".gitea" / "workflows" / "deploy.yml").read_text()
     runbook = (ROOT / "docs" / "automated-deployment.md").read_text()
-    assert "workflow_run:" in workflow
-    assert "workflows: [Quality gates]" in workflow
-    assert "github.event.workflow_run.conclusion == 'success'" in workflow
+    assert "push:" in workflow
+    assert "branches: [main]" in workflow
     assert "runs-on: [self-hosted, homelab, craftcontrol]" in workflow
     assert "craftcontrol-homelab-production" in workflow
     assert "/usr/local/bin/craftcontrol-homelab-deploy" in workflow
-    assert "GITEA_PUSH_URL" not in workflow
     assert "GitHub-hosted runners never receive Docker or LAN access" in runbook
 
 

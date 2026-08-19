@@ -20,7 +20,8 @@ Authorization is enforced in the API. The browser interface is not a security bo
 After the local-auth release is deployed, create a one-time setup code:
 
 ```bash
-docker compose exec craftcontrol craftcontrol auth bootstrap --player VonCrush
+docker compose -f docker-compose.split.yml exec craftcontrol-backend \
+  craftcontrol auth bootstrap --player VonCrush
 ```
 
 Open the CraftControl login screen, choose **First access or invitation**, enter the Gamertag, one-time code, and a new password of 8–128 characters. The code expires after 30 minutes and is stored only as a SHA-256 hash.
@@ -38,7 +39,8 @@ Login and invitation claim are exempt because they do not rely on an existing au
 Generate a recovery code for an observed player:
 
 ```bash
-docker compose exec craftcontrol craftcontrol auth recover VonCrush
+docker compose -f docker-compose.split.yml exec craftcontrol-backend \
+  craftcontrol auth recover VonCrush
 ```
 
 Owners can generate invitations from the dedicated player profile: open **Players**, select the player, then use the separate **CraftControl access** card. Choose `viewer`, `operator`, or `owner`, press **Generate access**, and copy the one-time code. The Minecraft permission card beside it is independent and never changes panel access. Active accounts instead receive a recovery code. Owners can suspend access, which revokes every active session immediately; the last active owner cannot be suspended or demoted.
@@ -46,8 +48,10 @@ Owners can generate invitations from the dedicated player profile: open **Player
 The same operations remain available from the CLI for recovery:
 
 ```bash
-docker compose exec craftcontrol craftcontrol auth invite Nicole --role operator
-docker compose exec craftcontrol craftcontrol auth invite PlayerName --role viewer
+docker compose -f docker-compose.split.yml exec craftcontrol-backend \
+  craftcontrol auth invite Nicole --role operator
+docker compose -f docker-compose.split.yml exec craftcontrol-backend \
+  craftcontrol auth invite PlayerName --role viewer
 ```
 
 Tokens are printed once. Do not store them in shell history, tickets, screenshots, or logs. CLI recovery preserves the account's existing role and never promotes a viewer or operator to owner.

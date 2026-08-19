@@ -25,9 +25,9 @@ The manifest records the format version, UTC creation time, world, SQLite schema
 Run from `/mnt/storage/docker/craftcontrol`:
 
 ```bash
-docker compose exec craftcontrol craftcontrol backup create
-docker compose exec craftcontrol craftcontrol backup list
-docker compose exec craftcontrol craftcontrol backup verify BACKUP_ID
+docker compose -f docker-compose.split.yml exec craftcontrol-backend craftcontrol backup create
+docker compose -f docker-compose.split.yml exec craftcontrol-backend craftcontrol backup list
+docker compose -f docker-compose.split.yml exec craftcontrol-backend craftcontrol backup verify BACKUP_ID
 ```
 
 Pass `--world NAME` to `create` only when the active world cannot be detected. Backup does not restart either service.
@@ -37,13 +37,13 @@ Pass `--world NAME` to `create` only when the active world cannot be detected. B
 Preview retention before deleting anything:
 
 ```bash
-docker compose exec craftcontrol craftcontrol backup prune --keep 7
+docker compose -f docker-compose.split.yml exec craftcontrol-backend craftcontrol backup prune --keep 7
 ```
 
 Apply the reviewed deletion explicitly:
 
 ```bash
-docker compose exec craftcontrol craftcontrol backup prune --keep 7 --yes
+docker compose -f docker-compose.split.yml exec craftcontrol-backend craftcontrol backup prune --keep 7 --yes
 ```
 
 Retention ignores pre-restore recovery directories. Copy the sets you need for disaster recovery off the Docker host before pruning.
@@ -54,13 +54,13 @@ Restore replaces the selected world and `manager.db`; it refuses to run while Be
 
 ```bash
 cd /mnt/storage/docker/craftcontrol
-docker compose stop craftcontrol
+docker compose -f docker-compose.split.yml stop craftcontrol-frontend craftcontrol-backend
 docker stop minecraft-bedrock
-docker compose run --rm --no-deps craftcontrol craftcontrol backup verify BACKUP_ID
-docker compose run --rm --no-deps craftcontrol craftcontrol backup restore BACKUP_ID --yes
-docker compose up -d craftcontrol
+docker compose -f docker-compose.split.yml run --rm --no-deps craftcontrol-backend craftcontrol backup verify BACKUP_ID
+docker compose -f docker-compose.split.yml run --rm --no-deps craftcontrol-backend craftcontrol backup restore BACKUP_ID --yes
+docker compose -f docker-compose.split.yml up -d craftcontrol-backend craftcontrol-frontend
 docker start minecraft-bedrock
-docker compose ps
+docker compose -f docker-compose.split.yml ps
 ```
 
 Before replacement, restore creates `BACKUP_ROOT/pre-restore/<timestamp>/` with the current SQLite database and world. Do not delete that recovery copy until the restored world and player history are verified.
@@ -70,7 +70,7 @@ After startup, check:
 ```bash
 curl -fsS http://127.0.0.1:8082/api/status
 curl -fsS http://127.0.0.1:8082/api/players
-docker compose logs --tail=100 craftcontrol
+docker compose -f docker-compose.split.yml logs --tail=100 craftcontrol-backend
 ```
 
 To recover configuration or behavior-pack files, inspect and extract `configuration.tar.gz` manually, compare it with the current deployment, and apply only the required files. Never overwrite `.env` without reviewing its values.

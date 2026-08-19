@@ -7,12 +7,12 @@ CraftControl embeds the independently versioned `craftcontrol-telemetry` reposit
 Run commands inside the CraftControl container:
 
 ```bash
-docker compose exec craftcontrol craftcontrol telemetry status
-docker compose exec craftcontrol craftcontrol telemetry install
-docker compose exec craftcontrol craftcontrol telemetry upgrade
-docker compose exec craftcontrol craftcontrol telemetry disable
-docker compose exec craftcontrol craftcontrol telemetry remove --yes
-docker compose exec craftcontrol craftcontrol telemetry rollback --yes
+docker compose -f docker-compose.split.yml exec craftcontrol-backend craftcontrol telemetry status
+docker compose -f docker-compose.split.yml exec craftcontrol-backend craftcontrol telemetry install
+docker compose -f docker-compose.split.yml exec craftcontrol-backend craftcontrol telemetry upgrade
+docker compose -f docker-compose.split.yml exec craftcontrol-backend craftcontrol telemetry disable
+docker compose -f docker-compose.split.yml exec craftcontrol-backend craftcontrol telemetry remove --yes
+docker compose -f docker-compose.split.yml exec craftcontrol-backend craftcontrol telemetry rollback --yes
 ```
 
 Use `--world NAME` when automatic detection cannot identify the intended world. `install` and `upgrade` are the same idempotent reconciliation operation; the different action names make operator intent explicit.

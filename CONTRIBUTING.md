@@ -114,6 +114,12 @@ Every issue **and** every PR must have all four of the following set before requ
 Changes to user-visible content in `README.md` must update the corresponding
 content in `README.pt-BR.md` in the same pull request.
 
+English is the canonical language for technical and operational documentation.
+When a document has a Portuguese translation (for example
+`README.pt-BR.md` or `docs/installation.pt-BR.md`), user-visible changes to its
+English source must update that translation in the same pull request. New
+Portuguese documentation is optional unless an issue explicitly requires it.
+
 The quality gate **must pass** before requesting a merge:
 
 ```bash

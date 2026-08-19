@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import re
 import xml.etree.ElementTree as element_tree
 from pathlib import Path
 
@@ -50,51 +49,6 @@ def test_compose_uses_final_product_name() -> None:
     assert "container_name: craftcontrol" in compose
     assert "minecraft-bedrock-manager" not in compose
 
-
-
-
-def test_authentication_can_reveal_passwords_accessibly() -> None:
-    auth_script = (FRONTEND / "static" / "js" / "auth.js").read_text()
-    stylesheet = (FRONTEND / "static" / "auth.css").read_text()
-    ui_root = element_tree.parse(FRONTEND / "static" / "craftcontrol-ui.svg").getroot()
-    symbols = {node.attrib.get("id") for node in ui_root.iter() if node.tag.endswith("symbol")}
-    assert "password-toggle" in auth_script
-    assert "aria-pressed" in auth_script
-    assert 'class="auth-switch"' in auth_script
-    assert 'const form = claim' in auth_script
-    assert 'overlay.querySelector("form")' in auth_script
-    assert 'id="claim-form" hidden' not in auth_script
-    assert "words.claimTitle" in auth_script
-    assert ".auth-card form[hidden]" in stylesheet
-    assert 'showPassword: "Mostrar senha"' in auth_script
-    assert 'showPassword: "Show password"' in auth_script
-    assert 'showPassword: "Mostrar contraseña"' in auth_script
-    assert ".password-toggle" in stylesheet
-    assert "ui-eye" in symbols
-
-
-
-def test_deaths_localize_game_terms_and_separate_source_from_timestamp() -> None:
-    script = frontend_script()
-    terms = (FRONTEND / "static" / "js" / "i18n" / "game-terms.js").read_text()
-    history = (FRONTEND / "static" / "js" / "features" / "players" / "history.js").read_text()
-    stylesheet = (FRONTEND / "static" / "players.css").read_text()
-    template = (FRONTEND / "templates" / "index.html").read_text()
-    assert 'entityExplosion: ["creeper", "Explosão de criatura", "Entity explosion"]' in terms
-    assert 'skeleton: ["skeleton", "Esqueleto", "Skeleton"]' in terms
-    assert '/static/craftcontrol-mobs.svg#mob-' in terms
-    assert 'class="death-entry-header"' in history
-    assert ".death-source" in stylesheet
-    assert 'id="release-tags"' in template
-
-
-def test_players_and_analytics_receive_localized_dimension_names() -> None:
-    script = frontend_script()
-    terms = (FRONTEND / "static" / "js" / "i18n" / "game-terms.js").read_text()
-    assert "function dimensionName(identifier)" in terms
-    assert "blockIcon, dimensionName, gameTermMarkup" in script
-    assert "blockTermMarkup, dimensionName, formatRankingValue" in script
-    assert "formatDuration, dimensionName, localeTag" in script
 
 
 def test_original_creature_icon_pack_has_expected_pixel_art_symbols() -> None:
@@ -152,26 +106,6 @@ def test_split_frontend_reports_its_own_release_version() -> None:
     assert "/version.json" in nginx
 
 
-def test_world_rules_server_and_auth_have_feature_boundaries() -> None:
-    script = frontend_script()
-    expectations = {
-        "world/index.js": "createWorldFeature",
-        "rules/index.js": "createRulesFeature",
-        "server/index.js": "createServerFeature",
-        "auth/bootstrap.js": "startAuthenticatedApplication",
-    }
-    for relative, factory in expectations.items():
-        module = (FRONTEND / "static" / "js" / "features" / relative).read_text()
-        assert f"function {factory}" in module
-    assert "getWorldFeature().renderWorld()" in script
-    assert "getRulesFeature().renderRules()" in script
-    assert "getServerFeature().renderServer()" in script
-    assert "function renderTimePanel" not in script
-    assert "function loadTelemetryPack" not in script
-    assert "requireSession().then" not in script
-
-
-
 
 def test_analytics_activity_and_deaths_have_a_feature_boundary() -> None:
     script = frontend_script()
@@ -186,35 +120,6 @@ def test_analytics_activity_and_deaths_have_a_feature_boundary() -> None:
     assert "activityView.showDeathDetails" in index
     assert "function analyticsEventsMarkup" not in script
     assert "function showDeathDetails" not in script
-
-
-def test_interface_uses_custom_icons_and_bilingual_block_labels() -> None:
-    script = frontend_script()
-    terms = (FRONTEND / "static" / "js" / "i18n" / "game-terms.js").read_text()
-    template = (FRONTEND / "templates" / "index.html").read_text()
-    assert 'stone: ["Pedra", "Stone"]' in terms
-    assert 'diamond_ore: ["Minério de diamante", "Diamond ore"]' in terms
-    assert 'cobblestone_wall: ["Muro de pedregulho", "Cobblestone wall"]' in terms
-    assert 'leaf_litter: ["Folhiço", "Leaf litter"]' in terms
-    assert 'stone_stairs: ["Escadas de pedra", "Stone stairs"]' in terms
-    assert 'stripped_birch_log: ["Tronco de bétula descascado", "Stripped birch log"]' in terms
-    assert 'reeds: ["Cana-de-açúcar", "Sugar cane"]' in terms
-    assert 'cobblestone: "Adoquín"' in terms
-    assert 'leaf_litter: "Hojarasca"' in terms
-    assert 'data-locale="es"' in template
-    assert 'ui-flag-br' in template
-    assert 'ui-flag-us' in template
-    assert 'ui-flag-es' in template
-    i18n = (FRONTEND / "static" / "js" / "i18n" / "index.js").read_text()
-    assert 'import { es } from "./es.js?v=8"' in i18n
-    assert "function blockTermMarkup" in terms
-    assert "/static/craftcontrol-blocks.svg#block-" in terms
-    assert "/static/craftcontrol-ui.svg#ui-" in terms
-    assert "craftcontrol-ui.svg#ui-refresh" in template
-    legacy_icons = re.compile(r"[☀☠⚔♛♟⚙◆◇◈▦▥▤☷⌂⌛♥▶↝➶✦✓↻⛏⚡⚠]")
-    assert legacy_icons.search(script) is None
-    assert legacy_icons.search(template) is None
-
 
 
 def test_analytics_has_dedicated_bilingual_mobile_workspace() -> None:

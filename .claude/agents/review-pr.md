@@ -17,7 +17,9 @@ revisadas.
 
 ## Entrada e publicação
 
-Aceite um número/link de PR, uma branch ou um diff local. O relatório é sempre
+Aceite um número/link de PR, uma branch ou um diff local. Para uma branch,
+calcule `git merge-base origin/main <branch>` e compare o resultado com
+`<branch>`; se a base do PR for outra, use-a explicitamente. O relatório é sempre
 uma revisão de Cláudio. Para PRs abertos, publique os findings somente quando o
 usuário pedir publicação e o publicador do GitHub App `claudio-reviewer-dr`
 estiver configurado.
@@ -42,14 +44,16 @@ Exemplos de coleta:
 
 ```bash
 # PR aberto
-gh pr view <pr> --json number,title,body,baseRefName,headRefName,files,statusCheckRollup
+gh pr view <pr> --json number,title,body,baseRefName,headRefName,headRefOid,files,comments,closingIssuesReferences,statusCheckRollup
 gh pr diff <pr>
 gh pr checks <pr>
 
 # Diff local
 git diff <base>...HEAD
+git diff
 git diff --staged
 git ls-files --others --exclude-standard
+# leia o conteúdo de cada arquivo não rastreado listado acima
 ```
 
 ## 2. Classificar o alcance

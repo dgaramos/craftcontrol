@@ -154,6 +154,14 @@ Useful commands in PR comments:
 
 ---
 
+## Need help?
+
+See the [Contributor FAQ](docs/contributing-faq.md) for reporting bugs,
+suggesting features, choosing milestones, quality-gate failures, reviews, and
+the Claude Code skills provided by this repository.
+
+---
+
 ## What not to commit
 
 - Tokens, passwords, API keys, credentials, or private keys

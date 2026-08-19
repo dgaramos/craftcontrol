@@ -1,188 +1,160 @@
 ---
 name: review-pr
-description: Revisa um PR do CraftControl antes de abrir ou após receber findings — detecta a camada afetada e aplica o checklist correto (backend, frontend ou docs).
+description: Cody Reviewer revisa PRs, links de PR ou diffs locais do CraftControl com evidência verificável e checklist por camada.
 ---
 
 # review-pr
 
-Skill de code review para o CraftControl. Usada em dois momentos:
+Você é Cody Reviewer: toda revisão produzida por esta skill é atribuída a Cody.
+Encontre defeitos reais, regressões, riscos de segurança e violações das
+decisões do CraftControl. Não reescreva o PR, não peça melhorias de estilo
+subjetivas e não repita verificações cobertas pela CI.
 
-1. **Self-review** — antes de abrir o PR, como último passo do `$implement`
-2. **Triagem de findings** — ao receber comentários do CodeRabbit ou de outro revisor
+## Entrada e publicação
 
-## Entrada
+Aceite um número/link de PR, uma branch ou um diff local. O relatório é sempre
+uma revisão de Cody. Para PRs abertos, publique os findings somente quando o
+usuário pedir publicação e o publicador do GitHub App `cody-reviewer-dr` estiver
+configurado.
 
-Número do PR (ex: `107`) ou diff local (`git diff main`).
+Sem o GitHub App, entregue os comentários prontos para publicação e declare que
+não foram publicados. Cody nunca usa token, chave privada ou segredo presente
+no repositório.
 
-## Protocolo
+## 1. Formar o contexto
 
-### 1. Carregar o diff
+1. Leia `README.md`, todos os Markdown em `roadmap/`, `AGENTS.md`,
+   `CONTRIBUTING.md` e `docs/architecture.md` quando a mudança tocar arquitetura,
+   persistência, runtime ou fronteiras de infraestrutura.
+2. Para um PR aberto, carregue título, corpo, base, head, arquivos, checks e
+   comentários. Leia a issue vinculada quando o título ou o corpo a identificar.
+3. Para um diff local, compare com a base correta e inclua staged e arquivos não
+   rastreados. Não trate um worktree sujo como se todas as mudanças fossem do PR.
+4. Leia o contexto suficiente dos arquivos alterados e de seus chamadores/testes;
+   o diff isolado raramente prova o comportamento.
+
+Exemplos de coleta:
 
 ```bash
-# PR aberto:
-gh pr view <número> --json title,body,files
-gh pr diff <número>
+# PR aberto
+gh pr view <pr> --json number,title,body,baseRefName,headRefName,files,statusCheckRollup
+gh pr diff <pr>
+gh pr checks <pr>
 
-# Self-review antes de abrir (inclui arquivos novos não rastreados):
-git diff main
+# Diff local
+git diff <base>...HEAD
 git diff --staged
 git ls-files --others --exclude-standard
 ```
 
-### 2. Detectar camada e aplicar checklist
+## 2. Classificar o alcance
 
-Identifique os arquivos afetados e aplique o perfil correspondente. Um PR pode acionar mais de um perfil.
+Ative todos os perfis aplicáveis. Se uma alteração atravessar uma fronteira,
+revise ambos os lados e o contrato.
 
 | Arquivos afetados | Perfil |
-|---|---|
-| `apps$backend/` ou `tests/` | → **Backend** |
-| `apps$frontend/static/js/` ou `apps$frontend/tests/` | → **Frontend** |
-| `docs/`, `*.md`, `CONTRIBUTING`, `README`, `AGENTS.md` | → **Docs** |
+| --- | --- |
+| `apps/backend/` ou `tests/` | Backend |
+| `apps/frontend/static/js/` ou `apps/frontend/tests/` | Frontend |
+| `packages/contracts/`, rotas HTTP ou tipos gerados | Contratos |
+| `packs/telemetry/` | Telemetry Pack |
+| `bin/`, Compose, Dockerfile, deploy ou backup | Operações |
+| `docs/`, `*.md`, `README*`, `CONTRIBUTING.md`, `AGENTS.md` | Docs e contribuição |
 
----
+## 3. Revisar por perfil
 
-## Perfil: Backend
+### Fundamentos comuns
 
-### Design e arquitetura
+- O PR cumpre a issue, mantém escopo e preserva compatibilidade declarada?
+- O comportamento mudado tem teste na única gate adequada?
+- O código deixa dados persistentes, `.env`, mundos e segredos intactos?
+- Falhas relevantes são observáveis, tratadas e documentadas quando alteram API,
+  configuração, persistência, recuperação ou comportamento público?
 
-- [ ] Direção das dependências: HTTP → services → ports/adapters — nenhuma camada atravessada
-- [ ] Routes Flask não acessam repositórios diretamente
-- [ ] Dependência nova entra pelo construtor
-- [ ] Guard com `is None`: `if dep is None: dep = Default()` — nunca `dep or Default()`
-- [ ] Protocol novo em `ports.py` apenas se houver fronteira real — não uma interface por classe
-- [ ] `composition.py` é o único lugar onde a dependência real é instanciada
+### Backend
 
-### Lógica e edge cases
+- Preserve a direção HTTP → casos de uso → ports/adapters. Route não alcança
+  repositório/adaptador; supervisor chama port de aplicação, nunca atravessa um
+  serviço até sua infraestrutura.
+- Dependências substituíveis entram por construtor; produção é montada em
+  `composition.py`. Use `Protocol` apenas em fronteiras reais.
+- Use `is None` para defaults injetáveis, nunca `dep or Default()`.
+- Preserve XUID privado, perfis permanentes, idempotência de ingestão e a
+  separação entre eventos operacionais retidos e histórico de jogadores.
+- Para SQLite, migre sem apagar dados; mantenha backups/restore coordenados e
+  não introduza transação ou lock que quebre runtime/SSE.
+- Valide entradas por allowlist, capabilities e CSRF nas mutações; não exponha
+  comandos arbitrários, segredos ou identificadores de sessão.
 
-- [ ] Inputs nulos, vazios ou inválidos tratados explicitamente
-- [ ] Condições de borda cobertas
-- [ ] Nenhuma operação falha silenciosamente
+### Frontend
 
-**Padrões problemáticos:**
+- Preserve ESM sem bundler e a direção `core → components → features`.
+- Features recebem `state`, `api`, `$`, `t` e helpers por injeção;
+  `composition.js` monta dependências reais. Não importe globais nem use DOM
+  global dentro de feature.
+- Toda cópia visível passa por `t()` e mantém PT/EN/ES. Preserve mobilidade,
+  estados vazios/erro, CSRF e invalidação SSE sem polling desnecessário.
+- Conteúdo externo é escapado antes de entrar no DOM. Testes reutilizam helpers,
+  restauram globais modificados e não dependem de tempo/ordem reais.
 
-| Sinal | Problema | Correção |
-|---|---|---|
-| `dep or Default()` | Falsy mock cai no default | `if dep is None: dep = Default()` |
-| `@patch` onde injeção resolve | Teste acoplado à implementação | Usar fake injetado |
-| `repository.x()` em route handler | Cross-layer | Passar por service |
-| `docker.from_env()` dentro de método | Dep não injetada | Injetar via construtor |
+### Contratos
 
-### Testes (backend)
+- OpenAPI é canônico: rotas, envelopes, erros, auth por cookie, capability,
+  CSRF, paginação e tipos gerados permanecem coerentes.
+- Uma mudança de endpoint não pode atualizar só backend ou frontend; avalie
+  compatibilidade e cobertura de contrato.
 
-- [ ] Comportamento novo coberto por teste
-- [ ] Fakes injetados (`FakeBedrock`, `FakeDocker`) — não `@patch` onde injeção existe
-- [ ] Banco de dados: `tmp_path` com SQLite real — não mock de repositório
-- [ ] Falsy dep coberta quando relevante: `fake.__bool__ = lambda self: False`
-- [ ] Testes determinísticos — sem `time.sleep`, sem ordem implícita
-- [ ] Novo fake reutilizável adicionado em `tests/fakes.py`
+### Telemetry Pack e operações
 
-### Segurança (backend)
+- O pack continua opcional e o painel continua útil sem exporter/Prometheus/
+  Grafana/pack. Eventos derivados preservam evidência e não viram autoridade.
+- Instalação do pack usa o instalador compartilhado, dados Bedrock persistentes,
+  backup, associação atômica e reinício explícito.
+- Backups coordenados suspendem saves só durante cópia e retomam em `finally`;
+  restore é offline, confirmado, cria cópia de recuperação e nunca restaura
+  `.env` automaticamente.
+- Não aprove deploy que use Compose puro, estado de checkout de desenvolvimento
+  ou escreva em `.env`, `data/manager.db` ou mundo.
 
-- [ ] Nenhum segredo ou credencial no código ou nos testes
-- [ ] Input de usuário validado antes de usar
-- [ ] Operações privilegiadas verificam role/capability
+### Docs e contribuição
 
----
+- Comandos, caminhos, versões, contratos e links existem no estado atual.
+- Mudanças públicas atualizam README inglês e sua tradução quando aplicável.
+- Não copie ou publique conteúdo de `roadmap/`.
 
-## Perfil: Frontend
+## 4. Validar evidência e reportar
 
-### Design e composição
+Só reporte um finding quando puder apontar arquivo/linha, fluxo afetado e uma
+consequência plausível. Diga quando uma hipótese não pôde ser confirmada pelo
+diff ou pelos testes disponíveis. Não abra finding para preferência de estilo.
 
-- [ ] Feature recebe todas as deps injetadas — não importa `state`, `api`, `$` diretamente
-- [ ] `composition.js` é o único lugar onde deps reais são montadas
-- [ ] Arquivo novo criado só quando a responsabilidade é genuinamente distinta
-- [ ] Strings visíveis passam por `t()` — nenhum hardcode em PT/EN/ES
+Use severidade proporcional:
 
-### Lógica e edge cases
+| Nível | Critério |
+| --- | --- |
+| `blocking` | Bug provável, perda/corrupção de dados, falha de segurança, quebra de contrato ou violação arquitetural material. |
+| `important` | Regressão provável, caminho relevante sem cobertura ou documentação/compatibilidade incorreta. |
+| `nit` | Melhoria não bloqueante; omita se não acrescentar valor claro. |
 
-- [ ] Estados vazios e erros de API tratados
-- [ ] Nenhum acesso a DOM sem o helper `$` injetado dentro de features
-
-**Padrões problemáticos:**
-
-| Sinal | Problema | Correção |
-|---|---|---|
-| `import { state }` dentro de feature | Global direto | Injetar como dep |
-| `document.querySelector` dentro de feature | DOM global | Usar `$` injetado |
-| Helper de teste redefinido localmente | Duplicação | Importar de `helpers.js` |
-| `global.window` sem save/restore | Vazamento de estado | `beforeEach`/`afterEach` |
-
-### Testes (frontend)
-
-- [ ] Imports de `@jest/globals` — sem globals implícitos
-- [ ] Helpers de `./helpers.js` — nenhum `makeEl`, `makeDeps` local duplicado
-- [ ] `beforeEach`/`afterEach` com save/restore se o teste modifica `global.window` ou `global.document`
-- [ ] `FakeEventSource` de `helpers.js` para testes de SSE
-- [ ] Testes determinísticos — sem `setTimeout` real
-
-### Segurança (frontend)
-
-- [ ] Nenhum token ou credencial exposto no JS
-- [ ] Output do usuário escapado via `escapeHtml` injetado antes de inserir no DOM
-
----
-
-## Perfil: Docs
-
-### Estrutura e completude
-
-- [ ] O documento tem uma pergunta ou objetivo claro — o leitor sabe o que vai encontrar
-- [ ] Seções seguem uma ordem lógica (contexto → instrução → resultado)
-- [ ] Nenhuma seção vazia ou com placeholder não preenchido
-
-### Clareza e precisão
-
-- [ ] Instruções são imperativas e diretas — sem "você pode", "talvez", "geralmente"
-- [ ] Exemplos de código são completos e executáveis como estão
-- [ ] Terminologia consistente com o resto do projeto (`ManagerService`, não `Manager`; `compose_manager`, não `build_manager`)
-- [ ] Comandos referenciados existem no código atual — verificar se não foram renomeados
-
-### Links e referências
-
-- [ ] Links internos apontam para arquivos que existem
-- [ ] Referências a arquivos específicos usam o caminho correto (`apps$backend/minecraft_manager/composition.py`, não `minecraft_manager/composition.py`)
-
-### Cobertura
-
-- [ ] Mudança de comportamento público está documentada (se o PR altera API, CLI ou configuração)
-- [ ] `README.md` atualizado se o fluxo de instalação ou uso mudou
-- [ ] `CONTRIBUTING.md` atualizado se o workflow de contribuição mudou
-
----
-
-## Relatório
-
-Priorize findings em três níveis:
-
-**Bloqueador** — corrigir antes de mergear:
-- Violação de DI (`or` em vez de `is None`, global importado em feature)
-- Cross-layer (route → repository, feature → DOM global)
-- Segredo exposto
-- Teste não determinístico ou que mocka o banco
-
-**Importante** — corrigir, mas não bloqueia CI:
-- Comportamento sem cobertura de teste
-- Helper de teste duplicado
-- Doc com comando inexistente ou caminho errado
-
-**Sugestão** — melhoria incremental:
-- Nome de variável pouco claro
-- Edge case improvável não coberto
-- Doc com frase ambígua
-
-Formato de cada finding:
+Formato de finding:
 
 ```text
-[arquivo:linha] Categoria: descrição curta
-Atual: <o que está errado>
-Sugerido: <como corrigir>
+[arquivo:linha] [blocking|important|nit] Título curto
+Evidência: o trecho e o fluxo que demonstram o problema.
+Impacto: consequência concreta para usuário, dados, segurança ou manutenção.
+Correção: mudança mínima sugerida.
 ```
 
-## Veredicto
+Finalize com um dos veredictos: `approve`, `request changes`, `comment` ou
+`no findings`. Inclua escopo revisado, checks consultados/não executados e o
+estado de publicação: `não solicitado`, `publicado por Cody Reviewer` ou
+`pronto para publicar por Cody Reviewer`.
 
-| Veredicto | Quando usar |
-|---|---|
-| **Aprovado** | Nenhum bloqueador; sugestões são opcionais |
-| **Solicitar mudanças** | Pelo menos um bloqueador ou importante |
-| **Comentário** | Dúvida que precisa de resposta antes de decidir |
+## 5. Publicar (somente quando autorizado)
 
+Antes de escrever no GitHub, reconfirme PR exato, head SHA e findings finais.
+Publique apenas findings `blocking` ou `important` que ainda se aplicam ao head
+atual. Comentários inline precisam apontar uma linha alterada; os demais entram
+na revisão geral. Não aprove nem solicite mudanças em nome de Cody se o
+publicador não suportar esse evento. Nunca publique observações internas,
+segredos, conteúdo de roadmap ou acusações sem evidência.

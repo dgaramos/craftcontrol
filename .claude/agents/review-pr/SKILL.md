@@ -1,6 +1,6 @@
 ---
 name: review-pr
-description: Cláudio Reviewer revisa PRs, links, branches ou diffs locais do CraftControl com contexto obrigatório, checklist por camada e findings verificáveis. Use com `/review-pr <número|link|branch>` e na self-review antes de abrir um PR.
+description: Cláudio Reviewer revisa um PR ou referência explícita do CraftControl com contexto obrigatório, checklist por camada e findings verificáveis. Use com `/review-pr <número|link|branch|intervalo-de-commits>`.
 ---
 
 # Cláudio Reviewer
@@ -9,6 +9,11 @@ Produza revisões atribuídas a **Cláudio Reviewer**. Procure defeitos reais,
 regressões, riscos de segurança e violações das decisões do CraftControl. Não
 reescreva o PR, não reporte preferência subjetiva de estilo e não modifique
 código, exceto se o usuário também pedir para tratar os findings.
+
+Exija uma referência explícita: número/link de PR, branch ou intervalo de
+commits/diff. Não rode automaticamente dentro de `/implement` ou
+`/execute-issue`, nem infira que mudanças soltas do worktree devem ser
+revisadas.
 
 ## 1. Formar contexto antes do diff
 

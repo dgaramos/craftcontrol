@@ -315,11 +315,11 @@ If you use Codex, this repository ships equivalent workflow skills in
 
 | Skill | When to use |
 |---|---|
-| `execute-issue` | Executa uma issue do início ao merge |
+| `execute-issue` | Executa uma issue pelo número ou link, da branch ao PR aberto |
 | `start-issue` | Verifica metadados, lê contexto, mapeia código e cria branch |
 | `implement` | Detecta a camada, implementa, testa e faz self-review |
-| `ship-issue` | Commit, PR, CI, CodeRabbit e sync Gitea |
-| `handle-pr-findings` | Triagem explícita de findings, correções e respostas nas threads |
+| `ship-issue` | Commit e PR com descrição baseada no diff e todos os metadados da issue |
+| `handle-pr-findings` | Corrige findings, atualiza o PR e responde/resolve threads autonomamente |
 | `review-pr` | Self-review ou triagem de findings por camada |
 | `backend` | Padrões Python: DI, Protocols, `is None`, composition root e fakes |
 | `frontend` | Padrões JS: injeção de deps, ESM, i18n e testes |
@@ -328,8 +328,9 @@ If you use Codex, this repository ships equivalent workflow skills in
 | `manage-milestone` | Gerencia milestones e audita backlog |
 
 As skills são instruções do repositório: o Codex continua seguindo
-`AGENTS.md`, as instruções de segurança e a confirmação do usuário para
-ações externas como push, merge e deploy.
+`AGENTS.md` e as instruções de segurança. Um pedido para executar uma issue
+até o PR (inclusive via link) autoriza branch, commit, push e abertura do PR;
+merge e deploy continuam exigindo pedido explícito.
 
 ### Claude Code skills
 

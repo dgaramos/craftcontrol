@@ -41,6 +41,10 @@ Padrões específicos de teste estão em `/backend` e `/frontend` — consulte a
 
 ### 5. Quality gate
 
+Não trate a ausência de Node/npm no host como bloqueio. `bin/check-frontend`
+usa automaticamente `node:22-alpine` via Docker quando necessário; execute o
+gate antes de reportar uma dependência ausente.
+
 ```bash
 # Backend (sempre rodar se tocar Python):
 PYTHONPATH=apps/backend:. pytest tests/ -q
@@ -49,7 +53,7 @@ PYTHONPATH=apps/backend:. pytest tests/ -q
 cd apps/frontend && npm test
 
 # Gate completo:
-bin/check-backend
+bin/check
 ```
 
 - [ ] Todos os testes passam

@@ -35,8 +35,9 @@ no repositório.
    persistência, runtime ou fronteiras de infraestrutura.
 2. Para um PR aberto, carregue título, corpo, base, head, arquivos, checks e
    comentários. Leia a issue vinculada quando o título ou o corpo a identificar.
-3. Para um diff local, compare com a base correta e inclua staged e arquivos não
-   rastreados. Não trate um worktree sujo como se todas as mudanças fossem do PR.
+3. Para um diff local, compare com a base correta e cubra mudanças staged,
+   rastreadas não staged e o conteúdo de cada arquivo não rastreado. Não trate
+   um worktree sujo como se todas as mudanças fossem do PR.
 4. Leia o contexto suficiente dos arquivos alterados e de seus chamadores/testes;
    o diff isolado raramente prova o comportamento.
 

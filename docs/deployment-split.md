@@ -140,7 +140,9 @@ bin/deploy-craftcontrol-release
 bin/deploy-craftcontrol-release --rollback 0.1.0 0.1.0
 ```
 
-The coordinated command deploys the backend first while the static frontend
-continues serving, then replaces the frontend without touching the new
-backend. Rollback versions are always explicit; an arbitrary unpinned image is
-never inferred from a mutable tag.
+The coordinated command first prepares both images, retrying each build up to
+three times when a registry or DNS failure is transient. It only begins service
+replacement after both images are ready, then deploys the backend while the
+static frontend continues serving and replaces the frontend without touching the
+new backend. Rollback versions are always explicit; an arbitrary unpinned image
+is never inferred from a mutable tag.

@@ -178,7 +178,7 @@ See [Telemetry Pack integration](docs/telemetry-pack.md) for the lifecycle and r
 
 CraftControl requires Docker Engine with the Compose plugin and an existing
 `itzg/minecraft-bedrock-server` deployment. It runs alongside the Bedrock
-project and must be deployed with its guarded commands. Never run a bare `docker compose up` from a development checkout.
+project and must be deployed with its guarded commands. Never run a bare `docker compose up` from a development checkout. Coordinated releases prepare both versioned images before recreating either service and retry transient image-registry failures up to three times.
 
 See [Installation](docs/installation.md) for prerequisites, expected directory
 layout, configuration, cutover, access, post-install checks, and troubleshooting.

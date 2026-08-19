@@ -9,11 +9,15 @@ ROLLBACK_VERSION=""
 
 if [[ "${1:-}" == "--check" ]]; then
   ACTION="check"
+elif [[ "${1:-}" == "--prepare" && $# -eq 1 ]]; then
+  ACTION="prepare"
+elif [[ "${1:-}" == "--activate" && $# -eq 1 ]]; then
+  ACTION="activate"
 elif [[ "${1:-}" == "--rollback" && -n "${2:-}" && $# -eq 2 ]]; then
   ACTION="rollback"
   ROLLBACK_VERSION="$2"
 elif [[ $# -gt 0 ]]; then
-  echo "usage: bin/deploy-craftcontrol-backend [--check | --rollback VERSION]" >&2
+  echo "usage: bin/deploy-craftcontrol-backend [--check | --prepare | --activate | --rollback VERSION]" >&2
   exit 2
 fi
 
@@ -36,6 +40,26 @@ validate_mounts() {
 validate_database() {
   [[ "$(compose exec -T craftcontrol-backend python -c 'import sqlite3; c=sqlite3.connect("/data/manager.db"); print(c.execute("PRAGMA quick_check").fetchone()[0])')" == "ok" ]] \
     || fail "SQLite integrity check failed"
+}
+prepare_forward_image() {
+  git -C "$SOURCE_ROOT" ls-files -z apps/backend packages packs bin/craftcontrol docker-compose.split.yml versions.env \
+    | rsync -a --from0 --files-from=- "$SOURCE_ROOT/" "$DEPLOY_ROOT/"
+  for attempt in 1 2 3; do
+    if compose build craftcontrol-backend; then
+      return
+    fi
+    [[ "$attempt" == "3" ]] && fail "backend image build failed after $attempt attempts"
+    echo "backend image build failed; retrying ($attempt/3)" >&2
+    sleep 5
+  done
+}
+activate_forward_image() {
+  docker image inspect "craftcontrol-backend:$CRAFTCONTROL_BACKEND_VERSION" >/dev/null
+  backup_output="$(compose exec -T craftcontrol-backend craftcontrol backup create)"
+  backup_id="$(python -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<<"$backup_output")"
+  compose exec -T craftcontrol-backend craftcontrol backup verify "$backup_id" >/dev/null
+  compose up -d --no-deps craftcontrol-backend
+  deployed_version="$CRAFTCONTROL_BACKEND_VERSION"
 }
 
 [[ "$DEPLOY_ROOT" == "$EXPECTED_DEPLOY_ROOT" || -n "${CRAFTCONTROL_DEPLOY_ROOT:-}" ]] || fail "unexpected deploy root"
@@ -64,21 +88,24 @@ if [[ "$ACTION" == "check" ]]; then
 fi
 
 frontend_id="$(docker inspect craftcontrol-frontend --format '{{.Id}}')"
-backup_output="$(compose exec -T craftcontrol-backend craftcontrol backup create)"
-backup_id="$(python -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<<"$backup_output")"
-compose exec -T craftcontrol-backend craftcontrol backup verify "$backup_id" >/dev/null
 
-if [[ "$ACTION" == "rollback" ]]; then
+if [[ "$ACTION" == "prepare" ]]; then
+  prepare_forward_image
+  echo "backend deploy preparation: ok version=$CRAFTCONTROL_BACKEND_VERSION"
+  exit 0
+elif [[ "$ACTION" == "activate" ]]; then
+  activate_forward_image
+elif [[ "$ACTION" == "rollback" ]]; then
+  backup_output="$(compose exec -T craftcontrol-backend craftcontrol backup create)"
+  backup_id="$(python -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<<"$backup_output")"
+  compose exec -T craftcontrol-backend craftcontrol backup verify "$backup_id" >/dev/null
   docker image inspect "craftcontrol-backend:$ROLLBACK_VERSION" >/dev/null 2>&1 \
     || fail "rollback image craftcontrol-backend:$ROLLBACK_VERSION is unavailable"
   CRAFTCONTROL_BACKEND_VERSION="$ROLLBACK_VERSION" compose up -d --no-deps craftcontrol-backend
   deployed_version="$ROLLBACK_VERSION"
 else
-  git -C "$SOURCE_ROOT" ls-files -z apps/backend packages packs bin/craftcontrol docker-compose.split.yml versions.env \
-    | rsync -a --from0 --files-from=- "$SOURCE_ROOT/" "$DEPLOY_ROOT/"
-  compose build craftcontrol-backend
-  compose up -d --no-deps craftcontrol-backend
-  deployed_version="$CRAFTCONTROL_BACKEND_VERSION"
+  prepare_forward_image
+  activate_forward_image
 fi
 
 for _ in $(seq 1 30); do

@@ -9,11 +9,15 @@ ROLLBACK_VERSION=""
 
 if [[ "${1:-}" == "--check" ]]; then
   ACTION="check"
+elif [[ "${1:-}" == "--prepare" && $# -eq 1 ]]; then
+  ACTION="prepare"
+elif [[ "${1:-}" == "--activate" && $# -eq 1 ]]; then
+  ACTION="activate"
 elif [[ "${1:-}" == "--rollback" && -n "${2:-}" && $# -eq 2 ]]; then
   ACTION="rollback"
   ROLLBACK_VERSION="$2"
 elif [[ $# -gt 0 ]]; then
-  echo "usage: bin/deploy-craftcontrol-frontend [--check | --rollback VERSION]" >&2
+  echo "usage: bin/deploy-craftcontrol-frontend [--check | --prepare | --activate | --rollback VERSION]" >&2
   exit 2
 fi
 
@@ -22,6 +26,23 @@ readonly COMPOSE_FILE="$DEPLOY_ROOT/docker-compose.split.yml"
 
 fail() { echo "frontend deploy refused: $*" >&2; exit 1; }
 compose() { docker compose --project-directory "$DEPLOY_ROOT" --file "$COMPOSE_FILE" "$@"; }
+prepare_forward_image() {
+  git -C "$SOURCE_ROOT" ls-files -z apps/frontend docker-compose.split.yml versions.env \
+    | rsync -a --from0 --files-from=- "$SOURCE_ROOT/" "$DEPLOY_ROOT/"
+  for attempt in 1 2 3; do
+    if compose build craftcontrol-frontend; then
+      return
+    fi
+    [[ "$attempt" == "3" ]] && fail "frontend image build failed after $attempt attempts"
+    echo "frontend image build failed; retrying ($attempt/3)" >&2
+    sleep 5
+  done
+}
+activate_forward_image() {
+  docker image inspect "craftcontrol-frontend:$CRAFTCONTROL_FRONTEND_VERSION" >/dev/null
+  compose up -d --no-deps craftcontrol-frontend
+  deployed_version="$CRAFTCONTROL_FRONTEND_VERSION"
+}
 
 [[ "$DEPLOY_ROOT" == "$EXPECTED_DEPLOY_ROOT" || -n "${CRAFTCONTROL_DEPLOY_ROOT:-}" ]] || fail "unexpected deploy root"
 [[ "$SOURCE_ROOT" != "$DEPLOY_ROOT" ]] || fail "source and deploy roots must be different"
@@ -47,17 +68,20 @@ fi
 
 backend_id="$(docker inspect craftcontrol-backend --format '{{.Id}}')"
 
-if [[ "$ACTION" == "rollback" ]]; then
+if [[ "$ACTION" == "prepare" ]]; then
+  prepare_forward_image
+  echo "frontend deploy preparation: ok version=$CRAFTCONTROL_FRONTEND_VERSION"
+  exit 0
+elif [[ "$ACTION" == "activate" ]]; then
+  activate_forward_image
+elif [[ "$ACTION" == "rollback" ]]; then
   docker image inspect "craftcontrol-frontend:$ROLLBACK_VERSION" >/dev/null 2>&1 \
     || fail "rollback image craftcontrol-frontend:$ROLLBACK_VERSION is unavailable"
   CRAFTCONTROL_FRONTEND_VERSION="$ROLLBACK_VERSION" compose up -d --no-deps craftcontrol-frontend
   deployed_version="$ROLLBACK_VERSION"
 else
-  git -C "$SOURCE_ROOT" ls-files -z apps/frontend docker-compose.split.yml versions.env \
-    | rsync -a --from0 --files-from=- "$SOURCE_ROOT/" "$DEPLOY_ROOT/"
-  compose build craftcontrol-frontend
-  compose up -d --no-deps craftcontrol-frontend
-  deployed_version="$CRAFTCONTROL_FRONTEND_VERSION"
+  prepare_forward_image
+  activate_forward_image
 fi
 
 for _ in $(seq 1 30); do

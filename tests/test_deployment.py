@@ -91,7 +91,7 @@ def test_coordinated_release_uses_the_pinned_pair_and_component_commands() -> No
 def test_successful_main_quality_run_triggers_the_guarded_homelab_release() -> None:
     workflow = (ROOT / ".gitea" / "workflows" / "deploy.yml").read_text()
     runbook = (ROOT / "docs" / "automated-deployment.md").read_text()
-    assert "push:" in workflow
+    assert "workflow_run:" in workflow
     assert "branches: [main]" in workflow
     assert "runs-on: [self-hosted, homelab, craftcontrol]" in workflow
     assert "craftcontrol-homelab-production" in workflow

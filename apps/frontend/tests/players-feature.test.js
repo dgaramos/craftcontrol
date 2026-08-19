@@ -100,18 +100,22 @@ describe("renderPlayersPanel — happy path", () => {
     expect(deps.bindSettingFields).toHaveBeenCalledWith(["Jogadores"]);
   });
 
-  test.each([
-    ["playerSettingsMarkup"],
-    ["bindSegmentedControls"],
-    ["bindSettingFields"],
-  ])("identifies a missing %s settings helper before loading players", async (missingHelper) => {
+  const invalidSettingsHelpers = ["playerSettingsMarkup", "bindSegmentedControls", "bindSettingFields"].flatMap((helper) => [
+    [helper, "missing", undefined, true],
+    [helper, "null", null, false],
+    [helper, "string", "not callable", false],
+    [helper, "object", {}, false],
+  ]);
+
+  test.each(invalidSettingsHelpers)("identifies a %s %s settings helper before loading players", async (missingHelper, kind, value, remove) => {
     const deps = makeWorkspaceDeps();
     const settings = {
       playerSettingsMarkup: deps.playerSettingsMarkup,
       bindSegmentedControls: deps.bindSegmentedControls,
       bindSettingFields: deps.bindSettingFields,
     };
-    delete settings[missingHelper];
+    if (remove) delete settings[missingHelper];
+    else settings[missingHelper] = value;
     deps.getSettingsFeature = jest.fn(() => settings);
 
     await expect(createPlayersWorkspace(deps)()).rejects.toThrow(

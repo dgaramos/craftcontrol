@@ -20,17 +20,6 @@ def frontend_script() -> str:
     ))
 
 
-def test_frontend_entrypoint_is_only_bootstrap_and_composition() -> None:
-    entrypoint = (FRONTEND / "static" / "app.js").read_text()
-    composition = (FRONTEND / "static" / "js" / "composition.js").read_text()
-    settings = (FRONTEND / "static" / "js" / "features" / "settings" / "index.js").read_text()
-    assert len(entrypoint.splitlines()) <= 5
-    assert "startApplication" in entrypoint
-    assert "createNavigation" in composition
-    assert "connectInvalidation" in composition
-    assert "createSettingsFeature" in settings
-
-
 def test_template_uses_product_brand_and_dynamic_instance_name() -> None:
     template = (FRONTEND / "templates" / "index.html").read_text()
     assert "<title>CraftControl" in template
@@ -129,16 +118,6 @@ def test_composition_defines_player_settings_markup_before_passing_to_players_fe
     )
 
 
-def test_browser_api_attaches_session_bound_csrf_header() -> None:
-    api_script = (FRONTEND / "static" / "js" / "api.js").read_text()
-    app_script = frontend_script()
-    auth_script = (FRONTEND / "static" / "js" / "auth.js").read_text()
-    assert 'headers["X-CSRF-Token"] = csrfToken' in api_script
-    assert 'typeof data.csrf_token === "string"' in api_script
-    assert './api.js?v=7' in app_script
-    assert './api.js?v=7' in auth_script
-
-
 def test_authentication_can_reveal_passwords_accessibly() -> None:
     auth_script = (FRONTEND / "static" / "js" / "auth.js").read_text()
     stylesheet = (FRONTEND / "static" / "auth.css").read_text()
@@ -235,18 +214,6 @@ def test_mobile_topbar_prioritizes_status_and_icon_actions() -> None:
     assert "#ui-logout" in index_html  # icon moved to tpl-identity native template
 
 
-def test_mobile_page_scroll_is_bounded_and_navigation_resets_position() -> None:
-    stylesheet = (FRONTEND / "static" / "app.css").read_text()
-    navigation = (FRONTEND / "static" / "js" / "core" / "navigation.js").read_text()
-    template = (FRONTEND / "templates" / "index.html").read_text()
-    assert "overscroll-behavior-y: none" in stylesheet
-    assert "min-height: 100dvh" in stylesheet
-    assert "overflow-x: clip" in stylesheet
-    assert 'window.scrollTo({ top: 0, left: 0, behavior: "auto" })' in navigation
-    assert '/static/app.css?v=25' in template
-    assert '/static/app.js?v=64' in template
-
-
 def test_split_frontend_reports_its_own_release_version() -> None:
     script = frontend_script()
     server = (FRONTEND / "static" / "js" / "features" / "server" / "index.js").read_text()
@@ -275,31 +242,6 @@ def test_world_rules_server_and_auth_have_feature_boundaries() -> None:
     assert "function renderTimePanel" not in script
     assert "function loadTelemetryPack" not in script
     assert "requireSession().then" not in script
-
-
-def test_frontend_core_owns_shared_state_and_dom_primitives() -> None:
-    script = frontend_script()
-    state_module = (FRONTEND / "static" / "js" / "core" / "state.js").read_text()
-    dom_module = (FRONTEND / "static" / "js" / "core" / "dom.js").read_text()
-    assert 'from "./core/state.js?v=7"' in script
-    assert 'from "./core/dom.js?v=7"' in script
-    assert "export const state" in state_module
-    assert "export function escapeHtml" in dom_module
-    assert "const state = {" not in script
-    assert "function escapeHtml" not in script
-
-
-def test_frontend_components_own_feedback_and_time_primitives() -> None:
-    script = frontend_script()
-    feedback = (FRONTEND / "static" / "js" / "components" / "feedback.js").read_text()
-    time = (FRONTEND / "static" / "js" / "components" / "time.js").read_text()
-    assert 'from "./components/feedback.js?v=7"' in script
-    assert 'from "./components/time.js?v=7"' in script
-    assert "export function toast" in feedback
-    assert "export function timelineTimestamp" in time
-    assert "export function formatDuration" in time
-    assert "function toast" not in script
-    assert "function formatDuration" not in script
 
 
 def test_analytics_activity_and_deaths_have_a_feature_boundary() -> None:

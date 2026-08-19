@@ -24,8 +24,8 @@ revisadas.
    ou infraestrutura, leia também `docs/architecture.md`.
 2. Para um PR aberto, carregue título, descrição, base, head SHA, arquivos,
    checks, comentários e issue vinculada. Para diff local, compare com a base
-   correta e inclua staged e não rastreados; não atribua ao PR mudanças alheias
-   de um worktree sujo.
+   correta e cubra mudanças staged, rastreadas não staged e o conteúdo de cada
+   arquivo não rastreado; não atribua ao PR mudanças alheias de um worktree sujo.
 3. Leia os arquivos alterados no contexto de seus chamadores e testes. Um diff
    isolado não basta para provar o comportamento.
 

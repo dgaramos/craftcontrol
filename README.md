@@ -317,10 +317,10 @@ If you use Codex, this repository ships equivalent workflow skills in
 |---|---|
 | `execute-issue` | Executa uma issue pelo número ou link, da branch ao PR aberto |
 | `start-issue` | Verifica metadados, lê contexto, mapeia código e cria branch |
-| `implement` | Detecta a camada, implementa, testa e faz self-review |
+| `implement` | Detecta a camada, implementa e testa |
 | `ship-issue` | Commit e PR com descrição baseada no diff e todos os metadados da issue |
 | `handle-pr-findings` | Corrige findings, atualiza o PR e responde/resolve threads autonomamente |
-| `review-pr` | Self-review ou triagem de findings por camada |
+| `review-pr <PR|ref>` | Revisão cruzada sob demanda de um PR ou referência explícita, por camada |
 | `backend` | Padrões Python: DI, Protocols, `is None`, composition root e fakes |
 | `frontend` | Padrões JS: injeção de deps, ESM, i18n e testes |
 | `create-issue` | Workshop para criar issues bem formadas |
@@ -343,7 +343,7 @@ If you use Claude Code, this repository ships a set of skills in `.claude/agents
 | `$implement` | Detecta camada (backend$frontend), carrega skill especializada, implementa e testa |
 | `$handle-pr-findings` | Triagem explícita de findings, correções e respostas nas threads |
 | `$ship-issue` | Commit, PR com metadados, CI, CodeRabbit, sync Gitea |
-| `$review-pr <n>` | Self-review ou triagem de findings — checklist por camada (backend, frontend, docs) |
+| `$review-pr <PR|ref>` | Revisão cruzada sob demanda de um PR ou referência explícita — checklist por camada |
 | `$backend` | Padrões Python: DI, Protocols, `is None`, composition root, fakes |
 | `$frontend` | Padrões JS: injeção de deps, helpers compartilhados, ESM, i18n |
 | `$create-issue` | Workshop PM/Dev Hat → cria issue bem formada com todos os metadados |

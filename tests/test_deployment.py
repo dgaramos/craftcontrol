@@ -17,11 +17,15 @@ def test_quality_gates_are_partitioned_and_automated() -> None:
         script = ROOT / "bin" / f"check-{gate}"
         assert script.is_file()
         assert f"{gate} gate: ok" in script.read_text()
+    assert (ROOT / "bin" / "check-contracts-frontend").is_file()
     umbrella = (ROOT / "bin" / "check").read_text()
-    assert "frontend backend contracts integration" in umbrella
+    assert "contracts-frontend" in umbrella
+    assert "frontend" in umbrella and "backend" in umbrella and "contracts" in umbrella and "integration" in umbrella
     for workflow in (ROOT / ".github" / "workflows" / "quality.yml", ROOT / ".gitea" / "workflows" / "quality.yml"):
         assert workflow.is_file()
-        assert "gate: [frontend, backend, contracts, integration]" in workflow.read_text()
+        text = workflow.read_text()
+        for job in ("backend", "contracts-backend", "contracts-frontend", "frontend", "integration"):
+            assert job in text
 
 
 def test_split_runtime_gate_uses_only_disposable_state() -> None:

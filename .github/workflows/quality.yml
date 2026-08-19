@@ -5,12 +5,17 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   backend:
     name: backend
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4.2.2
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@v5.6.0
         with:
           python-version: "3.12"
@@ -33,6 +38,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4.2.2
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@v5.6.0
         with:
           python-version: "3.12"
@@ -45,6 +52,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4.2.2
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4.4.0
         with:
           node-version: "22"
@@ -60,6 +69,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4.2.2
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4.4.0
         with:
           node-version: "22"
@@ -81,6 +92,8 @@ jobs:
     needs: [backend, contracts-backend, contracts-frontend, frontend]
     steps:
       - uses: actions/checkout@v4.2.2
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@v5.6.0
         with:
           python-version: "3.12"

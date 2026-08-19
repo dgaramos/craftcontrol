@@ -55,16 +55,26 @@ describe("analytics activity and deaths have a feature boundary", () => {
 
 describe("analytics has dedicated bilingual mobile workspace", () => {
   test("i18n catalogs contain bilingual activity and panel strings", () => {
-    const catalogs = i18nCatalogs();
-    expect(catalogs).toContain("Atividade do servidor");
-    expect(catalogs).toContain("Server activity");
-    expect(catalogs).toContain("rankingsTitle");
-    expect(catalogs).toContain("combatEmptyHelp");
-    expect(catalogs).toContain("explorationEmptyHelp");
-    expect(catalogs).toContain("collectionStarted");
-    expect(catalogs).toContain("Fim da linha do tempo");
-    expect(catalogs).toContain("End of timeline");
-    expect(catalogs).toContain("Fin de la línea de tiempo");
+    const pt = readFileSync(join(I18N, "pt.js"), "utf8");
+    const en = readFileSync(join(I18N, "en.js"), "utf8");
+    const es = readFileSync(join(I18N, "es.js"), "utf8");
+
+    // Keys that must be explicitly defined in pt and en (es inherits from en via spread)
+    for (const catalog of [pt, en]) {
+      expect(catalog).toContain("rankingsTitle");
+      expect(catalog).toContain("combatEmptyHelp");
+      expect(catalog).toContain("explorationEmptyHelp");
+      expect(catalog).toContain("collectionStarted");
+    }
+    // es defines its own rankingsTitle override
+    expect(es).toContain("rankingsTitle");
+
+    // Locale-specific visible strings validated per catalog
+    expect(pt).toContain("Atividade do servidor");
+    expect(pt).toContain("Fim da linha do tempo");
+    expect(en).toContain("Server activity");
+    expect(en).toContain("End of timeline");
+    expect(es).toContain("Fin de la línea de tiempo");
   });
 
   test("analytics JS contains view-switch tuples for all panels", () => {

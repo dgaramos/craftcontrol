@@ -52,9 +52,10 @@ describe("player workspace separates roster, profile and permission scopes", () 
     expect(settingsJs).toContain('class="player-server-settings');
   });
 
-  test('settings index includes bilingual "Somente leitura" read-only badge', () => {
+  test('settings index includes trilingual read-only badge (pt, en, es)', () => {
     expect(settingsJs).toContain("Somente leitura");
     expect(settingsJs).toContain("Read only");
+    expect(settingsJs).toContain("Solo lectura");
   });
 });
 

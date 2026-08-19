@@ -266,7 +266,7 @@ describe("updateToggleLabel", () => {
       schema: { settings: { limit: { group: "G", type: "number", label: "PT", label_en: "EN", label_es: "ES", description: "d", description_en: "de", description_es: "des", min: 1, max: 9, warning: "warn", warning_en: "warning" } }, gamerules: {} },
     });
     const feature = createSettingsFeature(deps);
-    expect(feature.booleanControl("detail-operator", "unknown")).toContain("Read only");
+    expect(feature.booleanControl("detail-operator", "unknown")).toContain("Solo lectura");
     feature.renderSettingsGroups(["G"]);
     expect(deps.content.innerHTML).toContain("serverIntro");
     expect(deps.content.innerHTML).toContain('min="1"');

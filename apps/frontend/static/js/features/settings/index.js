@@ -18,7 +18,8 @@ export function createSettingsFeature({ state, content, t, api, $, escapeHtml, t
     const checked = normalized === "true";
     const text = known ? (checked ? t("enabled") : t("disabled")) : t("unknown");
     if (id === "detail-operator" && !can("players.manage_permissions")) {
-      return `<span class="read-only-badge">${state.locale === "pt" ? "Somente leitura" : "Read only"}</span>`;
+      const readOnlyLabel = state.locale === "pt" ? "Somente leitura" : state.locale === "es" ? "Solo lectura" : "Read only";
+      return `<span class="read-only-badge">${readOnlyLabel}</span>`;
     }
     return `<div class="toggle-control"><span class="toggle-value ${known ? "" : "unknown"}">${text}</span><label class="switch"><input id="${id}" type="checkbox" ${checked ? "checked" : ""}><span></span></label></div>`;
   }

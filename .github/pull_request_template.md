@@ -1,28 +1,28 @@
-## O que muda
+## What changes
 
 <!--
 Uma a três frases descrevendo o que foi alterado e por quê.
 Foco no "porquê", não no "o quê" — o diff já mostra o quê.
 -->
 
-## Tipo de mudança
+## Change type
 
-- [ ] `feat` — nova funcionalidade
-- [ ] `fix` — correção de bug
-- [ ] `refactor` — sem mudança de comportamento
-- [ ] `test` — cobertura ou correção de testes
-- [ ] `docs` — documentação
-- [ ] `ci` / `build` / `chore` — infraestrutura
+- [ ] `feat` — new functionality
+- [ ] `fix` — bug fix
+- [ ] `refactor` — no behavior change
+- [ ] `test` — test coverage or correction
+- [ ] `docs` — documentation
+- [ ] `ci` / `build` / `chore` — infrastructure
 
 ## Checklist
 
-- [ ] `bin/check` passa localmente
-- [ ] Testes novos ou atualizados para o comportamento alterado
-- [ ] `README.md` atualizado se comportamento público, API ou contrato mudou
-- [ ] Nenhum segredo, XUID, `.env` ou dado de mundo commitado
-- [ ] Conventional Commit verificado: `git show -s --format=%s HEAD`
+- [ ] `bin/check` passes locally
+- [ ] Tests added or updated for changed behavior
+- [ ] `README.md` updated when public behavior, API, or contract changed
+- [ ] No secrets, XUIDs, `.env`, or world data committed
+- [ ] Conventional Commit verified: `git show -s --format=%s HEAD`
 
-## Contexto adicional
+## Additional context
 
 <!--
 Links para issues, roadmap, incidente ou decisão de arquitetura relevante.

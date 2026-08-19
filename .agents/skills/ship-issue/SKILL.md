@@ -127,7 +127,7 @@ quatro metadados refletem a issue:
 gh pr view <url-do-pr> \
   --json url,body,assignees,labels,milestone,projectItems \
   | jq '{url, assignees: [.assignees[].login], labels: [.labels[].name],
-         milestone: .milestone.title, projects: [.projectItems[].project.title]}'
+         milestone: .milestone.title, projects: [.projectItems[].title]}'
 ```
 
 Se algum item estiver ausente, corrija antes de reportar a entrega:

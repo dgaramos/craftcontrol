@@ -48,7 +48,7 @@ gh project item-list <número-do-project> --owner dgaramos --limit 1000
 ### Verificar se uma issue está em algum project
 
 ```bash
-gh issue view <número> --json projectItems --jq '.projectItems[].project.title'
+gh issue view <número> --json projectItems --jq '.projectItems[].title'
 ```
 
 ### Mover item entre colunas (status)
@@ -83,4 +83,3 @@ gh project item-delete <número-do-project> --owner dgaramos --id <item-id>
 - Ao criar uma issue nova — garantir que está no board certo
 - Ao auditar issues sem project (`gh issue list --json projectItems` e filtrar vazios)
 - Ao mover trabalho entre boards por mudança de escopo
-

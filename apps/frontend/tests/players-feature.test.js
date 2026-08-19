@@ -75,7 +75,7 @@ function makeWorkspaceDeps(overrides = {}) {
   const playerSettingsMarkup = jest.fn(() => "");
   const bindSegmentedControls = jest.fn();
   const bindSettingFields = jest.fn();
-  const getSettingsFeature = () => ({ playerSettingsMarkup, bindSegmentedControls, bindSettingFields });
+  const getSettingsFeature = jest.fn(() => ({ playerSettingsMarkup, bindSegmentedControls, bindSettingFields }));
   const formatDuration = (s) => `${s ?? 0}s`;
   const formatDate = (ts) => ts ? "2024-01-01" : "—";
   const renderPlayerDetail = jest.fn();
@@ -85,6 +85,45 @@ function makeWorkspaceDeps(overrides = {}) {
 // ── workspace.js ──────────────────────────────────────────────────────────────
 
 describe("renderPlayersPanel — happy path", () => {
+  test("renders and binds player settings through getSettingsFeature", async () => {
+    const deps = makeWorkspaceDeps();
+    deps.playerSettingsMarkup.mockReturnValue('<section class="player-server-settings"></section>');
+
+    await createPlayersWorkspace(deps)();
+
+    expect(deps.getSettingsFeature).toHaveBeenCalledTimes(1);
+    expect(deps.content.insertAdjacentHTML).toHaveBeenCalledWith(
+      "beforeend",
+      '<section class="player-server-settings"></section>',
+    );
+    expect(deps.bindSegmentedControls).toHaveBeenCalledTimes(1);
+    expect(deps.bindSettingFields).toHaveBeenCalledWith(["Jogadores"]);
+  });
+
+  const invalidSettingsHelpers = ["playerSettingsMarkup", "bindSegmentedControls", "bindSettingFields"].flatMap((helper) => [
+    [helper, "missing", undefined, true],
+    [helper, "null", null, false],
+    [helper, "string", "not callable", false],
+    [helper, "object", {}, false],
+  ]);
+
+  test.each(invalidSettingsHelpers)("identifies a %s %s settings helper before loading players", async (missingHelper, kind, value, remove) => {
+    const deps = makeWorkspaceDeps();
+    const settings = {
+      playerSettingsMarkup: deps.playerSettingsMarkup,
+      bindSegmentedControls: deps.bindSegmentedControls,
+      bindSettingFields: deps.bindSettingFields,
+    };
+    if (remove) delete settings[missingHelper];
+    else settings[missingHelper] = value;
+    deps.getSettingsFeature = jest.fn(() => settings);
+
+    await expect(createPlayersWorkspace(deps)()).rejects.toThrow(
+      `Players settings feature is missing callable helpers: ${missingHelper}`,
+    );
+    expect(deps.api).not.toHaveBeenCalled();
+  });
+
   test("clones players-screen template into content", async () => {
     const deps = makeWorkspaceDeps();
     const renderPlayersPanel = createPlayersWorkspace(deps);

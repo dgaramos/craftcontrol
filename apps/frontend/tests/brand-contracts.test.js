@@ -168,17 +168,3 @@ describe("brand contracts — component module ownership (feedback and time)", (
     expect(script).not.toContain("function formatDuration");
   });
 });
-
-describe("brand contracts — players feature composition (regression #156)", () => {
-  test("composition.js does not pass bindSegmentedControls as a direct dep to createPlayersFeature", () => {
-    const composition = readFileSync(join(JS, "composition.js"), "utf8");
-    const createPlayersCall = composition.slice(composition.indexOf("createPlayersFeature({"), composition.indexOf("});", composition.indexOf("createPlayersFeature({")));
-    expect(createPlayersCall).not.toContain("bindSegmentedControls");
-  });
-
-  test("composition.js does not pass bindSettingFields as a direct dep to createPlayersFeature", () => {
-    const composition = readFileSync(join(JS, "composition.js"), "utf8");
-    const createPlayersCall = composition.slice(composition.indexOf("createPlayersFeature({"), composition.indexOf("});", composition.indexOf("createPlayersFeature({")));
-    expect(createPlayersCall).not.toContain("bindSettingFields");
-  });
-});

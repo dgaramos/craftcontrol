@@ -12,9 +12,15 @@ return async function renderPlayersPanel() {
   clone.querySelector("[data-player-filter=operator]").textContent = t("filterOperators");
   clone.querySelector(".loading-players").textContent = t("checking");
   content.replaceChildren(clone);
-  content.insertAdjacentHTML("beforeend", getSettingsFeature().playerSettingsMarkup());
-  getSettingsFeature().bindSegmentedControls();
-  getSettingsFeature().bindSettingFields(["Jogadores"]);
+  const settings = getSettingsFeature();
+  const requiredSettingsHelpers = ["playerSettingsMarkup", "bindSegmentedControls", "bindSettingFields"];
+  const missingSettingsHelpers = requiredSettingsHelpers.filter((name) => typeof settings?.[name] !== "function");
+  if (missingSettingsHelpers.length) {
+    throw new Error(`Players settings feature is missing callable helpers: ${missingSettingsHelpers.join(", ")}`);
+  }
+  content.insertAdjacentHTML("beforeend", settings.playerSettingsMarkup());
+  settings.bindSegmentedControls();
+  settings.bindSettingFields(["Jogadores"]);
   try {
     const result = await api("/api/players");
     const list = result.players || [];
@@ -105,4 +111,3 @@ function renderPlayerCards(container, list, access = {}) {
 }
 
 }
-

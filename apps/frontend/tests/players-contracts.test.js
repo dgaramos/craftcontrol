@@ -152,6 +152,14 @@ describe("player feature separates workspace, profile, access, history and telem
 // ── 4. test_composition_defines_player_settings_markup_before_passing_to_players_feature ──
 
 describe("composition defines playerSettingsMarkup before passing to createPlayersFeature", () => {
+  function createPlayersFeatureCall() {
+    const start = composition.indexOf("createPlayersFeature({");
+    const end = composition.indexOf("});", start);
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(end).toBeGreaterThan(start);
+    return composition.slice(start, end);
+  }
+
   test("composition.js contains function playerSettingsMarkup", () => {
     expect(composition).toContain("function playerSettingsMarkup");
   });
@@ -162,6 +170,14 @@ describe("composition defines playerSettingsMarkup before passing to createPlaye
     expect(definitionPos).toBeGreaterThanOrEqual(0);
     expect(usagePos).toBeGreaterThanOrEqual(0);
     expect(definitionPos).toBeLessThan(usagePos);
+  });
+
+  test("does not pass bindSegmentedControls directly to createPlayersFeature", () => {
+    expect(createPlayersFeatureCall()).not.toContain("bindSegmentedControls");
+  });
+
+  test("does not pass bindSettingFields directly to createPlayersFeature", () => {
+    expect(createPlayersFeatureCall()).not.toContain("bindSettingFields");
   });
 });
 

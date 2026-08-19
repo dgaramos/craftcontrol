@@ -15,6 +15,10 @@ function frontendScript() {
   ].join("\n");
 }
 
+function compositionScript() {
+  return readFileSync(join(JS, "composition.js"), "utf8");
+}
+
 describe("brand contracts — entrypoint structure", () => {
   test("app.js is only bootstrap and composition (≤5 lines)", () => {
     const entrypoint = readFileSync(join(STATIC, "app.js"), "utf8");
@@ -54,7 +58,7 @@ describe("brand contracts — CSRF and API versioning", () => {
   });
 
   test("composition.js references api.js?v=7", () => {
-    const script = frontendScript();
+    const script = compositionScript();
     expect(script).toContain("./api.js?v=7");
   });
 
@@ -98,12 +102,12 @@ describe("brand contracts — mobile scroll behaviour", () => {
 
 describe("brand contracts — core module ownership (state and dom)", () => {
   test("composition.js imports from core/state.js?v=7", () => {
-    const script = frontendScript();
+    const script = compositionScript();
     expect(script).toContain('from "./core/state.js?v=7"');
   });
 
   test("composition.js imports from core/dom.js?v=7", () => {
-    const script = frontendScript();
+    const script = compositionScript();
     expect(script).toContain('from "./core/dom.js?v=7"');
   });
 
@@ -118,24 +122,24 @@ describe("brand contracts — core module ownership (state and dom)", () => {
   });
 
   test("composition.js does not inline state", () => {
-    const script = frontendScript();
+    const script = compositionScript();
     expect(script).not.toContain("const state = {");
   });
 
   test("composition.js does not inline escapeHtml", () => {
-    const script = frontendScript();
+    const script = compositionScript();
     expect(script).not.toContain("function escapeHtml");
   });
 });
 
 describe("brand contracts — component module ownership (feedback and time)", () => {
   test("composition.js imports from components/feedback.js?v=7", () => {
-    const script = frontendScript();
+    const script = compositionScript();
     expect(script).toContain('from "./components/feedback.js?v=7"');
   });
 
   test("composition.js imports from components/time.js?v=7", () => {
-    const script = frontendScript();
+    const script = compositionScript();
     expect(script).toContain('from "./components/time.js?v=7"');
   });
 
@@ -155,12 +159,12 @@ describe("brand contracts — component module ownership (feedback and time)", (
   });
 
   test("composition.js does not inline toast", () => {
-    const script = frontendScript();
+    const script = compositionScript();
     expect(script).not.toContain("function toast");
   });
 
   test("composition.js does not inline formatDuration", () => {
-    const script = frontendScript();
+    const script = compositionScript();
     expect(script).not.toContain("function formatDuration");
   });
 });

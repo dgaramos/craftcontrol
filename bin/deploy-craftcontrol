@@ -102,6 +102,15 @@ curl --fail --silent --show-error http://127.0.0.1:8082/static/app.js | grep 'co
 compose exec -T craftcontrol python -c \
   'from pathlib import Path; from swagger_ui_bundle import swagger_ui_path; assert (Path(swagger_ui_path) / "swagger-ui.css").is_file()'
 compose exec -T craftcontrol craftcontrol backup list >/dev/null
+curl --fail --silent --show-error http://127.0.0.1:8082/api/analytics/activity?page=1 \
+  | python -c 'import json,sys; d=json.load(sys.stdin); assert "events" in d and "total" in d and "first_event_at" in d' \
+  || fail "analytics activity canary failed"
+curl --fail --silent --show-error http://127.0.0.1:8082/api/analytics/periods?days=7 \
+  | python -c 'import json,sys; d=json.load(sys.stdin); assert "calendar" in d and "heatmap" in d' \
+  || fail "analytics periods canary failed"
+curl --fail --silent --show-error http://127.0.0.1:8082/api/telemetry-pack \
+  | python -c 'import json,sys; d=json.load(sys.stdin); assert "health" in d and "sequence" in d' \
+  || fail "telemetry pack health canary failed"
 [[ "$(docker inspect --format '{{.State.Health.Status}}' minecraft-bedrock)" == "healthy" ]] \
   || fail "Bedrock is not healthy"
 

@@ -35,12 +35,13 @@ Choose the milestone that matches the delivery scope:
 | Milestone | Use for |
 | --- | --- |
 | Reliable Foundation | Reliability, security, backups, authentication, and core invariants |
-| Clean Architecture | Modular-monolith refactoring, ports/adapters, and use cases |
-| Complete Panel | Product UI, mobile experience, and feature parity |
+| Clean Architecture | Modular-monolith refactoring, ports/adapters, and layered use cases |
+| Complete Panel | Product UI, bilingual mobile experience, and feature parity |
 | Community Ready | Installation, diagnostics, contribution tooling, and release automation |
 
-Every issue and PR also needs a GitHub Project, label, and assignee. The
-[metadata guide](../CONTRIBUTING.md#metadata) gives the complete rule.
+Every issue and PR also needs all four metadata fields: GitHub Project,
+Milestone, Label, and Assignee. The [metadata guide](../CONTRIBUTING.md#metadata)
+gives the complete rule.
 
 ## Can I work on an issue that is already assigned?
 

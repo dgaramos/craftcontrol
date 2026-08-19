@@ -15,6 +15,21 @@ AI agents should also read [`AGENTS.md`](AGENTS.md) for architecture, data invar
 
 ---
 
+## Language
+
+English is the project's primary language for GitHub issues, pull-request
+titles and descriptions, commit messages, source code, tests, and technical
+documentation. Write new contribution artifacts in English so external
+contributors and automated tooling share one canonical context.
+
+Portuguese translations remain welcome where a document already has a PT-BR
+counterpart or an issue explicitly requests one. Keep translated user-facing
+content synchronized with its English source; use Portuguese for local
+discussion when that is clearer, but record durable project decisions in
+English.
+
+---
+
 ## Branch naming
 
 ```
@@ -102,9 +117,9 @@ Every issue **and** every PR must have all four of the following set before requ
 
 | Milestone | Scope |
 | --- | --- |
-| **Fundação Confiável** | Reliability, security, backups, auth, and core invariants |
-| **Arquitetura Limpa** | Modular monolith refactor, ports/adapters, layered use cases |
-| **Painel Completo** | Full UI feature parity, bilingual, mobile-first |
+| **Reliable Foundation** | Reliability, security, backups, auth, and core invariants |
+| **Clean Architecture** | Modular monolith refactor, ports/adapters, layered use cases |
+| **Complete Panel** | Full UI feature parity, bilingual, mobile-first |
 | **Community Ready** | Installation, diagnostics, contribution tooling, release automation |
 
 ---

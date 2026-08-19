@@ -10,11 +10,12 @@ Open a GitHub issue with a concise title, the observed behavior, expected
 behavior, reproduction steps, and relevant safe logs or screenshots. Never
 include passwords, tokens, `.env` values, XUIDs, database files, or world data.
 Add the appropriate label, milestone, Project, and assignee before requesting
-work on it.
+work on it. Write the durable issue title and body in English; Portuguese is
+appropriate for discussion when it makes the problem clearer.
 
 ## How do I suggest a feature?
 
-Open an issue that explains the user problem and expected outcome before
+Open an issue in English that explains the user problem and expected outcome before
 proposing implementation details. State the intended scope, non-goals, affected
 area, and verifiable acceptance criteria. Use the issue to agree on the change
 before starting a branch.
@@ -33,9 +34,9 @@ Choose the milestone that matches the delivery scope:
 
 | Milestone | Use for |
 | --- | --- |
-| Fundação Confiável | Reliability, security, backups, authentication, and core invariants |
-| Arquitetura Limpa | Modular-monolith refactoring, ports/adapters, and use cases |
-| Painel Completo | Product UI, mobile experience, and feature parity |
+| Reliable Foundation | Reliability, security, backups, authentication, and core invariants |
+| Clean Architecture | Modular-monolith refactoring, ports/adapters, and use cases |
+| Complete Panel | Product UI, mobile experience, and feature parity |
 | Community Ready | Installation, diagnostics, contribution tooling, and release automation |
 
 Every issue and PR also needs a GitHub Project, label, and assignee. The

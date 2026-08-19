@@ -11,10 +11,10 @@ Gerencia milestones do repositório CraftControl via `gh api` e `gh issue`.
 
 | Número | Nome | Escopo |
 |---|---|---|
-| 1 | Fundação Confiável | Confiabilidade, segurança, auth, invariantes de núcleo |
+| 1 | Reliable Foundation | Confiabilidade, segurança, auth, invariantes de núcleo |
 | 2 | Community Ready | Instalação, diagnóstico, contribuição, release |
-| 3 | Arquitetura Limpa | Refactor modular, ports/adapters, use cases |
-| 4 | Painel Completo | Features de UI, bilíngue, mobile-first |
+| 3 | Clean Architecture | Refactor modular, ports/adapters, use cases |
+| 4 | Complete Panel | Features de UI, bilíngue, mobile-first |
 
 ## Comandos
 
@@ -33,7 +33,7 @@ gh issue list --milestone "<nome-do-milestone>" --state open
 
 Exemplo:
 ```bash
-gh issue list --milestone "Arquitetura Limpa" --state open
+gh issue list --milestone "Clean Architecture" --state open
 ```
 
 ### Atribuir issue a um milestone
@@ -44,7 +44,7 @@ gh issue edit <número> --milestone "<nome-do-milestone>"
 
 Exemplo:
 ```bash
-gh issue edit 108 --milestone "Fundação Confiável"
+gh issue edit 108 --milestone "Reliable Foundation"
 ```
 
 ### Remover milestone de uma issue
@@ -85,8 +85,7 @@ gh issue list --state open --json number,title,milestone,projectItems \
 
 | A issue é sobre... | Milestone |
 |---|---|
-| Segurança, auth, confiabilidade, invariantes | Fundação Confiável |
-| Refactor de arquitetura, DI, ports/adapters | Arquitetura Limpa |
-| UI, features de painel, bilinguismo, mobile | Painel Completo |
+| Segurança, auth, confiabilidade, invariantes | Reliable Foundation |
+| Refactor de arquitetura, DI, ports/adapters | Clean Architecture |
+| UI, features de painel, bilinguismo, mobile | Complete Panel |
 | Onboarding, instalação, diagnóstico, release | Community Ready |
-

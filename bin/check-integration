@@ -2,7 +2,7 @@
 set -euo pipefail
 
 readonly ROOT="$(git rev-parse --show-toplevel)"
-readonly PYTHON="${PYTHON:-python}"
+readonly PYTHON="${PYTHON:-python3}"
 cd "$ROOT"
 
 bash -n bin/deploy-craftcontrol

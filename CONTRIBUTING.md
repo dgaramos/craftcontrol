@@ -141,6 +141,10 @@ The quality gate **must pass** before requesting a merge:
 bin/check
 ```
 
+Node/npm do not need to be installed on the host: `bin/check-frontend` falls
+back to Docker (`node:22-alpine`) automatically. Run the gate before reporting
+a missing local Node installation as a blocker.
+
 Individual gates are also available:
 
 ```bash

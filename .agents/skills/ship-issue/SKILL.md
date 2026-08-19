@@ -1,6 +1,6 @@
 ---
 name: ship-issue
-description: Commita, abre PR e para — CI, CodeRabbit e merge ficam com o usuário.
+description: Commita, publica a branch e abre o PR de uma issue do CraftControl. Quando chamada por execute-issue ou por um pedido explícito de entrega até PR, faz push e cria o PR sem pedir confirmações intermediárias; CI, CodeRabbit e merge ficam com o usuário.
 ---
 
 # ship-issue
@@ -11,6 +11,12 @@ Assume que `$implement` já foi executado — implementação completa e gate ve
 
 **Escopo deste agente:** commit → push → PR aberto. Ponto final.
 Não monitora CI, não aguarda CodeRabbit, não faz merge.
+
+Quando esta skill for chamada por `$execute-issue`, ou quando o usuário pedir
+explicitamente para levar a issue até o PR, o pedido já autoriza commit, push
+e criação do PR. Não pergunte se deve publicar a branch nem se deve abrir o
+PR. Caso seja chamada isoladamente sem essa autorização, confirme antes de
+publicar qualquer alteração externa.
 
 ## Protocolo
 
@@ -23,16 +29,16 @@ git add <arquivos específicos — nunca git add -A sem revisar>
 git commit -m "$(cat <<'EOF'
 type(scope): descrição
 
+Co-authored-by: Codex <noreply@openai.com>
 EOF
 )"
 ```
 
 - [ ] Nenhum arquivo sensível incluído (`.env`, `manager.db`, dados de mundo, segredos)
 - [ ] Formato Conventional Commit verificado: `git show -s --format=%s HEAD`
+- [ ] Todo commit criado pelo Codex inclui `Co-authored-by: Codex <noreply@openai.com>`
 
 ### 2. Push
-
-Peça confirmação explícita ao usuário antes de publicar a branch.
 
 ```bash
 git push -u origin <branch>
@@ -41,55 +47,113 @@ git push gitea <branch>
 
 - [ ] Branch no GitHub e no Gitea
 
-Peça confirmação explícita ao usuário antes de criar o PR.
+### 3. Preparar descrição e metadados
 
-### 3. Abrir PR
+Antes de criar o PR, releia a issue, seus critérios de aceite e o diff final.
+Use esses fatos — não um texto genérico — para redigir a descrição. Leia também
+o template `.github/pull_request_template.md` e preserve todas as seções.
 
-**Título obrigatório:** `type(scope): descrição (#número-da-issue)`
+- **What changes:** uma a três frases em inglês que expliquem o problema, a
+  decisão tomada e o resultado observável. Inclua bullets concisos quando a
+  mudança tiver mais de uma frente relevante.
+- **Change type:** marque apenas o tipo aplicável.
+- **Checklist:** marque somente itens comprovados pelo diff e pelo gate. Diga
+  explicitamente se o README não precisou mudar e por quê, quando aplicável.
+- **Additional context:** inclua `Closes #<número>`, risco de compatibilidade,
+  migração, rollout ou limitações que importem ao revisor. Não preencha com
+  placeholders, nem descreva o diff linha a linha.
 
-Leia `.github/pull_request_template.md` e preencha todas as seções.
+Capture os metadados da issue e use os mesmos no PR. Labels, milestone,
+assignees e Projects não são opcionais:
+
+```bash
+gh issue view <número> \
+  --json title,assignees,labels,milestone,projectItems,body
+```
+
+Se a issue não tiver os quatro campos, corrija-a de acordo com a skill
+`$manage-project`/`$manage-milestone` antes de abrir o PR; não crie um PR
+incompleto. Se o token não tiver o escopo `project`, execute `gh auth refresh
+-s project` e pare somente se essa autorização não puder ser concedida.
+
+### 4. Abrir PR
+
+**Título obrigatório:** `type(scope): descrição (#número-da-issue)`.
+
+Passe cada label, assignee e Project recebido da issue. Use `--project` para
+cada Project (não apenas para adicionar a issue ao board); o PR deve aparecer
+no mesmo board. Exemplo para uma issue com dois labels:
 
 ```bash
 gh pr create \
   --title "type(scope): descrição (#número)" \
   --body "$(cat <<'EOF'
-## O que muda
+## What changes
 
-<porquê da mudança>
+<Descrição específica, baseada na issue e no diff.>
 
-## Tipo de mudança
+## Change type
 
-- [ ] feat / fix / refactor / test / docs / ci / chore
+- [x] `fix` — bug fix
 
 ## Checklist
 
-- [x] `bin/check` passa localmente
-- [x] Testes novos ou atualizados para o comportamento alterado
-- [ ] `README.md` atualizado se comportamento público mudou
-- [x] Nenhum segredo commitado
-- [x] Conventional Commit verificado
+- [x] `bin/check` passes locally
+- [x] Tests added or updated for changed behavior
+- [ ] `README.md` updated when public behavior, API, or contract changed
+- [x] No secrets, XUIDs, `.env`, or world data committed
+- [x] Conventional Commit verified: `git show -s --format=%s HEAD`
 
-## Contexto adicional
+## Additional context
 
 Closes #<número>
 EOF
 )" \
-  --assignee dgaramos \
+  --assignee "<assignee da issue>" \
   --milestone "<milestone da issue>" \
-  --label "<label da issue>"
+  --label "<primeiro label da issue>" \
+  --label "<segundo label da issue, se houver>" \
+  --project "<Project da issue>"
+```
+
+Não use o exemplo literalmente: gere os valores reais a partir da issue e
+revise o corpo antes de executar. Use `--base main` e `--head <branch>` para
+eliminar prompts interativos.
+
+### 5. Verificar e corrigir o PR
+
+Valide o PR recém-criado, incluindo os Projects. O PR só está pronto quando os
+quatro metadados refletem a issue:
+
+```bash
+gh pr view <url-do-pr> \
+  --json url,body,assignees,labels,milestone,projectItems \
+  | jq '{url, assignees: [.assignees[].login], labels: [.labels[].name],
+         milestone: .milestone.title, projects: [.projectItems[].title]}'
+```
+
+Se algum item estiver ausente, corrija antes de reportar a entrega:
+
+```bash
+gh pr edit <url-do-pr> --add-assignee "<login>" --add-label "<label>" \
+  --milestone "<milestone>" --add-project "<Project>"
 ```
 
 Metadados obrigatórios:
 
-- [ ] `--assignee dgaramos`
-- [ ] `--milestone` preenchido com o milestone da issue
-- [ ] `--label` preenchido com a label da issue
+- [ ] Todos os assignees da issue copiados
+- [ ] Todos os labels da issue copiados
+- [ ] Milestone da issue copiado
+- [ ] Todos os Projects da issue copiados
+- [ ] Corpo específico, sem placeholders, e com `Closes #<número>`
 
-### 4. Reportar e parar
+### 6. Reportar e parar
 
 Após o PR aberto, reporte ao usuário:
 - URL do PR
 - Jobs de CI disparados (`gh pr checks`)
+- Labels, milestone, assignees e Projects confirmados
+- Resumo do comportamento entregue e dos testes, não só uma lista de arquivos
 - Qualquer observação relevante sobre o diff
 
 **Pare aqui.** CI, review comments e merge são responsabilidade do usuário.
@@ -115,7 +179,12 @@ Para cada item bloqueador ou melhoria simples:
 
 ```bash
 git add <arquivos>
-git commit -m "fix(scope): endereçar findings de review"
+git commit -m "$(cat <<'EOF'
+fix(scope): endereçar findings de review
+
+Co-authored-by: Codex <noreply@openai.com>
+EOF
+)"
 git push origin <branch>
 git push gitea <branch>
 ```
@@ -134,4 +203,3 @@ Reporte ao usuário:
 - Nunca mergear sem confirmação explícita do usuário.
 - Nunca commitar segredos — revisar `git diff --staged` antes de commitar.
 - Nunca ficar em loop monitorando CI ou aguardando reviews — age quando acionado.
-

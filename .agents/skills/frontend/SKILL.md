@@ -156,6 +156,11 @@ afterEach(() => {
 cd apps$frontend && npm test
 ```
 
+Para o gate do repositório, prefira `bin/check-frontend`. Se Node/npm não
+existirem no host, o comando executa os checks JavaScript e Jest em
+`node:22-alpine` via Docker; não reporte a ausência de Node como bloqueio antes
+de executar esse fallback.
+
 ## Checklist de implementação
 
 Antes de commitar qualquer mudança de frontend:
@@ -165,4 +170,3 @@ Antes de commitar qualquer mudança de frontend:
 - [ ] Helpers de teste em `helpers.js`, não duplicados no arquivo de teste
 - [ ] `beforeEach`/`afterEach` com save/restore se o teste modificar globals
 - [ ] `npm test` passa sem warnings novos
-

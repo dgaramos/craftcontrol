@@ -13,8 +13,8 @@ For the contribution workflow, see [CONTRIBUTING.md](../CONTRIBUTING.md).
 | --- | --- | --- |
 | Docker Engine | 24+ | With the Compose plugin (`docker compose`) |
 | Python | 3.12 | Used by the backend and the test suite |
-| Node.js | 18+ | Used only by the frontend test runner |
-| npm | 9+ | Comes with Node; used for `apps/frontend` tests |
+| Node.js | 18+ | Optional: used by the frontend test runner when installed locally |
+| npm | 9+ | Optional with Docker; comes with Node when local frontend checks are preferred |
 | Git | any recent | For branch management and Conventional Commits |
 
 Verify your versions:
@@ -23,6 +23,7 @@ Verify your versions:
 docker --version
 docker compose version
 python3 --version
+# Optional: bin/check-frontend automatically uses Docker when these are absent.
 node --version
 npm --version
 ```
@@ -114,6 +115,13 @@ bin/check
 ```
 
 This is the only gate that must pass before requesting a merge.
+
+`bin/check-frontend` uses the local Node/npm installation when available. If
+they are absent, it runs the JavaScript syntax, i18n, interaction, and Jest
+checks in `node:22-alpine` through Docker. Do not report Node as a missing
+development dependency before running the gate; Docker is the supported
+fallback. The frontend `node_modules` directory is created or refreshed in
+the working tree just as it is for a local `npm ci`.
 
 ### Individual gates
 

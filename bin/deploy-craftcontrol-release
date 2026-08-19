@@ -13,8 +13,10 @@ elif [[ "${1:-}" == "--rollback" && -n "${2:-}" && -n "${3:-}" && $# -eq 3 ]]; t
   "$ROOT/bin/deploy-craftcontrol-frontend" --rollback "$2"
   echo "coordinated rollback complete: frontend=$2 backend=$3"
 elif [[ $# -eq 0 ]]; then
-  "$ROOT/bin/deploy-craftcontrol-backend"
-  "$ROOT/bin/deploy-craftcontrol-frontend"
+  "$ROOT/bin/deploy-craftcontrol-backend" --prepare
+  "$ROOT/bin/deploy-craftcontrol-frontend" --prepare
+  "$ROOT/bin/deploy-craftcontrol-backend" --activate
+  "$ROOT/bin/deploy-craftcontrol-frontend" --activate
   source "$ROOT/versions.env"
   echo "coordinated release complete: pair=$CRAFTCONTROL_RELEASE_PAIR"
 else

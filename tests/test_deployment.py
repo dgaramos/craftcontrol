@@ -47,6 +47,12 @@ def test_frontend_deploy_is_independent_guarded_and_reversible() -> None:
     assert "backend was recreated" in script
     assert "persistent data mount" in script
     assert "/version.json" in script
+    assert "--prepare | --activate" in script
+    assert "for attempt in 1 2 3" in script
+    assert "frontend image build failed; retrying" in script
+    assert script.index("compose build craftcontrol-frontend") < script.index(
+        "compose up -d --no-deps craftcontrol-frontend"
+    )
 
 
 def test_backend_deploy_is_backed_up_independent_and_reversible() -> None:
@@ -59,6 +65,12 @@ def test_backend_deploy_is_backed_up_independent_and_reversible() -> None:
     assert "frontend was recreated" in script
     assert "--rollback VERSION" in script
     assert "Bedrock is not healthy" in script
+    assert "--prepare | --activate" in script
+    assert "for attempt in 1 2 3" in script
+    assert "backend image build failed; retrying" in script
+    assert script.index("compose build craftcontrol-backend") < script.index(
+        "compose up -d --no-deps craftcontrol-backend"
+    )
 
 
 def test_coordinated_release_uses_the_pinned_pair_and_component_commands() -> None:
@@ -67,6 +79,13 @@ def test_coordinated_release_uses_the_pinned_pair_and_component_commands() -> No
     assert "deploy-craftcontrol-frontend" in script
     assert "CRAFTCONTROL_RELEASE_PAIR" in script
     assert "--rollback FRONTEND_VERSION BACKEND_VERSION" in script
+    assert 'deploy-craftcontrol-backend" --prepare' in script
+    assert 'deploy-craftcontrol-frontend" --prepare' in script
+    assert 'deploy-craftcontrol-backend" --activate' in script
+    assert 'deploy-craftcontrol-frontend" --activate' in script
+    assert script.index('deploy-craftcontrol-frontend" --prepare') < script.index(
+        'deploy-craftcontrol-backend" --activate'
+    )
 
 
 def test_successful_main_quality_run_triggers_the_guarded_homelab_release() -> None:

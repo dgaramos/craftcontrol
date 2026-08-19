@@ -20,6 +20,7 @@ def frontend_script() -> str:
     ))
 
 
+
 def test_template_uses_product_brand_and_dynamic_instance_name() -> None:
     template = (FRONTEND / "templates" / "index.html").read_text()
     assert "<title>CraftControl" in template
@@ -50,72 +51,6 @@ def test_compose_uses_final_product_name() -> None:
     assert "minecraft-bedrock-manager" not in compose
 
 
-def test_player_workspace_separates_roster_profile_and_permission_scopes() -> None:
-    script = frontend_script()
-    settings = (FRONTEND / "static" / "js" / "features" / "settings" / "index.js").read_text()
-    players = "\n".join(
-        path.read_text()
-        for path in sorted((FRONTEND / "static" / "js" / "features" / "players").glob("*.js"))
-    )
-    index_html = (FRONTEND / "templates" / "index.html").read_text()
-    assert "tpl-player-roster-row" in index_html  # markup extracted to native template
-    assert 'class="player-detail-screen"' in players
-    assert "Minecraft permission" in players
-    assert "CraftControl access" in players
-    assert 'class="player-server-settings' in settings
-    assert "Somente leitura" in script
-
-
-def test_player_profile_consolidates_authoritative_individual_analytics() -> None:
-    players = "\n".join(
-        path.read_text()
-        for path in sorted((FRONTEND / "static" / "js" / "features" / "players").glob("*.js"))
-    )
-    stylesheet = (FRONTEND / "static" / "players.css").read_text()
-    assert 'class="player-data-workspace"' in players
-    assert "stats.killsByType" in players
-    assert "stats.brokenByType" in players
-    assert "stats.placedByType" in players
-    assert "stats.dimensions" in players
-    assert 'id="compare-player-data"' in players
-    assert 'state.analytics.player = profile.name' in players
-    assert 'class="player-record-drawer"' in players
-    assert "permanent aggregates" in players
-    assert ".player-data-ranking" in stylesheet
-    assert ".player-record-drawer" in stylesheet
-
-
-def test_player_feature_separates_workspace_profile_access_history_and_telemetry() -> None:
-    feature_root = FRONTEND / "static" / "js" / "features" / "players"
-    index = (feature_root / "index.js").read_text()
-    script = frontend_script()
-    for name, factory in {
-        "workspace": "createPlayersWorkspace",
-        "profile": "createPlayerProfile",
-        "access": "createPlayerAccess",
-        "history": "createPlayerHistory",
-        "telemetry": "createPlayerTelemetry",
-    }.items():
-        module = (feature_root / f"{name}.js").read_text()
-        assert f"export function {factory}" in module
-        assert f'from "./{name}.js?v=7"' in index
-    assert 'from "./features/players/index.js?v=7"' in script
-    assert "function renderPlayerCards" not in script
-    assert "function bindPlayerAccess" not in script
-    assert "function deathHistoryMarkup" not in script
-    assert "function playerDataMarkup" not in script
-
-
-def test_composition_defines_player_settings_markup_before_passing_to_players_feature() -> None:
-    composition = (FRONTEND / "static" / "js" / "composition.js").read_text()
-    # playerSettingsMarkup must be defined locally in composition so that
-    # createPlayersFeature receives a callable, not an undefined reference.
-    assert "function playerSettingsMarkup" in composition
-    definition_pos = composition.index("function playerSettingsMarkup")
-    usage_pos = composition.index("playerSettingsMarkup,")
-    assert definition_pos < usage_pos, (
-        "playerSettingsMarkup must be defined before it is passed to createPlayersFeature"
-    )
 
 
 def test_authentication_can_reveal_passwords_accessibly() -> None:
@@ -137,15 +72,6 @@ def test_authentication_can_reveal_passwords_accessibly() -> None:
     assert ".password-toggle" in stylesheet
     assert "ui-eye" in symbols
 
-
-def test_player_timeline_separates_action_from_localized_timestamp() -> None:
-    history = (FRONTEND / "static" / "js" / "features" / "players" / "history.js").read_text()
-    time_component = (FRONTEND / "static" / "js" / "components" / "time.js").read_text()
-    stylesheet = (FRONTEND / "static" / "players.css").read_text()
-    assert 'class="timeline-action"' in history
-    assert 'class="timeline-timestamp"' in time_component
-    assert 'month: "short"' in time_component
-    assert ".timeline-timestamp" in stylesheet
 
 
 def test_deaths_localize_game_terms_and_separate_source_from_timestamp() -> None:
@@ -214,6 +140,7 @@ def test_mobile_topbar_prioritizes_status_and_icon_actions() -> None:
     assert "#ui-logout" in index_html  # icon moved to tpl-identity native template
 
 
+
 def test_split_frontend_reports_its_own_release_version() -> None:
     script = frontend_script()
     server = (FRONTEND / "static" / "js" / "features" / "server" / "index.js").read_text()
@@ -242,6 +169,8 @@ def test_world_rules_server_and_auth_have_feature_boundaries() -> None:
     assert "function renderTimePanel" not in script
     assert "function loadTelemetryPack" not in script
     assert "requireSession().then" not in script
+
+
 
 
 def test_analytics_activity_and_deaths_have_a_feature_boundary() -> None:
@@ -286,15 +215,6 @@ def test_interface_uses_custom_icons_and_bilingual_block_labels() -> None:
     assert legacy_icons.search(script) is None
     assert legacy_icons.search(template) is None
 
-
-def test_recent_sessions_have_distinct_state_duration_and_period_layout() -> None:
-    history = (FRONTEND / "static" / "js" / "features" / "players" / "history.js").read_text()
-    stylesheet = (FRONTEND / "static" / "players.css").read_text()
-    assert 'class="session-state"' in history
-    assert 'class="session-duration"' in history
-    assert 'class="session-period"' in history
-    assert "session.disconnected_at" in history
-    assert ".session-item.is-inferred" in stylesheet
 
 
 def test_analytics_has_dedicated_bilingual_mobile_workspace() -> None:

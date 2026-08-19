@@ -106,7 +106,7 @@ export function createHealthPanel({ content, t, uiIcon, api, escapeHtml, analyti
         statusRow.append(healthBadge(health, t));
         if (pack.runtime_version) {
           const ver = el("span", "health-version");
-          ver.textContent = `v${escapeHtml(pack.runtime_version)}`;
+          ver.textContent = `v${pack.runtime_version}`;
           statusRow.append(ver);
         }
         if (pack.last_error) {
@@ -176,7 +176,7 @@ export function createHealthPanel({ content, t, uiIcon, api, escapeHtml, analyti
         target.replaceChildren(fragment);
       } catch (error) {
         const empty = el("div", "analytics-empty");
-        text(empty, "p", escapeHtml(error.message));
+        text(empty, "p", error.message);
         target.replaceChildren(empty);
       }
     };

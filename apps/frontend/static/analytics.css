@@ -359,7 +359,7 @@
   .ranking-categories { grid-template-columns: repeat(2, 1fr); }
   .podium-places { gap: 4px; }
   .podium-place { padding-left: 4px; padding-right: 4px; }
-  .analytics-view-switch { grid-template-columns: repeat(4, 1fr); }
+  .analytics-view-switch { grid-template-columns: repeat(2, 1fr); }
   .health-hero { align-items: stretch; flex-direction: column; }
   .health-stats-grid { grid-template-columns: 1fr 1fr; }
   .blocks-hero { align-items: stretch; flex-direction: column; }

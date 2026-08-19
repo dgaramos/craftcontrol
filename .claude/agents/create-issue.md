@@ -59,9 +59,9 @@ Use `/manage-project` e `/manage-milestone` se precisar consultar o estado atual
 
 | Número | Nome | Escopo |
 |---|---|---|
-| 1 | Fundação Confiável | Confiabilidade, segurança, auth, invariantes de núcleo |
-| 3 | Arquitetura Limpa | Refactor modular, ports/adapters, use cases |
-| 4 | Painel Completo | Features de UI, bilíngue, mobile-first |
+| 1 | Reliable Foundation | Confiabilidade, segurança, auth, invariantes de núcleo |
+| 3 | Clean Architecture | Refactor modular, ports/adapters, use cases |
+| 4 | Complete Panel | Features de UI, bilíngue, mobile-first |
 | 2 | Community Ready | Instalação, diagnóstico, contribuição, release |
 
 **Label:** pelo menos uma — `enhancement`, `bug`, `test`, `documentation`.

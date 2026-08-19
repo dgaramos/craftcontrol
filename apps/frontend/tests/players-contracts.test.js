@@ -163,6 +163,18 @@ describe("composition defines playerSettingsMarkup before passing to createPlaye
     expect(usagePos).toBeGreaterThanOrEqual(0);
     expect(definitionPos).toBeLessThan(usagePos);
   });
+
+  test("does not pass bindSegmentedControls directly to createPlayersFeature", () => {
+    const start = composition.indexOf("createPlayersFeature({");
+    const createPlayersCall = composition.slice(start, composition.indexOf("});", start));
+    expect(createPlayersCall).not.toContain("bindSegmentedControls");
+  });
+
+  test("does not pass bindSettingFields directly to createPlayersFeature", () => {
+    const start = composition.indexOf("createPlayersFeature({");
+    const createPlayersCall = composition.slice(start, composition.indexOf("});", start));
+    expect(createPlayersCall).not.toContain("bindSettingFields");
+  });
 });
 
 // ── 5. test_player_timeline_separates_action_from_localized_timestamp ────────

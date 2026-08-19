@@ -107,6 +107,12 @@ def test_player_activity_returns_paginated(repo: SQLitePlayerRepository) -> None
     result = repo.player_activity("all", "VonCrush", "all", "", 0, 1, 10)
     assert result["total"] == 2
     assert len(result["events"]) == 2
+    assert isinstance(result["first_event_at"], float)
+
+
+def test_player_activity_first_event_at_is_none_when_empty(repo: SQLitePlayerRepository) -> None:
+    result = repo.player_activity("all", "", "all", "", 0, 1, 10)
+    assert result["first_event_at"] is None
 
 
 def test_player_rankings_is_shaped(repo: SQLitePlayerRepository) -> None:

@@ -135,4 +135,43 @@ describe("createAnalyticsFeature — factory setup", () => {
       global.document = savedDocument;
     }
   });
+
+  test("render with kind=health falls through to health panel", async () => {
+    const deps = makeAnalyticsDeps({ kind: "health" });
+    deps.api = jest.fn().mockRejectedValue(new Error("api error"));
+    deps.$ = jest.fn(() => makeEl());
+    const savedDocument = global.document;
+    global.document = makeDom().document;
+    try {
+      const { render } = createAnalyticsFeature(deps);
+      await expect(render()).resolves.toBeUndefined();
+    } finally {
+      global.document = savedDocument;
+    }
+  });
+
+  test("period filter options are disabled based on first_event_at from API", async () => {
+    const deps = makeAnalyticsDeps({ kind: "all" });
+    const opt7 = makeEl({ value: "7" });
+    const opt30 = makeEl({ value: "30" });
+    const daysSelect = makeEl();
+    daysSelect.querySelector = jest.fn((sel) => {
+      if (sel === "option[value='7']") return opt7;
+      if (sel === "option[value='30']") return opt30;
+      return null;
+    });
+    deps.$ = jest.fn((sel) => {
+      if (sel === "#analytics-days") return daysSelect;
+      return makeEl();
+    });
+    // first_event_at is only 3 days ago — neither 7d nor 30d option should be enabled
+    const recentTimestamp = Date.now() / 1000 - 3 * 86400;
+    deps.api = jest.fn()
+      .mockResolvedValueOnce({ events: [], pages: 1, page: 1, total: 0, summary: {}, first_event_at: recentTimestamp })
+      .mockResolvedValueOnce({ players: [] });
+    const { render } = createAnalyticsFeature(deps);
+    await render();
+    expect(opt7.disabled).toBe(true);
+    expect(opt30.disabled).toBe(true);
+  });
 });

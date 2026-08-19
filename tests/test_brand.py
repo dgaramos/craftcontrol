@@ -117,6 +117,18 @@ def test_player_feature_separates_workspace_profile_access_history_and_telemetry
     assert "function playerDataMarkup" not in script
 
 
+def test_composition_defines_player_settings_markup_before_passing_to_players_feature() -> None:
+    composition = (FRONTEND / "static" / "js" / "composition.js").read_text()
+    # playerSettingsMarkup must be defined locally in composition so that
+    # createPlayersFeature receives a callable, not an undefined reference.
+    assert "function playerSettingsMarkup" in composition
+    definition_pos = composition.index("function playerSettingsMarkup")
+    usage_pos = composition.index("playerSettingsMarkup,")
+    assert definition_pos < usage_pos, (
+        "playerSettingsMarkup must be defined before it is passed to createPlayersFeature"
+    )
+
+
 def test_browser_api_attaches_session_bound_csrf_header() -> None:
     api_script = (FRONTEND / "static" / "js" / "api.js").read_text()
     app_script = frontend_script()

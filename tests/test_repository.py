@@ -77,6 +77,7 @@ def test_global_activity_is_filtered_paginated_and_sanitized(tmp_path: Path) -> 
     assert first["total"] == 4
     assert first["pages"] == 2
     assert len(first["events"]) == 2
+    assert isinstance(first["first_event_at"], float)
     serialized = str(first)
     assert "private-xuid" not in serialized
     assert "private raw log evidence" not in serialized

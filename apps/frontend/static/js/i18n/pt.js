@@ -77,4 +77,5 @@ export const pt = {
     movementSampling: "Distância", snapshotRequests: "Snapshots",
     craftControlImage: "Imagem CraftControl", activeSince: "Ativa desde", packObserved: "Pack observado", packInstalledAt: "Arquivos atualizados em",
     packHealthTitle: "Saúde do pack", packHealthHelp: "Indicadores de volume e desempenho do behavior pack de telemetria ativo.", eventVolume: "Volume de eventos", sequenceHealth: "Saúde da sequência", noPackHealth: "O telemetry pack ainda não está reportando. Instale e ative-o para ver os dados de saúde.", resetCount: "Reinicializações", lastGap: "Última lacuna",
+    behaviorPackEyebrow: "Behavior Pack", statusEyebrow: "Status", volumeEyebrow: "Volume", telemetryEyebrow: "Telemetria",
   };

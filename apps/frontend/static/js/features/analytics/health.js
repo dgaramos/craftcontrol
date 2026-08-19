@@ -53,7 +53,7 @@ export function createHealthPanel({ content, t, uiIcon, api, escapeHtml, analyti
 
     const hero = el("header", "health-hero block-panel");
     const heroCopy = el("div");
-    text(heroCopy, "span", "BEHAVIOR PACK", "eyebrow");
+    text(heroCopy, "span", t("behaviorPackEyebrow"), "eyebrow");
     text(heroCopy, "h2", t("packHealthTitle"));
     text(heroCopy, "p", t("packHealthHelp"));
     const refreshBtn = el("button", "secondary");
@@ -99,7 +99,7 @@ export function createHealthPanel({ content, t, uiIcon, api, escapeHtml, analyti
 
         const statusSection = el("section", "health-status block-panel");
         const statusTitle = el("div", "ranking-section-title");
-        text(statusTitle, "span", "STATUS", "eyebrow");
+        text(statusTitle, "span", t("statusEyebrow"), "eyebrow");
         text(statusTitle, "h3", t("packHealth"));
         statusSection.append(statusTitle);
         const statusRow = el("div", "health-status-row");
@@ -124,7 +124,7 @@ export function createHealthPanel({ content, t, uiIcon, api, escapeHtml, analyti
 
         const volumeSection = el("section", "health-volume block-panel");
         const volTitle = el("div", "ranking-section-title");
-        text(volTitle, "span", "VOLUME", "eyebrow");
+        text(volTitle, "span", t("volumeEyebrow"), "eyebrow");
         text(volTitle, "h3", t("eventVolume"));
         volumeSection.append(volTitle);
         const volGrid = el("div", "health-stats-grid");
@@ -141,7 +141,7 @@ export function createHealthPanel({ content, t, uiIcon, api, escapeHtml, analyti
 
         const seqSection = el("section", "health-sequence block-panel");
         const seqTitle = el("div", "ranking-section-title");
-        text(seqTitle, "span", "TELEMETRY", "eyebrow");
+        text(seqTitle, "span", t("telemetryEyebrow"), "eyebrow");
         text(seqTitle, "h3", t("sequenceHealth"));
         seqSection.append(seqTitle);
         const seqGrid = el("div", "health-stats-grid");

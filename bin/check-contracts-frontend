@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly ROOT="$(git rev-parse --show-toplevel)"
+readonly PYTHON="${PYTHON:-python3}"
+cd "$ROOT"
+
+run_node_contract_checks() {
+  if command -v node >/dev/null 2>&1 && command -v npm >/dev/null 2>&1; then
+    (cd apps/frontend && npm ci && npm test -- --testPathPattern='.*-contracts\.test\.js$')
+    return
+  fi
+
+  command -v docker >/dev/null 2>&1 \
+    || { echo "node/npm are unavailable and Docker is required for frontend contract checks" >&2; exit 1; }
+
+  echo "node/npm not found on the host; running frontend contract checks in Docker"
+  docker run --rm \
+    --user "$(id -u):$(id -g)" \
+    -e npm_config_cache=/tmp/npm-cache \
+    -v "$ROOT:/workspace" \
+    -w /workspace \
+    node:22-alpine \
+    sh -ec '
+      cd apps/frontend
+      npm ci
+      npm test -- --testPathPattern=".*-contracts\.test\.js$"
+    '
+}
+
+run_node_contract_checks
+"$PYTHON" -m pytest tests/test_brand.py -v
+echo "contracts-frontend gate: ok"

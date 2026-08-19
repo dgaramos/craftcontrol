@@ -6,45 +6,87 @@ on:
   pull_request:
 
 jobs:
-  gate:
-    name: ${{ matrix.gate }}
+  backend:
+    name: backend
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        gate: [frontend, backend, contracts, integration]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v4.2.2
+      - uses: actions/setup-python@v5.6.0
         with:
           python-version: "3.12"
           cache: pip
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
       - run: python -m pip install -r apps/backend/requirements.txt
-      - run: bin/check-${{ matrix.gate }}
+      - run: bin/check-backend
       - name: Upload backend coverage
-        if: matrix.gate == 'backend'
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v5.4.3
         with:
           files: coverage.xml
           flags: backend
       - name: Upload backend test results
-        if: matrix.gate == 'backend'
-        uses: codecov/test-results-action@v1
+        uses: codecov/test-results-action@v1.1.1
         with:
           files: test-results/*.xml
           flags: backend
+
+  contracts-backend:
+    name: contracts-backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - uses: actions/setup-python@v5.6.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install -r apps/backend/requirements.txt
+      - run: bin/check-contracts
+
+  contracts-frontend:
+    name: contracts-frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - uses: actions/setup-node@v4.4.0
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@v5.6.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install -r apps/backend/requirements.txt
+      - run: bin/check-contracts-frontend
+
+  frontend:
+    name: frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - uses: actions/setup-node@v4.4.0
+        with:
+          node-version: "22"
+      - run: bin/check-frontend
       - name: Upload frontend coverage
-        if: matrix.gate == 'frontend'
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v5.4.3
         with:
           files: apps/frontend/coverage/lcov.info
           flags: frontend
       - name: Upload frontend test results
-        if: matrix.gate == 'frontend'
-        uses: codecov/test-results-action@v1
+        uses: codecov/test-results-action@v1.1.1
         with:
           files: apps/frontend/junit.xml
           flags: frontend
+
+  integration:
+    name: integration
+    runs-on: ubuntu-latest
+    needs: [backend, contracts-backend, contracts-frontend, frontend]
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - uses: actions/setup-python@v5.6.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: actions/setup-node@v4.4.0
+        with:
+          node-version: "22"
+      - run: python -m pip install -r apps/backend/requirements.txt
+      - run: bin/check-integration

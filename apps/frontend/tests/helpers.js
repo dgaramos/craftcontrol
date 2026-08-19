@@ -68,6 +68,16 @@ export function makeDom() {
           if (active) classes.add(name); else classes.delete(name);
           node.className = [...classes].join(" ");
         }),
+        add: jest.fn((...names) => {
+          const classes = new Set(node.className.split(/\s+/).filter(Boolean));
+          names.forEach((n) => classes.add(n));
+          node.className = [...classes].join(" ");
+        }),
+        remove: jest.fn((...names) => {
+          const classes = new Set(node.className.split(/\s+/).filter(Boolean));
+          names.forEach((n) => classes.delete(n));
+          node.className = [...classes].join(" ");
+        }),
       },
       append(...children) { this.children.push(...children); },
       replaceChildren(...children) { this.children = children; },
@@ -84,6 +94,7 @@ export function makeDom() {
     createElement: (tag) => createNode(tag),
     createDocumentFragment: () => createNode(),
     createRange: () => ({ createContextualFragment: () => createNode() }),
+    createTextNode: (text) => { const node = createNode("#text"); node.textContent = String(text); return node; },
   };
   return { document, createNode };
 }

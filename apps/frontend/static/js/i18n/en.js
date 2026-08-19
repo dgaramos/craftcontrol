@@ -41,7 +41,7 @@ export const en = {
     deathHistory: "Death history", noDeaths: "No detailed deaths recorded.", deathCause: "Cause", killedBy: "Killed by", projectile: "Projectile", telemetrySource: "Behavior pack",
     home: "Home", world: "World", players: "Players", analytics: "Data", rules: "Rules", settings: "Server",
     analyticsTitle: "Server activity", analyticsHelp: "The shared history of players joining, leaving, dying, or receiving permission changes.",
-    activityView: "Activity", deathsView: "Deaths", rankingsView: "Rankings", blocksView: "Blocks", combatView: "Combat", explorationView: "Exploration", trendsView: "Periods", eventFilter: "Event", playerFilter: "Player", periodFilter: "Period", sourceFilter: "Source", detailFilter: "Cause or responsible", detailFilterHint: "E.g. zombie, lava…",
+    activityView: "Activity", deathsView: "Deaths", rankingsView: "Rankings", blocksView: "Blocks", combatView: "Combat", explorationView: "Exploration", trendsView: "Periods", healthView: "Health", eventFilter: "Event", playerFilter: "Player", periodFilter: "Period", sourceFilter: "Source", detailFilter: "Cause or responsible", detailFilterHint: "E.g. zombie, lava…",
     everyEvent: "All events", joinsOnly: "Joins", leavesOnly: "Leaves", permissionsOnly: "Permissions", respawnsOnly: "Respawns", dimensionsOnly: "Dimensions",
     everyPlayer: "All players", lifetime: "All time", last7Days: "Last 7 days", last30Days: "Last 30 days",
     everySource: "All sources", structuredSource: "Telemetry Pack", serverSource: "Server and manager",
@@ -76,4 +76,5 @@ export const en = {
     damageAggregates: "Damage", blocksBroken: "Blocks broken", blocksPlaced: "Blocks placed", dimensionChanges: "Dimensions",
     movementSampling: "Distance", snapshotRequests: "Snapshots",
     craftControlImage: "CraftControl image", activeSince: "Active since", packObserved: "Observed pack", packInstalledAt: "Files updated at",
+    packHealthTitle: "Pack health", packHealthHelp: "Volume and performance indicators for the active telemetry behavior pack.", eventVolume: "Event volume", sequenceHealth: "Sequence health", noPackHealth: "The telemetry pack is not reporting yet. Install and activate it to see health data.", resetCount: "Resets", lastGap: "Last gap",
   };

@@ -445,6 +445,14 @@ class SQLitePlayerRepository:
                 f"WHERE {where} GROUP BY h.topic",
                 parameters,
             ).fetchall()
+            first_event_row = connection.execute(
+                "SELECT MIN(h.occurred_at) FROM player_history h "
+                "JOIN player_profiles p ON p.identity=h.identity "
+                "WHERE h.topic IN ("
+                "'player.connected','player.disconnected','player.respawned',"
+                "'player.dimension.changed','player.death','player.permission.changed')"
+            ).fetchone()
+        first_event_at = float(first_event_row[0]) if first_event_row and first_event_row[0] is not None else None
         events = []
         for row in rows:
             payload = json.loads(row[4])
@@ -473,6 +481,7 @@ class SQLitePlayerRepository:
         return {
             "events": events, "page": page, "page_size": page_size, "total": total,
             "pages": max(1, (total + page_size - 1) // page_size),
+            "first_event_at": first_event_at,
             "summary": {
                 "joins": counts.get("player.connected", 0),
                 "leaves": counts.get("player.disconnected", 0),

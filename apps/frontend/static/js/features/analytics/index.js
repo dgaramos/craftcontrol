@@ -4,13 +4,14 @@ import { createBlocksPanel } from "./blocks.js?v=7";
 import { createCombatPanel } from "./combat.js?v=7";
 import { createExplorationPanel } from "./exploration.js?v=7";
 import { createTrendsPanel } from "./trends.js?v=7";
+import { createHealthPanel } from "./health.js?v=8";
 import { renderMarkup } from "../../core/render.js";
 
 export function createAnalyticsFeature(deps) {
   const { state, content, t, uiIcon, api, $, escapeHtml, optionLabel, gameTermMarkup, timelineTimestamp, rankingDefinitions, formatRankingValue, formatDate, openAnalyticsPlayer, blockTermMarkup, blockIcon, oreLabel, formatDuration, dimensionName, localeTag, requestRender } = deps;
   const analyticsViewSwitch = (active) => {
-    const views = [["all", "activity", "activityView"], ["deaths", "deaths", "deathsView"], ["rankings", "rankings", "rankingsView"], ["blocks", "blocks", "blocksView"], ["combat", "combat", "combatView"], ["exploration", "exploration", "explorationView"], ["trends", "periods", "trendsView"]];
-    return `<div class="analytics-view-switch">${views.map(([view, icon, label]) => `<button data-analytics-view="${view}" class="${view} ${(view === "all" ? !["deaths", "rankings", "blocks", "combat", "exploration", "trends"].includes(active) : active === view) ? "active" : ""}" type="button">${uiIcon(icon)} ${t(label)}</button>`).join("")}</div>`;
+    const views = [["all", "activity", "activityView"], ["deaths", "deaths", "deathsView"], ["rankings", "rankings", "rankingsView"], ["blocks", "blocks", "blocksView"], ["combat", "combat", "combatView"], ["exploration", "exploration", "explorationView"], ["trends", "periods", "trendsView"], ["health", "activity", "healthView"]];
+    return `<div class="analytics-view-switch">${views.map(([view, icon, label]) => `<button data-analytics-view="${view}" class="${view} ${(view === "all" ? !["deaths", "rankings", "blocks", "combat", "exploration", "trends", "health"].includes(active) : active === view) ? "active" : ""}" type="button">${uiIcon(icon)} ${t(label)}</button>`).join("")}</div>`;
   };
   const bindAnalyticsViewSwitch = () => {
     content.querySelectorAll("[data-analytics-view]").forEach((button) => button.onclick = () => {
@@ -25,6 +26,7 @@ export function createAnalyticsFeature(deps) {
   const renderCombatPanel = createCombatPanel({ state, content, t, uiIcon, gameTermMarkup, api, $, escapeHtml, analyticsViewSwitch, bindAnalyticsViewSwitch, formatRankingValue, openAnalyticsPlayer, formatDate });
   const renderExplorationPanel = createExplorationPanel({ state, content, t, uiIcon, api, $, escapeHtml, analyticsViewSwitch, bindAnalyticsViewSwitch, formatRankingValue, openAnalyticsPlayer, formatDate, formatDuration, dimensionName, timelineTimestamp });
   const renderTrendsPanel = createTrendsPanel({ state, content, t, uiIcon, api, $, analyticsViewSwitch, bindAnalyticsViewSwitch, formatRankingValue, openAnalyticsPlayer, formatDate, formatDuration, localeTag });
+  const renderHealthPanel = createHealthPanel({ state, content, t, uiIcon, api, $, escapeHtml, analyticsViewSwitch, bindAnalyticsViewSwitch, formatDate });
   let activityObserver = null;
   let loadedEvents = [];
   let loadingActivity = false;
@@ -57,6 +59,10 @@ async function renderAnalyticsPanel() {
     await renderTrendsPanel();
     return;
   }
+  if (filters.kind === "health") {
+    await renderHealthPanel();
+    return;
+  }
   renderMarkup(content, `<div class="analytics-screen">${analyticsViewSwitch(filters.kind)}<header class="analytics-hero block-panel"><div><span class="eyebrow">CRAFTCONTROL ANALYTICS</span><h2>${t("analyticsTitle")}</h2><p>${t("analyticsHelp")}</p></div><button id="analytics-refresh" class="secondary" type="button">${uiIcon("refresh")} ${t("refreshData")}</button></header><section class="analytics-filters block-panel"><label><span>${t("eventFilter")}</span><select id="analytics-kind" ${filters.kind === "deaths" ? "disabled" : ""}><option value="all">${t("everyEvent")}</option><option value="joins">${t("joinsOnly")}</option><option value="leaves">${t("leavesOnly")}</option><option value="respawns">${t("respawnsOnly")}</option><option value="dimensions">${t("dimensionsOnly")}</option><option value="permissions">${t("permissionsOnly")}</option></select></label><label><span>${t("playerFilter")}</span><select id="analytics-player"><option value="">${t("everyPlayer")}</option></select></label><label><span>${t("periodFilter")}</span><select id="analytics-days"><option value="0">${t("lifetime")}</option><option value="7">${t("last7Days")}</option><option value="30">${t("last30Days")}</option></select></label><label><span>${t("sourceFilter")}</span><select id="analytics-source"><option value="all">${t("everySource")}</option><option value="structured">${t("structuredSource")}</option><option value="server">${t("serverSource")}</option></select></label><label><span>${t("detailFilter")}</span><input id="analytics-search" type="search" maxlength="64" value="${escapeHtml(filters.search)}" placeholder="${t("detailFilterHint")}"></label></section><div id="analytics-results" class="analytics-results"><div class="analytics-loading">${t("checking")}</div></div><dialog id="analytics-death-dialog" class="analytics-death-dialog"><div class="drawer-header"><div><span class="eyebrow">${t("deathDetails")}</span><h2></h2></div><button class="drawer-close" type="button" aria-label="${t("close")}">${uiIcon("close")}</button></div><div class="analytics-death-content"></div></dialog></div>`);  const applyFilterValues = () => {
     $("#analytics-kind").value = filters.kind === "deaths" ? "all" : filters.kind;
     $("#analytics-days").value = String(filters.days);
@@ -77,6 +83,15 @@ async function renderAnalyticsPanel() {
       const playerSelect = $("#analytics-player");
       const options = (roster.players || []).map((player) => `<option value="${escapeHtml(player.name)}">${escapeHtml(player.name)}</option>`).join("");
       renderMarkup(playerSelect, `<option value="">${t("everyPlayer")}</option>${options}`);      playerSelect.value = filters.player;
+      const firstEventAt = typeof result.first_event_at === "number" ? result.first_event_at : null;
+      const ageInDays = firstEventAt !== null ? (Date.now() / 1000 - firstEventAt) / 86400 : null;
+      const daysSelect = $("#analytics-days");
+      const opt7 = daysSelect.querySelector("option[value='7']");
+      const opt30 = daysSelect.querySelector("option[value='30']");
+      if (opt7) opt7.disabled = ageInDays === null || ageInDays < 7;
+      if (opt30) opt30.disabled = ageInDays === null || ageInDays < 30;
+      if (filters.days === 7 && opt7?.disabled) { filters.days = 0; daysSelect.value = "0"; }
+      if (filters.days === 30 && opt30?.disabled) { filters.days = 0; daysSelect.value = "0"; }
       const summary = result.summary || {};
       loadedEvents = append ? [...loadedEvents, ...(result.events || [])] : (result.events || []);
       const hasMore = result.page < result.pages;

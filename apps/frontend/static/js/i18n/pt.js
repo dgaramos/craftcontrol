@@ -41,7 +41,7 @@ export const pt = {
     deathHistory: "Histórico de mortes", noDeaths: "Nenhuma morte detalhada registrada.", deathCause: "Causa", killedBy: "Responsável", projectile: "Projétil", telemetrySource: "Behavior pack",
     home: "Início", world: "Mundo", players: "Jogadores", analytics: "Dados", rules: "Regras", settings: "Servidor",
     analyticsTitle: "Atividade do servidor", analyticsHelp: "A história compartilhada de quem entrou, saiu, morreu ou teve permissões alteradas.",
-    activityView: "Atividade", deathsView: "Mortes", rankingsView: "Rankings", blocksView: "Blocos", combatView: "Combate", explorationView: "Exploração", trendsView: "Períodos", eventFilter: "Evento", playerFilter: "Jogador", periodFilter: "Período", sourceFilter: "Origem", detailFilter: "Causa ou responsável", detailFilterHint: "Ex.: zombie, lava…",
+    activityView: "Atividade", deathsView: "Mortes", rankingsView: "Rankings", blocksView: "Blocos", combatView: "Combate", explorationView: "Exploração", trendsView: "Períodos", healthView: "Saúde", eventFilter: "Evento", playerFilter: "Jogador", periodFilter: "Período", sourceFilter: "Origem", detailFilter: "Causa ou responsável", detailFilterHint: "Ex.: zombie, lava…",
     everyEvent: "Todos os eventos", joinsOnly: "Entradas", leavesOnly: "Saídas", permissionsOnly: "Permissões", respawnsOnly: "Respawns", dimensionsOnly: "Dimensões",
     everyPlayer: "Todos os jogadores", lifetime: "Desde o início", last7Days: "Últimos 7 dias", last30Days: "Últimos 30 dias",
     everySource: "Todas as fontes", structuredSource: "Telemetry Pack", serverSource: "Servidor e manager",
@@ -76,4 +76,5 @@ export const pt = {
     damageAggregates: "Dano", blocksBroken: "Blocos quebrados", blocksPlaced: "Blocos colocados", dimensionChanges: "Dimensões",
     movementSampling: "Distância", snapshotRequests: "Snapshots",
     craftControlImage: "Imagem CraftControl", activeSince: "Ativa desde", packObserved: "Pack observado", packInstalledAt: "Arquivos atualizados em",
+    packHealthTitle: "Saúde do pack", packHealthHelp: "Indicadores de volume e desempenho do behavior pack de telemetria ativo.", eventVolume: "Volume de eventos", sequenceHealth: "Saúde da sequência", noPackHealth: "O telemetry pack ainda não está reportando. Instale e ative-o para ver os dados de saúde.", resetCount: "Reinicializações", lastGap: "Última lacuna",
   };

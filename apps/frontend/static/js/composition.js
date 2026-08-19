@@ -36,6 +36,8 @@ export function startApplication() {
     return navigation;
   }
 
+  function playerSettingsMarkup(...args) { return getSettingsFeature().playerSettingsMarkup(...args); }
+
   function refreshActivePanel() {
     if (!state.schema) return;
     $("#hero").hidden = state.tab !== "home";

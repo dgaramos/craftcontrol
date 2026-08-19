@@ -54,6 +54,7 @@ describe("player workspace separates roster, profile and permission scopes", () 
 
   test('settings index includes bilingual "Somente leitura" read-only badge', () => {
     expect(settingsJs).toContain("Somente leitura");
+    expect(settingsJs).toContain("Read only");
   });
 });
 

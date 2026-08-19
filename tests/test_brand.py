@@ -51,6 +51,21 @@ def test_compose_uses_final_product_name() -> None:
 
 
 
+
+def test_deaths_localize_game_terms_and_separate_source_from_timestamp() -> None:
+    script = frontend_script()
+    terms = (FRONTEND / "static" / "js" / "i18n" / "game-terms.js").read_text()
+    history = (FRONTEND / "static" / "js" / "features" / "players" / "history.js").read_text()
+    stylesheet = (FRONTEND / "static" / "players.css").read_text()
+    template = (FRONTEND / "templates" / "index.html").read_text()
+    assert 'entityExplosion: ["creeper", "Explosão de criatura", "Entity explosion"]' in terms
+    assert 'skeleton: ["skeleton", "Esqueleto", "Skeleton"]' in terms
+    assert '/static/craftcontrol-mobs.svg#mob-' in terms
+    assert 'class="death-entry-header"' in history
+    assert ".death-source" in stylesheet
+    assert 'id="release-tags"' in template
+
+
 def test_original_creature_icon_pack_has_expected_pixel_art_symbols() -> None:
     root = element_tree.parse(FRONTEND / "static" / "craftcontrol-mobs.svg").getroot()
     symbols = {node.attrib.get("id") for node in root.iter() if node.tag.endswith("symbol")}
@@ -104,6 +119,26 @@ def test_split_frontend_reports_its_own_release_version() -> None:
     assert "UI v" in server
     assert "CRAFTCONTROL_FRONTEND_VERSION=0.3.6" in dockerfile
     assert "/version.json" in nginx
+
+
+def test_world_rules_server_and_auth_have_feature_boundaries() -> None:
+    script = frontend_script()
+    expectations = {
+        "world/index.js": "createWorldFeature",
+        "rules/index.js": "createRulesFeature",
+        "server/index.js": "createServerFeature",
+        "auth/bootstrap.js": "startAuthenticatedApplication",
+    }
+    for relative, factory in expectations.items():
+        module = (FRONTEND / "static" / "js" / "features" / relative).read_text()
+        assert f"function {factory}" in module
+    assert "getWorldFeature().renderWorld()" in script
+    assert "getRulesFeature().renderRules()" in script
+    assert "getServerFeature().renderServer()" in script
+    assert "function renderTimePanel" not in script
+    assert "function loadTelemetryPack" not in script
+    assert "requireSession().then" not in script
+
 
 
 

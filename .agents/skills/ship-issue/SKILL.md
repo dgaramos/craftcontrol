@@ -29,12 +29,14 @@ git add <arquivos específicos — nunca git add -A sem revisar>
 git commit -m "$(cat <<'EOF'
 type(scope): descrição
 
+Co-authored-by: Codex <noreply@openai.com>
 EOF
 )"
 ```
 
 - [ ] Nenhum arquivo sensível incluído (`.env`, `manager.db`, dados de mundo, segredos)
 - [ ] Formato Conventional Commit verificado: `git show -s --format=%s HEAD`
+- [ ] Todo commit criado pelo Codex inclui `Co-authored-by: Codex <noreply@openai.com>`
 
 ### 2. Push
 
@@ -177,7 +179,12 @@ Para cada item bloqueador ou melhoria simples:
 
 ```bash
 git add <arquivos>
-git commit -m "fix(scope): endereçar findings de review"
+git commit -m "$(cat <<'EOF'
+fix(scope): endereçar findings de review
+
+Co-authored-by: Codex <noreply@openai.com>
+EOF
+)"
 git push origin <branch>
 git push gitea <branch>
 ```

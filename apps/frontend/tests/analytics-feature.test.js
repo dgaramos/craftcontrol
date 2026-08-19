@@ -174,4 +174,68 @@ describe("createAnalyticsFeature — factory setup", () => {
     expect(opt7.disabled).toBe(true);
     expect(opt30.disabled).toBe(true);
   });
+
+  test("resets days to 0 and re-fetches lifetime data when 7d period is invalid", async () => {
+    const deps = makeAnalyticsDeps({ kind: "all", days: 7 });
+    const opt7 = makeEl({ value: "7" });
+    const opt30 = makeEl({ value: "30" });
+    const daysSelect = makeEl({ value: "7" });
+    daysSelect.querySelector = jest.fn((sel) => {
+      if (sel === "option[value='7']") return opt7;
+      if (sel === "option[value='30']") return opt30;
+      return null;
+    });
+    deps.$ = jest.fn((sel) => {
+      if (sel === "#analytics-days") return daysSelect;
+      return makeEl();
+    });
+    const recentTimestamp = Date.now() / 1000 - 3 * 86400;
+    const lifetimeResponse = { events: [], pages: 1, page: 1, total: 0, summary: {}, first_event_at: recentTimestamp };
+    deps.api = jest.fn()
+      // first reload with days=7
+      .mockResolvedValueOnce({ events: [], pages: 1, page: 1, total: 0, summary: {}, first_event_at: recentTimestamp })
+      .mockResolvedValueOnce({ players: [] })
+      // second reload triggered by reset (days=0)
+      .mockResolvedValueOnce(lifetimeResponse)
+      .mockResolvedValueOnce({ players: [] });
+    const { render } = createAnalyticsFeature(deps);
+    await render();
+    // flush the setTimeout(reload, 0) scheduled by the reset
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(daysSelect.value).toBe("0");
+    // lifetime request must have been made (third api call uses days=0)
+    const thirdCall = deps.api.mock.calls[2];
+    expect(thirdCall[0]).toContain("days=0");
+  });
+
+  test("resets days to 0 and re-fetches lifetime data when 30d period is invalid", async () => {
+    const deps = makeAnalyticsDeps({ kind: "all", days: 30 });
+    const opt7 = makeEl({ value: "7" });
+    const opt30 = makeEl({ value: "30" });
+    const daysSelect = makeEl({ value: "30" });
+    daysSelect.querySelector = jest.fn((sel) => {
+      if (sel === "option[value='7']") return opt7;
+      if (sel === "option[value='30']") return opt30;
+      return null;
+    });
+    deps.$ = jest.fn((sel) => {
+      if (sel === "#analytics-days") return daysSelect;
+      return makeEl();
+    });
+    const recentTimestamp = Date.now() / 1000 - 10 * 86400;
+    const lifetimeResponse = { events: [], pages: 1, page: 1, total: 0, summary: {}, first_event_at: recentTimestamp };
+    deps.api = jest.fn()
+      // first reload with days=30
+      .mockResolvedValueOnce({ events: [], pages: 1, page: 1, total: 0, summary: {}, first_event_at: recentTimestamp })
+      .mockResolvedValueOnce({ players: [] })
+      // second reload triggered by reset (days=0)
+      .mockResolvedValueOnce(lifetimeResponse)
+      .mockResolvedValueOnce({ players: [] });
+    const { render } = createAnalyticsFeature(deps);
+    await render();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(daysSelect.value).toBe("0");
+    const thirdCall = deps.api.mock.calls[2];
+    expect(thirdCall[0]).toContain("days=0");
+  });
 });

@@ -90,8 +90,10 @@ async function renderAnalyticsPanel() {
       const opt30 = daysSelect.querySelector("option[value='30']");
       if (opt7) opt7.disabled = ageInDays === null || ageInDays < 7;
       if (opt30) opt30.disabled = ageInDays === null || ageInDays < 30;
-      if (filters.days === 7 && opt7?.disabled) { filters.days = 0; daysSelect.value = "0"; }
-      if (filters.days === 30 && opt30?.disabled) { filters.days = 0; daysSelect.value = "0"; }
+      let periodReset = false;
+      if (filters.days === 7 && opt7?.disabled) { filters.days = 0; daysSelect.value = "0"; periodReset = true; }
+      if (filters.days === 30 && opt30?.disabled) { filters.days = 0; daysSelect.value = "0"; periodReset = true; }
+      if (periodReset) { setTimeout(reload, 0); return; }
       const summary = result.summary || {};
       loadedEvents = append ? [...loadedEvents, ...(result.events || [])] : (result.events || []);
       const hasMore = result.page < result.pages;

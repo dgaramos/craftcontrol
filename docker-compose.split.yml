@@ -11,6 +11,7 @@ services:
     environment:
       MINECRAFT_CONTAINER: "${MINECRAFT_CONTAINER:-minecraft-bedrock}"
       MINECRAFT_PROJECT: "${MINECRAFT_PROJECT:-/minecraft-project}"
+      MINECRAFT_COMPOSE_PROJECT: "${MINECRAFT_COMPOSE_PROJECT:-minecraft-bedrock}"
       DATABASE_PATH: "${DATABASE_PATH:-/data/manager.db}"
       CONSOLE_WAIT_SECONDS: "${CONSOLE_WAIT_SECONDS:-1}"
       BOOTSTRAP_OPERATOR: "${BOOTSTRAP_OPERATOR:-VonCrush}"

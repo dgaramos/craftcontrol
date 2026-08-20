@@ -78,7 +78,7 @@ def test_compose_manager_builds_docker_when_none(tmp_path: Path) -> None:
     fake_docker = MagicMock()
     with patch("minecraft_manager.composition.DockerOperations", return_value=fake_docker) as mock_cls:
         manager = compose_manager(settings, bedrock=MagicMock(), runtime=MagicMock())
-    mock_cls.assert_called_once_with(settings.container, settings.project)
+    mock_cls.assert_called_once_with(settings.container, settings.project, settings.compose_project)
 
 
 def test_compose_manager_builds_runtime_when_none(tmp_path: Path) -> None:

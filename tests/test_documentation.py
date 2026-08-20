@@ -60,5 +60,7 @@ def test_local_reviewer_profile_is_shared_by_codex_and_claude() -> None:
         ROOT / ".agents/skills/review-pr/SKILL.md",
         ROOT / ".claude/agents/review-pr/SKILL.md",
         ROOT / ".claude/agents/review-pr.md",
+        ROOT / "AGENTS.md",
+        ROOT / "CLAUDE.md",
     ):
         assert ".agent-review/craftcontrol/PROFILE.md" in entry_point.read_text()

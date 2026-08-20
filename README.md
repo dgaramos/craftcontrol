@@ -335,7 +335,8 @@ merge e deploy continuam exigindo pedido explícito.
 The tool-neutral [`.agent-review/craftcontrol/PROFILE.md`](.agent-review/craftcontrol/PROFILE.md)
 contains the safeguards specific to Cody DR and Claudio DR reviews. See
 [Agent review profile](docs/agent-review-profile.md) to use it with portable
-plugins too.
+plugins too. Any agent can follow this local profile when it receives the path;
+the profile augments generic review skills and does not trigger review by itself.
 
 ### Claude Code skills
 

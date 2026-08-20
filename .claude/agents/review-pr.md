@@ -144,7 +144,7 @@ observação no resumo.
 Finalize com um dos veredictos: `approve`, `request changes`, `comment` ou
 `no findings`. Inclua escopo revisado, checks consultados/não executados e o
 estado de publicação: `não solicitado`, `publicado por Claudio DR` ou
-`pronto para publicar por Claudio DR`. Em todo relatório inicial e resumo de
+`não publicado`. Em todo relatório inicial e resumo de
 revisão, registre também `head revisado: <sha>` com o SHA efetivamente
 analisado.
 

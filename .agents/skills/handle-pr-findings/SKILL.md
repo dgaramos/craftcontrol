@@ -50,7 +50,7 @@ git add <arquivos específicos>
 git commit -m "$(cat <<'EOF'
 fix(scope): descrição do que foi corrigido
 
-Co-authored-by: Codex <noreply@openai.com>
+Co-authored-by: Cody DR <dgaramos+cody@gmail.com>
 EOF
 )"
 
@@ -110,6 +110,6 @@ Reporte ao usuário:
 
 - Trate finding válido e dentro de escopo sem pedir confirmação intermediária.
 - Um finding = um commit. Sem pacotes.
-- Todo commit criado pelo Codex inclui `Co-authored-by: Codex <noreply@openai.com>`.
+- Todo commit criado pelo Cody DR inclui `Co-authored-by: Cody DR <dgaramos+cody@gmail.com>`.
 - Nunca mergear.
 - Nunca commitar segredos.

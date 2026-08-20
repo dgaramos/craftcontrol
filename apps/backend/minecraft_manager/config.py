@@ -3,6 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 import os
 from pathlib import Path
+import re
+
+
+COMPOSE_PROJECT_NAME = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 
 
 @dataclass(frozen=True)
@@ -20,10 +24,13 @@ class Settings:
 
     @classmethod
     def from_env(cls) -> "Settings":
+        compose_project = os.getenv("MINECRAFT_COMPOSE_PROJECT", "minecraft-bedrock")
+        if not COMPOSE_PROJECT_NAME.fullmatch(compose_project):
+            raise ValueError("MINECRAFT_COMPOSE_PROJECT must be a valid Docker Compose project name")
         return cls(
             container=os.getenv("MINECRAFT_CONTAINER", "minecraft-bedrock"),
             project=Path(os.getenv("MINECRAFT_PROJECT", "/minecraft-project")),
-            compose_project=os.getenv("MINECRAFT_COMPOSE_PROJECT", "minecraft-bedrock"),
+            compose_project=compose_project,
             database=Path(os.getenv("DATABASE_PATH", "/data/manager.db")),
             console_wait_seconds=float(os.getenv("CONSOLE_WAIT_SECONDS", "1")),
             bootstrap_operator=os.getenv("BOOTSTRAP_OPERATOR", ""),

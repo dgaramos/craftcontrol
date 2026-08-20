@@ -11,11 +11,14 @@ from minecraft_manager.composition import _docker_factory, compose_manager
 from minecraft_manager.services import ManagerService
 
 
-def _minimal_settings(root: Path, bootstrap_operator: str = "") -> Settings:
+def _minimal_settings(
+    root: Path, bootstrap_operator: str = "", compose_project: str = "minecraft-bedrock"
+) -> Settings:
     return Settings(
         container="bedrock",
         project=root,
         database=root / "manager.db",
+        compose_project=compose_project,
         auth_cookie_secure=False,
         bootstrap_operator=bootstrap_operator,
     )
@@ -78,7 +81,18 @@ def test_compose_manager_builds_docker_when_none(tmp_path: Path) -> None:
     fake_docker = MagicMock()
     with patch("minecraft_manager.composition.DockerOperations", return_value=fake_docker) as mock_cls:
         manager = compose_manager(settings, bedrock=MagicMock(), runtime=MagicMock())
-    mock_cls.assert_called_once_with(settings.container, settings.project, settings.compose_project)
+    mock_cls.assert_called_once_with(
+        settings.container, settings.project, compose_project=settings.compose_project
+    )
+
+
+def test_compose_manager_passes_custom_compose_project(tmp_path: Path) -> None:
+    settings = _minimal_settings(tmp_path, compose_project="family-bedrock")
+    with patch("minecraft_manager.composition.DockerOperations") as mock_cls:
+        compose_manager(settings, bedrock=MagicMock(), runtime=MagicMock())
+    mock_cls.assert_called_once_with(
+        settings.container, settings.project, compose_project="family-bedrock"
+    )
 
 
 def test_compose_manager_builds_runtime_when_none(tmp_path: Path) -> None:

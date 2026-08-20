@@ -324,6 +324,11 @@ Se você usa Codex, este repositório oferece skills equivalentes de fluxo de tr
 
 As skills são instruções do repositório: o Codex continua seguindo `AGENTS.md` e as instruções de segurança. Um pedido para executar uma issue até o PR (inclusive via link) autoriza branch, commit, push e abertura do PR; merge e deploy continuam exigindo pedido explícito.
 
+O perfil tool-neutral em [`.agent-review/craftcontrol/PROFILE.md`](.agent-review/craftcontrol/PROFILE.md)
+concentra as salvaguardas específicas das revisões Cody DR e Claudio DR. Veja
+[Perfil de revisão de agentes](docs/agent-review-profile.md) para usá-lo também
+com os plugins portáteis.
+
 ### Skills do Claude Code
 
 Se você usa Claude Code, este repositório oferece um conjunto de skills em `.claude/agents/` que codificam o fluxo de trabalho e as convenções do projeto. Invoque-as com `/nome-da-skill`:

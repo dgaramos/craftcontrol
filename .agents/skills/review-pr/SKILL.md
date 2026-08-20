@@ -22,11 +22,14 @@ revisadas.
 1. Leia `README.md`, todos os Markdown em `roadmap/`, `AGENTS.md` e
    `CONTRIBUTING.md`. Quando a mudança tocar arquitetura, persistência, runtime
    ou infraestrutura, leia também `docs/architecture.md`.
-2. Para um PR aberto, carregue título, descrição, base, head SHA, arquivos,
+2. Carregue `.agent-review/craftcontrol/PROFILE.md` e todos os checklists de
+   camada aplicáveis. Esse perfil local é a fonte de verdade para salvaguardas
+   específicas do CraftControl.
+3. Para um PR aberto, carregue título, descrição, base, head SHA, arquivos,
    checks, comentários e issue vinculada. Para diff local, compare com a base
    correta e cubra mudanças staged, rastreadas não staged e o conteúdo de cada
    arquivo não rastreado; não atribua ao PR mudanças alheias de um worktree sujo.
-3. Leia os arquivos alterados no contexto de seus chamadores e testes. Um diff
+4. Leia os arquivos alterados no contexto de seus chamadores e testes. Um diff
    isolado não basta para provar o comportamento.
 
 ```bash

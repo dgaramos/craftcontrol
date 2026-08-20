@@ -158,7 +158,9 @@ Correção: mudança mínima sugerida.
 Finalize com um dos veredictos: `approve`, `request changes`, `comment` ou
 `no findings`. Inclua escopo revisado, checks consultados/não executados e o
 estado de publicação: `não solicitado`, `publicado por Claudio DR` ou
-`pronto para publicar por Claudio DR`.
+`pronto para publicar por Claudio DR`. Em todo relatório inicial e resumo de
+revisão, registre também `head revisado: <sha>` com o SHA efetivamente
+analisado.
 
 ## 5. Publicar (somente quando autorizado)
 
@@ -191,6 +193,7 @@ novos findings; não replique os já resolvidos.
 
 ```text
 Re-review: <PR/ref> — <ultimo-head> → <head-atual>
+Head revisado: <head-atual>.
 Findings anteriores: resolvidos: N; corrigidos/thread aberta: N; não resolvidos: N;
 substituídos: N; não verificáveis: N.
 Respostas verificadas: <threads/comentários externos consultados>.

@@ -134,26 +134,12 @@ revise ambos os lados e o contrato.
 
 ## 4. Validar evidência e reportar
 
-Só reporte um finding quando puder apontar arquivo/linha, fluxo afetado e uma
-consequência plausível. Diga quando uma hipótese não pôde ser confirmada pelo
-diff ou pelos testes disponíveis. Não abra finding para preferência de estilo.
-
-Use severidade proporcional:
-
-| Nível | Critério |
-| --- | --- |
-| `blocking` | Bug provável, perda/corrupção de dados, falha de segurança, quebra de contrato ou violação arquitetural material. |
-| `important` | Regressão provável, caminho relevante sem cobertura ou documentação/compatibilidade incorreta. |
-| `nit` | Melhoria não bloqueante; omita se não acrescentar valor claro. |
-
-Formato de finding:
-
-```text
-[arquivo:linha] [blocking|important|nit] Título curto
-Evidência: o trecho e o fluxo que demonstram o problema.
-Impacto: consequência concreta para usuário, dados, segurança ou manutenção.
-Correção: mudança mínima sugerida.
-```
+Antes de redigir o resultado, carregue `review-pr/references/reporting.md` e
+siga seu contrato de apresentação. Só reporte um finding quando puder apontar
+arquivo/linha, fluxo afetado e consequência plausível. Diga quando uma hipótese
+não pôde ser confirmada pelo diff ou pelos testes disponíveis. Não abra finding
+para preferência de estilo; abaixo de 80/100 de confiança, registre somente uma
+observação no resumo.
 
 Finalize com um dos veredictos: `approve`, `request changes`, `comment` ou
 `no findings`. Inclua escopo revisado, checks consultados/não executados e o
@@ -167,7 +153,7 @@ analisado.
 Antes de escrever no GitHub, reconfirme PR exato, head SHA e findings finais.
 Publique apenas findings `blocking` ou `important` que ainda se aplicam ao head
 atual. Comentários inline precisam apontar uma linha alterada; os demais entram
-na revisão geral. Não aprove nem solicite mudanças em nome de Claudio DR se o
+na revisão geral e seguem o formato da referência. Não aprove nem solicite mudanças em nome de Claudio DR se o
 publicador não suportar esse evento. Nunca publique observações internas,
 segredos, conteúdo de roadmap ou acusações sem evidência.
 

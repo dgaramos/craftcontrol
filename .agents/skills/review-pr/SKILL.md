@@ -92,23 +92,15 @@ da camada afetada.
 
 ## 4. Exigir evidência e concluir
 
-Abra finding apenas com arquivo/linha, fluxo afetado e consequência plausível.
-Declare hipóteses não confirmadas e atribua confiança de 0 a 100. Só inclua
-findings formais com confiança `>= 80`; abaixo disso, registre como observação
-no resumo, nunca como comentário de revisão. Classifique findings formais como
-`blocking` (segurança, dados, contrato ou falha material) ou `important`
-(regressão provável, cobertura relevante ausente ou incompatibilidade).
+Antes de redigir o resultado, carregue `references/reporting.md` e siga seu
+contrato de apresentação. Abra finding apenas com arquivo/linha, fluxo afetado
+e consequência plausível. Declare hipóteses não confirmadas e atribua confiança
+de 0 a 100. Só inclua findings formais com confiança `>= 80`; abaixo disso,
+registre como observação no resumo, nunca como comentário de revisão.
 
 Antes de concluir, verifique os eixos de risco aplicáveis: persistência,
 autorização/segurança, contratos, dados de jogadores e backup/recuperação.
 Declare explicitamente no resumo quais foram avaliados e quais não se aplicam.
-
-```text
-[arquivo:linha] [blocking|important] Título curto — confiança: 85/100
-Evidência: trecho e fluxo que provam o problema.
-Impacto: consequência concreta.
-Correção: mudança mínima sugerida.
-```
 
 Inicie o relatório com a referência, base/head e arquivos/camadas revisados;
 registre explicitamente `head revisado: <sha>` para viabilizar re-reviews.
@@ -120,7 +112,8 @@ checks consultados/não executados, eixos de risco e estado de publicação.
 Para um PR aberto, publique apenas se o usuário pedir e o publicador do GitHub
 App `cody-dr` estiver configurado. Reconfirme PR, head SHA e
 findings finais; publique apenas `blocking` ou `important` que persistam no
-head atual e tenham confiança `>= 80`. Comentário inline aponta linha alterada. Sem o publicador, entregue
+head atual e tenham confiança `>= 80`. Comentário inline segue o formato da
+referência e aponta linha alterada. Sem o publicador, entregue
 comentários prontos e marque como não publicados. Nunca leia tokens, chaves ou
 segredos do repositório.
 

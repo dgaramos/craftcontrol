@@ -47,3 +47,18 @@ def test_readme_documents_independent_operations_and_safe_installation(readme: s
         assert command in readme
     assert "Never run a bare `docker compose up`" in readme
     assert "The immediate direction is:" not in readme
+
+
+def test_local_reviewer_profile_is_shared_by_codex_and_claude() -> None:
+    profile = ROOT / ".agent-review/craftcontrol/PROFILE.md"
+    assert profile.is_file()
+
+    for checklist in ("backend.md", "frontend.md", "contracts.md", "operations.md", "contribution.md"):
+        assert (profile.parent / "references" / checklist).is_file()
+
+    for entry_point in (
+        ROOT / ".agents/skills/review-pr/SKILL.md",
+        ROOT / ".claude/agents/review-pr/SKILL.md",
+        ROOT / ".claude/agents/review-pr.md",
+    ):
+        assert ".agent-review/craftcontrol/PROFILE.md" in entry_point.read_text()

@@ -332,6 +332,11 @@ As skills são instruções do repositório: o Codex continua seguindo
 até o PR (inclusive via link) autoriza branch, commit, push e abertura do PR;
 merge e deploy continuam exigindo pedido explícito.
 
+The tool-neutral [`.agent-review/craftcontrol/PROFILE.md`](.agent-review/craftcontrol/PROFILE.md)
+contains the safeguards specific to Cody DR and Claudio DR reviews. See
+[Agent review profile](docs/agent-review-profile.md) to use it with portable
+plugins too.
+
 ### Claude Code skills
 
 If you use Claude Code, this repository ships a set of skills in `.claude/agents/` that encode the project's workflow and conventions. Invoke them with `/skill-name`:

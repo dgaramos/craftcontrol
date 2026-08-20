@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Maintain CraftControl, a mobile-first, bilingual control panel for Minecraft Bedrock servers. The application must remain usable without Prometheus, Grafana, the custom exporter, or a behavior pack.
+Maintain CraftControl, a mobile-first control panel for Minecraft Bedrock servers. The application must remain usable without Prometheus, Grafana, the custom exporter, or a behavior pack.
 
 ## Required context
 
@@ -47,7 +47,9 @@ The legacy file locations in the preceding rule are compatibility facades during
 
 ## Product and security rules
 
-- Keep the interface responsive, touch-friendly, Minecraft-inspired, and fully available in Portuguese and English.
+- Keep the interface responsive, touch-friendly, Minecraft-inspired, and fully
+  available in the supported UI locales: Portuguese, English, and Spanish.
+  This list is authoritative for agent review and implementation guidance.
 - Prefer understandable controls and contextual explanations over dense administration forms.
 - Do not add generic shell or arbitrary Bedrock-console endpoints.
 - Validate all commands and values with explicit allowlists.

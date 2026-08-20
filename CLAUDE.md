@@ -19,7 +19,8 @@ Key constraints:
 - Preserve event-driven synchronization, SSE, SQLite history, and exporter independence.
 - Player disconnects change status to offline and close sessions; they never delete profiles.
 - XUID stays internal. Player history is durable. Log-derived deaths are explicitly non-authoritative.
-- Keep the UI mobile-first, Minecraft-inspired, bilingual, and understandable to non-specialists.
+- Keep the UI mobile-first, Minecraft-inspired, understandable to non-specialists,
+  and fully available in the supported locales defined by `AGENTS.md`.
 - Do not expose arbitrary console commands or weaken the existing allowlists.
 - Preserve player-backed local authentication, backend RBAC, one-time hashed invitations, and revocable server-side sessions. Panel roles never imply Minecraft operator status.
 - Never overwrite `.env`, the SQLite database, or world data.

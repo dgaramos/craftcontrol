@@ -320,7 +320,7 @@ If you use Codex, this repository ships equivalent workflow skills in
 | `implement` | Detecta a camada, implementa e testa |
 | `ship-issue` | Commit e PR com descrição baseada no diff e todos os metadados da issue |
 | `handle-pr-findings` | Corrige findings, atualiza o PR e responde/resolve threads autonomamente |
-| `review-pr <PR|ref>` | Revisão cruzada sob demanda ou re-review incremental de um PR/ref, por camada |
+| `review-pr <PR ou ref>` | Revisão cruzada sob demanda ou re-review incremental de um PR/ref, por camada |
 | `backend` | Padrões Python: DI, Protocols, `is None`, composition root e fakes |
 | `frontend` | Padrões JS: injeção de deps, ESM, i18n e testes |
 | `create-issue` | Workshop para criar issues bem formadas |
@@ -343,7 +343,7 @@ If you use Claude Code, this repository ships a set of skills in `.claude/agents
 | `$implement` | Detecta camada (backend$frontend), carrega skill especializada, implementa e testa |
 | `$handle-pr-findings` | Triagem explícita de findings, correções e respostas nas threads |
 | `$ship-issue` | Commit, PR com metadados, CI, CodeRabbit, sync Gitea |
-| `$review-pr <PR|ref>` | Revisão cruzada sob demanda ou re-review incremental de um PR/ref — checklist por camada |
+| `$review-pr <PR ou ref>` | Revisão cruzada sob demanda ou re-review incremental de um PR/ref — checklist por camada |
 | `$backend` | Padrões Python: DI, Protocols, `is None`, composition root, fakes |
 | `$frontend` | Padrões JS: injeção de deps, helpers compartilhados, ESM, i18n |
 | `$create-issue` | Workshop PM/Dev Hat → cria issue bem formada com todos os metadados |

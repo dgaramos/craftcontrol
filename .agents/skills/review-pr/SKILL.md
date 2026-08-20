@@ -1,11 +1,11 @@
 ---
 name: review-pr
-description: Cody Reviewer revisa um PR ou referência explícita do CraftControl com contexto obrigatório, checklist por camada e findings verificáveis. Use com `/review-pr <número|link|branch|intervalo-de-commits>`.
+description: Cody DR revisa um PR ou referência explícita do CraftControl com contexto obrigatório, checklist por camada e findings verificáveis. Use com `/review-pr <número|link|branch|intervalo-de-commits>`.
 ---
 
-# Cody Reviewer
+# Cody DR
 
-Produza revisões atribuídas a **Cody Reviewer**. Procure defeitos reais,
+Produza revisões atribuídas a **Cody DR**. Procure defeitos reais,
 regressões, riscos de segurança e violações das decisões do CraftControl. Não
 reescreva o PR, não reporte preferência subjetiva de estilo e não modifique
 código, exceto se o usuário também pedir para tratar os findings.
@@ -110,15 +110,54 @@ Impacto: consequência concreta.
 Correção: mudança mínima sugerida.
 ```
 
-Inicie o relatório com a referência, base/head e arquivos/camadas revisados.
+Inicie o relatório com a referência, base/head e arquivos/camadas revisados;
+registre explicitamente `head revisado: <sha>` para viabilizar re-reviews.
 Finalize com `approve`, `request changes`, `comment` ou `no findings`; informe
 checks consultados/não executados, eixos de risco e estado de publicação.
 
 ## 5. Publicar somente com autorização
 
 Para um PR aberto, publique apenas se o usuário pedir e o publicador do GitHub
-App `cody-reviewer-dr` estiver configurado. Reconfirme PR, head SHA e
+App `cody-dr` estiver configurado. Reconfirme PR, head SHA e
 findings finais; publique apenas `blocking` ou `important` que persistam no
 head atual e tenham confiança `>= 80`. Comentário inline aponta linha alterada. Sem o publicador, entregue
 comentários prontos e marque como não publicados. Nunca leia tokens, chaves ou
 segredos do repositório.
+
+## 6. Re-review de findings resolvidos
+
+Quando receber o mesmo PR depois de correções, faça uma re-review; não repita a
+revisão integral como se fosse um PR novo.
+
+1. Carregue o head atual e todas as reviews, comentários gerais e threads,
+   incluindo `isResolved`, `isOutdated`, autor, respostas e SHA/commit quando
+   disponíveis. Para threads e respostas, use GraphQL; a listagem plana de
+   comentários não preserva o estado da conversa.
+2. Localize o último head revisado pelo mesmo reviewer no relatório publicado ou
+   fornecido pelo usuário. Se não houver um SHA confiável, declare que o delta
+   não é verificável e faça uma revisão completa do head atual.
+3. Confirme que o último head é ancestral do atual com `git merge-base
+   --is-ancestor <ultimo-head> <head-atual>`. Se houve rebase/force-push, diga
+   que o histórico foi reescrito e revise `base...head` completo.
+4. Para cada finding anterior, valide o código atual e classifique-o como
+   `resolvido`, `corrigido mas thread aberta`, `não resolvido`, `substituído` ou
+   `não verificável`. Uma resposta na thread ou comentário externo é contexto,
+   não prova de correção; confronte-a com código, testes e head atual.
+5. Revise somente os commits/diff entre `<ultimo-head>` e `<head-atual>` para
+   novos findings. Não replique finding anterior resolvido; caso a correção crie
+   regressão, reporte-a como novo finding com evidência própria.
+
+Use este resumo antes de novos findings:
+
+```text
+Re-review: <PR/ref> — <ultimo-head> → <head-atual>
+Findings anteriores: resolvidos: N; corrigidos/thread aberta: N; não resolvidos: N;
+substituídos: N; não verificáveis: N.
+Respostas verificadas: <threads/comentários externos consultados>.
+Delta revisado: <arquivos e commits novos>.
+```
+
+Somente responda, resolva threads ou publique uma nova review se o usuário
+autorizar expressamente essas escritas. Se autorizado, responda cada finding
+com seu status verificado; não marque como resolvido o que apenas recebeu uma
+resposta.

@@ -50,7 +50,7 @@ git add <arquivos específicos>
 git commit -m "$(cat <<'EOF'
 fix(scope): descrição do que foi corrigido
 
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Co-authored-by: Claudio DR <dgaramos+claudio@gmail.com>
 EOF
 )"
 

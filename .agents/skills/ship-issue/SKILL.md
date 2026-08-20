@@ -29,14 +29,14 @@ git add <arquivos específicos — nunca git add -A sem revisar>
 git commit -m "$(cat <<'EOF'
 type(scope): descrição
 
-Co-authored-by: Codex <noreply@openai.com>
+Co-authored-by: Cody DR <dgaramos+cody@gmail.com>
 EOF
 )"
 ```
 
 - [ ] Nenhum arquivo sensível incluído (`.env`, `manager.db`, dados de mundo, segredos)
 - [ ] Formato Conventional Commit verificado: `git show -s --format=%s HEAD`
-- [ ] Todo commit criado pelo Codex inclui `Co-authored-by: Codex <noreply@openai.com>`
+- [ ] Todo commit criado pelo Cody DR inclui `Co-authored-by: Cody DR <dgaramos+cody@gmail.com>`
 
 ### 2. Push
 
@@ -182,7 +182,7 @@ git add <arquivos>
 git commit -m "$(cat <<'EOF'
 fix(scope): endereçar findings de review
 
-Co-authored-by: Codex <noreply@openai.com>
+Co-authored-by: Cody DR <dgaramos+cody@gmail.com>
 EOF
 )"
 git push origin <branch>

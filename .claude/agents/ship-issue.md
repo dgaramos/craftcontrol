@@ -29,7 +29,7 @@ git add <arquivos específicos — nunca git add -A sem revisar>
 git commit -m "$(cat <<'EOF'
 type(scope): descrição
 
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Co-authored-by: Claudio DR <dgaramos+claudio@gmail.com>
 EOF
 )"
 ```
@@ -181,7 +181,7 @@ git add <arquivos>
 git commit -m "$(cat <<'EOF'
 fix(scope): endereçar findings de review
 
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Co-authored-by: Claudio DR <dgaramos+claudio@gmail.com>
 EOF
 )"
 git push origin <branch>

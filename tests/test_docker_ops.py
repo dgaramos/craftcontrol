@@ -18,9 +18,15 @@ def _completed(returncode: int = 0, stdout: str = "", stderr: str = "") -> subpr
     return cp
 
 
-def _ops(result: subprocess.CompletedProcess | None = None) -> tuple[DockerOperations, MagicMock]:
+def _ops(
+    result: subprocess.CompletedProcess | None = None,
+    *,
+    compose_project: str = "minecraft-bedrock",
+) -> tuple[DockerOperations, MagicMock]:
     executor = MagicMock(return_value=result or _completed())
-    return DockerOperations("bedrock", Path("/srv/project"), executor=executor), executor
+    return DockerOperations(
+        "bedrock", Path("/srv/project"), executor=executor, compose_project=compose_project
+    ), executor
 
 
 # ---------------------------------------------------------------------------
@@ -69,6 +75,18 @@ def test_apply_calls_force_recreate() -> None:
         ["docker", "compose", "--project-name", "minecraft-bedrock", "--project-directory", "/srv/project", "up", "-d", "--force-recreate", "minecraft-bedrock"],
         capture_output=True, text=True, timeout=120, check=False,
     )
+
+
+def test_start_uses_custom_compose_project() -> None:
+    ops, executor = _ops(compose_project="family-bedrock")
+    ops.execute("start")
+    assert executor.call_args.args[0][3] == "family-bedrock"
+
+
+def test_apply_uses_custom_compose_project() -> None:
+    ops, executor = _ops(compose_project="family-bedrock")
+    ops.execute("apply")
+    assert executor.call_args.args[0][3] == "family-bedrock"
 
 
 def test_stop_calls_docker_stop() -> None:

@@ -14,8 +14,9 @@ class DockerOperations:
         self,
         container: str,
         project: Path,
-        compose_project: str = "minecraft-bedrock",
         executor: DockerExecutor | None = None,
+        *,
+        compose_project: str = "minecraft-bedrock",
     ) -> None:
         self.container = container
         self.project = project

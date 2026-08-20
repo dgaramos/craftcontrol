@@ -8,6 +8,16 @@ Maintain CraftControl, a mobile-first, bilingual control panel for Minecraft Bed
 
 Before planning, reviewing, or changing this project, read `README.md` and every Markdown file under the local `roadmap/` directory when that directory exists. The roadmap is private operational context: do not stage, commit, publish, quote, or copy it into deployment artifacts.
 
+## Agent review profile
+
+The tool-neutral profile at `.agent-review/craftcontrol/PROFILE.md` is the
+authoritative CraftControl-specific review context. Load it and every applicable
+layer checklist for any PR review, whether the reviewer is Cody DR, Claudio DR,
+or another agent. The profile augments generic review skills; it does not
+trigger a review automatically. If it is unavailable, use the repository-native
+`review-pr` entry point. Never copy roadmap content, credentials, databases, or
+world data into the profile or review output.
+
 ## Architecture
 
 - Treat `docs/architecture.md` as the authoritative architecture and dependency-direction reference.

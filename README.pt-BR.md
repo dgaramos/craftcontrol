@@ -327,7 +327,8 @@ As skills são instruções do repositório: o Codex continua seguindo `AGENTS.m
 O perfil tool-neutral em [`.agent-review/craftcontrol/PROFILE.md`](.agent-review/craftcontrol/PROFILE.md)
 concentra as salvaguardas específicas das revisões Cody DR e Claudio DR. Veja
 [Perfil de revisão de agentes](docs/agent-review-profile.md) para usá-lo também
-com os plugins portáteis.
+com os plugins portáteis. Qualquer agente pode seguir o perfil local ao receber
+o caminho; ele complementa skills genéricas e não dispara uma revisão sozinho.
 
 ### Skills do Claude Code
 

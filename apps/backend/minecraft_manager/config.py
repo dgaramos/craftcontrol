@@ -10,6 +10,7 @@ class Settings:
     container: str
     project: Path
     database: Path
+    compose_project: str = "minecraft-bedrock"
     console_wait_seconds: float = 1.0
     bootstrap_operator: str = ""
     reconcile_seconds: int = 900
@@ -22,6 +23,7 @@ class Settings:
         return cls(
             container=os.getenv("MINECRAFT_CONTAINER", "minecraft-bedrock"),
             project=Path(os.getenv("MINECRAFT_PROJECT", "/minecraft-project")),
+            compose_project=os.getenv("MINECRAFT_COMPOSE_PROJECT", "minecraft-bedrock"),
             database=Path(os.getenv("DATABASE_PATH", "/data/manager.db")),
             console_wait_seconds=float(os.getenv("CONSOLE_WAIT_SECONDS", "1")),
             bootstrap_operator=os.getenv("BOOTSTRAP_OPERATOR", ""),

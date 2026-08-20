@@ -57,7 +57,7 @@ def test_start_calls_compose_up() -> None:
     ops, executor = _ops()
     ops.execute("start")
     executor.assert_called_once_with(
-        ["docker", "compose", "--project-directory", "/srv/project", "up", "-d", "minecraft-bedrock"],
+        ["docker", "compose", "--project-name", "minecraft-bedrock", "--project-directory", "/srv/project", "up", "-d", "minecraft-bedrock"],
         capture_output=True, text=True, timeout=120, check=False,
     )
 
@@ -66,7 +66,7 @@ def test_apply_calls_force_recreate() -> None:
     ops, executor = _ops()
     ops.execute("apply")
     executor.assert_called_once_with(
-        ["docker", "compose", "--project-directory", "/srv/project", "up", "-d", "--force-recreate", "minecraft-bedrock"],
+        ["docker", "compose", "--project-name", "minecraft-bedrock", "--project-directory", "/srv/project", "up", "-d", "--force-recreate", "minecraft-bedrock"],
         capture_output=True, text=True, timeout=120, check=False,
     )
 

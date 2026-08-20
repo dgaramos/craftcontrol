@@ -14,10 +14,12 @@ class DockerOperations:
         self,
         container: str,
         project: Path,
+        compose_project: str = "minecraft-bedrock",
         executor: DockerExecutor | None = None,
     ) -> None:
         self.container = container
         self.project = project
+        self.compose_project = compose_project
         self._executor: DockerExecutor = executor if executor is not None else subprocess.run
 
     def _run(self, *args: str, timeout: int = 30) -> subprocess.CompletedProcess[str]:
@@ -30,9 +32,9 @@ class DockerOperations:
 
     def execute(self, action: str) -> None:
         if action == "start":
-            result = self._run("compose", "--project-directory", str(self.project), "up", "-d", "minecraft-bedrock", timeout=120)
+            result = self._run("compose", "--project-name", self.compose_project, "--project-directory", str(self.project), "up", "-d", "minecraft-bedrock", timeout=120)
         elif action == "apply":
-            result = self._run("compose", "--project-directory", str(self.project), "up", "-d", "--force-recreate", "minecraft-bedrock", timeout=120)
+            result = self._run("compose", "--project-name", self.compose_project, "--project-directory", str(self.project), "up", "-d", "--force-recreate", "minecraft-bedrock", timeout=120)
         elif action in {"stop", "restart"}:
             result = self._run(action, self.container, timeout=120)
         else:

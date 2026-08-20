@@ -37,7 +37,7 @@ def compose_manager(
     if bedrock is None:
         bedrock = BedrockClient(settings.container, list(GAMERULES), settings.console_wait_seconds)
     if docker is None:
-        docker = DockerOperations(settings.container, settings.project)
+        docker = DockerOperations(settings.container, settings.project, settings.compose_project)
     broker = EventBroker(repository)
     players = PlayerService(
         SQLitePlayerRepository(settings.database), files, bedrock, broker, settings.bootstrap_operator

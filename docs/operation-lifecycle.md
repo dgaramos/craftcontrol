@@ -224,6 +224,38 @@ expanding it into per-stage `stage_log` entries. The mapping rule is:
 A future host agent that emits this same shape requires no changes to the
 application layer.
 
+### Application-service stage failures
+
+For stages owned directly by the application service (REVIEW, BACKUP_VERIFICATION,
+VERIFICATION, CONFIRMATION), failures do not go through the executor result shape.
+The application service writes the `stage_log` entry and `error_detail` directly:
+
+- The failing stage's `stage_log` entry receives `outcome: error` and a `detail`
+  string describing the failure.
+- `error_detail` is populated with `code`, `message`, and `stage`; `exception_type`
+  is set if an unhandled exception caused the failure.
+- All subsequent stages receive `outcome: skipped`.
+- The operation transitions to `FAILED`.
+
+The `skipped` outcome in `stage_log` is not limited to executor stages; any stage
+that does not run because a prior stage failed records `outcome: skipped`.
+
+### Cancellation semantics
+
+`CANCELLED` is only valid before the RESTART stage begins. If a cancel request
+arrives after PREPARATION has written configuration files but before RESTART
+executes, the application service must:
+
+1. Record a `stage_log` entry for PREPARATION with `outcome: ok` (already
+   written) and mark RESTART and all subsequent stages as `outcome: skipped`.
+2. Trigger a rollback of the prepared configuration files via the Compose adapter
+   before transitioning the operation to `CANCELLED`.
+3. Emit `operation.cancelled` only after the rollback completes or is confirmed
+   as a no-op.
+
+If rollback fails, the operation transitions to `FAILED` rather than `CANCELLED`,
+with `error_detail` describing the rollback failure.
+
 ---
 
 ## Divergent state
@@ -273,15 +305,20 @@ Operations emit the following event types over the SSE stream.
 
 Each message is a standard SSE frame with the following fields:
 
+Operations events flow through the same `/api/events` SSE endpoint and
+`EventBroker` used by the rest of the platform. The wire format is:
+
 ```text
-id: <monotonically increasing integer, scoped to this SSE connection>
-event: operation
-data: <JSON object>
+id: <durable integer from EventStore, monotonically increasing across restarts>
+event: state
+data: {"topic": "<event-type>", "timestamp": <unix float>, "source": "<service>", "payload": {…}}
 ```
 
-The `event:` field is always the literal string `operation`. Consumers
-differentiate event subtypes using the `topic` key in the JSON `data` object.
-The `data` object has this shape:
+The `event:` field is always the literal string `state` (the existing platform
+convention). Consumers differentiate operation events from other platform events
+using the `topic` key. The operation-specific fields are carried inside `payload`:
+
+| Field | Type | Description |
 
 | Field | Type | Description |
 |---|---|---|
@@ -294,14 +331,21 @@ The `data` object has this shape:
 | `stage` | enum \| null | Stage name for `operation.stage_started` and `operation.stage_completed`; null for other events. |
 | `stage_outcome` | `ok` \| `error` \| `skipped` \| null | Stage result for `operation.stage_completed`; null for other events. |
 | `error_detail` | object \| null | Populated on `operation.failed`; null otherwise. |
-| `divergence_detail` | list \| null | Populated on `operation.divergent`; null otherwise. |
+| `divergence_detail` | list\<object\> \| null | Populated on `operation.divergent`; null otherwise. See `divergence_detail` schema above. |
 
 ### Replay and ordering guarantees
 
-The SSE `id:` field is a connection-scoped integer that increments with every
-frame. Clients may send `Last-Event-ID` on reconnect; the server replays all
-frames for in-progress operations whose `operation_id` the client has not yet
-received a terminal event for.
+The SSE `id:` field is the durable `EventStore` integer — it persists across
+server restarts and is not connection-scoped. Clients may send `Last-Event-ID`
+on reconnect; the server replays all stored events with an id greater than the
+supplied value.
+
+**Known gap:** the current `EventBroker.stream` implementation replays stored
+events and then registers the subscriber. An event published in the window
+between those two operations will not appear in the replay or the live queue.
+Until this race is closed, clients should treat the operations endpoint
+(`GET /api/operations/{id}`) as the authoritative source after reconnect and
+use SSE only for incremental updates.
 
 Deduplication is the client's responsibility. Because `operation.stage_started`
 and `operation.stage_completed` can fire for multiple stages within the same

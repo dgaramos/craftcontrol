@@ -37,6 +37,10 @@ on:
         description: Optional reply body for an existing PR review thread
         required: false
         type: string
+      resolve_thread_id:
+        description: Optional PR review-thread node identifier to resolve
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -67,6 +71,7 @@ jobs:
           COMMENT_BODY: ${{ inputs.comment_body }}
           REPLY_COMMENT_ID: ${{ inputs.reply_comment_id }}
           REPLY_BODY: ${{ inputs.reply_body }}
+          RESOLVE_THREAD_ID: ${{ inputs.resolve_thread_id }}
         run: |
           set -euo pipefail
           [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]] || { echo "pr_number must be a positive integer" >&2; exit 1; }
@@ -75,15 +80,22 @@ jobs:
             [[ -n "$value" ]] && ((supplied_reply_fields += 1))
           done
           [[ "$supplied_reply_fields" -eq 0 || "$supplied_reply_fields" -eq 2 ]] || { echo "reply_comment_id and reply_body must be provided together" >&2; exit 1; }
-          if [[ "$supplied_reply_fields" -eq 2 ]]; then
-            [[ "$REPLY_COMMENT_ID" =~ ^[1-9][0-9]*$ ]] || { echo "reply_comment_id must be a positive integer" >&2; exit 1; }
+          if [[ "$supplied_reply_fields" -eq 2 || -n "$RESOLVE_THREAD_ID" ]]; then
             [[ -z "$REVIEW_BODY$COMMENT_PATH$COMMENT_LINE$COMMENT_BODY" ]] || { echo "reply mode cannot include review inputs" >&2; exit 1; }
-            expected_pr_url="https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}"
-            actual_pr_url="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/comments/${REPLY_COMMENT_ID}" --jq .pull_request_url)"
-            [[ "$actual_pr_url" == "$expected_pr_url" ]] || { echo "reply comment does not belong to pr_number" >&2; exit 1; }
-            gh api --method POST "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/comments" \
-              -f body="$REPLY_BODY" \
-              -F in_reply_to="$REPLY_COMMENT_ID"
+            if [[ "$supplied_reply_fields" -eq 2 ]]; then
+              [[ "$REPLY_COMMENT_ID" =~ ^[1-9][0-9]*$ ]] || { echo "reply_comment_id must be a positive integer" >&2; exit 1; }
+              expected_pr_url="https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}"
+              actual_pr_url="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/comments/${REPLY_COMMENT_ID}" --jq .pull_request_url)"
+              [[ "$actual_pr_url" == "$expected_pr_url" ]] || { echo "reply comment does not belong to pr_number" >&2; exit 1; }
+              gh api --method POST "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/comments" \
+                -f body="$REPLY_BODY" \
+                -F in_reply_to="$REPLY_COMMENT_ID"
+            fi
+            if [[ -n "$RESOLVE_THREAD_ID" ]]; then
+              actual_thread_pr_number="$(gh api graphql -f query='query($thread: ID!) { node(id: $thread) { ... on PullRequestReviewThread { pullRequest { number } } } }' -f thread="$RESOLVE_THREAD_ID" --jq '.data.node.pullRequest.number')"
+              [[ "$actual_thread_pr_number" == "$PR_NUMBER" ]] || { echo "resolve thread does not belong to pr_number" >&2; exit 1; }
+              gh api graphql -f query='mutation($thread: ID!) { resolveReviewThread(input: {threadId: $thread}) { thread { isResolved } } }' -f thread="$RESOLVE_THREAD_ID"
+            fi
             exit 0
           fi
           [[ -n "$REVIEW_BODY" ]] || { echo "review_body is required outside reply mode" >&2; exit 1; }

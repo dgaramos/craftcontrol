@@ -184,11 +184,14 @@ def test_reviewer_publishers_support_thread_replies_without_creating_a_review() 
         workflow = (ROOT / ".github" / "workflows" / name).read_text()
         assert "reply_comment_id:" in workflow
         assert "reply_body:" in workflow
+        assert "resolve_thread_id:" in workflow
         assert "reply_comment_id and reply_body must be provided together" in workflow
         assert "reply mode cannot include review inputs" in workflow
         assert "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/comments" in workflow
         assert '-F in_reply_to="$REPLY_COMMENT_ID"' in workflow
         assert "reply comment does not belong to pr_number" in workflow
+        assert "resolve thread does not belong to pr_number" in workflow
+        assert "resolveReviewThread" in workflow
         assert f"Create a {reviewer.title()} DR installation token" in workflow
 
 
@@ -198,4 +201,5 @@ def test_reviewer_skills_dispatch_thread_replies_through_their_apps() -> None:
     for skill, reviewer in ((cody, "cody-dr"), (claudio, "claudio-dr")):
         assert "reply_comment_id" in skill
         assert "reply_body" in skill
+        assert "resolve_thread_id" in skill
         assert reviewer in skill

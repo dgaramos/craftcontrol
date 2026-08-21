@@ -107,3 +107,100 @@ def test_prune_is_dry_run_until_confirmed(backup_env) -> None:
     applied = env["service"].prune(1, confirmed=True)
     assert len(applied["deleted"]) == 1
     assert len(env["service"].list()) == 1
+
+
+def test_prune_rejects_keep_less_than_one(backup_env) -> None:
+    env = backup_env
+    import pytest
+    with pytest.raises(ValueError, match="keep must be at least 1"):
+        env["service"].prune(0)
+
+
+def test_list_skips_non_directory_entries(backup_env) -> None:
+    """list() ignores files without a manifest.json and non-directory entries."""
+    env = backup_env
+    env["service"].create()
+    # Create a stray file (not a directory) inside backup_root
+    stray = env["root"] / "backups" / "not-a-directory"
+    stray.write_text("garbage")
+    # Create a directory without a manifest
+    no_manifest = env["root"] / "backups" / "no-manifest"
+    no_manifest.mkdir()
+    results = env["service"].list()
+    ids = [r["id"] for r in results]
+    assert "not-a-directory" not in ids
+    assert "no-manifest" not in ids
+
+
+def test_list_handles_corrupt_manifest(backup_env) -> None:
+    """list() appends {invalid: True} entries when manifest JSON is unreadable."""
+    env = backup_env
+    identifier = str(env["service"].create()["id"])
+    # Corrupt the manifest
+    (env["root"] / "backups" / identifier / "manifest.json").write_text("NOT_JSON")
+    results = env["service"].list()
+    entry = next(r for r in results if r["id"] == identifier)
+    assert entry.get("invalid") is True
+
+
+def test_verify_rejects_wrong_format_version(backup_env) -> None:
+    """verify() raises when FORMAT_VERSION in manifest does not match."""
+    import pytest
+    env = backup_env
+    identifier = str(env["service"].create()["id"])
+    manifest_path = env["root"] / "backups" / identifier / "manifest.json"
+    data = json.loads(manifest_path.read_text())
+    data["format"] = 999
+    manifest_path.write_text(json.dumps(data))
+    with pytest.raises(ValueError, match="unsupported backup format"):
+        env["service"].verify(identifier)
+
+
+def test_backup_directory_rejects_invalid_identifier(backup_env) -> None:
+    """_backup_directory raises ValueError for identifiers with path separators."""
+    import pytest
+    with pytest.raises(ValueError, match="invalid backup identifier"):
+        env = backup_env
+        env["service"].verify("../../etc/passwd")
+
+
+def test_backup_directory_rejects_missing_identifier(backup_env) -> None:
+    """_backup_directory raises FileNotFoundError for non-existent backups."""
+    import pytest
+    with pytest.raises(FileNotFoundError):
+        env = backup_env
+        env["service"].verify("nonexistent-backup-id")
+
+
+def test_world_directory_rejects_path_outside_worlds(backup_env) -> None:
+    """_world_directory raises ValueError for worlds that escape the worlds dir."""
+    import pytest
+    with pytest.raises(ValueError, match="existing direct child"):
+        env = backup_env
+        env["service"].create(world="../escape")
+
+
+def test_configured_world_falls_back_to_server_properties(backup_env) -> None:
+    """_configured_world reads level-name from server.properties when .env is absent."""
+    env = backup_env
+    # Remove LEVEL_NAME from .env so it falls through to server.properties
+    (env["project"] / ".env").unlink()
+    result = env["service"].create()
+    assert result["ok"]
+
+
+def test_configured_world_uses_single_directory_as_fallback(backup_env) -> None:
+    """_configured_world returns the sole world dir when no config files exist."""
+    env = backup_env
+    (env["project"] / ".env").unlink()
+    (env["project"] / "data" / "server.properties").unlink()
+    result = env["service"].create()
+    assert result["ok"]
+
+
+def test_docker_container_running_returns_false_when_docker_unavailable() -> None:
+    """docker_container_running returns False when docker binary is not found."""
+    from minecraft_manager.operations.backup import docker_container_running
+    # Use a container name that definitely doesn't exist; docker may not be installed
+    result = docker_container_running("__nonexistent_test_container__")
+    assert result is False

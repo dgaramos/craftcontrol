@@ -87,6 +87,8 @@ jobs:
               expected_pr_url="https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}"
               actual_pr_url="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/comments/${REPLY_COMMENT_ID}" --jq .pull_request_url)"
               [[ "$actual_pr_url" == "$expected_pr_url" ]] || { echo "reply comment does not belong to pr_number" >&2; exit 1; }
+              in_reply_to_id="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/comments/${REPLY_COMMENT_ID}" --jq '.in_reply_to_id // empty')"
+              [[ -z "$in_reply_to_id" ]] || { echo "reply_comment_id must be a top-level review comment, not a reply" >&2; exit 1; }
               gh api --method POST "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/comments" \
                 -f body="$REPLY_BODY" \
                 -F in_reply_to="$REPLY_COMMENT_ID"

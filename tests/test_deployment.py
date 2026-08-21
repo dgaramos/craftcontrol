@@ -190,6 +190,7 @@ def test_reviewer_publishers_support_thread_replies_without_creating_a_review() 
         assert "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/comments" in workflow
         assert '-F in_reply_to="$REPLY_COMMENT_ID"' in workflow
         assert "reply comment does not belong to pr_number" in workflow
+        assert "reply_comment_id must be a top-level review comment, not a reply" in workflow
         assert "resolve thread does not belong to pr_number" in workflow
         assert "resolveReviewThread" in workflow
         assert "permission-pull-requests: write" in workflow

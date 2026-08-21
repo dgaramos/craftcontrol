@@ -32,6 +32,7 @@ _VALID_STAGES = frozenset({
     "RESTART", "HEALTH_WAIT", "VERIFICATION", "CONFIRMATION",
 })
 _VALID_OUTCOMES = frozenset({"ok", "error", "skipped"})
+_MAX_LIST_LIMIT = 200
 
 
 class InvalidStateTransitionError(Exception):
@@ -129,7 +130,14 @@ class SQLiteOperationRepository:
         return self._deserialize(dict(row)) if row else None
 
     def list_operations(self, limit: int = 50) -> list[dict[str, Any]]:
-        """Return the *limit* most-recently created operations, newest first."""
+        """Return the *limit* most-recently created operations, newest first.
+
+        Raises ``ValueError`` if *limit* is not in the range ``[1, _MAX_LIST_LIMIT]``.
+        """
+        if not (1 <= limit <= _MAX_LIST_LIMIT):
+            raise ValueError(
+                f"limit must be between 1 and {_MAX_LIST_LIMIT}, got {limit!r}"
+            )
         with self._connect() as conn:
             rows = conn.execute(
                 "SELECT * FROM server_operations ORDER BY created_at DESC LIMIT ?",
@@ -206,11 +214,17 @@ class SQLiteOperationRepository:
             stage_log: list[dict[str, Any]] = json.loads(record["stage_log"] or "[]")
             found = False
             for entry in stage_log:
-                if entry["stage"] == stage and entry["outcome"] is None:
-                    entry["completed_at"] = completed_at
-                    entry["outcome"] = outcome
-                    entry["detail"] = detail
-                    found = True
+                if entry["stage"] == stage:
+                    if entry["outcome"] is None:
+                        # Open entry — close it.
+                        entry["completed_at"] = completed_at
+                        entry["outcome"] = outcome
+                        entry["detail"] = detail
+                        found = True
+                    elif entry["outcome"] == outcome and entry["detail"] == detail:
+                        # Already completed with identical values — idempotent return.
+                        return
+                    # Different outcome or detail: fall through so not found raises.
                     break
             if not found:
                 raise InvalidStateTransitionError(
@@ -248,6 +262,8 @@ class SQLiteOperationRepository:
         """
         if new_state not in _VALID_STATES:
             raise ValueError(f"unknown state: {new_state!r}")
+        if current_stage is not None and current_stage not in _VALID_STAGES:
+            raise ValueError(f"unknown stage: {current_stage!r}")
         is_terminal = new_state in _TERMINAL_STATES
         if is_terminal and completed_at is None:
             completed_at = updated_at

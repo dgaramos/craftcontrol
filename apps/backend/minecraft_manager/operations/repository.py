@@ -42,6 +42,13 @@ _ALLOWED_TRANSITIONS: dict[str, frozenset[str]] = {
     "IN_PROGRESS": frozenset({"APPLIED", "FAILED", "DIVERGENT", "CANCELLED"}),
 }
 _VALID_OUTCOMES = frozenset({"ok", "error", "skipped"})
+# Stages that must be completed before certain terminal states are permitted.
+# APPLIED requires CONFIRMATION (outcome recorded); DIVERGENT requires VERIFICATION.
+# FAILED and CANCELLED have no required-stage constraint.
+_TERMINAL_STAGE_REQUIRED: dict[str, str] = {
+    "APPLIED": "CONFIRMATION",
+    "DIVERGENT": "VERIFICATION",
+}
 _MAX_LIST_LIMIT = 200
 
 
@@ -298,8 +305,8 @@ class SQLiteOperationRepository:
                 raise InvalidStateTransitionError(
                     f"transition {current_state!r} → {new_state!r} is not permitted"
                 )
+            stage_log: list[dict[str, Any]] = json.loads(record["stage_log"] or "[]")
             if new_state == "CANCELLED":
-                stage_log: list[dict[str, Any]] = json.loads(record["stage_log"] or "[]")
                 highest_started = max(
                     (_STAGE_RANK[e["stage"]] for e in stage_log if e["stage"] in _STAGE_RANK),
                     default=-1,
@@ -307,6 +314,15 @@ class SQLiteOperationRepository:
                 if highest_started >= _CANCEL_BEFORE_STAGE_RANK:
                     raise InvalidStateTransitionError(
                         f"operation {operation_id!r} cannot be cancelled after RESTART has begun"
+                    )
+            if new_state in _TERMINAL_STAGE_REQUIRED:
+                required_stage = _TERMINAL_STAGE_REQUIRED[new_state]
+                completed_stages = {
+                    e["stage"] for e in stage_log if e.get("outcome") is not None
+                }
+                if required_stage not in completed_stages:
+                    raise InvalidStateTransitionError(
+                        f"transition to {new_state!r} requires {required_stage!r} to be completed"
                     )
             conn.execute(
                 "UPDATE server_operations SET "

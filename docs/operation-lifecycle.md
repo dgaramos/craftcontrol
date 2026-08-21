@@ -70,6 +70,7 @@ from `VERIFICATION`.
 
 ```text
 PENDING
+  ├─► CANCELLED    (explicit cancel before first stage begins)
   └─► IN_PROGRESS  (first stage begins)
         ├─► FAILED       (any stage errors)
         ├─► CANCELLED    (explicit cancel before RESTART)

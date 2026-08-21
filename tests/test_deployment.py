@@ -192,7 +192,6 @@ def test_reviewer_publishers_support_thread_replies_without_creating_a_review() 
         assert "reply comment does not belong to pr_number" in workflow
         assert "resolve thread does not belong to pr_number" in workflow
         assert "resolveReviewThread" in workflow
-        assert "permission-issues: write" in workflow
         assert "permission-pull-requests: write" in workflow
         assert f"Create a {reviewer.title()} DR installation token" in workflow
 

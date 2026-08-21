@@ -102,6 +102,10 @@ class TestCreateOperation:
         with pytest.raises(ValueError, match="already exists"):
             repo.create_operation(oid, "server_settings_update", "bob", {})
 
+    def test_rejects_invalid_operation_type(self, repo: SQLiteOperationRepository) -> None:
+        with pytest.raises(ValueError, match="unknown operation_type"):
+            repo.create_operation(_new_id(), "not_a_real_type", "alice", {})
+
 
 # ---------------------------------------------------------------------------
 # get_operation / list_operations
@@ -399,6 +403,34 @@ class TestTransitionState:
         repo.advance_stage(oid, "REVIEW", started_at=time.time())
         with pytest.raises(InvalidStateTransitionError, match=r"requires.*CONFIRMATION"):
             repo.transition_state(oid, "APPLIED", updated_at=time.time())
+
+    def test_in_progress_rejects_when_no_stage_started(self, repo: SQLiteOperationRepository) -> None:
+        # Transition to IN_PROGRESS is invalid when stage_log is empty (no stage ever started).
+        oid = _new_id()
+        repo.create_operation(oid, "server_settings_update", "alice", {})
+        with pytest.raises(InvalidStateTransitionError, match="at least one started stage"):
+            repo.transition_state(oid, "IN_PROGRESS", updated_at=time.time(), current_stage="REVIEW")
+
+    def test_in_progress_rejects_when_current_stage_differs_from_last_started(
+        self, db_path: Path, repo: SQLiteOperationRepository
+    ) -> None:
+        # Inject a PENDING operation with two stage_log entries so the last started
+        # stage is BACKUP_VERIFICATION. Passing REVIEW as current_stage must be rejected.
+        oid = _new_id()
+        repo.create_operation(oid, "server_settings_update", "alice", {})
+        t = time.time()
+        stage_log = json.dumps([
+            {"stage": "REVIEW", "started_at": t, "completed_at": None, "outcome": None, "detail": None},
+            {"stage": "BACKUP_VERIFICATION", "started_at": t + 0.001, "completed_at": None, "outcome": None, "detail": None},
+        ])
+        # Keep state as PENDING so the PENDING → IN_PROGRESS transition is valid.
+        with sqlite3.connect(db_path) as conn:
+            conn.execute(
+                "UPDATE server_operations SET stage_log=? WHERE operation_id=?",
+                (stage_log, oid),
+            )
+        with pytest.raises(InvalidStateTransitionError, match="last started stage"):
+            repo.transition_state(oid, "IN_PROGRESS", updated_at=time.time(), current_stage="REVIEW")
 
 
 class TestAdvanceStageOrdering:

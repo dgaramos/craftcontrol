@@ -50,6 +50,9 @@ _TERMINAL_STAGE_REQUIRED: dict[str, str] = {
     "DIVERGENT": "VERIFICATION",
 }
 _MAX_LIST_LIMIT = 200
+_VALID_OPERATION_TYPES = frozenset({
+    "server_settings_update",
+})
 
 
 class InvalidStateTransitionError(Exception):
@@ -98,8 +101,13 @@ class SQLiteOperationRepository:
 
         Returns the freshly created operation record as a dict.
         Raises ``ValueError`` if an operation with the same *operation_id*
-        already exists.
+        already exists or if *operation_type* is not a recognised value.
         """
+        if operation_type not in _VALID_OPERATION_TYPES:
+            raise ValueError(
+                f"unknown operation_type: {operation_type!r}; "
+                f"valid values are {sorted(_VALID_OPERATION_TYPES)}"
+            )
         now = time.time()
         with self._connect() as conn:
             existing = conn.execute(
@@ -306,6 +314,19 @@ class SQLiteOperationRepository:
                     f"transition {current_state!r} → {new_state!r} is not permitted"
                 )
             stage_log: list[dict[str, Any]] = json.loads(record["stage_log"] or "[]")
+            if new_state == "IN_PROGRESS":
+                started_stages = [e["stage"] for e in stage_log if e["stage"] in _VALID_STAGES]
+                if not started_stages:
+                    raise InvalidStateTransitionError(
+                        f"transition to 'IN_PROGRESS' requires at least one started stage, "
+                        f"but stage_log is empty for operation {operation_id!r}"
+                    )
+                last_started = started_stages[-1]
+                if current_stage != last_started:
+                    raise InvalidStateTransitionError(
+                        f"transition to 'IN_PROGRESS' requires current_stage={last_started!r} "
+                        f"(the last started stage), got {current_stage!r}"
+                    )
             if new_state == "CANCELLED":
                 highest_started = max(
                     (_STAGE_RANK[e["stage"]] for e in stage_log if e["stage"] in _STAGE_RANK),

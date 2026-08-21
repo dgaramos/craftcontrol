@@ -27,10 +27,20 @@ from .._db import SQLITE_BUSY_TIMEOUT_MS
 
 _TERMINAL_STATES = frozenset({"APPLIED", "FAILED", "DIVERGENT", "CANCELLED"})
 _VALID_STATES = frozenset({"PENDING", "IN_PROGRESS"}) | _TERMINAL_STATES
-_VALID_STAGES = frozenset({
+# Ordered stage sequence as defined in docs/operation-lifecycle.md.
+_STAGE_ORDER: list[str] = [
     "REVIEW", "BACKUP_VERIFICATION", "PREPARATION",
     "RESTART", "HEALTH_WAIT", "VERIFICATION", "CONFIRMATION",
-})
+]
+_VALID_STAGES = frozenset(_STAGE_ORDER)
+_STAGE_RANK: dict[str, int] = {s: i for i, s in enumerate(_STAGE_ORDER)}
+# CANCELLED is only valid before RESTART (index 3).
+_CANCEL_BEFORE_STAGE_RANK = _STAGE_RANK["RESTART"]
+# Allowed state transitions per source state (terminal → nothing, enforced separately).
+_ALLOWED_TRANSITIONS: dict[str, frozenset[str]] = {
+    "PENDING": frozenset({"IN_PROGRESS", "CANCELLED"}),
+    "IN_PROGRESS": frozenset({"APPLIED", "FAILED", "DIVERGENT", "CANCELLED"}),
+}
 _VALID_OUTCOMES = frozenset({"ok", "error", "skipped"})
 _MAX_LIST_LIMIT = 200
 
@@ -178,6 +188,15 @@ class SQLiteOperationRepository:
             stage_log: list[dict[str, Any]] = json.loads(record["stage_log"] or "[]")
             if any(entry["stage"] == stage for entry in stage_log):
                 return  # idempotent
+            # Enforce stage ordering: the new stage must immediately follow the
+            # highest stage already recorded (or be REVIEW as the first stage).
+            started_ranks = [_STAGE_RANK[e["stage"]] for e in stage_log if e["stage"] in _STAGE_RANK]
+            expected_rank = (max(started_ranks) + 1) if started_ranks else 0
+            if _STAGE_RANK[stage] != expected_rank:
+                expected_stage = _STAGE_ORDER[expected_rank]
+                raise InvalidStateTransitionError(
+                    f"expected next stage {expected_stage!r}, got {stage!r}"
+                )
             stage_log.append({"stage": stage, "started_at": started_at, "completed_at": None, "outcome": None, "detail": None})
             new_state = "IN_PROGRESS" if state == "PENDING" else state
             conn.execute(
@@ -269,10 +288,26 @@ class SQLiteOperationRepository:
             completed_at = updated_at
         with self._connect() as conn:
             record = self._row_or_raise(conn, operation_id)
-            if record["state"] in _TERMINAL_STATES:
+            current_state = record["state"]
+            if current_state in _TERMINAL_STATES:
                 raise InvalidStateTransitionError(
-                    f"operation {operation_id!r} is already terminal ({record['state']!r})"
+                    f"operation {operation_id!r} is already terminal ({current_state!r})"
                 )
+            allowed = _ALLOWED_TRANSITIONS.get(current_state, frozenset())
+            if new_state not in allowed:
+                raise InvalidStateTransitionError(
+                    f"transition {current_state!r} → {new_state!r} is not permitted"
+                )
+            if new_state == "CANCELLED":
+                stage_log: list[dict[str, Any]] = json.loads(record["stage_log"] or "[]")
+                highest_started = max(
+                    (_STAGE_RANK[e["stage"]] for e in stage_log if e["stage"] in _STAGE_RANK),
+                    default=-1,
+                )
+                if highest_started >= _CANCEL_BEFORE_STAGE_RANK:
+                    raise InvalidStateTransitionError(
+                        f"operation {operation_id!r} cannot be cancelled after RESTART has begun"
+                    )
             conn.execute(
                 "UPDATE server_operations SET "
                 "state=?, current_stage=?, updated_at=?, completed_at=?, "

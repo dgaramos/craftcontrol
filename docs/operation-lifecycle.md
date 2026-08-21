@@ -168,6 +168,15 @@ executor is responsible only for PREPARATION, RESTART, and HEALTH_WAIT. It
 reports back a structured result that the application service uses to advance the
 stage log. Executors do not write to the operation record directly.
 
+### Executor invocation
+
+The application service invokes the executor with at minimum:
+
+| Field | Type | Description |
+|---|---|---|
+| `operation_id` | UUID | The stable correlation identifier for this operation. Executors must include it in any logs or audit records they produce. |
+| `intended_state` | object | The configuration snapshot the executor must apply. |
+
 ### Executor result shape
 
 An executor must return a plain object with the following fields after completing
@@ -178,11 +187,21 @@ its scope (PREPARATION through HEALTH_WAIT):
 | `outcome` | `ok` \| `error` | Whether the executor completed its scope without error. |
 | `executor_ref` | string \| null | Opaque executor-local handle for correlation and audit. |
 | `health_reached` | bool | True if the health probe confirmed server readiness within the deadline. |
+| `failed_stage` | enum \| null | The stage at which an error occurred (`PREPARATION`, `RESTART`, or `HEALTH_WAIT`); null when `outcome` is `ok`. |
 | `detail` | string \| null | Human-readable summary or error message. |
 
-The application service maps this result to stage log entries and advances the
-operation state. A future host agent that emits this same shape requires no
-changes to the application layer.
+Because the executor covers three stages (PREPARATION, RESTART, HEALTH_WAIT) but
+returns a single result object, the application service is responsible for
+expanding it into per-stage `stage_log` entries. The mapping rule is:
+
+- Stages preceding `failed_stage` receive `outcome: ok`.
+- `failed_stage` receives `outcome: error` and the `detail` value.
+- Stages after `failed_stage` receive `outcome: skipped`.
+- When `outcome` is `ok`, all three stages receive `outcome: ok`; `health_reached`
+  is reflected in the `HEALTH_WAIT` entry's `detail`.
+
+A future host agent that emits this same shape requires no changes to the
+application layer.
 
 ---
 

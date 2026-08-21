@@ -1,0 +1,74 @@
+name: Publish Cody DR review
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number
+        required: true
+        type: string
+      event:
+        description: Review event
+        required: true
+        default: REQUEST_CHANGES
+        type: choice
+        options: [REQUEST_CHANGES, COMMENT, APPROVE]
+      review_body:
+        description: Review summary in Markdown
+        required: true
+        type: string
+      comment_path:
+        description: Optional changed-file path for an inline finding
+        required: false
+        type: string
+      comment_line:
+        description: Optional line on the RIGHT side of the diff
+        required: false
+        type: string
+      comment_body:
+        description: Optional inline finding in Markdown
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create a Cody DR installation token
+        id: cody-token
+        uses: actions/create-github-app-token@v3.2.0
+        with:
+          client-id: ${{ vars.CODY_DR_CLIENT_ID }}
+          private-key: ${{ secrets.CODY_DR_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-pull-requests: write
+
+      - name: Submit review
+        env:
+          GH_TOKEN: ${{ steps.cody-token.outputs.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          REVIEW_EVENT: ${{ inputs.event }}
+          REVIEW_BODY: ${{ inputs.review_body }}
+          COMMENT_PATH: ${{ inputs.comment_path }}
+          COMMENT_LINE: ${{ inputs.comment_line }}
+          COMMENT_BODY: ${{ inputs.comment_body }}
+        run: |
+          set -euo pipefail
+          head_sha="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq .head.sha)"
+          jq -n \
+            --arg event "$REVIEW_EVENT" \
+            --arg body "$REVIEW_BODY" \
+            --arg commit_id "$head_sha" \
+            --arg path "$COMMENT_PATH" \
+            --arg line "$COMMENT_LINE" \
+            --arg comment "$COMMENT_BODY" \
+            '{event: $event, body: $body, commit_id: $commit_id}
+             + (if $path != "" and $line != "" and $comment != ""
+                then {comments: [{path: $path, line: ($line | tonumber), side: "RIGHT", body: $comment}]}
+                else {}
+                end)' > review.json
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/reviews" --input review.json

@@ -104,24 +104,36 @@ def _migration_005_server_operations(connection: sqlite3.Connection) -> None:
     connection.execute(
         "CREATE TABLE IF NOT EXISTS server_operations ("
         "operation_id TEXT PRIMARY KEY, "
-        "operation_type TEXT NOT NULL, "
-        "state TEXT NOT NULL, "
-        "current_stage TEXT, "
-        "initiated_by TEXT NOT NULL, "
+        "server_id TEXT NOT NULL, "
+        "state TEXT NOT NULL CHECK(state IN ('pending','running','confirmed','failed','divergent')), "
+        "requested_changes TEXT NOT NULL DEFAULT '{}', "
         "created_at REAL NOT NULL, "
         "updated_at REAL NOT NULL, "
         "completed_at REAL, "
-        "stage_log TEXT NOT NULL DEFAULT '[]', "
-        "intended_state TEXT NOT NULL DEFAULT '{}', "
-        "observed_state TEXT, "
-        "divergence_detail TEXT, "
-        "executor_ref TEXT, "
-        "error_detail TEXT, "
-        "CHECK(state IN ('PENDING','IN_PROGRESS','APPLIED','FAILED','DIVERGENT','CANCELLED'))"
-        ")"
+        "terminal_error TEXT, "
+        "observation TEXT NOT NULL DEFAULT '{}', "
+        "correlation_id TEXT)"
     )
-    connection.execute("CREATE INDEX IF NOT EXISTS idx_server_operations_state ON server_operations(state, created_at DESC)")
-    connection.execute("CREATE INDEX IF NOT EXISTS idx_server_operations_created ON server_operations(created_at DESC)")
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_server_operations_server ON server_operations(server_id,created_at DESC)"
+    )
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_server_operations_state ON server_operations(server_id,state)"
+    )
+    connection.execute(
+        "CREATE TABLE IF NOT EXISTS operation_stages ("
+        "operation_id TEXT NOT NULL REFERENCES server_operations(operation_id), "
+        "stage TEXT NOT NULL, "
+        "result TEXT NOT NULL CHECK(result IN ('pending','running','completed','failed','skipped')), "
+        "started_at REAL, "
+        "completed_at REAL, "
+        "evidence TEXT NOT NULL DEFAULT '{}', "
+        "error TEXT, "
+        "PRIMARY KEY(operation_id, stage))"
+    )
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_operation_stages_op ON operation_stages(operation_id)"
+    )
 
 
 MIGRATIONS: Mapping[int, Migration] = {

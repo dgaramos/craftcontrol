@@ -7,6 +7,7 @@ from .players import PlayerService
 from .telemetry_service import TelemetryService
 from .server import WorldService
 from .reconciliation import ReconciliationService
+from .operations import ServerOperationService
 
 
 class ManagerService:
@@ -30,6 +31,7 @@ class ManagerService:
         telemetry_service: TelemetryService | None = None,
         world_service: WorldService | None = None,
         reconciliation_service: ReconciliationService | None = None,
+        operation_service: ServerOperationService | None = None,
     ) -> None:
         self.repository = repository
         self.files = files
@@ -66,6 +68,8 @@ class ManagerService:
                 "with all domain services injected."
             )
         self._reconciliation = reconciliation_service
+        # operation_service is optional; None disables durable operation tracking.
+        self.operation_service: ServerOperationService | None = operation_service
 
     def attach_runtime(self, runtime: RuntimeSupervisor) -> None:
         if self.runtime is not None:
@@ -142,9 +146,23 @@ class ManagerService:
         changes = {key: validate_value(SETTINGS[key], value) for key, value in payload.items() if key in SETTINGS}
         if not changes:
             raise ValueError("Nenhuma configuração válida")
-        self.files.write_env(changes)
-        self.repository.store("settings", changes, "manager")
-        self.broker.publish("state.changed", "manager", {"domains": ["settings"], "keys": list(changes)})
+
+        if self.operation_service is not None:
+            # Route through the durable operation lifecycle (issue #190).
+            # The apply_fn performs the actual disk write inside the operation.
+            def _apply() -> None:
+                self.files.write_env(changes)
+                self.repository.store("settings", changes, "manager")
+                self.broker.publish("state.changed", "manager", {"domains": ["settings"], "keys": list(changes)})
+
+            self.operation_service.apply_restart_required(changes, _apply)
+        else:
+            # Fallback for contexts where operation tracking is not wired in
+            # (e.g. existing tests that compose ManagerService directly).
+            self.files.write_env(changes)
+            self.repository.store("settings", changes, "manager")
+            self.broker.publish("state.changed", "manager", {"domains": ["settings"], "keys": list(changes)})
+
         return list(changes)
 
     def set_gamerule(self, rule: str, value: Any) -> str:

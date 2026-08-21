@@ -1,15 +1,16 @@
 """Operational reliability use cases."""
 
 from .backup import BackupService
-from .repository import (
-    InvalidStateTransitionError,
-    OperationNotFoundError,
-    SQLiteOperationRepository,
-)
+from .lifecycle import OperationStage, OperationState, ServerOperation
+from .repository import SQLiteOperationRepository
+from .service import ConflictingOperationError, ServerOperationService
 
 __all__ = [
     "BackupService",
-    "InvalidStateTransitionError",
-    "OperationNotFoundError",
+    "ConflictingOperationError",
+    "OperationStage",
+    "OperationState",
     "SQLiteOperationRepository",
+    "ServerOperation",
+    "ServerOperationService",
 ]

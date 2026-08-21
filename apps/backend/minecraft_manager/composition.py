@@ -17,6 +17,7 @@ from .telemetry_service import TelemetryService
 from .telemetry_repository import SQLiteTelemetryRepository
 from .server import WorldService
 from .reconciliation import ReconciliationService
+from .operations import ServerOperationService, SQLiteOperationRepository
 
 
 def _docker_factory() -> object:
@@ -52,6 +53,13 @@ def compose_manager(
         player_service=players,
         telemetry_service=telemetry,
     )
+    operation_repo = SQLiteOperationRepository(settings.database)
+    operation_service = ServerOperationService(
+        operation_repository=operation_repo,
+        docker=docker,
+        broker=broker,
+        server_id=settings.container,
+    )
     manager = ManagerService(
         repository=repository,
         files=files,
@@ -63,6 +71,7 @@ def compose_manager(
         telemetry_service=telemetry,
         world_service=world,
         reconciliation_service=reconciliation,
+        operation_service=operation_service,
     )
     if runtime is None:
         runtime = EventRuntime(

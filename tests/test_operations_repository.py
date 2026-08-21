@@ -381,7 +381,7 @@ class TestTransitionState:
         oid = _new_id()
         repo.create_operation(oid, "server_settings_update", "alice", {})
         _run_stages_through(repo, oid, "VERIFICATION")
-        with pytest.raises(InvalidStateTransitionError, match="requires.*CONFIRMATION"):
+        with pytest.raises(InvalidStateTransitionError, match=r"requires.*CONFIRMATION"):
             repo.transition_state(oid, "APPLIED", updated_at=time.time())
 
     def test_raises_for_divergent_without_verification(self, repo: SQLiteOperationRepository) -> None:
@@ -389,7 +389,7 @@ class TestTransitionState:
         oid = _new_id()
         repo.create_operation(oid, "server_settings_update", "alice", {})
         _run_stages_through(repo, oid, "HEALTH_WAIT")
-        with pytest.raises(InvalidStateTransitionError, match="requires.*VERIFICATION"):
+        with pytest.raises(InvalidStateTransitionError, match=r"requires.*VERIFICATION"):
             repo.transition_state(oid, "DIVERGENT", updated_at=time.time())
 
     def test_raises_for_applied_after_review_only(self, repo: SQLiteOperationRepository) -> None:
@@ -397,7 +397,7 @@ class TestTransitionState:
         oid = _new_id()
         repo.create_operation(oid, "server_settings_update", "alice", {})
         repo.advance_stage(oid, "REVIEW", started_at=time.time())
-        with pytest.raises(InvalidStateTransitionError, match="requires.*CONFIRMATION"):
+        with pytest.raises(InvalidStateTransitionError, match=r"requires.*CONFIRMATION"):
             repo.transition_state(oid, "APPLIED", updated_at=time.time())
 
 

@@ -232,10 +232,11 @@ class TestCompleteStage:
 # ---------------------------------------------------------------------------
 
 class TestTransitionState:
-    @pytest.mark.parametrize("terminal", ["APPLIED", "FAILED", "DIVERGENT", "CANCELLED"])
+    @pytest.mark.parametrize("terminal", ["APPLIED", "FAILED", "DIVERGENT"])
     def test_terminal_states_set_completed_at(self, repo: SQLiteOperationRepository, terminal: str) -> None:
         oid = _new_id()
         repo.create_operation(oid, "server_settings_update", "alice", {})
+        repo.advance_stage(oid, "REVIEW", started_at=time.time())
         t = time.time()
         repo.transition_state(oid, terminal, updated_at=t)
         op = repo.get_operation(oid)
@@ -243,9 +244,20 @@ class TestTransitionState:
         assert op["completed_at"] is not None
         assert op["current_stage"] is None
 
+    def test_cancelled_from_pending_sets_completed_at(self, repo: SQLiteOperationRepository) -> None:
+        oid = _new_id()
+        repo.create_operation(oid, "server_settings_update", "alice", {})
+        t = time.time()
+        repo.transition_state(oid, "CANCELLED", updated_at=t)
+        op = repo.get_operation(oid)
+        assert op["state"] == "CANCELLED"
+        assert op["completed_at"] is not None
+        assert op["current_stage"] is None
+
     def test_terminal_rejects_further_transitions(self, repo: SQLiteOperationRepository) -> None:
         oid = _new_id()
         repo.create_operation(oid, "server_settings_update", "alice", {})
+        repo.advance_stage(oid, "REVIEW", started_at=time.time())
         repo.transition_state(oid, "APPLIED", updated_at=time.time())
         with pytest.raises(InvalidStateTransitionError):
             repo.transition_state(oid, "FAILED", updated_at=time.time())
@@ -269,6 +281,7 @@ class TestTransitionState:
     def test_divergent_stores_detail(self, repo: SQLiteOperationRepository) -> None:
         oid = _new_id()
         repo.create_operation(oid, "server_settings_update", "alice", {})
+        repo.advance_stage(oid, "REVIEW", started_at=time.time())
         detail = [{"field": "difficulty", "intended": "hard", "observed": "normal"}]
         repo.transition_state(
             oid,
@@ -284,6 +297,7 @@ class TestTransitionState:
     def test_failed_stores_error_detail(self, repo: SQLiteOperationRepository) -> None:
         oid = _new_id()
         repo.create_operation(oid, "server_settings_update", "alice", {})
+        repo.advance_stage(oid, "REVIEW", started_at=time.time())
         error = {"code": "executor_timeout", "message": "timed out", "stage": "RESTART"}
         repo.transition_state(oid, "FAILED", updated_at=time.time(), error_detail=error)
         op = repo.get_operation(oid)
@@ -292,9 +306,53 @@ class TestTransitionState:
     def test_executor_ref_is_stored(self, repo: SQLiteOperationRepository) -> None:
         oid = _new_id()
         repo.create_operation(oid, "server_settings_update", "alice", {})
+        repo.advance_stage(oid, "REVIEW", started_at=time.time())
         repo.transition_state(oid, "APPLIED", updated_at=time.time(), executor_ref="compose:restart:abc123")
         op = repo.get_operation(oid)
         assert op["executor_ref"] == "compose:restart:abc123"
+
+    def test_raises_for_invalid_transition_pending_to_applied(self, repo: SQLiteOperationRepository) -> None:
+        oid = _new_id()
+        repo.create_operation(oid, "server_settings_update", "alice", {})
+        with pytest.raises(InvalidStateTransitionError, match="not permitted"):
+            repo.transition_state(oid, "APPLIED", updated_at=time.time())
+
+    def test_raises_for_invalid_transition_pending_to_divergent(self, repo: SQLiteOperationRepository) -> None:
+        oid = _new_id()
+        repo.create_operation(oid, "server_settings_update", "alice", {})
+        with pytest.raises(InvalidStateTransitionError, match="not permitted"):
+            repo.transition_state(oid, "DIVERGENT", updated_at=time.time())
+
+    def test_raises_for_cancelled_after_restart_begins(self, repo: SQLiteOperationRepository) -> None:
+        oid = _new_id()
+        repo.create_operation(oid, "server_settings_update", "alice", {})
+        for stage in ["REVIEW", "BACKUP_VERIFICATION", "PREPARATION", "RESTART"]:
+            repo.advance_stage(oid, stage, started_at=time.time())
+        with pytest.raises(InvalidStateTransitionError, match="cannot be cancelled"):
+            repo.transition_state(oid, "CANCELLED", updated_at=time.time())
+
+
+class TestAdvanceStageOrdering:
+    def test_raises_when_first_stage_is_not_review(self, repo: SQLiteOperationRepository) -> None:
+        oid = _new_id()
+        repo.create_operation(oid, "server_settings_update", "alice", {})
+        with pytest.raises(InvalidStateTransitionError, match="expected next stage"):
+            repo.advance_stage(oid, "RESTART", started_at=time.time())
+
+    def test_raises_when_stage_skips_ahead(self, repo: SQLiteOperationRepository) -> None:
+        oid = _new_id()
+        repo.create_operation(oid, "server_settings_update", "alice", {})
+        repo.advance_stage(oid, "REVIEW", started_at=time.time())
+        with pytest.raises(InvalidStateTransitionError, match="expected next stage"):
+            repo.advance_stage(oid, "PREPARATION", started_at=time.time())
+
+    def test_sequential_stages_are_accepted(self, repo: SQLiteOperationRepository) -> None:
+        oid = _new_id()
+        repo.create_operation(oid, "server_settings_update", "alice", {})
+        for stage in ["REVIEW", "BACKUP_VERIFICATION", "PREPARATION", "RESTART"]:
+            repo.advance_stage(oid, stage, started_at=time.time())
+        op = repo.get_operation(oid)
+        assert op["current_stage"] == "RESTART"
 
 
 # ---------------------------------------------------------------------------

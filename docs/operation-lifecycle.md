@@ -68,7 +68,7 @@ from `VERIFICATION`.
 
 ## Transitions
 
-```
+```text
 PENDING
   └─► IN_PROGRESS  (first stage begins)
         ├─► FAILED       (any stage errors)

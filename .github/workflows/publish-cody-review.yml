@@ -81,7 +81,9 @@ jobs:
             expected_pr_url="https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}"
             actual_pr_url="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/comments/${REPLY_COMMENT_ID}" --jq .pull_request_url)"
             [[ "$actual_pr_url" == "$expected_pr_url" ]] || { echo "reply comment does not belong to pr_number" >&2; exit 1; }
-            gh api --method POST "repos/${GITHUB_REPOSITORY}/pulls/comments/${REPLY_COMMENT_ID}/replies" -f body="$REPLY_BODY"
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/comments" \
+              -f body="$REPLY_BODY" \
+              -F in_reply_to="$REPLY_COMMENT_ID"
             exit 0
           fi
           [[ -n "$REVIEW_BODY" ]] || { echo "review_body is required outside reply mode" >&2; exit 1; }

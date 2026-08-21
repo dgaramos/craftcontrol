@@ -52,6 +52,30 @@ def _new_id() -> str:
     return str(uuid.uuid4())
 
 
+_ALL_STAGES = [
+    "REVIEW", "BACKUP_VERIFICATION", "PREPARATION",
+    "RESTART", "HEALTH_WAIT", "VERIFICATION", "CONFIRMATION",
+]
+
+
+def _run_all_stages(repo: SQLiteOperationRepository, oid: str) -> None:
+    """Advance and complete every stage in lifecycle order."""
+    t = time.time()
+    for i, stage in enumerate(_ALL_STAGES):
+        repo.advance_stage(oid, stage, started_at=t + i * 0.001)
+        repo.complete_stage(oid, stage, outcome="ok", completed_at=t + i * 0.001 + 0.0005)
+
+
+def _run_stages_through(repo: SQLiteOperationRepository, oid: str, last: str) -> None:
+    """Advance and complete stages up to and including *last*."""
+    t = time.time()
+    for i, stage in enumerate(_ALL_STAGES):
+        repo.advance_stage(oid, stage, started_at=t + i * 0.001)
+        repo.complete_stage(oid, stage, outcome="ok", completed_at=t + i * 0.001 + 0.0005)
+        if stage == last:
+            break
+
+
 # ---------------------------------------------------------------------------
 # create_operation
 # ---------------------------------------------------------------------------
@@ -232,15 +256,36 @@ class TestCompleteStage:
 # ---------------------------------------------------------------------------
 
 class TestTransitionState:
-    @pytest.mark.parametrize("terminal", ["APPLIED", "FAILED", "DIVERGENT"])
-    def test_terminal_states_set_completed_at(self, repo: SQLiteOperationRepository, terminal: str) -> None:
+    def test_applied_sets_completed_at(self, repo: SQLiteOperationRepository) -> None:
+        oid = _new_id()
+        repo.create_operation(oid, "server_settings_update", "alice", {})
+        _run_all_stages(repo, oid)
+        t = time.time()
+        repo.transition_state(oid, "APPLIED", updated_at=t)
+        op = repo.get_operation(oid)
+        assert op["state"] == "APPLIED"
+        assert op["completed_at"] is not None
+        assert op["current_stage"] is None
+
+    def test_divergent_sets_completed_at(self, repo: SQLiteOperationRepository) -> None:
+        oid = _new_id()
+        repo.create_operation(oid, "server_settings_update", "alice", {})
+        _run_stages_through(repo, oid, "VERIFICATION")
+        t = time.time()
+        repo.transition_state(oid, "DIVERGENT", updated_at=t)
+        op = repo.get_operation(oid)
+        assert op["state"] == "DIVERGENT"
+        assert op["completed_at"] is not None
+        assert op["current_stage"] is None
+
+    def test_failed_sets_completed_at(self, repo: SQLiteOperationRepository) -> None:
         oid = _new_id()
         repo.create_operation(oid, "server_settings_update", "alice", {})
         repo.advance_stage(oid, "REVIEW", started_at=time.time())
         t = time.time()
-        repo.transition_state(oid, terminal, updated_at=t)
+        repo.transition_state(oid, "FAILED", updated_at=t)
         op = repo.get_operation(oid)
-        assert op["state"] == terminal
+        assert op["state"] == "FAILED"
         assert op["completed_at"] is not None
         assert op["current_stage"] is None
 
@@ -257,7 +302,7 @@ class TestTransitionState:
     def test_terminal_rejects_further_transitions(self, repo: SQLiteOperationRepository) -> None:
         oid = _new_id()
         repo.create_operation(oid, "server_settings_update", "alice", {})
-        repo.advance_stage(oid, "REVIEW", started_at=time.time())
+        _run_all_stages(repo, oid)
         repo.transition_state(oid, "APPLIED", updated_at=time.time())
         with pytest.raises(InvalidStateTransitionError):
             repo.transition_state(oid, "FAILED", updated_at=time.time())
@@ -281,7 +326,7 @@ class TestTransitionState:
     def test_divergent_stores_detail(self, repo: SQLiteOperationRepository) -> None:
         oid = _new_id()
         repo.create_operation(oid, "server_settings_update", "alice", {})
-        repo.advance_stage(oid, "REVIEW", started_at=time.time())
+        _run_stages_through(repo, oid, "VERIFICATION")
         detail = [{"field": "difficulty", "intended": "hard", "observed": "normal"}]
         repo.transition_state(
             oid,
@@ -306,7 +351,7 @@ class TestTransitionState:
     def test_executor_ref_is_stored(self, repo: SQLiteOperationRepository) -> None:
         oid = _new_id()
         repo.create_operation(oid, "server_settings_update", "alice", {})
-        repo.advance_stage(oid, "REVIEW", started_at=time.time())
+        _run_all_stages(repo, oid)
         repo.transition_state(oid, "APPLIED", updated_at=time.time(), executor_ref="compose:restart:abc123")
         op = repo.get_operation(oid)
         assert op["executor_ref"] == "compose:restart:abc123"
@@ -330,6 +375,30 @@ class TestTransitionState:
             repo.advance_stage(oid, stage, started_at=time.time())
         with pytest.raises(InvalidStateTransitionError, match="cannot be cancelled"):
             repo.transition_state(oid, "CANCELLED", updated_at=time.time())
+
+    def test_raises_for_applied_without_confirmation(self, repo: SQLiteOperationRepository) -> None:
+        # APPLIED requires CONFIRMATION to be completed; only running through VERIFICATION is not enough.
+        oid = _new_id()
+        repo.create_operation(oid, "server_settings_update", "alice", {})
+        _run_stages_through(repo, oid, "VERIFICATION")
+        with pytest.raises(InvalidStateTransitionError, match="requires.*CONFIRMATION"):
+            repo.transition_state(oid, "APPLIED", updated_at=time.time())
+
+    def test_raises_for_divergent_without_verification(self, repo: SQLiteOperationRepository) -> None:
+        # DIVERGENT requires VERIFICATION to be completed; stopping after HEALTH_WAIT is not enough.
+        oid = _new_id()
+        repo.create_operation(oid, "server_settings_update", "alice", {})
+        _run_stages_through(repo, oid, "HEALTH_WAIT")
+        with pytest.raises(InvalidStateTransitionError, match="requires.*VERIFICATION"):
+            repo.transition_state(oid, "DIVERGENT", updated_at=time.time())
+
+    def test_raises_for_applied_after_review_only(self, repo: SQLiteOperationRepository) -> None:
+        # Regression guard: confirm REVIEW alone is never sufficient for APPLIED.
+        oid = _new_id()
+        repo.create_operation(oid, "server_settings_update", "alice", {})
+        repo.advance_stage(oid, "REVIEW", started_at=time.time())
+        with pytest.raises(InvalidStateTransitionError, match="requires.*CONFIRMATION"):
+            repo.transition_state(oid, "APPLIED", updated_at=time.time())
 
 
 class TestAdvanceStageOrdering:

@@ -4,6 +4,7 @@ from flask import Blueprint, g, jsonify, request
 
 from .dependencies import manager
 from ..auth.http import auth_service, require
+from ..operations import ConflictingOperationError
 
 server_api = Blueprint("server_api", __name__)
 
@@ -13,6 +14,8 @@ server_api = Blueprint("server_api", __name__)
 def update_config():
     try:
         changed = manager().save_settings(request.get_json(force=True))
+    except ConflictingOperationError as error:
+        return jsonify(error=str(error)), 409
     except (TypeError, ValueError) as error:
         return jsonify(error=str(error)), 400
     return jsonify(ok=True, restart_required=True, changed=changed)

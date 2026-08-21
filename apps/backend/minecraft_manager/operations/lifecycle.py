@@ -169,6 +169,7 @@ class ServerOperation:
         return self
 
     def begin_stage(self, stage: OperationStage, evidence: dict[str, Any] | None = None) -> ServerOperation:
+        self._assert_state(OperationState.RUNNING)
         record = self._stage(stage)
         record.result = StageResult.RUNNING
         record.started_at = _now()
@@ -178,6 +179,7 @@ class ServerOperation:
         return self
 
     def complete_stage(self, stage: OperationStage, evidence: dict[str, Any] | None = None) -> ServerOperation:
+        self._assert_state(OperationState.RUNNING)
         record = self._stage(stage)
         record.result = StageResult.COMPLETED
         record.completed_at = _now()
@@ -209,6 +211,7 @@ class ServerOperation:
         return self
 
     def confirm(self, evidence: dict[str, Any] | None = None) -> ServerOperation:
+        self._assert_state(OperationState.RUNNING)
         confirm_record = self._stage(OperationStage.CONFIRM)
         confirm_record.result = StageResult.COMPLETED
         confirm_record.completed_at = _now()
@@ -220,6 +223,7 @@ class ServerOperation:
         return self
 
     def diverge(self, error: str, observation: dict[str, Any] | None = None) -> ServerOperation:
+        self._assert_state(OperationState.RUNNING)
         self.state = OperationState.DIVERGENT
         self.terminal_error = error
         if observation:

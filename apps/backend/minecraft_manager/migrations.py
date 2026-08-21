@@ -100,11 +100,36 @@ def _migration_004_daily_player_aggregates(connection: sqlite3.Connection) -> No
     connection.execute("CREATE INDEX IF NOT EXISTS idx_player_daily_day ON player_daily(day,identity)")
 
 
+def _migration_005_server_operations(connection: sqlite3.Connection) -> None:
+    connection.execute(
+        "CREATE TABLE IF NOT EXISTS server_operations ("
+        "operation_id TEXT PRIMARY KEY, "
+        "operation_type TEXT NOT NULL, "
+        "state TEXT NOT NULL, "
+        "current_stage TEXT, "
+        "initiated_by TEXT NOT NULL, "
+        "created_at REAL NOT NULL, "
+        "updated_at REAL NOT NULL, "
+        "completed_at REAL, "
+        "stage_log TEXT NOT NULL DEFAULT '[]', "
+        "intended_state TEXT NOT NULL DEFAULT '{}', "
+        "observed_state TEXT, "
+        "divergence_detail TEXT, "
+        "executor_ref TEXT, "
+        "error_detail TEXT, "
+        "CHECK(state IN ('PENDING','IN_PROGRESS','APPLIED','FAILED','DIVERGENT','CANCELLED'))"
+        ")"
+    )
+    connection.execute("CREATE INDEX IF NOT EXISTS idx_server_operations_state ON server_operations(state, created_at DESC)")
+    connection.execute("CREATE INDEX IF NOT EXISTS idx_server_operations_created ON server_operations(created_at DESC)")
+
+
 MIGRATIONS: Mapping[int, Migration] = {
     1: _migration_001_initial_schema,
     2: _migration_002_retain_telemetry_payloads,
     3: _migration_003_local_accounts,
     4: _migration_004_daily_player_aggregates,
+    5: _migration_005_server_operations,
 }
 LATEST_SCHEMA_VERSION = max(MIGRATIONS)
 

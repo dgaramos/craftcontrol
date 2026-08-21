@@ -105,6 +105,18 @@ class TestQueries:
             repo.create_operation(_new_id(), "server_settings_update", "alice", {})
         assert len(repo.list_operations(limit=3)) == 3
 
+    def test_list_operations_rejects_negative_limit(self, repo: SQLiteOperationRepository) -> None:
+        with pytest.raises(ValueError, match="limit must be between"):
+            repo.list_operations(limit=-1)
+
+    def test_list_operations_rejects_zero_limit(self, repo: SQLiteOperationRepository) -> None:
+        with pytest.raises(ValueError, match="limit must be between"):
+            repo.list_operations(limit=0)
+
+    def test_list_operations_rejects_overlarge_limit(self, repo: SQLiteOperationRepository) -> None:
+        with pytest.raises(ValueError, match="limit must be between"):
+            repo.list_operations(limit=201)
+
 
 # ---------------------------------------------------------------------------
 # advance_stage
@@ -194,6 +206,26 @@ class TestCompleteStage:
         with pytest.raises(ValueError, match="unknown outcome"):
             repo.complete_stage(oid, "REVIEW", outcome="bad", completed_at=time.time())
 
+    def test_idempotent_for_repeated_completion_with_same_values(self, repo: SQLiteOperationRepository) -> None:
+        oid = _new_id()
+        repo.create_operation(oid, "server_settings_update", "alice", {})
+        t = time.time()
+        repo.advance_stage(oid, "REVIEW", started_at=t)
+        repo.complete_stage(oid, "REVIEW", outcome="ok", completed_at=t + 1, detail="passed")
+        # Replaying with identical values must not raise.
+        repo.complete_stage(oid, "REVIEW", outcome="ok", completed_at=t + 2, detail="passed")
+        op = repo.get_operation(oid)
+        assert op["stage_log"][0]["outcome"] == "ok"
+
+    def test_raises_for_repeated_completion_with_different_outcome(self, repo: SQLiteOperationRepository) -> None:
+        oid = _new_id()
+        repo.create_operation(oid, "server_settings_update", "alice", {})
+        t = time.time()
+        repo.advance_stage(oid, "REVIEW", started_at=t)
+        repo.complete_stage(oid, "REVIEW", outcome="ok", completed_at=t + 1)
+        with pytest.raises(InvalidStateTransitionError):
+            repo.complete_stage(oid, "REVIEW", outcome="error", completed_at=t + 2)
+
 
 # ---------------------------------------------------------------------------
 # transition_state
@@ -223,6 +255,12 @@ class TestTransitionState:
         repo.create_operation(oid, "server_settings_update", "alice", {})
         with pytest.raises(ValueError, match="unknown state"):
             repo.transition_state(oid, "NOPE", updated_at=time.time())
+
+    def test_raises_for_unknown_current_stage(self, repo: SQLiteOperationRepository) -> None:
+        oid = _new_id()
+        repo.create_operation(oid, "server_settings_update", "alice", {})
+        with pytest.raises(ValueError, match="unknown stage"):
+            repo.transition_state(oid, "IN_PROGRESS", updated_at=time.time(), current_stage="BOGUS_STAGE")
 
     def test_raises_for_unknown_operation(self, repo: SQLiteOperationRepository) -> None:
         with pytest.raises(OperationNotFoundError):

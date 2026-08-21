@@ -18,8 +18,7 @@ from .lifecycle import (
     OperationState,
     ServerOperation,
 )
-from .repository import SQLiteOperationRepository
-from ..ports import ContainerOperations, EventPublisher
+from ..ports import ContainerOperations, EventPublisher, OperationStore
 
 LOGGER = logging.getLogger(__name__)
 
@@ -46,7 +45,7 @@ class ServerOperationService:
 
     def __init__(
         self,
-        operation_repository: SQLiteOperationRepository,
+        operation_repository: OperationStore,
         docker: ContainerOperations,
         broker: EventPublisher,
         server_id: str = "default",
@@ -110,7 +109,7 @@ class ServerOperationService:
         the operation does not exist or is still running.
         """
         operation = self._repo.get(operation_id)
-        if operation is None or operation.state == OperationState.RUNNING:
+        if operation is None or not operation.state.is_terminal:
             return operation
         obs = self._observe_container()
         operation.update_observation(obs)

@@ -248,8 +248,10 @@ executes, the application service must:
 
 1. Record a `stage_log` entry for PREPARATION with `outcome: ok` (already
    written) and mark RESTART and all subsequent stages as `outcome: skipped`.
-2. Trigger a rollback of the prepared configuration files via the Compose adapter
-   before transitioning the operation to `CANCELLED`.
+2. Invoke the active executor's rollback capability with `operation_id` and the
+   prepared state before transitioning the operation to `CANCELLED`. The executor
+   (Compose adapter or host agent) is responsible for undoing its own PREPARATION
+   work and returning a structured result with `outcome` and `detail`.
 3. Emit `operation.cancelled` only after the rollback completes or is confirmed
    as a no-op.
 
@@ -337,15 +339,20 @@ using the `topic` key. The operation-specific fields are carried inside `payload
 
 The SSE `id:` field is the durable `EventStore` integer — it persists across
 server restarts and is not connection-scoped. Clients may send `Last-Event-ID`
-on reconnect; the server replays all stored events with an id greater than the
+on reconnect; the server replays stored events with an id greater than the
 supplied value.
 
-**Known gap:** the current `EventBroker.stream` implementation replays stored
-events and then registers the subscriber. An event published in the window
-between those two operations will not appear in the replay or the live queue.
-Until this race is closed, clients should treat the operations endpoint
-(`GET /api/operations/{id}`) as the authoritative source after reconnect and
-use SSE only for incremental updates.
+**Known gap — replay race:** `EventBroker.stream` replays stored events and
+then registers the subscriber. An event published in the window between those
+two operations will not appear in the replay or the live queue. Until this race
+is closed, clients should treat `GET /api/operations/{id}` as the authoritative
+source after reconnect and use SSE only for incremental updates.
+
+**Known gap — replay page limit:** `EventStore.events_after` returns at most
+100 events per call. After an outage with more than 100 buffered events, the
+replay is incomplete and no cursor or continuation is provided. Clients must
+not assume a complete replay; they must re-fetch the operations endpoint to
+resynchronise state after any reconnect gap longer than a few seconds.
 
 Deduplication is the client's responsibility. Because `operation.stage_started`
 and `operation.stage_completed` can fire for multiple stages within the same

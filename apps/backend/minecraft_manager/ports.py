@@ -94,48 +94,14 @@ class RuntimeSupervisor(Protocol):
 
 
 class OperationStore(Protocol):
-    """Durable storage for server operation lifecycle records."""
+    """Durable store for server operation lifecycle records."""
 
-    def create_operation(
-        self,
-        operation_id: str,
-        operation_type: str,
-        initiated_by: str,
-        intended_state: dict[str, Any],
-    ) -> dict[str, Any]: ...
-
-    def get_operation(self, operation_id: str) -> dict[str, Any] | None: ...
-
-    def list_operations(self, limit: int = 50) -> list[dict[str, Any]]: ...
-
-    def advance_stage(
-        self,
-        operation_id: str,
-        stage: str,
-        started_at: float,
-    ) -> None: ...
-
-    def complete_stage(
-        self,
-        operation_id: str,
-        stage: str,
-        outcome: str,
-        completed_at: float,
-        detail: str | None = None,
-    ) -> None: ...
-
-    def transition_state(
-        self,
-        operation_id: str,
-        new_state: str,
-        updated_at: float,
-        current_stage: str | None = None,
-        completed_at: float | None = None,
-        observed_state: dict[str, Any] | None = None,
-        divergence_detail: list[dict[str, Any]] | None = None,
-        executor_ref: str | None = None,
-        error_detail: dict[str, Any] | None = None,
-    ) -> None: ...
+    def save(self, operation: Any) -> None: ...
+    def update_stage(self, operation: Any, stage: Any) -> None: ...
+    def get(self, operation_id: str) -> Any | None: ...
+    def get_latest(self, server_id: str) -> Any | None: ...
+    def get_active(self, server_id: str) -> Any | None: ...
+    def list_recent(self, server_id: str, limit: int = 10) -> list[Any]: ...
 
 
 class RuntimeApplication(Protocol):

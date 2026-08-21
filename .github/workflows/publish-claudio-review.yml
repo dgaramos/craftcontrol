@@ -39,7 +39,8 @@ jobs:
     steps:
       - name: Create a Claudio DR installation token
         id: claudio-token
-        uses: actions/create-github-app-token@v3.2.0
+        # v3.2.0
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
         with:
           client-id: ${{ vars.CLAUDIO_DR_CLIENT_ID }}
           private-key: ${{ secrets.CLAUDIO_DR_PRIVATE_KEY }}

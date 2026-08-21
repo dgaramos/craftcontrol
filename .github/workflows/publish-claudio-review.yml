@@ -59,6 +59,13 @@ jobs:
           COMMENT_BODY: ${{ inputs.comment_body }}
         run: |
           set -euo pipefail
+          [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]] || { echo "pr_number must be a positive integer" >&2; exit 1; }
+          supplied_comment_fields=0
+          for value in "$COMMENT_PATH" "$COMMENT_LINE" "$COMMENT_BODY"; do
+            [[ -n "$value" ]] && ((supplied_comment_fields += 1))
+          done
+          [[ "$supplied_comment_fields" -eq 0 || "$supplied_comment_fields" -eq 3 ]] || { echo "inline comment path, line, and body must be provided together" >&2; exit 1; }
+          [[ "$supplied_comment_fields" -eq 0 || "$COMMENT_LINE" =~ ^[1-9][0-9]*$ ]] || { echo "comment_line must be a positive integer" >&2; exit 1; }
           head_sha="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq .head.sha)"
           jq -n \
             --arg event "$REVIEW_EVENT" \

@@ -64,6 +64,10 @@ def test_browser_api_calls_remain_inside_the_declared_api_boundary(http_surface_
         ), f"Browser endpoint is outside the frozen contract: {call}"
 
 
+# The import-string assertions below (e.g. `?v=9`, `?v=7`) stay in Python
+# because they test the HTTP surface: Flask must serve the correct versioned
+# content to browsers. They are not testing JS module wiring or composition
+# logic — that belongs in Jest (see apps/frontend/tests/players-contracts.test.js).
 def test_flask_compatibility_serves_frontend_from_the_application_boundary(tmp_path: Path) -> None:
     class FakeManager:
         def initialize(self) -> None:

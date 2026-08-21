@@ -112,7 +112,7 @@ UTC ISO 8601.
 | `executor_ref` | string \| null | Opaque identifier returned by the executor (e.g. Compose service name + restart token). |
 | `error_detail` | object \| null | Structured error populated when state is FAILED. |
 
-#### `error_detail` schema
+### `error_detail` schema
 
 | Field | Type | Description |
 |---|---|---|
@@ -121,7 +121,7 @@ UTC ISO 8601.
 | `stage` | enum | The stage in which the error occurred. |
 | `exception_type` | string \| null | Python exception class name, if applicable. |
 
-#### `divergence_detail` schema
+### `divergence_detail` schema
 
 A list of objects, one per mismatched field.
 
@@ -188,14 +188,24 @@ its scope (PREPARATION through HEALTH_WAIT):
 | `executor_ref` | string \| null | Opaque executor-local handle for correlation and audit. |
 | `health_reached` | bool | True if the health probe confirmed server readiness within the deadline. |
 | `failed_stage` | enum \| null | The stage at which an error occurred (`PREPARATION`, `RESTART`, or `HEALTH_WAIT`); null when `outcome` is `ok`. |
-| `detail` | string \| null | Human-readable summary or error message. |
+| `detail` | string \| null | Human-readable summary or error message. Becomes `error_detail.message` when `outcome` is `error`. |
+| `error_code` | string \| null | Machine-readable error code (e.g. `executor_timeout`, `health_probe_failed`); null when `outcome` is `ok`. Becomes `error_detail.code`. |
+| `exception_type` | string \| null | Python exception class name if an unhandled exception caused the failure; null otherwise. Becomes `error_detail.exception_type`. |
+
+**Invariant:** when `health_reached` is `false`, the executor **must** set
+`outcome: error` and `failed_stage: HEALTH_WAIT`. A result with
+`health_reached: false` and `outcome: ok` is a contract violation and must be
+rejected by the application service.
 
 Because the executor covers three stages (PREPARATION, RESTART, HEALTH_WAIT) but
 returns a single result object, the application service is responsible for
 expanding it into per-stage `stage_log` entries. The mapping rule is:
 
 - Stages preceding `failed_stage` receive `outcome: ok`.
-- `failed_stage` receives `outcome: error` and the `detail` value.
+- `failed_stage` receives `outcome: error`; its `stage_log` entry's `detail`
+  is set from `detail`, and the operation record's `error_detail` is populated
+  from `error_code` → `code`, `detail` → `message`, `failed_stage` → `stage`,
+  `exception_type` → `exception_type`.
 - Stages after `failed_stage` receive `outcome: skipped`.
 - When `outcome` is `ok`, all three stages receive `outcome: ok`; `health_reached`
   is reflected in the `HEALTH_WAIT` entry's `detail`.

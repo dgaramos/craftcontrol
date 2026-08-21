@@ -112,6 +112,25 @@ UTC ISO 8601.
 | `executor_ref` | string \| null | Opaque identifier returned by the executor (e.g. Compose service name + restart token). |
 | `error_detail` | object \| null | Structured error populated when state is FAILED. |
 
+#### `error_detail` schema
+
+| Field | Type | Description |
+|---|---|---|
+| `code` | string | Machine-readable error code (e.g. `executor_timeout`, `health_probe_failed`). |
+| `message` | string | Human-readable error description. |
+| `stage` | enum | The stage in which the error occurred. |
+| `exception_type` | string \| null | Python exception class name, if applicable. |
+
+#### `divergence_detail` schema
+
+A list of objects, one per mismatched field.
+
+| Field | Type | Description |
+|---|---|---|
+| `field` | string | Dot-separated path to the mismatched field within the state snapshot (e.g. `difficulty`). |
+| `intended` | any | The value expected after the operation. |
+| `observed` | any | The value read during VERIFICATION. |
+
 ### Stage log entry
 
 Each entry in `stage_log` captures one stage attempt.

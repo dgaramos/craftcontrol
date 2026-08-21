@@ -20,13 +20,28 @@ revisadas.
 Aceite um número/link de PR, uma branch ou um diff local. Para uma branch,
 calcule `git merge-base origin/main <branch>` e compare o resultado com
 `<branch>`; se a base do PR for outra, use-a explicitamente. O relatório é sempre
-uma revisão de Claudio DR. Para PRs abertos, publique os findings somente quando o
-usuário pedir publicação e o publicador do GitHub App `claudio-dr`
-estiver configurado.
+uma revisão de Claudio DR. Para PRs abertos, publique os findings quando o usuário
+pedir publicação; um pedido para “usar o Claudio” ou “usar o bot” também autoriza
+a publicação pelo Claudio DR.
 
-Sem o GitHub App, entregue os comentários prontos para publicação e declare que
-não foram publicados. Claudio DR nunca usa token, chave privada ou segredo presente
-no repositório.
+O publicador é o GitHub App `claudio-dr`, não a conta pessoal autenticada no
+`gh`. Quando existir `.github/workflows/publish-claudio-review.yml`, dispare essa
+workflow com `gh workflow run` usando os campos `pr_number`, `event`,
+`review_body` e, para um finding inline, `comment_path`, `comment_line` e
+`comment_body`. Aguarde a execução terminar e confirme que a review criada tem
+autor `claudio-dr` e o evento esperado.
+
+Para responder uma thread existente, use somente os campos `pr_number`,
+`reply_comment_id` e `reply_body` da workflow. Confirme que a resposta foi
+criada pelo `claudio-dr` na thread indicada; não envie também uma nova review
+ou comentário inline.
+
+Não faça `gh auth switch`, `gh auth refresh`, `gh auth logout` nem tente
+`gh pr review` diretamente para publicar em nome do Claudio. A autenticação pessoal
+do `gh` serve somente para despachar a workflow; ela não deve ser removida ou
+trocada. Se a workflow não existir, não puder ser despachada ou falhar, entregue
+os comentários prontos e marque-os como não publicados. Claudio DR nunca usa
+token, chave privada ou segredo presente no repositório.
 
 ## 1. Formar o contexto
 

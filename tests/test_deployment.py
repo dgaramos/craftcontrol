@@ -174,3 +174,27 @@ def test_deploy_command_anchors_compose_and_protects_state() -> None:
     assert 'sha256sum "$DATABASE_FILE"' in script
     assert "/api/auth/me" in script
     assert "| grep -q" not in script
+
+
+def test_reviewer_publishers_support_thread_replies_without_creating_a_review() -> None:
+    for name, reviewer in (
+        ("publish-cody-review.yml", "cody"),
+        ("publish-claudio-review.yml", "claudio"),
+    ):
+        workflow = (ROOT / ".github" / "workflows" / name).read_text()
+        assert "reply_comment_id:" in workflow
+        assert "reply_body:" in workflow
+        assert "reply_comment_id and reply_body must be provided together" in workflow
+        assert "reply mode cannot include review inputs" in workflow
+        assert f"repos/${{GITHUB_REPOSITORY}}/pulls/comments/${{REPLY_COMMENT_ID}}/replies" in workflow
+        assert "reply comment does not belong to pr_number" in workflow
+        assert f"Create a {reviewer.title()} DR installation token" in workflow
+
+
+def test_reviewer_skills_dispatch_thread_replies_through_their_apps() -> None:
+    cody = (ROOT / ".agents" / "skills" / "review-pr" / "SKILL.md").read_text()
+    claudio = (ROOT / ".claude" / "agents" / "review-pr.md").read_text()
+    for skill, reviewer in ((cody, "cody-dr"), (claudio, "claudio-dr")):
+        assert "reply_comment_id" in skill
+        assert "reply_body" in skill
+        assert reviewer in skill

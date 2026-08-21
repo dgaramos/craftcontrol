@@ -112,11 +112,29 @@ checks consultados/não executados, eixos de risco e estado de publicação.
 
 ## 5. Publicar somente com autorização
 
-Para um PR aberto, publique apenas se o usuário pedir e o publicador do GitHub
-App `cody-dr` estiver configurado. Reconfirme PR, head SHA e
-findings finais; publique apenas `blocking` ou `important` que persistam no
-head atual e tenham confiança `>= 80`. Comentário inline segue o formato da
-referência e aponta linha alterada. Sem o publicador, entregue
+Para um PR aberto, publique apenas se o usuário pedir. Um pedido para “usar o
+Cody” ou “usar o bot” também autoriza a publicação pelo Cody DR. Reconfirme PR,
+head SHA e findings finais; publique apenas `blocking` ou `important` que
+persistam no head atual e tenham confiança `>= 80`.
+
+### Publicador Cody DR
+
+O publicador é o GitHub App `cody-dr`, não a conta pessoal autenticada no `gh`.
+Quando existir `.github/workflows/publish-cody-review.yml`, dispare essa
+workflow com `gh workflow run` usando os campos `pr_number`, `event`,
+`review_body` e, para um finding inline, `comment_path`, `comment_line` e
+`comment_body`. Aguarde a execução terminar e confirme que a review criada tem
+autor `cody-dr` e o evento esperado.
+
+Para responder uma thread existente, use somente os campos `pr_number`,
+`reply_comment_id` e `reply_body` da mesma workflow. Confirme que a resposta
+foi criada pelo `cody-dr` na thread indicada; não envie também uma nova review
+ou comentário inline.
+
+Não faça `gh auth switch`, `gh auth refresh`, `gh auth logout` nem tente
+`gh pr review` diretamente para publicar em nome do Cody. A autenticação pessoal
+do `gh` serve somente para despachar a workflow; ela não deve ser removida ou
+trocada. Se a workflow não existir, não puder ser despachada ou falhar, entregue
 comentários prontos e marque como não publicados. Nunca leia tokens, chaves ou
 segredos do repositório.
 

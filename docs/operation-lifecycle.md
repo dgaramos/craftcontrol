@@ -108,7 +108,7 @@ UTC ISO 8601.
 | `stage_log` | list | Ordered log of stage entries (see Stage log entry). |
 | `intended_state` | object | Snapshot of the configuration as it should appear after the operation. |
 | `observed_state` | object \| null | Snapshot read during VERIFICATION; null until that stage runs. |
-| `divergence_detail` | object \| null | Fields where observed state differs from intended state; null when not divergent. |
+| `divergence_detail` | list\<object\> \| null | Fields where observed state differs from intended state; null when not divergent. |
 | `executor_ref` | string \| null | Opaque identifier returned by the executor (e.g. Compose service name + restart token). |
 | `error_detail` | object \| null | Structured error populated when state is FAILED. |
 
@@ -186,16 +186,27 @@ its scope (PREPARATION through HEALTH_WAIT):
 |---|---|---|
 | `outcome` | `ok` \| `error` | Whether the executor completed its scope without error. |
 | `executor_ref` | string \| null | Opaque executor-local handle for correlation and audit. |
-| `health_reached` | bool | True if the health probe confirmed server readiness within the deadline. |
+| `health_reached` | bool \| null | `true` if the health probe confirmed server readiness within the deadline; `false` if the probe ran and timed out or failed; `null` if the probe never ran because a prior stage (`PREPARATION` or `RESTART`) failed. |
 | `failed_stage` | enum \| null | The stage at which an error occurred (`PREPARATION`, `RESTART`, or `HEALTH_WAIT`); null when `outcome` is `ok`. |
 | `detail` | string \| null | Human-readable summary or error message. Becomes `error_detail.message` when `outcome` is `error`. |
 | `error_code` | string \| null | Machine-readable error code (e.g. `executor_timeout`, `health_probe_failed`); null when `outcome` is `ok`. Becomes `error_detail.code`. |
 | `exception_type` | string \| null | Python exception class name if an unhandled exception caused the failure; null otherwise. Becomes `error_detail.exception_type`. |
 
-**Invariant:** when `health_reached` is `false`, the executor **must** set
-`outcome: error` and `failed_stage: HEALTH_WAIT`. A result with
-`health_reached: false` and `outcome: ok` is a contract violation and must be
-rejected by the application service.
+**Conditional schema:** when `outcome` is `error`, `failed_stage`, `detail`, and
+`error_code` must all be non-null; `exception_type` remains optional. When
+`outcome` is `ok`, all three must be null.
+
+**Invariants for `health_reached`:**
+
+- `health_reached: false` — the probe ran and did not confirm readiness; the
+  executor **must** set `outcome: error` and `failed_stage: HEALTH_WAIT`.
+- `health_reached: null` — the probe never ran because `PREPARATION` or
+  `RESTART` failed; `failed_stage` must be `PREPARATION` or `RESTART`
+  respectively.
+- `health_reached: true` — the probe succeeded; `outcome` must be `ok`.
+
+Any other combination is a contract violation and must be rejected by the
+application service.
 
 Because the executor covers three stages (PREPARATION, RESTART, HEALTH_WAIT) but
 returns a single result object, the application service is responsible for
@@ -292,9 +303,14 @@ frame. Clients may send `Last-Event-ID` on reconnect; the server replays all
 frames for in-progress operations whose `operation_id` the client has not yet
 received a terminal event for.
 
-Deduplication is the client's responsibility: if a client receives two frames
-with the same `operation_id` and `topic`, it must apply only the one with the
-higher `updated_at` value.
+Deduplication is the client's responsibility. Because `operation.stage_started`
+and `operation.stage_completed` can fire for multiple stages within the same
+operation, deduplicating on `(operation_id, topic)` alone would discard valid
+events. Clients must use the SSE `id:` sequence number as the primary
+deduplication key: if a frame with a given `id` has already been applied, discard
+it. When `id` is unavailable (e.g. during replay), use
+`(operation_id, topic, stage, updated_at)` as the composite key and apply only
+the frame with the highest `updated_at` among duplicates.
 
 The application service guarantees that a terminal SSE event is emitted only
 after the corresponding operation record has been committed to SQLite. A client

@@ -15,7 +15,7 @@ on:
         options: [REQUEST_CHANGES, COMMENT, APPROVE]
       review_body:
         description: Review summary in Markdown
-        required: true
+        required: false
         type: string
       comment_path:
         description: Optional changed-file path for an inline finding
@@ -27,6 +27,14 @@ on:
         type: string
       comment_body:
         description: Optional inline finding in Markdown
+        required: false
+        type: string
+      reply_comment_id:
+        description: Optional PR review-comment identifier to reply to
+        required: false
+        type: string
+      reply_body:
+        description: Optional reply body for an existing PR review thread
         required: false
         type: string
 
@@ -57,9 +65,26 @@ jobs:
           COMMENT_PATH: ${{ inputs.comment_path }}
           COMMENT_LINE: ${{ inputs.comment_line }}
           COMMENT_BODY: ${{ inputs.comment_body }}
+          REPLY_COMMENT_ID: ${{ inputs.reply_comment_id }}
+          REPLY_BODY: ${{ inputs.reply_body }}
         run: |
           set -euo pipefail
           [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]] || { echo "pr_number must be a positive integer" >&2; exit 1; }
+          supplied_reply_fields=0
+          for value in "$REPLY_COMMENT_ID" "$REPLY_BODY"; do
+            [[ -n "$value" ]] && ((supplied_reply_fields += 1))
+          done
+          [[ "$supplied_reply_fields" -eq 0 || "$supplied_reply_fields" -eq 2 ]] || { echo "reply_comment_id and reply_body must be provided together" >&2; exit 1; }
+          if [[ "$supplied_reply_fields" -eq 2 ]]; then
+            [[ "$REPLY_COMMENT_ID" =~ ^[1-9][0-9]*$ ]] || { echo "reply_comment_id must be a positive integer" >&2; exit 1; }
+            [[ -z "$REVIEW_BODY$COMMENT_PATH$COMMENT_LINE$COMMENT_BODY" ]] || { echo "reply mode cannot include review inputs" >&2; exit 1; }
+            expected_pr_url="https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}"
+            actual_pr_url="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/comments/${REPLY_COMMENT_ID}" --jq .pull_request_url)"
+            [[ "$actual_pr_url" == "$expected_pr_url" ]] || { echo "reply comment does not belong to pr_number" >&2; exit 1; }
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/pulls/comments/${REPLY_COMMENT_ID}/replies" -f body="$REPLY_BODY"
+            exit 0
+          fi
+          [[ -n "$REVIEW_BODY" ]] || { echo "review_body is required outside reply mode" >&2; exit 1; }
           supplied_comment_fields=0
           for value in "$COMMENT_PATH" "$COMMENT_LINE" "$COMMENT_BODY"; do
             [[ -n "$value" ]] && ((supplied_comment_fields += 1))

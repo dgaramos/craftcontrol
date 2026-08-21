@@ -248,6 +248,45 @@ Operations emit the following event types over the SSE stream.
 | `operation.divergent` | Terminal: executor succeeded but observed state mismatches. |
 | `operation.cancelled` | Terminal: cancelled before RESTART. |
 
-All events carry `operation_id` and `updated_at` at minimum. Terminal events
-additionally carry `completed_at` and the relevant terminal fields
-(`divergence_detail`, `error_detail`, or neither).
+### SSE wire format
+
+Each message is a standard SSE frame with the following fields:
+
+```text
+id: <monotonically increasing integer, scoped to this SSE connection>
+event: operation
+data: <JSON object>
+```
+
+The `event:` field is always the literal string `operation`. Consumers
+differentiate event subtypes using the `topic` key in the JSON `data` object.
+The `data` object has this shape:
+
+| Field | Type | Description |
+|---|---|---|
+| `topic` | string | One of the event type values from the table above (e.g. `operation.applied`). |
+| `operation_id` | UUID | Correlation identifier for the operation. |
+| `state` | enum | Current operation state at the time of emission. |
+| `current_stage` | enum \| null | Active stage name; null when terminal. |
+| `updated_at` | datetime | UTC ISO 8601 timestamp of the transition that triggered this event. |
+| `completed_at` | datetime \| null | Set only on terminal events; null otherwise. |
+| `stage` | enum \| null | Stage name for `operation.stage_started` and `operation.stage_completed`; null for other events. |
+| `stage_outcome` | `ok` \| `error` \| `skipped` \| null | Stage result for `operation.stage_completed`; null for other events. |
+| `error_detail` | object \| null | Populated on `operation.failed`; null otherwise. |
+| `divergence_detail` | list \| null | Populated on `operation.divergent`; null otherwise. |
+
+### Replay and ordering guarantees
+
+The SSE `id:` field is a connection-scoped integer that increments with every
+frame. Clients may send `Last-Event-ID` on reconnect; the server replays all
+frames for in-progress operations whose `operation_id` the client has not yet
+received a terminal event for.
+
+Deduplication is the client's responsibility: if a client receives two frames
+with the same `operation_id` and `topic`, it must apply only the one with the
+higher `updated_at` value.
+
+The application service guarantees that a terminal SSE event is emitted only
+after the corresponding operation record has been committed to SQLite. A client
+that receives a terminal event may safely fetch the operations endpoint and
+expect the record to reflect the final state.

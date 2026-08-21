@@ -186,7 +186,7 @@ def test_reviewer_publishers_support_thread_replies_without_creating_a_review() 
         assert "reply_body:" in workflow
         assert "reply_comment_id and reply_body must be provided together" in workflow
         assert "reply mode cannot include review inputs" in workflow
-        assert f"repos/${{GITHUB_REPOSITORY}}/pulls/comments/${{REPLY_COMMENT_ID}}/replies" in workflow
+        assert "repos/${GITHUB_REPOSITORY}/pulls/comments/${REPLY_COMMENT_ID}/replies" in workflow
         assert "reply comment does not belong to pr_number" in workflow
         assert f"Create a {reviewer.title()} DR installation token" in workflow
 

@@ -60,9 +60,16 @@ cumulative labels on the operation record, not per-stage fields.
 `DIVERGENT` is a first-class terminal outcome, not a subtype of `FAILED`. A
 divergent result means the platform accepted the command but the resulting state
 is unexpected. Callers must not conflate divergence with failure: the failure
-path triggers rollback or corrective action, while the divergence path triggers
-an alert and manual review. An operation can transition to `DIVERGENT` only
-from `VERIFICATION`.
+path triggers an alert and requires a new operation or manual corrective action
+(no automatic rollback occurs within this contract), while the divergence path
+triggers an alert and manual review. An operation can transition to `DIVERGENT`
+only from `VERIFICATION`.
+
+When state is `FAILED`, the application service records `error_detail`, emits
+`operation.failed`, and seals the record. No rollback is initiated
+automatically. Corrective action — whether a new operation, a manual restore, or
+an operator intervention — is outside the scope of this contract and must be
+initiated explicitly by the operator.
 
 ---
 

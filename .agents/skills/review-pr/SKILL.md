@@ -131,6 +131,11 @@ Para responder uma thread existente, use somente os campos `pr_number`,
 foi criada pelo `cody-dr` na thread indicada; não envie também uma nova review
 ou comentário inline.
 
+Quando um finding estiver comprovadamente corrigido, a workflow também aceita
+`resolve_thread_id`. Verifique o código e os testes no head atual, responda a
+thread com o status verificado quando necessário e só então resolva-a pelo
+`cody-dr`.
+
 Não faça `gh auth switch`, `gh auth refresh`, `gh auth logout` nem tente
 `gh pr review` diretamente para publicar em nome do Cody. A autenticação pessoal
 do `gh` serve somente para despachar a workflow; ela não deve ser removida ou

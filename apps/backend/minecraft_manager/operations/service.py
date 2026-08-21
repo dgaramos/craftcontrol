@@ -14,6 +14,13 @@ import time
 from datetime import datetime, timezone
 from typing import Any
 
+# Minimum age (seconds) an orphan operation must have before it is abandoned.
+# This prevents a new worker from racing against a still-running worker in
+# graceful-reload scenarios (e.g. Gunicorn SIGWINCH).  An operation updated
+# within this window is left untouched; the previous worker will either finish
+# or the next startup cycle will catch it once it truly stalls.
+ORPHAN_STALENESS_SECONDS = 30
+
 from .lifecycle import (
     OperationStage,
     OperationState,
@@ -282,10 +289,28 @@ class ServerOperationService:
             return
         if active is None:
             return
+        # Guard against racing with a still-running worker during a graceful
+        # reload (e.g. Gunicorn SIGWINCH).  The previous worker updates
+        # `updated_at` on every stage transition, so a recently-touched
+        # operation is still alive in another process and must not be clobbered.
+        # CraftControl targets a single-worker homelab deployment, so this
+        # window is ordinarily zero; the guard is a safety net for any
+        # deployment that introduces overlapping workers.
+        age = datetime.now(timezone.utc).timestamp() - active.updated_at
+        if age < ORPHAN_STALENESS_SECONDS:
+            LOGGER.info(
+                "server_operation skipping orphan reclaim: operation_id=%s updated %.1fs ago"
+                " (threshold %ds) — may still be running in another worker",
+                active.operation_id,
+                age,
+                ORPHAN_STALENESS_SECONDS,
+            )
+            return
         LOGGER.warning(
-            "server_operation orphan detected on startup operation_id=%s state=%s — marking as failed",
+            "server_operation orphan detected on startup operation_id=%s state=%s age=%.1fs — marking as failed",
             active.operation_id,
             active.state.value,
+            age,
         )
         # Use the currently running stage if one exists, otherwise the first
         # stage so that fail_stage has a valid stage record to update.

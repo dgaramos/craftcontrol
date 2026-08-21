@@ -347,3 +347,212 @@ class TestServerOperationService:
     def test_request_reconciliation_returns_none_for_unknown(self, tmp_path: Path):
         service = make_service(tmp_path)
         assert service.request_reconciliation("nonexistent") is None
+
+    def test_get_active_returns_none_when_no_active(self, tmp_path: Path):
+        service = make_service(tmp_path)
+        assert service.get_active() is None
+
+    def test_list_recent_returns_operations(self, tmp_path: Path):
+        service = make_service(tmp_path, health_timeout=1)
+        op = service.apply_restart_required({}, lambda: None)
+        time.sleep(2)
+        results = service.list_recent(limit=5)
+        assert len(results) >= 1
+        assert any(r.operation_id == op.operation_id for r in results)
+
+    def test_observe_container_error_branch(self, tmp_path: Path):
+        """_observe_container catches docker.status() exceptions and returns error dict."""
+        docker = MagicMock()
+        docker.status.side_effect = RuntimeError("docker daemon unavailable")
+        docker.execute.return_value = None
+        broker = MagicMock()
+        service = make_service(tmp_path, docker=docker, broker=broker, health_timeout=1)
+        # Trigger the error branch via apply which calls _observe_container during RESTART failure
+        op = service.apply_restart_required({}, lambda: None)
+        time.sleep(2)
+        refreshed = service.get_operation(op.operation_id)
+        assert refreshed is not None
+        # Operation fails because health wait uses _observe_container which returns online=False
+        assert refreshed.state == OperationState.FAILED
+
+    def test_unexpected_exception_in_run_marks_operation_failed(self, tmp_path: Path):
+        """Outer except in _run catches unexpected failures from repo operations."""
+        docker = MagicMock()
+        docker.status.return_value = {"state": "running", "online": True}
+        docker.execute.return_value = None
+        broker = MagicMock()
+
+        repo = make_repo(tmp_path)
+        call_count = [0]
+        original_update = repo.update_stage
+
+        def flaky_update_stage(operation, stage):
+            call_count[0] += 1
+            # Raise on the third call (during PREPARE stage update)
+            if call_count[0] == 3:
+                raise RuntimeError("unexpected disk error")
+            return original_update(operation, stage)
+
+        repo.update_stage = flaky_update_stage  # type: ignore[method-assign]
+        service = ServerOperationService(
+            operation_repository=repo,
+            docker=docker,
+            broker=broker,
+            server_id="test-server",
+            health_timeout=1,
+        )
+        op = service.apply_restart_required({}, lambda: None)
+        time.sleep(1)
+        refreshed = service.get_operation(op.operation_id)
+        assert refreshed is not None
+        assert refreshed.state == OperationState.FAILED
+        assert "internal error" in (refreshed.terminal_error or "")
+
+    def test_publish_exception_is_swallowed(self, tmp_path: Path):
+        """_publish swallows broker exceptions without failing the operation."""
+        broker = MagicMock()
+        broker.publish.side_effect = RuntimeError("broker unavailable")
+        service = make_service(tmp_path, broker=broker, health_timeout=1)
+        op = service.apply_restart_required({}, lambda: None)
+        time.sleep(2)
+        # Operation still reaches terminal state despite broker failures
+        refreshed = service.get_operation(op.operation_id)
+        assert refreshed is not None
+        assert refreshed.state.is_terminal
+
+    def test_reconcile_startup_orphan(self, tmp_path: Path):
+        """On startup, active operations from a previous process are failed."""
+        db = make_db(tmp_path)
+        repo = SQLiteOperationRepository(db)
+        orphan = ServerOperation.create("test-server", {"X": "1"})
+        orphan.start()
+        # Simulate a stale orphan: backdate updated_at beyond the staleness threshold
+        # so _reconcile_startup_orphans treats it as abandoned rather than still-running.
+        orphan.updated_at -= 60
+        repo.save(orphan)
+        # Verify orphan is active before we create the service
+        assert repo.get_active("test-server") is not None
+
+        docker = MagicMock()
+        docker.status.return_value = {"state": "running", "online": True}
+        broker = MagicMock()
+        # Creating the service triggers _reconcile_startup_orphans
+        ServerOperationService(
+            operation_repository=repo,
+            docker=docker,
+            broker=broker,
+            server_id="test-server",
+            health_timeout=1,
+        )
+        # The orphan should now be in a terminal state
+        reconciled = repo.get(orphan.operation_id)
+        assert reconciled is not None
+        assert reconciled.state == OperationState.FAILED
+        assert "abandoned" in (reconciled.terminal_error or "")
+
+    def test_reconcile_startup_orphan_with_active_stage(self, tmp_path: Path):
+        """Orphan with an active (RUNNING) stage uses that stage for fail_stage."""
+        db = make_db(tmp_path)
+        repo = SQLiteOperationRepository(db)
+        orphan = ServerOperation.create("test-server", {})
+        orphan.start()
+        orphan.begin_stage(OperationStage.RESTART)
+        # Backdate updated_at so the staleness guard treats this as a true orphan.
+        orphan.updated_at -= 60
+        repo.save(orphan)
+
+        docker = MagicMock()
+        docker.status.return_value = {"state": "running", "online": True}
+        broker = MagicMock()
+        ServerOperationService(
+            operation_repository=repo,
+            docker=docker,
+            broker=broker,
+            server_id="test-server",
+            health_timeout=1,
+        )
+        reconciled = repo.get(orphan.operation_id)
+        assert reconciled is not None
+        assert reconciled.state == OperationState.FAILED
+
+    def test_reconcile_startup_orphan_skips_recent_operations(self, tmp_path: Path):
+        """Recently-updated operations are left untouched to avoid racing a live worker."""
+        db = make_db(tmp_path)
+        repo = SQLiteOperationRepository(db)
+        orphan = ServerOperation.create("test-server", {})
+        orphan.start()
+        # updated_at is fresh (now) — staleness guard must keep it as RUNNING.
+        repo.save(orphan)
+
+        docker = MagicMock()
+        docker.status.return_value = {"state": "running", "online": True}
+        broker = MagicMock()
+        ServerOperationService(
+            operation_repository=repo,
+            docker=docker,
+            broker=broker,
+            server_id="test-server",
+            health_timeout=1,
+        )
+        untouched = repo.get(orphan.operation_id)
+        assert untouched is not None
+        assert untouched.state == OperationState.RUNNING
+
+
+# ---------------------------------------------------------------------------
+# Lifecycle edge-case tests
+# ---------------------------------------------------------------------------
+
+
+class TestLifecycleEdgeCases:
+    def test_index_of_returns_correct_position(self):
+        assert OperationStage.index_of(OperationStage.REVIEW) == 0
+        assert OperationStage.index_of(OperationStage.CONFIRM) == len(OperationStage.ordered()) - 1
+
+    def test_begin_stage_with_evidence(self):
+        op = ServerOperation.create("srv", {})
+        op.start()
+        op.begin_stage(OperationStage.REVIEW, evidence={"hint": "value"})
+        record = next(s for s in op.stages if s.stage == OperationStage.REVIEW)
+        assert record.evidence["hint"] == "value"
+
+    def test_stage_raises_keyerror_for_stage_not_in_list(self):
+        op = ServerOperation.create("srv", {})
+        # Clear stages to force the KeyError path
+        op.stages = []
+        with pytest.raises(KeyError):
+            op._stage(OperationStage.REVIEW)
+
+    def test_assert_state_raises_on_wrong_state(self):
+        op = ServerOperation.create("srv", {})
+        # Operation is PENDING; calling start() again should raise because
+        # start() asserts PENDING and transitions, so call confirm() which asserts RUNNING
+        with pytest.raises(ValueError, match="Cannot transition"):
+            op.confirm()
+
+    def test_active_stage_returns_none_when_no_running_stage(self):
+        op = ServerOperation.create("srv", {})
+        # All stages are PENDING — none is RUNNING
+        assert op.active_stage is None
+
+    def test_failed_stage_returns_none_when_no_failed_stage(self):
+        op = ServerOperation.create("srv", {})
+        assert op.failed_stage is None
+
+
+# ---------------------------------------------------------------------------
+# Repository edge-case tests
+# ---------------------------------------------------------------------------
+
+
+class TestRepositoryEdgeCases:
+    def test_update_stage_returns_early_for_missing_stage(self, tmp_path: Path):
+        """update_stage is a no-op when the stage is not found in operation.stages."""
+        repo = make_repo(tmp_path)
+        op = ServerOperation.create("srv", {})
+        op.start()
+        repo.save(op)
+        # Replace stages list with an empty list so the stage look-up finds nothing
+        op.stages = []
+        # Should not raise; just return early
+        repo.update_stage(op, OperationStage.REVIEW)

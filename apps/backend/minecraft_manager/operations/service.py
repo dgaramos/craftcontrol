@@ -8,6 +8,7 @@ confirm or report a divergent outcome.
 from __future__ import annotations
 
 import logging
+import sqlite3
 import threading
 import time
 from datetime import datetime, timezone
@@ -58,6 +59,7 @@ class ServerOperationService:
         self._health_timeout = health_timeout
         # Protects the check-then-create sequence on this process.
         self._lock = threading.Lock()
+        self._reconcile_startup_orphans()
 
     # ------------------------------------------------------------------
     # Public API
@@ -258,6 +260,40 @@ class ServerOperationService:
                 "error": str(exc),
                 "observed_at": _now(),
             }
+
+    # ------------------------------------------------------------------
+    # Startup reconciliation
+    # ------------------------------------------------------------------
+
+    def _reconcile_startup_orphans(self) -> None:
+        """Fail non-terminal operations abandoned by a previous process instance.
+
+        A daemon thread is killed on backend restart, leaving its operation
+        record in PENDING or RUNNING state.  ``get_active`` would then block
+        every future operation until the database is manually repaired.  This
+        method runs synchronously during ``__init__`` — before any thread is
+        created — so no lock is required.
+        """
+        try:
+            active = self._repo.get_active(self._server_id)
+        except sqlite3.OperationalError:
+            # Schema not yet migrated (e.g. first boot or test DB without migrations).
+            # No orphans can exist in an empty schema.
+            return
+        if active is None:
+            return
+        LOGGER.warning(
+            "server_operation orphan detected on startup operation_id=%s state=%s — marking as failed",
+            active.operation_id,
+            active.state.value,
+        )
+        # Use the currently running stage if one exists, otherwise the first
+        # stage so that fail_stage has a valid stage record to update.
+        active_stage = active.active_stage
+        stage = active_stage.stage if active_stage else OperationStage.REVIEW
+        active.fail_stage(stage, "abandoned: process restarted")
+        self._repo.save(active)
+        self._publish(active)
 
     # ------------------------------------------------------------------
     # Lock and creation

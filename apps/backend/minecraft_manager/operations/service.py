@@ -166,7 +166,7 @@ class ServerOperationService:
 
             # Stage: HEALTH_WAIT — poll until Bedrock is running
             self._begin(operation, OperationStage.HEALTH_WAIT)
-            healthy, health_evidence = self._wait_for_health()
+            healthy, health_evidence = self._wait_for_health(operation)
             if not healthy:
                 self._fail(
                     operation,
@@ -236,16 +236,32 @@ class ServerOperationService:
     # Reconciliation helpers (issue #189)
     # ------------------------------------------------------------------
 
-    def _wait_for_health(self) -> tuple[bool, dict[str, Any]]:
-        """Poll the container until it reports healthy or the deadline expires."""
+    def _wait_for_health(
+        self, operation: ServerOperation
+    ) -> tuple[bool, dict[str, Any]]:
+        """Poll the container until it reports healthy or the deadline expires.
+
+        Periodically persists *operation* so that ``updated_at`` stays within
+        ``ORPHAN_STALENESS_SECONDS``.  Without this heartbeat, a new worker
+        started more than ``ORPHAN_STALENESS_SECONDS`` into a health-wait
+        window would incorrectly classify the still-live operation as an orphan
+        and clobber it.
+        """
         deadline = time.monotonic() + self._health_timeout
+        # Heartbeat every half the staleness window so we stay well inside it.
+        heartbeat_interval = ORPHAN_STALENESS_SECONDS / 2
+        last_heartbeat = time.monotonic()
         observations: list[dict[str, Any]] = []
         while time.monotonic() < deadline:
             obs = self._observe_container()
             observations.append(obs)
             if obs.get("online"):
                 return True, {"observations": len(observations), "last": obs}
-            remaining = deadline - time.monotonic()
+            now = time.monotonic()
+            if now - last_heartbeat >= heartbeat_interval:
+                self._repo.update_stage(operation, OperationStage.HEALTH_WAIT)
+                last_heartbeat = now
+            remaining = deadline - now
             if remaining <= 0:
                 break
             time.sleep(min(HEALTH_POLL_INTERVAL_SECONDS, remaining))

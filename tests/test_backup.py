@@ -183,6 +183,9 @@ def test_world_directory_rejects_path_outside_worlds(backup_env) -> None:
 def test_configured_world_falls_back_to_server_properties(backup_env) -> None:
     """_configured_world reads level-name from server.properties when .env is absent."""
     env = backup_env
+    # Add a second world directory so the single-directory fallback cannot fire;
+    # the only way to select the correct world is to read server.properties.
+    (env["project"] / "data" / "worlds" / "OtherLevel").mkdir()
     # Remove LEVEL_NAME from .env so it falls through to server.properties
     (env["project"] / ".env").unlink()
     result = env["service"].create()
@@ -198,9 +201,16 @@ def test_configured_world_uses_single_directory_as_fallback(backup_env) -> None:
     assert result["ok"]
 
 
-def test_docker_container_running_returns_false_when_docker_unavailable() -> None:
+def test_docker_container_running_returns_false_when_docker_unavailable(
+    monkeypatch,
+) -> None:
     """docker_container_running returns False when docker binary is not found."""
-    from minecraft_manager.operations.backup import docker_container_running
-    # Use a container name that definitely doesn't exist; docker may not be installed
-    result = docker_container_running("__nonexistent_test_container__")
+    import subprocess
+    import minecraft_manager.operations.backup as backup_mod
+
+    def _raise(*args, **kwargs):
+        raise FileNotFoundError("docker: command not found")
+
+    monkeypatch.setattr(subprocess, "run", _raise)
+    result = backup_mod.docker_container_running("any-container")
     assert result is False

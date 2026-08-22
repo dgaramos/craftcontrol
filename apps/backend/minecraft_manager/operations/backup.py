@@ -258,11 +258,15 @@ class BackupService:
 
 
 def docker_container_running(container: str) -> bool:
-    result = subprocess.run(
-        ["docker", "inspect", "-f", "{{.State.Running}}", container],
-        capture_output=True,
-        text=True,
-        timeout=10,
-        check=False,
-    )
+    try:
+        result = subprocess.run(
+            ["docker", "inspect", "-f", "{{.State.Running}}", container],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except FileNotFoundError:
+        # Docker binary is not installed on this host.
+        return False
     return result.returncode == 0 and result.stdout.strip() == "true"

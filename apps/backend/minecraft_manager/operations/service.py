@@ -151,19 +151,22 @@ class ServerOperationService:
                     evidence={"unverifiable_settings": unverifiable},
                 )
                 return
-            try:
-                operation.requested_changes = {
-                    key: validate_value(SETTINGS[key], value)
-                    for key, value in operation.requested_changes.items()
-                }
-            except (TypeError, ValueError) as exc:
+            normalized_changes: dict[str, str] = {}
+            invalid_settings: dict[str, str] = {}
+            for key, value in operation.requested_changes.items():
+                try:
+                    normalized_changes[key] = validate_value(SETTINGS[key], value)
+                except (TypeError, ValueError) as exc:
+                    invalid_settings[key] = str(exc)
+            if invalid_settings:
                 self._fail(
                     operation,
                     OperationStage.REVIEW,
-                    f"requested changes are invalid: {exc}",
-                    evidence={"invalid_settings": list(operation.requested_changes)},
+                    "requested changes are invalid",
+                    evidence={"invalid_settings": invalid_settings},
                 )
                 return
+            operation.requested_changes = normalized_changes
             self._repo.save(operation)
             self._complete(operation, OperationStage.REVIEW, evidence={"changes": list(operation.requested_changes)})
 

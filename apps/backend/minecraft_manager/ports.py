@@ -8,7 +8,7 @@ structurally.
 from __future__ import annotations
 
 from collections.abc import Iterator
-from typing import Any, Protocol, TYPE_CHECKING
+from typing import Any, Callable, Protocol, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .operations.lifecycle import OperationStage, ServerOperation
@@ -77,6 +77,16 @@ class ServerConsole(Protocol):
 class ContainerOperations(Protocol):
     def status(self) -> dict[str, Any]: ...
     def execute(self, action: str) -> None: ...
+
+
+class ThreadLike(Protocol):
+    def start(self) -> None: ...
+
+
+class ThreadFactory(Protocol):
+    def __call__(
+        self, *, target: Callable[..., Any], args: tuple[Any, ...], daemon: bool, name: str
+    ) -> ThreadLike: ...
 
 
 class PublishedEvent(Protocol):

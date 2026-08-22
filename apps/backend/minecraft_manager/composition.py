@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import threading
+
 from .bedrock import BedrockClient
 from .config import Settings
 from .docker_ops import DockerOperations
@@ -58,6 +60,8 @@ def compose_manager(
         operation_repository=operation_repo,
         docker=docker,
         broker=broker,
+        configuration=files,
+        thread_factory=threading.Thread,
         server_id=settings.container,
     )
     manager = ManagerService(

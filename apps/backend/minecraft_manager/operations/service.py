@@ -26,7 +26,8 @@ from .lifecycle import (
     OperationState,
     ServerOperation,
 )
-from ..ports import ContainerOperations, EventPublisher, OperationStore
+from ..ports import ContainerOperations, EventPublisher, OperationStore, ServerConfiguration, ThreadFactory
+from ..schema import PROPERTY_NAMES, SETTINGS, validate_value
 
 LOGGER = logging.getLogger(__name__)
 
@@ -56,14 +57,18 @@ class ServerOperationService:
         operation_repository: OperationStore,
         docker: ContainerOperations,
         broker: EventPublisher,
+        configuration: ServerConfiguration,
+        thread_factory: ThreadFactory,
         server_id: str = "default",
         health_timeout: int = DEFAULT_HEALTH_TIMEOUT_SECONDS,
     ) -> None:
         self._repo = operation_repository
         self._docker = docker
         self._broker = broker
+        self._configuration = configuration
         self._server_id = server_id
         self._health_timeout = health_timeout
+        self._thread_factory = thread_factory
         # Protects the check-then-create sequence on this process.
         self._lock = threading.Lock()
         self._reconcile_startup_orphans()
@@ -90,7 +95,7 @@ class ServerOperationService:
         operation record.
         """
         operation = self._create_or_reject(changes, correlation_id)
-        thread = threading.Thread(
+        thread = self._thread_factory(
             target=self._run,
             args=(operation, apply_fn),
             daemon=True,
@@ -137,6 +142,32 @@ class ServerOperationService:
 
             # Stage: REVIEW
             self._begin(operation, OperationStage.REVIEW)
+            unverifiable = sorted(set(operation.requested_changes) - PROPERTY_NAMES.keys())
+            if unverifiable:
+                self._fail(
+                    operation,
+                    OperationStage.REVIEW,
+                    "requested changes cannot be verified against Bedrock properties",
+                    evidence={"unverifiable_settings": unverifiable},
+                )
+                return
+            normalized_changes: dict[str, str] = {}
+            invalid_settings: dict[str, str] = {}
+            for key, value in operation.requested_changes.items():
+                try:
+                    normalized_changes[key] = validate_value(SETTINGS[key], value)
+                except (TypeError, ValueError) as exc:
+                    invalid_settings[key] = str(exc)
+            if invalid_settings:
+                self._fail(
+                    operation,
+                    OperationStage.REVIEW,
+                    "requested changes are invalid",
+                    evidence={"invalid_settings": invalid_settings},
+                )
+                return
+            operation.requested_changes = normalized_changes
+            self._repo.save(operation)
             self._complete(operation, OperationStage.REVIEW, evidence={"changes": list(operation.requested_changes)})
 
             # Stage: BACKUP_VERIFY (skipped in basic delivery — no backup dep here)
@@ -177,16 +208,48 @@ class ServerOperationService:
                 return
             self._complete(operation, OperationStage.HEALTH_WAIT, evidence=health_evidence)
 
-            # Stage: VERIFY — confirm effective configuration matches request
+            # Stage: VERIFY — confirm effective Bedrock configuration matches request
             self._begin(operation, OperationStage.VERIFY)
-            obs = self._observe_container()
-            operation.update_observation(obs)
-            self._repo.update_stage(operation, OperationStage.VERIFY)
-            self._complete(operation, OperationStage.VERIFY, evidence=obs)
+            try:
+                verified, evidence = self._verify_configuration(operation)
+            except Exception as exc:
+                evidence = {
+                    **self._observe_container(),
+                    "configuration_checked_at": _now(),
+                    "verification_error": str(exc),
+                }
+                operation.update_observation(evidence)
+                self._fail(
+                    operation,
+                    OperationStage.VERIFY,
+                    f"could not verify effective configuration: {exc}",
+                    evidence=evidence,
+                )
+                return
+            operation.update_observation(evidence)
+            if not evidence.get("online"):
+                self._fail(
+                    operation,
+                    OperationStage.VERIFY,
+                    "Bedrock became unhealthy during configuration verification",
+                    evidence=evidence,
+                )
+                return
+            if not verified:
+                operation.diverge("effective configuration differs from requested changes", evidence=evidence)
+                self._repo.save(operation)
+                self._publish(operation)
+                LOGGER.warning(
+                    "server_operation divergent operation_id=%s differences=%s",
+                    operation.operation_id,
+                    evidence["differences"],
+                )
+                return
+            self._complete(operation, OperationStage.VERIFY, evidence=evidence)
 
             # Stage: CONFIRM
             self._begin(operation, OperationStage.CONFIRM)
-            operation.confirm(evidence={"confirmed_at": _now()})
+            operation.confirm(evidence={"confirmed_at": _now(), "last_confirmed_at": _now()})
             self._repo.save(operation)
             self._publish(operation)
             LOGGER.info(
@@ -241,31 +304,41 @@ class ServerOperationService:
     ) -> tuple[bool, dict[str, Any]]:
         """Poll the container until it reports healthy or the deadline expires.
 
-        Periodically persists *operation* so that ``updated_at`` stays within
-        ``ORPHAN_STALENESS_SECONDS``.  Without this heartbeat, a new worker
+        Persists every observation so the active stage retains current evidence
+        and ``updated_at`` stays within ``ORPHAN_STALENESS_SECONDS``. Without
+        this heartbeat, a new worker
         started more than ``ORPHAN_STALENESS_SECONDS`` into a health-wait
         window would incorrectly classify the still-live operation as an orphan
         and clobber it.
         """
         deadline = time.monotonic() + self._health_timeout
-        # Heartbeat every half the staleness window so we stay well inside it.
-        heartbeat_interval = ORPHAN_STALENESS_SECONDS / 2
-        last_heartbeat = time.monotonic()
         observations: list[dict[str, Any]] = []
         while time.monotonic() < deadline:
             obs = self._observe_container()
             observations.append(obs)
+            self._record_health_observation(operation, obs, len(observations))
             if obs.get("online"):
                 return True, {"observations": len(observations), "last": obs}
-            now = time.monotonic()
-            if now - last_heartbeat >= heartbeat_interval:
-                self._repo.update_stage(operation, OperationStage.HEALTH_WAIT)
-                last_heartbeat = now
-            remaining = deadline - now
+            remaining = deadline - time.monotonic()
             if remaining <= 0:
                 break
             time.sleep(min(HEALTH_POLL_INTERVAL_SECONDS, remaining))
-        return False, {"observations": len(observations), "timed_out": True}
+        return False, {
+            "observations": len(observations),
+            "timed_out": True,
+            "last": observations[-1] if observations else {},
+        }
+
+    def _record_health_observation(
+        self, operation: ServerOperation, observation: dict[str, Any], count: int
+    ) -> None:
+        """Persist the latest health evidence while the operation is waiting."""
+        operation.update_observation(observation)
+        active_stage = operation.active_stage
+        if active_stage is not None:
+            active_stage.evidence.update({"observations": count, "last": observation})
+        self._repo.update_stage(operation, OperationStage.HEALTH_WAIT)
+        self._publish(operation)
 
     def _observe_container(self) -> dict[str, Any]:
         """Return a snapshot of current container state."""
@@ -284,6 +357,33 @@ class ServerOperationService:
                 "observed_at": _now(),
             }
 
+    def _verify_configuration(self, operation: ServerOperation) -> tuple[bool, dict[str, Any]]:
+        """Compare requested settings with Bedrock's generated server.properties.
+
+        The Compose environment is only the requested input.  Bedrock writes its
+        effective startup configuration to ``server.properties``; comparing the
+        mapped properties after the health probe avoids treating a successful
+        container command as confirmation.
+        """
+        properties = self._configuration.read_properties()
+        expected = {
+            PROPERTY_NAMES[key]: value
+            for key, value in operation.requested_changes.items()
+            if key in PROPERTY_NAMES
+        }
+        observed = {name: properties.get(name) for name in expected}
+        differences = [
+            {"property": name, "expected": value, "observed": observed[name]}
+            for name, value in expected.items()
+            if observed[name] != value
+        ]
+        return not differences, {
+            **self._observe_container(),
+            "configuration_checked_at": _now(),
+            "expected_settings": expected,
+            "observed_settings": observed,
+            "differences": differences,
+        }
     # ------------------------------------------------------------------
     # Startup reconciliation
     # ------------------------------------------------------------------

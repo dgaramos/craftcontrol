@@ -34,6 +34,18 @@ import sqlite3
 # Helpers
 # ---------------------------------------------------------------------------
 
+
+class InlineThread:
+    """Runs a background-operation target synchronously in focused tests."""
+
+    def __init__(self, *, target, args, **_kwargs) -> None:
+        self._target = target
+        self._args = args
+
+    def start(self) -> None:
+        self._target(*self._args)
+
+
 def make_db(tmp_path: Path) -> Path:
     db = tmp_path / "state.db"
     with sqlite3.connect(db) as conn:
@@ -49,7 +61,9 @@ def make_service(
     tmp_path: Path,
     docker: MagicMock | None = None,
     broker: MagicMock | None = None,
+    configuration: MagicMock | None = None,
     health_timeout: int = 1,
+    thread_factory=threading.Thread,
 ) -> ServerOperationService:
     if docker is None:
         docker = MagicMock()
@@ -57,10 +71,15 @@ def make_service(
         docker.execute.return_value = None
     if broker is None:
         broker = MagicMock()
+    if configuration is None:
+        configuration = MagicMock()
+        configuration.read_properties.return_value = {"max-players": "1"}
     return ServerOperationService(
         operation_repository=make_repo(tmp_path),
         docker=docker,
         broker=broker,
+        configuration=configuration,
+        thread_factory=thread_factory,
         server_id="test-server",
         health_timeout=health_timeout,
     )
@@ -241,6 +260,95 @@ class TestSQLiteOperationRepository:
 
 
 class TestServerOperationService:
+    def test_operation_confirms_only_when_effective_configuration_matches(self, tmp_path: Path):
+        docker = MagicMock()
+        docker.status.return_value = {"state": "running", "online": True}
+        configuration = MagicMock()
+        configuration.read_properties.return_value = {"max-players": "20"}
+        service = make_service(
+            tmp_path,
+            docker=docker,
+            configuration=configuration,
+            thread_factory=InlineThread,
+        )
+
+        operation = service.apply_restart_required({"MAX_PLAYERS": "20"}, lambda: None)
+
+        assert operation.state == OperationState.CONFIRMED
+        verify = next(stage for stage in operation.stages if stage.stage == OperationStage.VERIFY)
+        assert verify.evidence["differences"] == []
+        assert operation.observation["observed_settings"] == {"max-players": "20"}
+
+    def test_operation_becomes_divergent_when_effective_configuration_differs(self, tmp_path: Path):
+        docker = MagicMock()
+        docker.status.return_value = {"state": "running", "online": True}
+        configuration = MagicMock()
+        configuration.read_properties.return_value = {"max-players": "10"}
+        service = make_service(
+            tmp_path,
+            docker=docker,
+            configuration=configuration,
+            thread_factory=InlineThread,
+        )
+
+        operation = service.apply_restart_required({"MAX_PLAYERS": "20"}, lambda: None)
+
+        assert operation.state == OperationState.DIVERGENT
+        assert operation.observation["differences"] == [
+            {"property": "max-players", "expected": "20", "observed": "10"}
+        ]
+        assert operation.active_stage is None
+
+    def test_operation_fails_when_bedrock_becomes_unhealthy_during_verification(self, tmp_path: Path):
+        docker = MagicMock()
+        docker.status.side_effect = [
+            {"state": "running", "online": True},
+            {"state": "stopped", "online": False},
+        ]
+        configuration = MagicMock()
+        configuration.read_properties.return_value = {"max-players": "20"}
+        service = make_service(
+            tmp_path, docker=docker, configuration=configuration, thread_factory=InlineThread
+        )
+
+        operation = service.apply_restart_required({"MAX_PLAYERS": "20"}, lambda: None)
+
+        assert operation.state == OperationState.FAILED
+        assert operation.failed_stage is not None
+        assert operation.failed_stage.stage == OperationStage.VERIFY
+
+    def test_operation_normalizes_valid_settings_before_verification(self, tmp_path: Path):
+        configuration = MagicMock()
+        configuration.read_properties.return_value = {"max-players": "20"}
+        service = make_service(tmp_path, configuration=configuration, thread_factory=InlineThread)
+
+        operation = service.apply_restart_required({"MAX_PLAYERS": 20}, lambda: None)
+
+        assert operation.state == OperationState.CONFIRMED
+        assert operation.requested_changes == {"MAX_PLAYERS": "20"}
+
+    def test_operation_records_each_invalid_setting_during_review(self, tmp_path: Path):
+        service = make_service(tmp_path, thread_factory=InlineThread)
+
+        operation = service.apply_restart_required(
+            {"MAX_PLAYERS": 101, "DIFFICULTY": "nightmare"}, lambda: None
+        )
+
+        review = next(stage for stage in operation.stages if stage.stage == OperationStage.REVIEW)
+        assert operation.state == OperationState.FAILED
+        assert set(review.evidence["invalid_settings"]) == {"MAX_PLAYERS", "DIFFICULTY"}
+
+    def test_operation_fails_before_apply_when_a_setting_cannot_be_verified(self, tmp_path: Path):
+        service = make_service(tmp_path, thread_factory=InlineThread)
+        applied = []
+
+        operation = service.apply_restart_required({"UNSUPPORTED_SETTING": "value"}, lambda: applied.append(True))
+
+        assert operation.state == OperationState.FAILED
+        assert applied == []
+        review = next(stage for stage in operation.stages if stage.stage == OperationStage.REVIEW)
+        assert review.evidence["unverifiable_settings"] == ["UNSUPPORTED_SETTING"]
+
     def test_apply_creates_operation_and_runs_apply_fn(self, tmp_path: Path):
         service = make_service(tmp_path)
         applied = []
@@ -248,7 +356,7 @@ class TestServerOperationService:
         def apply_fn():
             applied.append(True)
 
-        op = service.apply_restart_required({"X": "1"}, apply_fn)
+        op = service.apply_restart_required({"MAX_PLAYERS": "1"}, apply_fn)
         assert op.operation_id
         assert op.state in {OperationState.PENDING, OperationState.RUNNING}
         # Wait for background thread
@@ -273,10 +381,10 @@ class TestServerOperationService:
         def apply_fn():
             pass
 
-        service.apply_restart_required({"X": "1"}, apply_fn)
+        service.apply_restart_required({"MAX_PLAYERS": "1"}, apply_fn)
         time.sleep(0.2)  # Let the operation start
         with pytest.raises(ConflictingOperationError):
-            service.apply_restart_required({"Y": "2"}, apply_fn)
+            service.apply_restart_required({"MAX_PLAYERS": "2"}, apply_fn)
         barrier.set()
 
     def test_operation_fails_when_apply_fn_raises(self, tmp_path: Path):
@@ -285,7 +393,7 @@ class TestServerOperationService:
         def bad_apply():
             raise RuntimeError("disk full")
 
-        op = service.apply_restart_required({"X": "1"}, bad_apply)
+        op = service.apply_restart_required({"MAX_PLAYERS": "1"}, bad_apply)
         time.sleep(1)
         refreshed = service.get_operation(op.operation_id)
         assert refreshed is not None
@@ -402,6 +510,8 @@ class TestServerOperationService:
             operation_repository=repo,
             docker=docker,
             broker=broker,
+            configuration=MagicMock(),
+            thread_factory=threading.Thread,
             server_id="test-server",
             health_timeout=1,
         )
@@ -445,6 +555,8 @@ class TestServerOperationService:
             operation_repository=repo,
             docker=docker,
             broker=broker,
+            configuration=MagicMock(),
+            thread_factory=threading.Thread,
             server_id="test-server",
             health_timeout=1,
         )
@@ -472,6 +584,8 @@ class TestServerOperationService:
             operation_repository=repo,
             docker=docker,
             broker=broker,
+            configuration=MagicMock(),
+            thread_factory=threading.Thread,
             server_id="test-server",
             health_timeout=1,
         )
@@ -495,6 +609,8 @@ class TestServerOperationService:
             operation_repository=repo,
             docker=docker,
             broker=broker,
+            configuration=MagicMock(),
+            thread_factory=threading.Thread,
             server_id="test-server",
             health_timeout=1,
         )

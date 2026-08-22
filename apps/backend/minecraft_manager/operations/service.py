@@ -143,6 +143,15 @@ class ServerOperationService:
 
             # Stage: REVIEW
             self._begin(operation, OperationStage.REVIEW)
+            unverifiable = sorted(set(operation.requested_changes) - PROPERTY_NAMES.keys())
+            if unverifiable:
+                self._fail(
+                    operation,
+                    OperationStage.REVIEW,
+                    "requested changes cannot be verified against Bedrock properties",
+                    evidence={"unverifiable_settings": unverifiable},
+                )
+                return
             self._complete(operation, OperationStage.REVIEW, evidence={"changes": list(operation.requested_changes)})
 
             # Stage: BACKUP_VERIFY (skipped in basic delivery — no backup dep here)

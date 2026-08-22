@@ -73,7 +73,7 @@ def make_service(
         broker = MagicMock()
     if configuration is None:
         configuration = MagicMock()
-        configuration.read_properties.return_value = {}
+        configuration.read_properties.return_value = {"max-players": "1"}
     return ServerOperationService(
         operation_repository=make_repo(tmp_path),
         docker=docker,
@@ -299,6 +299,17 @@ class TestServerOperationService:
         ]
         assert operation.active_stage is None
 
+    def test_operation_fails_before_apply_when_a_setting_cannot_be_verified(self, tmp_path: Path):
+        service = make_service(tmp_path, thread_factory=InlineThread)
+        applied = []
+
+        operation = service.apply_restart_required({"UNSUPPORTED_SETTING": "value"}, lambda: applied.append(True))
+
+        assert operation.state == OperationState.FAILED
+        assert applied == []
+        review = next(stage for stage in operation.stages if stage.stage == OperationStage.REVIEW)
+        assert review.evidence["unverifiable_settings"] == ["UNSUPPORTED_SETTING"]
+
     def test_apply_creates_operation_and_runs_apply_fn(self, tmp_path: Path):
         service = make_service(tmp_path)
         applied = []
@@ -306,7 +317,7 @@ class TestServerOperationService:
         def apply_fn():
             applied.append(True)
 
-        op = service.apply_restart_required({"X": "1"}, apply_fn)
+        op = service.apply_restart_required({"MAX_PLAYERS": "1"}, apply_fn)
         assert op.operation_id
         assert op.state in {OperationState.PENDING, OperationState.RUNNING}
         # Wait for background thread
@@ -331,10 +342,10 @@ class TestServerOperationService:
         def apply_fn():
             pass
 
-        service.apply_restart_required({"X": "1"}, apply_fn)
+        service.apply_restart_required({"MAX_PLAYERS": "1"}, apply_fn)
         time.sleep(0.2)  # Let the operation start
         with pytest.raises(ConflictingOperationError):
-            service.apply_restart_required({"Y": "2"}, apply_fn)
+            service.apply_restart_required({"MAX_PLAYERS": "2"}, apply_fn)
         barrier.set()
 
     def test_operation_fails_when_apply_fn_raises(self, tmp_path: Path):
@@ -343,7 +354,7 @@ class TestServerOperationService:
         def bad_apply():
             raise RuntimeError("disk full")
 
-        op = service.apply_restart_required({"X": "1"}, bad_apply)
+        op = service.apply_restart_required({"MAX_PLAYERS": "1"}, bad_apply)
         time.sleep(1)
         refreshed = service.get_operation(op.operation_id)
         assert refreshed is not None

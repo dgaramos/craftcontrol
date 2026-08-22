@@ -11,7 +11,6 @@ import logging
 import sqlite3
 import threading
 import time
-from collections.abc import Callable
 from datetime import datetime, timezone
 from typing import Any
 
@@ -27,8 +26,8 @@ from .lifecycle import (
     OperationState,
     ServerOperation,
 )
-from ..ports import ContainerOperations, EventPublisher, OperationStore, ServerConfiguration
-from ..schema import PROPERTY_NAMES
+from ..ports import ContainerOperations, EventPublisher, OperationStore, ServerConfiguration, ThreadFactory
+from ..schema import PROPERTY_NAMES, SETTINGS, validate_value
 
 LOGGER = logging.getLogger(__name__)
 
@@ -59,7 +58,7 @@ class ServerOperationService:
         docker: ContainerOperations,
         broker: EventPublisher,
         configuration: ServerConfiguration,
-        thread_factory: Callable[..., Any],
+        thread_factory: ThreadFactory,
         server_id: str = "default",
         health_timeout: int = DEFAULT_HEALTH_TIMEOUT_SECONDS,
     ) -> None:
@@ -152,6 +151,20 @@ class ServerOperationService:
                     evidence={"unverifiable_settings": unverifiable},
                 )
                 return
+            try:
+                operation.requested_changes = {
+                    key: validate_value(SETTINGS[key], value)
+                    for key, value in operation.requested_changes.items()
+                }
+            except (TypeError, ValueError) as exc:
+                self._fail(
+                    operation,
+                    OperationStage.REVIEW,
+                    f"requested changes are invalid: {exc}",
+                    evidence={"invalid_settings": list(operation.requested_changes)},
+                )
+                return
+            self._repo.save(operation)
             self._complete(operation, OperationStage.REVIEW, evidence={"changes": list(operation.requested_changes)})
 
             # Stage: BACKUP_VERIFY (skipped in basic delivery — no backup dep here)
@@ -211,6 +224,14 @@ class ServerOperationService:
                 )
                 return
             operation.update_observation(evidence)
+            if not evidence.get("online"):
+                self._fail(
+                    operation,
+                    OperationStage.VERIFY,
+                    "Bedrock became unhealthy during configuration verification",
+                    evidence=evidence,
+                )
+                return
             if not verified:
                 operation.diverge("effective configuration differs from requested changes", evidence=evidence)
                 self._repo.save(operation)

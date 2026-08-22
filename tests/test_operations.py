@@ -299,6 +299,34 @@ class TestServerOperationService:
         ]
         assert operation.active_stage is None
 
+    def test_operation_fails_when_bedrock_becomes_unhealthy_during_verification(self, tmp_path: Path):
+        docker = MagicMock()
+        docker.status.side_effect = [
+            {"state": "running", "online": True},
+            {"state": "stopped", "online": False},
+        ]
+        configuration = MagicMock()
+        configuration.read_properties.return_value = {"max-players": "20"}
+        service = make_service(
+            tmp_path, docker=docker, configuration=configuration, thread_factory=InlineThread
+        )
+
+        operation = service.apply_restart_required({"MAX_PLAYERS": "20"}, lambda: None)
+
+        assert operation.state == OperationState.FAILED
+        assert operation.failed_stage is not None
+        assert operation.failed_stage.stage == OperationStage.VERIFY
+
+    def test_operation_normalizes_valid_settings_before_verification(self, tmp_path: Path):
+        configuration = MagicMock()
+        configuration.read_properties.return_value = {"max-players": "20"}
+        service = make_service(tmp_path, configuration=configuration, thread_factory=InlineThread)
+
+        operation = service.apply_restart_required({"MAX_PLAYERS": 20}, lambda: None)
+
+        assert operation.state == OperationState.CONFIRMED
+        assert operation.requested_changes == {"MAX_PLAYERS": "20"}
+
     def test_operation_fails_before_apply_when_a_setting_cannot_be_verified(self, tmp_path: Path):
         service = make_service(tmp_path, thread_factory=InlineThread)
         applied = []

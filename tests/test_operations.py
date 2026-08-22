@@ -63,7 +63,7 @@ def make_service(
     broker: MagicMock | None = None,
     configuration: MagicMock | None = None,
     health_timeout: int = 1,
-    thread_factory=None,
+    thread_factory=threading.Thread,
 ) -> ServerOperationService:
     if docker is None:
         docker = MagicMock()
@@ -79,9 +79,9 @@ def make_service(
         docker=docker,
         broker=broker,
         configuration=configuration,
+        thread_factory=thread_factory,
         server_id="test-server",
         health_timeout=health_timeout,
-        thread_factory=thread_factory,
     )
 
 
@@ -461,6 +461,7 @@ class TestServerOperationService:
             docker=docker,
             broker=broker,
             configuration=MagicMock(),
+            thread_factory=threading.Thread,
             server_id="test-server",
             health_timeout=1,
         )
@@ -505,6 +506,7 @@ class TestServerOperationService:
             docker=docker,
             broker=broker,
             configuration=MagicMock(),
+            thread_factory=threading.Thread,
             server_id="test-server",
             health_timeout=1,
         )
@@ -533,6 +535,7 @@ class TestServerOperationService:
             docker=docker,
             broker=broker,
             configuration=MagicMock(),
+            thread_factory=threading.Thread,
             server_id="test-server",
             health_timeout=1,
         )
@@ -557,6 +560,7 @@ class TestServerOperationService:
             docker=docker,
             broker=broker,
             configuration=MagicMock(),
+            thread_factory=threading.Thread,
             server_id="test-server",
             health_timeout=1,
         )

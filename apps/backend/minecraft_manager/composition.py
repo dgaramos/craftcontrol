@@ -58,6 +58,7 @@ def compose_manager(
         operation_repository=operation_repo,
         docker=docker,
         broker=broker,
+        configuration=files,
         server_id=settings.container,
     )
     manager = ManagerService(

@@ -222,8 +222,18 @@ class ServerOperation:
         self.updated_at = _now()
         return self
 
-    def diverge(self, error: str, observation: dict[str, Any] | None = None) -> ServerOperation:
+    def diverge(
+        self,
+        error: str,
+        observation: dict[str, Any] | None = None,
+        evidence: dict[str, Any] | None = None,
+    ) -> ServerOperation:
         self._assert_state(OperationState.RUNNING)
+        verify_record = self._stage(OperationStage.VERIFY)
+        verify_record.result = StageResult.COMPLETED
+        verify_record.completed_at = _now()
+        if evidence:
+            verify_record.evidence.update(evidence)
         self.state = OperationState.DIVERGENT
         self.terminal_error = error
         if observation:

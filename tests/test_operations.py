@@ -34,6 +34,18 @@ import sqlite3
 # Helpers
 # ---------------------------------------------------------------------------
 
+
+class InlineThread:
+    """Runs a background-operation target synchronously in focused tests."""
+
+    def __init__(self, *, target, args, **_kwargs) -> None:
+        self._target = target
+        self._args = args
+
+    def start(self) -> None:
+        self._target(*self._args)
+
+
 def make_db(tmp_path: Path) -> Path:
     db = tmp_path / "state.db"
     with sqlite3.connect(db) as conn:
@@ -49,7 +61,9 @@ def make_service(
     tmp_path: Path,
     docker: MagicMock | None = None,
     broker: MagicMock | None = None,
+    configuration: MagicMock | None = None,
     health_timeout: int = 1,
+    thread_factory=None,
 ) -> ServerOperationService:
     if docker is None:
         docker = MagicMock()
@@ -57,12 +71,17 @@ def make_service(
         docker.execute.return_value = None
     if broker is None:
         broker = MagicMock()
+    if configuration is None:
+        configuration = MagicMock()
+        configuration.read_properties.return_value = {}
     return ServerOperationService(
         operation_repository=make_repo(tmp_path),
         docker=docker,
         broker=broker,
+        configuration=configuration,
         server_id="test-server",
         health_timeout=health_timeout,
+        thread_factory=thread_factory,
     )
 
 
@@ -241,6 +260,45 @@ class TestSQLiteOperationRepository:
 
 
 class TestServerOperationService:
+    def test_operation_confirms_only_when_effective_configuration_matches(self, tmp_path: Path):
+        docker = MagicMock()
+        docker.status.return_value = {"state": "running", "online": True}
+        configuration = MagicMock()
+        configuration.read_properties.return_value = {"max-players": "20"}
+        service = make_service(
+            tmp_path,
+            docker=docker,
+            configuration=configuration,
+            thread_factory=InlineThread,
+        )
+
+        operation = service.apply_restart_required({"MAX_PLAYERS": "20"}, lambda: None)
+
+        assert operation.state == OperationState.CONFIRMED
+        verify = next(stage for stage in operation.stages if stage.stage == OperationStage.VERIFY)
+        assert verify.evidence["differences"] == []
+        assert operation.observation["observed_settings"] == {"max-players": "20"}
+
+    def test_operation_becomes_divergent_when_effective_configuration_differs(self, tmp_path: Path):
+        docker = MagicMock()
+        docker.status.return_value = {"state": "running", "online": True}
+        configuration = MagicMock()
+        configuration.read_properties.return_value = {"max-players": "10"}
+        service = make_service(
+            tmp_path,
+            docker=docker,
+            configuration=configuration,
+            thread_factory=InlineThread,
+        )
+
+        operation = service.apply_restart_required({"MAX_PLAYERS": "20"}, lambda: None)
+
+        assert operation.state == OperationState.DIVERGENT
+        assert operation.observation["differences"] == [
+            {"property": "max-players", "expected": "20", "observed": "10"}
+        ]
+        assert operation.active_stage is None
+
     def test_apply_creates_operation_and_runs_apply_fn(self, tmp_path: Path):
         service = make_service(tmp_path)
         applied = []
@@ -402,6 +460,7 @@ class TestServerOperationService:
             operation_repository=repo,
             docker=docker,
             broker=broker,
+            configuration=MagicMock(),
             server_id="test-server",
             health_timeout=1,
         )
@@ -445,6 +504,7 @@ class TestServerOperationService:
             operation_repository=repo,
             docker=docker,
             broker=broker,
+            configuration=MagicMock(),
             server_id="test-server",
             health_timeout=1,
         )
@@ -472,6 +532,7 @@ class TestServerOperationService:
             operation_repository=repo,
             docker=docker,
             broker=broker,
+            configuration=MagicMock(),
             server_id="test-server",
             health_timeout=1,
         )
@@ -495,6 +556,7 @@ class TestServerOperationService:
             operation_repository=repo,
             docker=docker,
             broker=broker,
+            configuration=MagicMock(),
             server_id="test-server",
             health_timeout=1,
         )

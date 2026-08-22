@@ -374,6 +374,10 @@ class TestServerOperationService:
         assert refreshed is not None
         # Operation fails because health wait uses _observe_container which returns online=False
         assert refreshed.state == OperationState.FAILED
+        # Confirm failure occurred specifically in the HEALTH_WAIT stage, not in an
+        # outer handler that would mask the error origin.
+        failed = refreshed.failed_stage
+        assert failed is not None and failed.stage == OperationStage.HEALTH_WAIT
 
     def test_unexpected_exception_in_run_marks_operation_failed(self, tmp_path: Path):
         """Outer except in _run catches unexpected failures from repo operations."""
@@ -383,13 +387,13 @@ class TestServerOperationService:
         broker = MagicMock()
 
         repo = make_repo(tmp_path)
-        call_count = [0]
         original_update = repo.update_stage
 
         def flaky_update_stage(operation, stage):
-            call_count[0] += 1
-            # Raise on the third call (during PREPARE stage update)
-            if call_count[0] == 3:
+            # Raise on PREPARE to exercise the outer _run except handler without
+            # relying on a fragile call-count that breaks when the stage sequence
+            # changes.
+            if stage == OperationStage.PREPARE:
                 raise RuntimeError("unexpected disk error")
             return original_update(operation, stage)
 

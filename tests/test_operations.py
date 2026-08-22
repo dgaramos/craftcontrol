@@ -327,6 +327,17 @@ class TestServerOperationService:
         assert operation.state == OperationState.CONFIRMED
         assert operation.requested_changes == {"MAX_PLAYERS": "20"}
 
+    def test_operation_records_each_invalid_setting_during_review(self, tmp_path: Path):
+        service = make_service(tmp_path, thread_factory=InlineThread)
+
+        operation = service.apply_restart_required(
+            {"MAX_PLAYERS": 101, "DIFFICULTY": "nightmare"}, lambda: None
+        )
+
+        review = next(stage for stage in operation.stages if stage.stage == OperationStage.REVIEW)
+        assert operation.state == OperationState.FAILED
+        assert set(review.evidence["invalid_settings"]) == {"MAX_PLAYERS", "DIFFICULTY"}
+
     def test_operation_fails_before_apply_when_a_setting_cannot_be_verified(self, tmp_path: Path):
         service = make_service(tmp_path, thread_factory=InlineThread)
         applied = []

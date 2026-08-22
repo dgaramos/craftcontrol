@@ -59,9 +59,9 @@ class ServerOperationService:
         docker: ContainerOperations,
         broker: EventPublisher,
         configuration: ServerConfiguration,
+        thread_factory: Callable[..., Any],
         server_id: str = "default",
         health_timeout: int = DEFAULT_HEALTH_TIMEOUT_SECONDS,
-        thread_factory: Callable[..., Any] | None = None,
     ) -> None:
         self._repo = operation_repository
         self._docker = docker
@@ -69,7 +69,7 @@ class ServerOperationService:
         self._configuration = configuration
         self._server_id = server_id
         self._health_timeout = health_timeout
-        self._thread_factory = thread_factory if thread_factory is not None else threading.Thread
+        self._thread_factory = thread_factory
         # Protects the check-then-create sequence on this process.
         self._lock = threading.Lock()
         self._reconcile_startup_orphans()

@@ -52,3 +52,66 @@ When a reviewer authors a commit, use its matching co-author trailer:
 <dgaramos+claudio@gmail.com>`.
 
 This profile never triggers an automatic review.
+
+## Quality gate
+
+Run `bin/check` before handoff. A failed gate stops implementation, shipping,
+or a claim that a finding is resolved.
+
+## Lifecycle skill mapping
+
+| Local entry point | Portable skill |
+| --- | --- |
+| Start an issue branch | `start-issue` |
+| Implement an issue | `implement-issue` |
+| Ship a completed issue | `ship-change` |
+| Run the full lifecycle | `execute-issue` |
+| Review a pull request | `review-pr` |
+| Triage review findings | `handle-pr-findings` |
+| Draft or publish an issue | `author-issue` |
+
+## PR metadata
+
+- **Base branch:** `main`
+- **Branch naming:** `<issue-number>-<type>/<slug>`
+- **Labels, milestone, assignee, Project and reviewers:** inherit the linked
+  issue; apply and verify each after opening the PR
+- **PR template:** `.github/pull_request_template.md`
+- **Merge policy:** squash merge after required checks and actionable findings
+  are addressed
+
+## Publisher dispatch contract
+
+Publication remains explicitly authorized. Never use a personal GitHub comment
+as a fallback for a configured App.
+
+### Review
+
+Dispatch `publish-cody-review.yml` or `publish-claudio-review.yml` with
+`pr_number`, `reviewed_head_sha`, `event`, `review_body`, and the optional
+review manifests `inline_comments_json`, `replies_json`, and
+`resolve_thread_ids_json`.
+
+### Create issue
+
+Dispatch `publish-cody-issue.yml` or `publish-claudio-issue.yml` with required
+`title` and `body`; `labels`, `assignees`, and `milestone_number` are optional.
+Do not supply review-only fields to this mode.
+
+| Reviewer | Mode | Availability |
+| --- | --- | --- |
+| Cody DR | review | available |
+| Cody DR | create-issue | available |
+| Cody DR | reply | unavailable until #238 |
+| Cody DR | resolve-thread | unavailable until #238 |
+| Claudio DR | review | available |
+| Claudio DR | create-issue | available |
+| Claudio DR | reply | unavailable until #238 |
+| Claudio DR | resolve-thread | unavailable until #238 |
+
+## Post-publication verification
+
+After a review or issue publication, verify the target and that the author is
+`cody-dr[bot]` for Cody DR or `claudio-dr[bot]` for Claudio DR. Reply and
+resolution verification becomes applicable only after #238. A failed
+verification is a failed publication, not a fallback to a personal account.

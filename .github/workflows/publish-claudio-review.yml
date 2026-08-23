@@ -37,4 +37,5 @@ jobs:
           REPLIES_JSON: ${{ inputs.replies_json }}
           RESOLVE_THREAD_IDS_JSON: ${{ inputs.resolve_thread_ids_json }}
           EXPECTED_AUTHOR: claudio-dr[bot]
+          PUBLISHER_APP_SLUG: ${{ steps.claudio-token.outputs.app-slug }}
         run: bash .github/scripts/publish-review.sh

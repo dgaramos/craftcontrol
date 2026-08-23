@@ -43,191 +43,68 @@
     }
   ],
   "paths": {
-    "/api/health": {
+    "/api/analytics/activity": {
       "get": {
         "tags": [
-          "System"
+          "Analytics"
         ],
-        "operationId": "health",
-        "summary": "Check backend health",
-        "security": [],
-        "responses": {
-          "200": {
-            "description": "Healthy backend",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Health"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/schema": {
-      "get": {
-        "tags": [
-          "Configuration"
-        ],
-        "operationId": "getSchema",
-        "summary": "Get editable settings and gamerule definitions",
-        "responses": {
-          "200": {
-            "description": "Editable field definitions",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SchemaDocument"
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          }
-        }
-      }
-    },
-    "/api/config": {
-      "get": {
-        "tags": [
-          "Configuration"
-        ],
-        "operationId": "getConfig",
-        "summary": "Get current persistent configuration",
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/JsonObject"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "Configuration"
-        ],
-        "operationId": "updateConfig",
-        "summary": "Validate and stage persistent configuration",
-        "x-craftcontrol-capability": "server.configure",
+        "operationId": "getActivity",
+        "summary": "Query filtered server activity",
         "parameters": [
           {
-            "$ref": "#/components/parameters/CsrfToken"
-          }
-        ],
-        "requestBody": {
-          "$ref": "#/components/requestBodies/JsonObject"
-        },
-        "responses": {
-          "200": {
-            "description": "Configuration saved",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ConfigUpdateResult"
-                }
-              }
+            "name": "page_size",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
             }
           },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          }
-        }
-      }
-    },
-    "/api/state": {
-      "get": {
-        "tags": [
-          "System"
-        ],
-        "operationId": "getState",
-        "summary": "Get the reconciled public manager state",
-        "responses": {
-          "200": {
-            "description": "Sanitized manager state",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/StateSnapshot"
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          }
-        }
-      }
-    },
-    "/api/status": {
-      "get": {
-        "tags": [
-          "Server"
-        ],
-        "operationId": "getServerStatus",
-        "summary": "Get Bedrock container status",
-        "responses": {
-          "200": {
-            "description": "Bedrock container status",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ServerStatus"
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          }
-        }
-      }
-    },
-    "/api/refresh": {
-      "post": {
-        "tags": [
-          "System"
-        ],
-        "operationId": "refreshState",
-        "summary": "Request asynchronous reconciliation",
-        "parameters": [
           {
-            "$ref": "#/components/parameters/CsrfToken"
-          }
-        ],
-        "responses": {
-          "202": {
-            "description": "Reconciliation accepted",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RefreshAccepted"
-                }
-              }
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
             }
           },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          }
-        }
-      }
-    },
-    "/api/events": {
-      "get": {
-        "tags": [
-          "System"
-        ],
-        "operationId": "streamEvents",
-        "summary": "Stream state events with Server-Sent Events",
-        "parameters": [
           {
-            "name": "Last-Event-ID",
-            "in": "header",
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "player",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "all",
+                "structured",
+                "server"
+              ]
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
             "schema": {
               "type": "integer",
               "minimum": 0
@@ -236,120 +113,11 @@
         ],
         "responses": {
           "200": {
-            "description": "SSE event stream",
-            "headers": {
-              "X-Accel-Buffering": {
-                "schema": {
-                  "type": "string",
-                  "const": "no"
-                }
-              }
-            },
-            "content": {
-              "text/event-stream": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          }
-        }
-      }
-    },
-    "/api/auth/me": {
-      "get": {
-        "tags": [
-          "Authentication"
-        ],
-        "operationId": "getCurrentUser",
-        "summary": "Get the current user and session-bound CSRF token",
-        "responses": {
-          "200": {
-            "description": "Current authenticated session",
+            "description": "Paginated activity history",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Session"
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          }
-        }
-      }
-    },
-    "/api/auth/login": {
-      "post": {
-        "tags": [
-          "Authentication"
-        ],
-        "operationId": "login",
-        "summary": "Create a panel session",
-        "security": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/LoginRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Authenticated session",
-            "headers": {
-              "Set-Cookie": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Session"
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          }
-        }
-      }
-    },
-    "/api/auth/claim": {
-      "post": {
-        "tags": [
-          "Authentication"
-        ],
-        "operationId": "claimAccess",
-        "summary": "Activate an invitation or recovery code",
-        "security": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ClaimRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Activated session",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Session"
+                  "$ref": "#/components/schemas/ActivityPage"
                 }
               }
             }
@@ -360,24 +128,143 @@
         }
       }
     },
-    "/api/auth/logout": {
-      "post": {
+    "/api/analytics/blocks": {
+      "get": {
         "tags": [
-          "Authentication"
+          "Analytics"
         ],
-        "operationId": "logout",
-        "summary": "Revoke the current session",
+        "operationId": "getBlockAnalytics",
+        "summary": "Get mining and building analytics",
         "parameters": [
           {
-            "$ref": "#/components/parameters/CsrfToken"
+            "$ref": "#/components/parameters/Limit"
           }
         ],
         "responses": {
           "200": {
-            "$ref": "#/components/responses/Ok"
+            "description": "Mining and building analytics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LifetimeAnalytics"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analytics/combat": {
+      "get": {
+        "tags": [
+          "Analytics"
+        ],
+        "operationId": "getCombatAnalytics",
+        "summary": "Get combat analytics",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Combat analytics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LifetimeAnalytics"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analytics/exploration": {
+      "get": {
+        "tags": [
+          "Analytics"
+        ],
+        "operationId": "getExplorationAnalytics",
+        "summary": "Get exploration analytics",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Exploration analytics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LifetimeAnalytics"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analytics/periods": {
+      "get": {
+        "tags": [
+          "Analytics"
+        ],
+        "operationId": "getPeriodAnalytics",
+        "summary": "Get daily and period analytics",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "enum": [
+                7,
+                30
+              ]
+            }
           },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daily period analytics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PeriodAnalytics"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analytics/rankings": {
+      "get": {
+        "tags": [
+          "Analytics"
+        ],
+        "operationId": "getRankings",
+        "summary": "Get lifetime rankings",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lifetime rankings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LifetimeAnalytics"
+                }
+              }
+            }
           }
         }
       }
@@ -503,6 +390,556 @@
         }
       }
     },
+    "/api/auth/claim": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "operationId": "claimAccess",
+        "summary": "Activate an invitation or recovery code",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Activated session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Session"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "operationId": "login",
+        "summary": "Create a panel session",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authenticated session",
+            "headers": {
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Session"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "operationId": "logout",
+        "summary": "Revoke the current session",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": [
+          "Authentication"
+        ],
+        "operationId": "getCurrentUser",
+        "summary": "Get the current user and session-bound CSRF token",
+        "responses": {
+          "200": {
+            "description": "Current authenticated session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Session"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/config": {
+      "get": {
+        "tags": [
+          "Configuration"
+        ],
+        "operationId": "getConfig",
+        "summary": "Get current persistent configuration",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/JsonObject"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Configuration"
+        ],
+        "operationId": "updateConfig",
+        "summary": "Validate and stage persistent configuration",
+        "x-craftcontrol-capability": "server.configure",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/JsonObject"
+        },
+        "responses": {
+          "200": {
+            "description": "Configuration saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigUpdateResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/api/events": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "operationId": "streamEvents",
+        "summary": "Stream state events with Server-Sent Events",
+        "parameters": [
+          {
+            "name": "Last-Event-ID",
+            "in": "header",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "SSE event stream",
+            "headers": {
+              "X-Accel-Buffering": {
+                "schema": {
+                  "type": "string",
+                  "const": "no"
+                }
+              }
+            },
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/gamerules/{rule}": {
+      "put": {
+        "tags": [
+          "World"
+        ],
+        "operationId": "setGamerule",
+        "summary": "Set one allowlisted gamerule",
+        "x-craftcontrol-capability": "world.manage",
+        "parameters": [
+          {
+            "name": "rule",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "value"
+                ],
+                "properties": {
+                  "value": {}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Applied gamerule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameruleResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      }
+    },
+    "/api/health": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "operationId": "health",
+        "summary": "Check backend health",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Healthy backend",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/operations": {
+      "get": {
+        "operationId": "list_operations",
+        "summary": "List recent server operations",
+        "tags": [
+          "operations"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of recent server operations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "operations": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ServerOperation"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/operations/active": {
+      "get": {
+        "operationId": "get_active_operation",
+        "summary": "Get the current non-terminal server operation",
+        "tags": [
+          "operations"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Active operation or null",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "operation": {
+                      "oneOf": [
+                        {
+                          "$ref": "#/components/schemas/ServerOperation"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/operations/latest": {
+      "get": {
+        "operationId": "get_latest_operation",
+        "summary": "Get the most recent server operation",
+        "tags": [
+          "operations"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Latest operation or null",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "operation": {
+                      "oneOf": [
+                        {
+                          "$ref": "#/components/schemas/ServerOperation"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/operations/stream": {
+      "get": {
+        "operationId": "stream_operations",
+        "summary": "SSE stream of operation lifecycle changes",
+        "description": "Emits an operation event for every operation.updated broker event. Pass Last-Event-ID on reconnect to avoid missing terminal outcomes.",
+        "tags": [
+          "operations"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "csrfToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Last-Event-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0
+            },
+            "description": "Resume the stream after this event ID (reconnect support)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Server-Sent Events stream of operation lifecycle changes",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/operations/{operation_id}": {
+      "get": {
+        "operationId": "get_operation",
+        "summary": "Get a specific server operation by ID",
+        "tags": [
+          "operations"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "csrfToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "operation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "operation": {
+                      "$ref": "#/components/schemas/ServerOperation"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Operation not found"
+          }
+        }
+      }
+    },
+    "/api/operations/{operation_id}/reconcile": {
+      "post": {
+        "operationId": "reconcile_operation",
+        "summary": "Re-observe Bedrock and refresh a terminal operation outcome",
+        "tags": [
+          "operations"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "csrfToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          },
+          {
+            "name": "operation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Refreshed operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "operation": {
+                      "$ref": "#/components/schemas/ServerOperation"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Operation not found"
+          }
+        }
+      }
+    },
     "/api/players": {
       "get": {
         "tags": [
@@ -612,228 +1049,139 @@
         }
       }
     },
-    "/api/analytics/activity": {
-      "get": {
+    "/api/refresh": {
+      "post": {
         "tags": [
-          "Analytics"
+          "System"
         ],
-        "operationId": "getActivity",
-        "summary": "Query filtered server activity",
+        "operationId": "refreshState",
+        "summary": "Request asynchronous reconciliation",
         "parameters": [
           {
-            "name": "page_size",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100,
-              "default": 25
-            }
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "minimum": 1
-            }
-          },
-          {
-            "name": "kind",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "player",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "source",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "all",
-                "structured",
-                "server"
-              ]
-            }
-          },
-          {
-            "name": "search",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "days",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "minimum": 0
-            }
+            "$ref": "#/components/parameters/CsrfToken"
           }
         ],
         "responses": {
-          "200": {
-            "description": "Paginated activity history",
+          "202": {
+            "description": "Reconciliation accepted",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ActivityPage"
+                  "$ref": "#/components/schemas/RefreshAccepted"
                 }
               }
             }
           },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
           }
         }
       }
     },
-    "/api/analytics/rankings": {
+    "/api/schema": {
       "get": {
         "tags": [
-          "Analytics"
+          "Configuration"
         ],
-        "operationId": "getRankings",
-        "summary": "Get lifetime rankings",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/Limit"
-          }
-        ],
+        "operationId": "getSchema",
+        "summary": "Get editable settings and gamerule definitions",
         "responses": {
           "200": {
-            "description": "Lifetime rankings",
+            "description": "Editable field definitions",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/LifetimeAnalytics"
+                  "$ref": "#/components/schemas/SchemaDocument"
                 }
               }
-            }
-          }
-        }
-      }
-    },
-    "/api/analytics/blocks": {
-      "get": {
-        "tags": [
-          "Analytics"
-        ],
-        "operationId": "getBlockAnalytics",
-        "summary": "Get mining and building analytics",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/Limit"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Mining and building analytics",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LifetimeAnalytics"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/analytics/combat": {
-      "get": {
-        "tags": [
-          "Analytics"
-        ],
-        "operationId": "getCombatAnalytics",
-        "summary": "Get combat analytics",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/Limit"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Combat analytics",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LifetimeAnalytics"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/analytics/exploration": {
-      "get": {
-        "tags": [
-          "Analytics"
-        ],
-        "operationId": "getExplorationAnalytics",
-        "summary": "Get exploration analytics",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/Limit"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Exploration analytics",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LifetimeAnalytics"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/analytics/periods": {
-      "get": {
-        "tags": [
-          "Analytics"
-        ],
-        "operationId": "getPeriodAnalytics",
-        "summary": "Get daily and period analytics",
-        "parameters": [
-          {
-            "name": "days",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "enum": [
-                7,
-                30
-              ]
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/server/{action}": {
+      "post": {
+        "tags": [
+          "Server"
+        ],
+        "operationId": "operateServer",
+        "summary": "Run an allowlisted Bedrock lifecycle operation",
+        "x-craftcontrol-capability": "action-specific",
+        "parameters": [
           {
-            "$ref": "#/components/parameters/Limit"
+            "$ref": "#/components/parameters/ActionPath"
+          },
+          {
+            "$ref": "#/components/parameters/CsrfToken"
           }
         ],
         "responses": {
           "200": {
-            "description": "Daily period analytics",
+            "description": "Server operation result",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PeriodAnalytics"
+                  "$ref": "#/components/schemas/ActionResult"
                 }
               }
             }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/api/state": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "operationId": "getState",
+        "summary": "Get the reconciled public manager state",
+        "responses": {
+          "200": {
+            "description": "Sanitized manager state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StateSnapshot"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/status": {
+      "get": {
+        "tags": [
+          "Server"
+        ],
+        "operationId": "getServerStatus",
+        "summary": "Get Bedrock container status",
+        "responses": {
+          "200": {
+            "description": "Bedrock container status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
           }
         }
       }
@@ -895,14 +1243,14 @@
         }
       }
     },
-    "/api/server/{action}": {
+    "/api/time/{action}": {
       "post": {
         "tags": [
-          "Server"
+          "World"
         ],
-        "operationId": "operateServer",
-        "summary": "Run an allowlisted Bedrock lifecycle operation",
-        "x-craftcontrol-capability": "action-specific",
+        "operationId": "operateTime",
+        "summary": "Run an allowlisted time or weather operation",
+        "x-craftcontrol-capability": "world.manage",
         "parameters": [
           {
             "$ref": "#/components/parameters/ActionPath"
@@ -911,70 +1259,16 @@
             "$ref": "#/components/parameters/CsrfToken"
           }
         ],
-        "responses": {
-          "200": {
-            "description": "Server operation result",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ActionResult"
-                }
-              }
-            }
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          }
-        }
-      }
-    },
-    "/api/gamerules/{rule}": {
-      "put": {
-        "tags": [
-          "World"
-        ],
-        "operationId": "setGamerule",
-        "summary": "Set one allowlisted gamerule",
-        "x-craftcontrol-capability": "world.manage",
-        "parameters": [
-          {
-            "name": "rule",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "$ref": "#/components/parameters/CsrfToken"
-          }
-        ],
         "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "value"
-                ],
-                "properties": {
-                  "value": {}
-                }
-              }
-            }
-          }
+          "$ref": "#/components/requestBodies/JsonObject"
         },
         "responses": {
           "200": {
-            "description": "Applied gamerule",
+            "description": "Time or weather result",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/GameruleResult"
+                  "$ref": "#/components/schemas/TimeActionResult"
                 }
               }
             }
@@ -1014,258 +1308,6 @@
           },
           "400": {
             "$ref": "#/components/responses/BadRequest"
-          }
-        }
-      }
-    },
-    "/api/time/{action}": {
-      "post": {
-        "tags": [
-          "World"
-        ],
-        "operationId": "operateTime",
-        "summary": "Run an allowlisted time or weather operation",
-        "x-craftcontrol-capability": "world.manage",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/ActionPath"
-          },
-          {
-            "$ref": "#/components/parameters/CsrfToken"
-          }
-        ],
-        "requestBody": {
-          "$ref": "#/components/requestBodies/JsonObject"
-        },
-        "responses": {
-          "200": {
-            "description": "Time or weather result",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TimeActionResult"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          }
-        }
-      }
-    },
-    "/api/operations": {
-      "get": {
-        "operationId": "list_operations",
-        "summary": "List recent server operations",
-        "tags": [
-          "operations"
-        ],
-        "security": [
-          {
-            "cookieAuth": []
-          },
-          {
-            "csrfToken": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of recent server operations",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "operations": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/ServerOperation"
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/operations/latest": {
-      "get": {
-        "operationId": "get_latest_operation",
-        "summary": "Get the most recent server operation",
-        "tags": [
-          "operations"
-        ],
-        "security": [
-          {
-            "cookieAuth": []
-          },
-          {
-            "csrfToken": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Latest operation or null",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "operation": {
-                      "oneOf": [
-                        {
-                          "$ref": "#/components/schemas/ServerOperation"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/operations/active": {
-      "get": {
-        "operationId": "get_active_operation",
-        "summary": "Get the current non-terminal server operation",
-        "tags": [
-          "operations"
-        ],
-        "security": [
-          {
-            "cookieAuth": []
-          },
-          {
-            "csrfToken": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Active operation or null",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "operation": {
-                      "oneOf": [
-                        {
-                          "$ref": "#/components/schemas/ServerOperation"
-                        },
-                        {
-                          "type": "null"
-                        }
-                      ]
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/operations/{operation_id}": {
-      "get": {
-        "operationId": "get_operation",
-        "summary": "Get a specific server operation by ID",
-        "tags": [
-          "operations"
-        ],
-        "security": [
-          {
-            "cookieAuth": []
-          },
-          {
-            "csrfToken": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "operation_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Operation record",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "operation": {
-                      "$ref": "#/components/schemas/ServerOperation"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Operation not found"
-          }
-        }
-      }
-    },
-    "/api/operations/{operation_id}/reconcile": {
-      "post": {
-        "operationId": "reconcile_operation",
-        "summary": "Re-observe Bedrock and refresh a terminal operation outcome",
-        "tags": [
-          "operations"
-        ],
-        "security": [
-          {
-            "cookieAuth": []
-          },
-          {
-            "csrfToken": []
-          }
-        ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/CsrfToken"
-          },
-          {
-            "name": "operation_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Refreshed operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "operation": {
-                      "$ref": "#/components/schemas/ServerOperation"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Operation not found"
           }
         }
       }

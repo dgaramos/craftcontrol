@@ -1,5 +1,12 @@
 /**
+ * @jest-environment jsdom
+ */
+
+/**
  * Tests for the operation lifecycle progress component (issue #192).
+ *
+ * renderOperation now returns a DocumentFragment (or null), not an HTML string.
+ * Tests mount the fragment into a container element and query the DOM.
  */
 
 import { jest } from "@jest/globals";
@@ -9,7 +16,6 @@ function makeDeps(overrides = {}) {
   return {
     api: jest.fn().mockResolvedValue({ operation: null }),
     t: (key) => key,
-    escapeHtml: (v) => String(v ?? ""),
     formatDate: (v) => (v ? "2024-01-01 14:30" : "—"),
     uiIcon: (name) => `<svg>${name}</svg>`,
     ...overrides,
@@ -41,14 +47,22 @@ function makeOperation(overrides = {}) {
   };
 }
 
+/** Mount a renderOperation result into a fresh div for DOM querying. */
+function mount(feature, op) {
+  const container = document.createElement("div");
+  const frag = feature.renderOperation(op);
+  if (frag) container.appendChild(frag);
+  return container;
+}
+
 describe("createOperationFeature — renderOperation", () => {
   test("renders running operation with completed and active stages", () => {
     const feature = createOperationFeature(makeDeps());
-    const html = feature.renderOperation(makeOperation());
-    expect(html).toContain("op-state-running");
-    expect(html).toContain("op-stage-completed");
-    expect(html).toContain("op-stage-running");
-    expect(html).toContain("1/7");
+    const el = mount(feature, makeOperation());
+    expect(el.querySelector(".op-state-running")).not.toBeNull();
+    expect(el.querySelector(".op-stage-completed")).not.toBeNull();
+    expect(el.querySelector(".op-stage-running")).not.toBeNull();
+    expect(el.querySelector(".op-counter").textContent).toBe("1/7");
   });
 
   test("renders confirmed terminal state", () => {
@@ -66,9 +80,9 @@ describe("createOperationFeature — renderOperation", () => {
       ],
       completed_at: 1700000007,
     });
-    const html = feature.renderOperation(op);
-    expect(html).toContain("op-state-confirmed");
-    expect(html).toContain("7/7");
+    const el = mount(feature, op);
+    expect(el.querySelector(".op-state-confirmed")).not.toBeNull();
+    expect(el.querySelector(".op-counter").textContent).toBe("7/7");
   });
 
   test("renders failed stage with error", () => {
@@ -86,10 +100,13 @@ describe("createOperationFeature — renderOperation", () => {
         { stage: "confirm", result: "pending", started_at: null, completed_at: null, evidence: {}, error: null },
       ],
     });
-    const html = feature.renderOperation(op);
-    expect(html).toContain("op-state-failed");
-    expect(html).toContain("op-stage-failed");
-    expect(html).toContain("Backup verification failed");
+    const el = mount(feature, op);
+    expect(el.querySelector(".op-state-failed")).not.toBeNull();
+    expect(el.querySelector(".op-stage-failed")).not.toBeNull();
+    // API-derived error text must appear in the DOM as text, not HTML
+    const errorEls = el.querySelectorAll(".op-error-text");
+    const errorTexts = Array.from(errorEls).map((e) => e.textContent);
+    expect(errorTexts.some((t) => t.includes("Backup verification failed"))).toBe(true);
   });
 
   test("renders divergent state with observation", () => {
@@ -108,10 +125,14 @@ describe("createOperationFeature — renderOperation", () => {
         { stage: "confirm", result: "pending", started_at: null, completed_at: null, evidence: {}, error: null },
       ],
     });
-    const html = feature.renderOperation(op);
-    expect(html).toContain("op-state-divergent");
-    expect(html).toContain("Configuration mismatch after restart");
-    expect(html).toContain("observed value");
+    const el = mount(feature, op);
+    expect(el.querySelector(".op-state-divergent")).not.toBeNull();
+    // terminal_error via textContent (in .op-error-text, not the icon slot)
+    const terminalErrorSpan = el.querySelector(".op-terminal .op-error-text");
+    expect(terminalErrorSpan.textContent).toBe("Configuration mismatch after restart");
+    // observation key rendered as "observed value" (underscores → spaces)
+    const dts = Array.from(el.querySelectorAll(".op-terminal dt")).map((dt) => dt.textContent);
+    expect(dts).toContain("observed value");
   });
 
   test("renders skipped stages", () => {
@@ -129,36 +150,42 @@ describe("createOperationFeature — renderOperation", () => {
       ],
       completed_at: 1700000007,
     });
-    const html = feature.renderOperation(op);
-    expect(html).toContain("op-stage-skipped");
-    expect(html).toContain("op-stage-completed");
+    const el = mount(feature, op);
+    expect(el.querySelector(".op-stage-skipped")).not.toBeNull();
+    expect(el.querySelector(".op-stage-completed")).not.toBeNull();
   });
 
   test("renders requested changes in collapsible section", () => {
     const feature = createOperationFeature(makeDeps());
-    const html = feature.renderOperation(makeOperation({ requested_changes: { SERVER_NAME: "TestWorld", MAX_PLAYERS: 20 } }));
-    expect(html).toContain("opChanges");
-    expect(html).toContain("SERVER_NAME");
-    expect(html).toContain("TestWorld");
-    expect(html).toContain("MAX_PLAYERS");
+    const el = mount(feature, makeOperation({ requested_changes: { SERVER_NAME: "TestWorld", MAX_PLAYERS: 20 } }));
+    const details = el.querySelector(".op-changes");
+    expect(details).not.toBeNull();
+    expect(details.querySelector("summary").textContent).toBe("opChanges");
+    const liTexts = Array.from(details.querySelectorAll("li")).map((li) => li.textContent);
+    expect(liTexts.some((t) => t.includes("SERVER_NAME"))).toBe(true);
+    expect(liTexts.some((t) => t.includes("TestWorld"))).toBe(true);
+    expect(liTexts.some((t) => t.includes("MAX_PLAYERS"))).toBe(true);
   });
 
   test("renders evidence from active stage", () => {
     const feature = createOperationFeature(makeDeps());
-    const html = feature.renderOperation(makeOperation());
-    expect(html).toContain("backup path");
-    expect(html).toContain("/backups/world");
+    const el = mount(feature, makeOperation());
+    // backup_path evidence from the running backup_verify stage
+    const dds = Array.from(el.querySelectorAll(".op-active-stage dd")).map((dd) => dd.textContent);
+    expect(dds).toContain("/backups/world");
+    const dts = Array.from(el.querySelectorAll(".op-active-stage dt")).map((dt) => dt.textContent);
+    expect(dts).toContain("backup path");
   });
 
-  test("returns empty string for null operation", () => {
+  test("returns null for null operation", () => {
     const feature = createOperationFeature(makeDeps());
-    expect(feature.renderOperation(null)).toBe("");
+    expect(feature.renderOperation(null)).toBeNull();
   });
 
   test("handles operation with no stages array", () => {
     const feature = createOperationFeature(makeDeps());
-    const html = feature.renderOperation({ ...makeOperation(), stages: null });
-    expect(html).toContain("op-stage-bar");
+    const el = mount(feature, { ...makeOperation(), stages: null });
+    expect(el.querySelector(".op-stage-bar")).not.toBeNull();
   });
 });
 
@@ -338,38 +365,41 @@ describe("createOperationFeature — recovery actions (issue #194)", () => {
 
   test("failed operation renders reconcile and retry buttons", () => {
     const feature = createOperationFeature(makeDeps());
-    const html = feature.renderOperation(makeTerminalOp("failed"));
-    expect(html).toContain('data-op-action="reconcile"');
-    expect(html).toContain('data-op-action="retry"');
+    const el = mount(feature, makeTerminalOp("failed"));
+    expect(el.querySelector('[data-op-action="reconcile"]')).not.toBeNull();
+    expect(el.querySelector('[data-op-action="retry"]')).not.toBeNull();
   });
 
   test("divergent operation renders reconcile and retry buttons", () => {
     const feature = createOperationFeature(makeDeps());
-    const html = feature.renderOperation(makeTerminalOp("divergent"));
-    expect(html).toContain('data-op-action="reconcile"');
-    expect(html).toContain('data-op-action="retry"');
+    const el = mount(feature, makeTerminalOp("divergent"));
+    expect(el.querySelector('[data-op-action="reconcile"]')).not.toBeNull();
+    expect(el.querySelector('[data-op-action="retry"]')).not.toBeNull();
   });
 
   test("confirmed operation does not render recovery buttons", () => {
     const feature = createOperationFeature(makeDeps());
-    const html = feature.renderOperation(makeTerminalOp("confirmed"));
-    expect(html).not.toContain('data-op-action="reconcile"');
-    expect(html).not.toContain('data-op-action="retry"');
+    const el = mount(feature, makeTerminalOp("confirmed"));
+    expect(el.querySelector('[data-op-action="reconcile"]')).toBeNull();
+    expect(el.querySelector('[data-op-action="retry"]')).toBeNull();
   });
 
   test("operation with parent_operation_id renders parent link placeholder", () => {
     const feature = createOperationFeature(makeDeps());
-    const html = feature.renderOperation(makeTerminalOp("failed", { parent_operation_id: "abcd1234-dead-beef-cafe-000000000000" }));
-    expect(html).toContain("op-parent-link");
-    expect(html).toContain("op-parent-id");
-    // parent_operation_id must NOT be interpolated into innerHTML
-    expect(html).not.toContain("abcd1234");
+    const el = mount(feature, makeTerminalOp("failed", { parent_operation_id: "abcd1234-dead-beef-cafe-000000000000" }));
+    expect(el.querySelector(".op-parent-link")).not.toBeNull();
+    expect(el.querySelector(".op-parent-id")).not.toBeNull();
+    // parent_operation_id must NOT be present in the DOM at render time —
+    // it is injected later by bindRecoveryActions via textContent.
+    expect(el.querySelector(".op-parent-id").textContent).toBe("");
+    // The raw UUID must not appear anywhere in serialised markup
+    expect(el.innerHTML).not.toContain("abcd1234");
   });
 
   test("operation without parent_operation_id does not render parent link", () => {
     const feature = createOperationFeature(makeDeps());
-    const html = feature.renderOperation(makeTerminalOp("failed"));
-    expect(html).not.toContain("op-parent-link");
+    const el = mount(feature, makeTerminalOp("failed"));
+    expect(el.querySelector(".op-parent-link")).toBeNull();
   });
 
   // recovery button buttons no longer carry data-op-id; operation_id comes from closure
@@ -516,9 +546,13 @@ describe("createOperationFeature — divergent stage rendering", () => {
         { stage: "confirm", result: "pending", started_at: null, completed_at: null, evidence: {}, error: null },
       ],
     });
-    const html = feature.renderOperation(op);
-    expect(html).toContain("op-stage-divergent");
-    expect(html).toContain("value mismatch");
-    expect(html).toContain("observed");
+    const el = mount(feature, op);
+    expect(el.querySelector(".op-stage-divergent")).not.toBeNull();
+    // stage error via textContent in active stage panel
+    const errorSpans = Array.from(el.querySelectorAll(".op-active-stage .op-error-text"));
+    expect(errorSpans.some((s) => s.textContent.includes("value mismatch"))).toBe(true);
+    // evidence key "observed" must appear as a dt
+    const dts = Array.from(el.querySelectorAll(".op-active-stage dt")).map((dt) => dt.textContent);
+    expect(dts).toContain("observed");
   });
 });

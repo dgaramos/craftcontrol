@@ -1,3 +1,7 @@
+/**
+ * @jest-environment jsdom
+ */
+
 import { jest } from "@jest/globals";
 import { createServerFeature } from "../static/js/features/server/index.js";
 import { makeEl } from "./helpers.js";

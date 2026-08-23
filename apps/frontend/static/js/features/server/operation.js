@@ -5,12 +5,16 @@
  * pending, failed, and divergent stages with readable evidence and timestamps.
  * Survives navigation and reload via the /api/operations/latest endpoint and
  * an operation SSE stream.
+ *
+ * renderOperation returns a DocumentFragment, not an HTML string. API-derived
+ * values are set exclusively via textContent; uiIcon() output is injected into
+ * dedicated icon slots via innerHTML as trusted static markup (issue #219).
  */
 
 const STAGE_ORDER = ["review", "backup_verify", "prepare", "restart", "health_wait", "verify", "confirm"];
 const STORAGE_KEY = "craftcontrol-operation-id";
 
-export function createOperationFeature({ api, t, escapeHtml, formatDate, uiIcon, toast }) {
+export function createOperationFeature({ api, t, formatDate, uiIcon, toast }) {
   let currentOperation = null;
   let eventSource = null;
   let onUpdate = null;
@@ -74,7 +78,10 @@ export function createOperationFeature({ api, t, escapeHtml, formatDate, uiIcon,
   }
 
   // ------------------------------------------------------------------
-  // Rendering
+  // Rendering helpers — all return DOM nodes, never HTML strings.
+  // API-derived text is always set via textContent.
+  // uiIcon() output is injected into dedicated icon slots via innerHTML
+  // because it is trusted static markup, not API-derived content.
   // ------------------------------------------------------------------
 
   function stageLabel(stageName) {
@@ -92,8 +99,11 @@ export function createOperationFeature({ api, t, escapeHtml, formatDate, uiIcon,
     return "pending";
   }
 
-  function renderStageBar(stages) {
-    return stages.map((record) => {
+  /**
+   * Appends one .op-stage child per record into the given container element.
+   */
+  function renderStageBar(stages, container) {
+    stages.forEach((record) => {
       const cls = stageClass(record);
       const label = stageLabel(record.stage);
       const timestamp = record.completed_at
@@ -102,31 +112,102 @@ export function createOperationFeature({ api, t, escapeHtml, formatDate, uiIcon,
           ? formatDate(record.started_at * 1000)
           : "";
       const title = timestamp ? `${label} · ${timestamp}` : label;
-      return `<div class="op-stage op-stage-${escapeHtml(cls)}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">${uiIcon(cls === "completed" || cls === "skipped" ? "check" : cls === "failed" || cls === "divergent" ? "close" : "pending")}<span>${escapeHtml(label)}</span></div>`;
-    }).join("");
+
+      const div = document.createElement("div");
+      div.className = `op-stage op-stage-${cls}`;
+      div.title = title;
+      div.setAttribute("aria-label", title);
+
+      const iconName =
+        cls === "completed" || cls === "skipped" ? "check"
+          : cls === "failed" || cls === "divergent" ? "close"
+            : "pending";
+      // icon slot: trusted static SVG markup from uiIcon()
+      const iconSlot = document.createElement("span");
+      iconSlot.innerHTML = uiIcon(iconName);
+      div.appendChild(iconSlot);
+
+      const span = document.createElement("span");
+      span.textContent = label;
+      div.appendChild(span);
+
+      container.appendChild(div);
+    });
   }
 
+  /**
+   * Builds a <dl class="op-evidence"> element from an evidence object.
+   * Returns null when the object is empty or has no displayable entries.
+   * All keys and values are set via textContent.
+   */
   function renderEvidence(evidence) {
-    const entries = Object.entries(evidence || {});
-    if (!entries.length) return "";
-    const items = entries
-      .filter(([, v]) => v !== null && v !== undefined && v !== "")
-      .map(([k, v]) => `<div><dt>${escapeHtml(k.replace(/_/g, " "))}</dt><dd>${escapeHtml(String(v))}</dd></div>`)
-      .join("");
-    return items ? `<dl class="op-evidence">${items}</dl>` : "";
+    const entries = Object.entries(evidence || {}).filter(([, v]) => v !== null && v !== undefined && v !== "");
+    if (!entries.length) return null;
+
+    const dl = document.createElement("dl");
+    dl.className = "op-evidence";
+
+    entries.forEach(([k, v]) => {
+      const item = document.createElement("div");
+      const dt = document.createElement("dt");
+      dt.textContent = k.replace(/_/g, " ");
+      const dd = document.createElement("dd");
+      dd.textContent = String(v);
+      item.appendChild(dt);
+      item.appendChild(dd);
+      dl.appendChild(item);
+    });
+
+    return dl;
   }
 
+  /**
+   * Returns a <div class="op-active-stage"> for the currently running,
+   * failed, or divergent stage, or null when no such stage exists.
+   * API-derived stage error and evidence are set via textContent / renderEvidence.
+   */
   function activeStageMarkup(stages) {
     const running = stages.find((s) => s.result === "running");
     const failed = stages.find((s) => s.result === "failed");
     const divergent = stages.find((s) => s.result === "divergent");
     const active = running || failed || divergent;
-    if (!active) return "";
+    if (!active) return null;
+
     const label = stageLabel(active.stage);
     const started = active.started_at ? formatDate(active.started_at * 1000) : null;
-    const errorLine = active.error ? `<p class="op-error">${uiIcon("warning")} ${escapeHtml(active.error)}</p>` : "";
-    const timeLine = started ? `<small>${escapeHtml(started)}</small>` : "";
-    return `<div class="op-active-stage"><strong>${escapeHtml(label)}</strong>${timeLine}${errorLine}${renderEvidence(active.evidence)}</div>`;
+
+    const div = document.createElement("div");
+    div.className = "op-active-stage";
+
+    const strong = document.createElement("strong");
+    strong.textContent = label;
+    div.appendChild(strong);
+
+    if (started) {
+      const small = document.createElement("small");
+      small.textContent = started;
+      div.appendChild(small);
+    }
+
+    if (active.error) {
+      const p = document.createElement("p");
+      p.className = "op-error";
+      // icon slot: trusted static SVG markup
+      const iconSlot = document.createElement("span");
+      iconSlot.innerHTML = uiIcon("warning");
+      p.appendChild(iconSlot);
+      // API-derived error text via textContent
+      const errorText = document.createElement("span");
+      errorText.className = "op-error-text";
+      errorText.textContent = active.error;
+      p.appendChild(errorText);
+      div.appendChild(p);
+    }
+
+    const evidenceNode = renderEvidence(active.evidence);
+    if (evidenceNode) div.appendChild(evidenceNode);
+
+    return div;
   }
 
   function operationStateClass(state) {
@@ -142,34 +223,134 @@ export function createOperationFeature({ api, t, escapeHtml, formatDate, uiIcon,
     return t(stateKey) || op.state;
   }
 
+  /**
+   * Returns a <div class="op-terminal"> for confirmed, failed, or divergent
+   * operations, or null for still-running ones.
+   * API-derived terminal_error, observation, and parent_operation_id are
+   * set via textContent; recovery button labels come from t() (i18n, not API).
+   */
   function terminalMarkup(op) {
-    if (!["confirmed", "failed", "divergent"].includes(op.state)) return "";
-    const completed = op.completed_at ? `<small>${formatDate(op.completed_at * 1000)}</small>` : "";
-    const errorLine = op.terminal_error ? `<p class="op-error">${uiIcon("warning")} ${escapeHtml(op.terminal_error)}</p>` : "";
+    if (!["confirmed", "failed", "divergent"].includes(op.state)) return null;
+
+    const div = document.createElement("div");
+    div.className = "op-terminal";
+
+    if (op.completed_at) {
+      const small = document.createElement("small");
+      small.textContent = formatDate(op.completed_at * 1000);
+      div.appendChild(small);
+    }
+
+    if (op.terminal_error) {
+      const p = document.createElement("p");
+      p.className = "op-error";
+      // icon slot: trusted static SVG markup
+      const iconSlot = document.createElement("span");
+      iconSlot.innerHTML = uiIcon("warning");
+      p.appendChild(iconSlot);
+      // API-derived error via textContent
+      const errorSpan = document.createElement("span");
+      errorSpan.className = "op-error-text";
+      errorSpan.textContent = op.terminal_error;
+      p.appendChild(errorSpan);
+      div.appendChild(p);
+    }
+
     const observation = Object.entries(op.observation || {});
-    const observationLine = observation.length
-      ? `<dl class="op-evidence">${observation.map(([k, v]) => `<div><dt>${escapeHtml(k.replace(/_/g, " "))}</dt><dd>${escapeHtml(String(v))}</dd></div>`).join("")}</dl>`
-      : "";
-    const parentLink = op.parent_operation_id
-      ? `<p class="op-parent-link"><small>${escapeHtml(t("opParentLink"))} <code class="op-parent-id"></code></small></p>`
-      : "";
-    const recoveryActions = ["failed", "divergent"].includes(op.state)
-      ? `<div class="op-recovery-actions">
-          <button class="secondary op-action" data-op-action="reconcile" title="${escapeHtml(t("opReconcileHelp"))}">${escapeHtml(t("opReconcile"))}</button>
-          <button class="op-action" data-op-action="retry" title="${escapeHtml(t("opRetryHelp"))}">${escapeHtml(t("opRetry"))}</button>
-        </div>`
-      : "";
-    return `<div class="op-terminal">${completed}${errorLine}${observationLine}${parentLink}${recoveryActions}</div>`;
+    if (observation.length) {
+      const dl = document.createElement("dl");
+      dl.className = "op-evidence";
+      observation.forEach(([k, v]) => {
+        const item = document.createElement("div");
+        const dt = document.createElement("dt");
+        dt.textContent = k.replace(/_/g, " ");
+        const dd = document.createElement("dd");
+        dd.textContent = String(v);
+        item.appendChild(dt);
+        item.appendChild(dd);
+        dl.appendChild(item);
+      });
+      div.appendChild(dl);
+    }
+
+    if (op.parent_operation_id) {
+      const p = document.createElement("p");
+      p.className = "op-parent-link";
+      const small = document.createElement("small");
+      // i18n label via textContent (not API-derived)
+      small.appendChild(document.createTextNode(t("opParentLink") + " "));
+      const code = document.createElement("code");
+      code.className = "op-parent-id";
+      // parent_operation_id is set later by bindRecoveryActions via textContent
+      small.appendChild(code);
+      p.appendChild(small);
+      div.appendChild(p);
+    }
+
+    if (["failed", "divergent"].includes(op.state)) {
+      const actionsDiv = document.createElement("div");
+      actionsDiv.className = "op-recovery-actions";
+
+      const reconcileBtn = document.createElement("button");
+      reconcileBtn.className = "secondary op-action";
+      reconcileBtn.dataset.opAction = "reconcile";
+      reconcileBtn.title = t("opReconcileHelp");
+      reconcileBtn.textContent = t("opReconcile");
+      actionsDiv.appendChild(reconcileBtn);
+
+      const retryBtn = document.createElement("button");
+      retryBtn.className = "op-action";
+      retryBtn.dataset.opAction = "retry";
+      retryBtn.title = t("opRetryHelp");
+      retryBtn.textContent = t("opRetry");
+      actionsDiv.appendChild(retryBtn);
+
+      div.appendChild(actionsDiv);
+    }
+
+    return div;
   }
 
+  /**
+   * Returns a <details class="op-changes"> element listing the requested
+   * changes, or null when there are none.
+   * Change keys and values are set via textContent.
+   */
   function changesMarkup(op) {
     const entries = Object.entries(op.requested_changes || {});
-    if (!entries.length) return "";
-    return `<details class="op-changes"><summary>${t("opChanges")}</summary><ul>${entries.map(([k, v]) => `<li><strong>${escapeHtml(k)}</strong>: ${escapeHtml(String(v))}</li>`).join("")}</ul></details>`;
+    if (!entries.length) return null;
+
+    const details = document.createElement("details");
+    details.className = "op-changes";
+
+    const summary = document.createElement("summary");
+    summary.textContent = t("opChanges");
+    details.appendChild(summary);
+
+    const ul = document.createElement("ul");
+    entries.forEach(([k, v]) => {
+      const li = document.createElement("li");
+      const strong = document.createElement("strong");
+      strong.textContent = k;
+      li.appendChild(strong);
+      li.appendChild(document.createTextNode(": " + String(v)));
+      ul.appendChild(li);
+    });
+    details.appendChild(ul);
+
+    return details;
   }
 
+  /**
+   * Returns a DocumentFragment containing the full operation progress card,
+   * or null when op is falsy.
+   *
+   * Callers must insert the fragment into the DOM directly (e.g. via
+   * container.replaceChildren(fragment)) rather than serialising it to HTML.
+   */
   function renderOperation(op) {
-    if (!op) return "";
+    if (!op) return null;
+
     const stages = STAGE_ORDER.map((name) => {
       const record = (op.stages || []).find((s) => s.stage === name);
       return record || { stage: name, result: "pending", started_at: null, completed_at: null, evidence: {}, error: null };
@@ -177,19 +358,58 @@ export function createOperationFeature({ api, t, escapeHtml, formatDate, uiIcon,
     const completed = stages.filter((s) => s.result === "completed" || s.result === "skipped").length;
     const stateClass = operationStateClass(op.state);
     const headline = operationHeadline(op);
-    return `<section class="operation-progress-card block-panel op-state-${escapeHtml(stateClass)}">
-  <div class="op-header">
-    <span class="eyebrow">${escapeHtml(t("serverOperation"))}</span>
-    <div class="op-headline">
-      <h3>${escapeHtml(headline)}</h3>
-      <span class="op-counter">${completed}/${STAGE_ORDER.length}</span>
-    </div>
-  </div>
-  <div class="op-stage-bar" role="list" aria-label="${escapeHtml(t("opStages"))}">${renderStageBar(stages)}</div>
-  ${activeStageMarkup(stages)}
-  ${terminalMarkup(op)}
-  ${changesMarkup(op)}
-</section>`;
+
+    const frag = document.createDocumentFragment();
+
+    const section = document.createElement("section");
+    section.className = `operation-progress-card block-panel op-state-${stateClass}`;
+
+    // Header
+    const header = document.createElement("div");
+    header.className = "op-header";
+
+    const eyebrow = document.createElement("span");
+    eyebrow.className = "eyebrow";
+    eyebrow.textContent = t("serverOperation");
+    header.appendChild(eyebrow);
+
+    const headlineDiv = document.createElement("div");
+    headlineDiv.className = "op-headline";
+
+    const h3 = document.createElement("h3");
+    h3.textContent = headline;
+    headlineDiv.appendChild(h3);
+
+    const counter = document.createElement("span");
+    counter.className = "op-counter";
+    counter.textContent = `${completed}/${STAGE_ORDER.length}`;
+    headlineDiv.appendChild(counter);
+
+    header.appendChild(headlineDiv);
+    section.appendChild(header);
+
+    // Stage bar
+    const stageBar = document.createElement("div");
+    stageBar.className = "op-stage-bar";
+    stageBar.setAttribute("role", "list");
+    stageBar.setAttribute("aria-label", t("opStages"));
+    renderStageBar(stages, stageBar);
+    section.appendChild(stageBar);
+
+    // Active stage
+    const activeNode = activeStageMarkup(stages);
+    if (activeNode) section.appendChild(activeNode);
+
+    // Terminal summary
+    const terminalNode = terminalMarkup(op);
+    if (terminalNode) section.appendChild(terminalNode);
+
+    // Requested changes
+    const changesNode = changesMarkup(op);
+    if (changesNode) section.appendChild(changesNode);
+
+    frag.appendChild(section);
+    return frag;
   }
 
   // ------------------------------------------------------------------

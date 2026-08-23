@@ -1,3 +1,5 @@
+import { createOperationFeature } from "./operation.js";
+
 export function createServerFeature({ state, content, t, api, $, escapeHtml, uiIcon, formatDate, toast, getSettingsFeature }) {
 function telemetryPackMarkup() {
   return `<section class="telemetry-pack-card block-panel"><div><span class="eyebrow">CRAFTCONTROL</span><h3>${t("telemetryPack")}</h3><p>${t("telemetryPackHelp")}</p></div><div id="telemetry-pack-state" class="telemetry-pack-state">${t("checking")}</div></section>`;
@@ -45,11 +47,36 @@ async function loadFrontendVersion() {
   } catch (_) { /* The compatibility image has no independent frontend version. */ }
 }
 
+// ------------------------------------------------------------------
+// Operation lifecycle progress
+// ------------------------------------------------------------------
+
+const operationFeature = createOperationFeature({ api, t, escapeHtml, formatDate, uiIcon });
+
+function refreshOperationPanel() {
+  const container = $("#operation-progress-container");
+  if (!container) return;
+  const op = operationFeature.getOperation();
+  container.innerHTML = op ? operationFeature.renderOperation(op) : "";
+}
+
+operationFeature.setUpdateCallback(() => refreshOperationPanel());
+
+function operationProgressMarkup() {
+  const op = operationFeature.getOperation();
+  const inner = op ? operationFeature.renderOperation(op) : "";
+  return `<div id="operation-progress-container">${inner}</div>`;
+}
+
+async function initializeOperationProgress() {
+  await operationFeature.initialize();
+  refreshOperationPanel();
+}
 
   const renderServer = () => {
-    getSettingsFeature().renderSettingsGroups(["Packs", "Rede", "Avançado"], telemetryPackMarkup());
+    getSettingsFeature().renderSettingsGroups(["Packs", "Rede", "Avançado"], operationProgressMarkup() + telemetryPackMarkup());
     loadTelemetryPack();
+    initializeOperationProgress();
   };
   return { renderServer, renderReleaseTags, loadFrontendVersion };
 }
-

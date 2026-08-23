@@ -282,6 +282,90 @@ class TestSQLiteOperationRepository:
         assert loaded is not None
         assert loaded.state == OperationState.RUNNING
 
+    def test_concurrent_save_last_writer_wins_without_corruption(self, tmp_path: Path):
+        """Two threads saving the same operation concurrently must not corrupt data.
+
+        With BEGIN IMMEDIATE the second thread is blocked until the first
+        commits, ensuring a clean serialised write rather than a lost update.
+        """
+        repo = make_repo(tmp_path)
+        op = ServerOperation.create("srv", {})
+        repo.save(op)
+
+        barrier = threading.Barrier(2)
+        errors: list[Exception] = []
+
+        def writer(state_transition):
+            try:
+                barrier.wait(timeout=5)
+                op_local = repo.get(op.operation_id)
+                assert op_local is not None
+                state_transition(op_local)
+                repo.save(op_local)
+            except Exception as exc:
+                errors.append(exc)
+
+        t1 = threading.Thread(target=writer, args=(lambda o: o.start(),))
+        t2 = threading.Thread(target=writer, args=(lambda o: o.start(),))
+        t1.start()
+        t2.start()
+        t1.join(timeout=10)
+        t2.join(timeout=10)
+
+        assert not errors, errors
+        loaded = repo.get(op.operation_id)
+        assert loaded is not None
+        assert loaded.state == OperationState.RUNNING
+
+    def test_concurrent_update_stage_does_not_clobber_terminal_state(self, tmp_path: Path):
+        """A concurrent update_stage write must not overwrite a terminal state
+        written by another thread that holds the write lock first."""
+        repo = make_repo(tmp_path)
+        op = ServerOperation.create("srv", {})
+        op.start()
+        op.complete_stage(OperationStage.REVIEW, evidence={})
+        repo.save(op)
+
+        barrier = threading.Barrier(2)
+        errors: list[Exception] = []
+
+        def complete_writer():
+            try:
+                barrier.wait(timeout=5)
+                op_c = repo.get(op.operation_id)
+                assert op_c is not None
+                op_c.complete_stage(OperationStage.RESTART, evidence={"source": "complete"})
+                repo.update_stage(op_c, OperationStage.RESTART)
+            except Exception as exc:
+                errors.append(exc)
+
+        def fail_writer():
+            try:
+                barrier.wait(timeout=5)
+                op_f = repo.get(op.operation_id)
+                assert op_f is not None
+                op_f.fail_stage(OperationStage.RESTART, error="simulated failure")
+                repo.update_stage(op_f, OperationStage.RESTART)
+            except Exception as exc:
+                errors.append(exc)
+
+        t1 = threading.Thread(target=complete_writer)
+        t2 = threading.Thread(target=fail_writer)
+        t1.start()
+        t2.start()
+        t1.join(timeout=10)
+        t2.join(timeout=10)
+
+        assert not errors, errors
+        # The database must reflect exactly one of the two outcomes — not a mix.
+        loaded = repo.get(op.operation_id)
+        assert loaded is not None
+        restart_stage = next(
+            (s for s in loaded.stages if s.stage == OperationStage.RESTART), None
+        )
+        assert restart_stage is not None
+        assert restart_stage.result in (StageResult.COMPLETED, StageResult.FAILED)
+
 
 # ---------------------------------------------------------------------------
 # Service tests

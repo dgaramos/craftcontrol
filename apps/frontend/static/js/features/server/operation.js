@@ -34,6 +34,11 @@ export function createOperationFeature({ api, t, escapeHtml, formatDate, uiIcon 
         }
       } catch (_) { /* ignore malformed SSE payload */ }
     });
+    eventSource.onopen = async () => {
+      // Re-fetch on every (re)connection to recover events missed during a gap.
+      await loadLatest();
+      if (currentOperation && onUpdate) onUpdate(currentOperation);
+    };
     eventSource.onerror = () => {
       // EventSource reconnects automatically; no explicit handling needed.
     };
@@ -53,10 +58,12 @@ export function createOperationFeature({ api, t, escapeHtml, formatDate, uiIcon 
     } catch (_) { /* silently skip — the panel renders without an operation */ }
   }
 
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
   async function loadFromStorage() {
     let storedId = null;
     try { storedId = localStorage.getItem(STORAGE_KEY); } catch (_) { /* storage unavailable */ }
-    if (!storedId) return;
+    if (!storedId || !UUID_RE.test(storedId)) return;
     try {
       const response = await api(`/api/operations/${storedId}`);
       if (response.operation) currentOperation = response.operation;
@@ -78,6 +85,7 @@ export function createOperationFeature({ api, t, escapeHtml, formatDate, uiIcon 
     if (record.result === "completed") return "completed";
     if (record.result === "skipped") return "skipped";
     if (record.result === "failed") return "failed";
+    if (record.result === "divergent") return "divergent";
     return "pending";
   }
 
@@ -91,7 +99,7 @@ export function createOperationFeature({ api, t, escapeHtml, formatDate, uiIcon 
           ? formatDate(record.started_at * 1000)
           : "";
       const title = timestamp ? `${label} · ${timestamp}` : label;
-      return `<div class="op-stage op-stage-${escapeHtml(cls)}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">${uiIcon(cls === "completed" || cls === "skipped" ? "check" : cls === "failed" ? "close" : "pending")}<span>${escapeHtml(label)}</span></div>`;
+      return `<div class="op-stage op-stage-${escapeHtml(cls)}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">${uiIcon(cls === "completed" || cls === "skipped" ? "check" : cls === "failed" || cls === "divergent" ? "close" : "pending")}<span>${escapeHtml(label)}</span></div>`;
     }).join("");
   }
 
@@ -108,7 +116,8 @@ export function createOperationFeature({ api, t, escapeHtml, formatDate, uiIcon 
   function activeStageMarkup(stages) {
     const running = stages.find((s) => s.result === "running");
     const failed = stages.find((s) => s.result === "failed");
-    const active = running || failed;
+    const divergent = stages.find((s) => s.result === "divergent");
+    const active = running || failed || divergent;
     if (!active) return "";
     const label = stageLabel(active.stage);
     const started = active.started_at ? formatDate(active.started_at * 1000) : null;

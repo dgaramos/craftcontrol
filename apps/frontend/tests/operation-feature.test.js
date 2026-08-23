@@ -234,4 +234,67 @@ describe("createOperationFeature — initialize and SSE", () => {
       global.EventSource = savedES;
     }
   });
+
+  test("onopen re-fetches latest and calls onUpdate after reconnect", async () => {
+    const op = makeOperation();
+    const api = jest.fn().mockResolvedValue({ operation: op });
+    const feature = createOperationFeature(makeDeps({ api }));
+    const callback = jest.fn();
+    feature.setUpdateCallback(callback);
+
+    let capturedOnopen = null;
+    const mockEventSource = {
+      addEventListener: jest.fn(),
+      onerror: null,
+      set onopen(fn) { capturedOnopen = fn; },
+    };
+    const savedES = global.EventSource;
+    global.EventSource = jest.fn(() => mockEventSource);
+    try {
+      feature.connectStream();
+      expect(capturedOnopen).toBeTruthy();
+      await capturedOnopen();
+      expect(api).toHaveBeenCalledWith("/api/operations/latest");
+      expect(callback).toHaveBeenCalledWith(expect.objectContaining({ operation_id: "op-1" }));
+    } finally {
+      global.EventSource = savedES;
+    }
+  });
+
+  test("loadFromStorage rejects a non-UUID stored id without calling api", async () => {
+    const api = jest.fn().mockResolvedValue({ operation: null });
+    const feature = createOperationFeature(makeDeps({ api }));
+
+    const savedGet = Storage.prototype.getItem;
+    Storage.prototype.getItem = jest.fn(() => "../../etc/passwd");
+    try {
+      await feature.initialize();
+      const storageCall = api.mock.calls.find((c) => c[0].includes("etc"));
+      expect(storageCall).toBeUndefined();
+    } finally {
+      Storage.prototype.getItem = savedGet;
+    }
+  });
+});
+
+describe("createOperationFeature — divergent stage rendering", () => {
+  test("stage with result divergent renders as op-stage-divergent", () => {
+    const feature = createOperationFeature(makeDeps());
+    const op = makeOperation({
+      state: "divergent",
+      stages: [
+        { stage: "review", result: "completed", started_at: 1700000000, completed_at: 1700000001, evidence: {}, error: null },
+        { stage: "backup_verify", result: "completed", started_at: 1700000001, completed_at: 1700000002, evidence: {}, error: null },
+        { stage: "prepare", result: "completed", started_at: 1700000002, completed_at: 1700000003, evidence: {}, error: null },
+        { stage: "restart", result: "completed", started_at: 1700000003, completed_at: 1700000004, evidence: {}, error: null },
+        { stage: "health_wait", result: "completed", started_at: 1700000004, completed_at: 1700000005, evidence: {}, error: null },
+        { stage: "verify", result: "divergent", started_at: 1700000005, completed_at: null, evidence: { observed: "old" }, error: "value mismatch" },
+        { stage: "confirm", result: "pending", started_at: null, completed_at: null, evidence: {}, error: null },
+      ],
+    });
+    const html = feature.renderOperation(op);
+    expect(html).toContain("op-stage-divergent");
+    expect(html).toContain("value mismatch");
+    expect(html).toContain("observed");
+  });
 });

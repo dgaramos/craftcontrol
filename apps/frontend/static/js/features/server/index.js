@@ -51,13 +51,14 @@ async function loadFrontendVersion() {
 // Operation lifecycle progress
 // ------------------------------------------------------------------
 
-const operationFeature = createOperationFeature({ api, t, escapeHtml, formatDate, uiIcon, toast });
+const operationFeature = createOperationFeature({ api, t, formatDate, uiIcon, toast });
 
 function refreshOperationPanel() {
   const container = $("#operation-progress-container");
   if (!container) return;
   const op = operationFeature.getOperation();
-  container.innerHTML = op ? operationFeature.renderOperation(op) : "";
+  const frag = op ? operationFeature.renderOperation(op) : null;
+  container.replaceChildren(...(frag ? [frag] : []));
   operationFeature.bindRecoveryActions(container);
 }
 
@@ -67,9 +68,9 @@ operationFeature.setUpdateCallback((op) => {
 });
 
 function operationProgressMarkup() {
-  const op = operationFeature.getOperation();
-  const inner = op ? operationFeature.renderOperation(op) : "";
-  return `<div id="operation-progress-container">${inner}</div>`;
+  // The container starts empty; refreshOperationPanel populates it after
+  // initializeOperationProgress resolves.
+  return `<div id="operation-progress-container"></div>`;
 }
 
 async function initializeOperationProgress() {

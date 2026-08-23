@@ -197,7 +197,7 @@ def test_reviewer_publishers_support_thread_replies_without_creating_a_review() 
         assert "bash .github/scripts/publish-review.sh" in workflow
         assert "permission-pull-requests: write" in workflow
         assert f"{reviewer}-dr[bot]" in workflow
-        assert "outputs.app-slug" in workflow
+        assert f"PUBLISHER_APP_SLUG: ${{{{ steps.{reviewer}-token.outputs.app-slug }}}}" in workflow
 
     assert "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/comments" in publisher
     assert "reply target mismatch" in publisher

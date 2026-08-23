@@ -48,7 +48,7 @@ export function createSettingsFeature({ state, content, t, api, $, escapeHtml, t
 
   function updateSaveLabel() {
     const count = Object.keys(state.changes).length;
-    $("#save").hidden = count === 0;
+    $("#save").hidden = count === 0 || state.operationActive;
     $("#save-label").textContent = t("reviewCount", count);
     document.querySelector("footer").classList.toggle("has-pending", count > 0);
     if ($("#changes-drawer").open) renderChangesDrawer();
@@ -124,7 +124,10 @@ export function createSettingsFeature({ state, content, t, api, $, escapeHtml, t
 
   function renderSettingsGroups(groupNames, prefix = "") {
     const titleKey = state.tab === "world" ? "worldIntro" : state.tab === "rules" ? "rulesIntro" : state.tab === "server" ? "serverIntro" : "onlinePlayers";
-    content.innerHTML = `<div class="section-heading"><h2>${t(titleKey)}</h2></div>${prefix}<div class="accordion-list">${settingsMarkup(groupNames)}</div>`;
+    const lockBanner = state.operationActive
+      ? `<div class="mutation-lock-notice" role="alert">${t("operationLocked")}</div>`
+      : "";
+    content.innerHTML = `<div class="section-heading"><h2>${t(titleKey)}</h2></div>${prefix}${lockBanner}<div class="accordion-list">${settingsMarkup(groupNames)}</div>`;
     bindSegmentedControls();
     bindSettingFields(groupNames);
   }
@@ -132,6 +135,13 @@ export function createSettingsFeature({ state, content, t, api, $, escapeHtml, t
   function bindSettingFields(groupNames) {
     const persistent = Object.entries(state.schema.settings).filter(([, definition]) => groupNames.includes(definition.group));
     const live = Object.entries(state.schema.gamerules).filter(([, definition]) => groupNames.includes(definition.group));
+    if (state.operationActive) {
+      [...persistent, ...live].forEach(([key]) => {
+        const element = $(`#field-${key}`);
+        if (element) element.disabled = true;
+      });
+      return;
+    }
     persistent.forEach(([key, definition]) => {
       const element = $(`#field-${key}`);
       element.addEventListener("change", () => {

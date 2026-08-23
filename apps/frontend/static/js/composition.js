@@ -162,7 +162,8 @@ export function startApplication() {
     const element = $("#status");
     element.textContent = status.online ? t("online") : t("stopped");
     element.classList.toggle("online", status.online);
-    $("#server-state-title").textContent = status.online ? t("serverOnline") : t("serverStopped");
+    const titleKey = state.operationActive && !status.online ? "serverRestarting" : (status.online ? "serverOnline" : "serverStopped");
+    $("#server-state-title").textContent = t(titleKey);
     $("#hero").classList.toggle("offline", !status.online);
   }
 
@@ -231,6 +232,11 @@ export function startApplication() {
   state.subscribe("tab", () => {
     getNavigation().renderTabs();
     refreshActivePanel();
+  });
+  state.subscribe("operationActive", () => {
+    if (state.status) setStatus(state.status);
+    getSettingsFeature().updateSaveLabel();
+    if (["world", "rules", "server"].includes(state.tab)) refreshActivePanel();
   });
   state.subscribe("locale", applyLocale);
   state.subscribe("config", () => {

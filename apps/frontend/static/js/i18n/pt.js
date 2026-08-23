@@ -92,4 +92,6 @@ export const pt = {
     opStage_health_wait: "Verificação de saúde",
     opStage_verify: "Verificar",
     opStage_confirm: "Confirmar",
+    operationLocked: "Alterações bloqueadas durante operação do servidor.",
+    serverRestarting: "Servidor reiniciando",
   };

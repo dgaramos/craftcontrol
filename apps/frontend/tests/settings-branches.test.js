@@ -290,3 +290,71 @@ describe("updateToggleLabel", () => {
     expect(deps.content.innerHTML).toContain("Careful");
   });
 });
+
+// ── operation lock ────────────────────────────────────────────────────────────
+
+describe("operation lock", () => {
+  function makeLockedDeps() {
+    return makeDeps({
+      operationActive: true,
+      changes: {},
+      config: { max_players: "10" },
+      gamerules: { showcoordinates: "true" },
+      schema: {
+        settings: {
+          max_players: { group: "G", label: "Max", label_en: "Max", description: "d", description_en: "d", type: "number" },
+        },
+        gamerules: {
+          showcoordinates: { group: "G", label: "Coords", label_en: "Coords", description: "d", description_en: "d", type: "boolean" },
+        },
+      },
+    });
+  }
+
+  test("renderSettingsGroups includes mutation-lock-notice when operationActive", () => {
+    const deps = makeLockedDeps();
+    createSettingsFeature(deps).renderSettingsGroups(["G"]);
+    expect(deps.content.innerHTML).toContain("mutation-lock-notice");
+    expect(deps.content.innerHTML).toContain("operationLocked");
+  });
+
+  test("renderSettingsGroups omits mutation-lock-notice when operation is not active", () => {
+    const deps = makeDeps({ operationActive: false, schema: { settings: {}, gamerules: {} } });
+    createSettingsFeature(deps).renderSettingsGroups([]);
+    expect(deps.content.innerHTML).not.toContain("mutation-lock-notice");
+  });
+
+  test("bindSettingFields disables all fields when operationActive", () => {
+    const deps = makeLockedDeps();
+    const settingsEl = makeEl();
+    const gameruleEl = makeEl();
+    deps.elements["#field-max_players"] = settingsEl;
+    deps.elements["#field-showcoordinates"] = gameruleEl;
+    const { bindSettingFields } = createSettingsFeature(deps);
+    bindSettingFields(["G"]);
+    expect(settingsEl.disabled).toBe(true);
+    expect(gameruleEl.disabled).toBe(true);
+  });
+
+  test("bindSettingFields skips event binding when operationActive", () => {
+    const deps = makeLockedDeps();
+    const settingsEl = makeEl();
+    deps.elements["#field-max_players"] = settingsEl;
+    const { bindSettingFields } = createSettingsFeature(deps);
+    bindSettingFields(["G"]);
+    // addEventListener should not be called because we returned early
+    expect(settingsEl.addEventListener).not.toHaveBeenCalled();
+  });
+
+  test("updateSaveLabel hides save when operationActive even with pending changes", () => {
+    const deps = makeLockedDeps();
+    deps.state.changes = { max_players: "20" };
+    const saveEl = makeEl({ hidden: false });
+    deps.elements["#save"] = saveEl;
+    deps.elements["#save-label"] = makeEl();
+    deps.elements["#changes-drawer"] = makeEl({ open: false });
+    const { updateSaveLabel } = createSettingsFeature(deps);
+    updateSaveLabel();
+    expect(saveEl.hidden).toBe(true);
+  });
+});

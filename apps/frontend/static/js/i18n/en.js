@@ -92,4 +92,6 @@ export const en = {
     opStage_health_wait: "Health check",
     opStage_verify: "Verify",
     opStage_confirm: "Confirm",
+    operationLocked: "Changes are locked while a server operation is in progress.",
+    serverRestarting: "Server restarting",
   };

@@ -23,17 +23,22 @@ async function runTimeAction(action, payload = {}) {
 }
 
 function bindTimePanel() {
-  content.querySelectorAll("[data-time-preset]").forEach((button) => button.onclick = async () => {
+  const guardMutation = (fn) => async (...args) => {
+    if (state.operationActive) { toast(t("operationLocked"), true); return; }
+    return fn(...args);
+  };
+  content.querySelectorAll("[data-time-preset]").forEach((button) => button.onclick = guardMutation(async () => {
     try { await runTimeAction("preset", { value: button.dataset.timePreset }); } catch (error) { toast(error.message, true); }
-  });
-  $("#set-exact-time").onclick = async () => {
+  }));
+  $("#set-exact-time").onclick = guardMutation(async () => {
     try { await runTimeAction("set", { value: $("#exact-time").value }); } catch (error) { toast(error.message, true); }
-  };
-  $("#add-time-button").onclick = async () => {
+  });
+  $("#add-time-button").onclick = guardMutation(async () => {
     try { await runTimeAction("add", { value: $("#add-time").value }); } catch (error) { toast(error.message, true); }
-  };
+  });
   [["time-daylight-cycle", "dodaylightcycle"], ["time-weather-cycle", "doweathercycle"]].forEach(([id, rule]) => {
     $(`#${id}`).onchange = async (event) => {
+      if (state.operationActive) { toast(t("operationLocked"), true); renderTimePanel(); return; }
       getSettingsFeature().updateToggleLabel(event.target);
       try {
         await api(`/api/gamerules/${rule}`, { method: "PUT", body: JSON.stringify({ value: event.target.checked }) });
@@ -41,9 +46,9 @@ function bindTimePanel() {
       } catch (error) { toast(error.message, true); renderTimePanel(); }
     };
   });
-  content.querySelectorAll("[data-weather]").forEach((button) => button.onclick = async () => {
+  content.querySelectorAll("[data-weather]").forEach((button) => button.onclick = guardMutation(async () => {
     try { await runTimeAction("weather", { value: button.dataset.weather, duration: $("#weather-duration").value }); } catch (error) { toast(error.message, true); }
-  });
+  }));
   $("#weather-query").onclick = async () => {
     try { const result = await runTimeAction("weather-query"); $("#time-query-result").textContent = `${t("queryResult")}: ${t(result.value) || result.value}`; } catch (error) { toast(error.message, true); }
   };
@@ -53,10 +58,10 @@ function bindTimePanel() {
       $("#time-query-result").textContent = `${t("queryResult")}: ${result.value ?? t("queryUnavailable")}`;
     } catch (error) { toast(error.message, true); }
   });
-  $("#reset-days").onclick = async () => {
+  $("#reset-days").onclick = guardMutation(async () => {
     if (!confirm(t("resetDaysConfirm"))) return;
     try { await runTimeAction("reset-days"); } catch (error) { toast(error.message, true); }
-  };
+  });
 }
 
 

@@ -1,9 +1,14 @@
 from pathlib import Path
 import os
+import shutil
 import subprocess
 
 
 ROOT = Path(__file__).resolve().parents[1]
+BASH = shutil.which("bash")
+
+if BASH is None:
+    raise RuntimeError("bash is required to test the review publisher")
 
 
 def test_component_deploy_canaries_use_the_production_port_default() -> None:
@@ -216,7 +221,7 @@ def test_reviewer_publisher_rejects_unexpected_app_before_mutation(tmp_path: Pat
         "EXPECTED_AUTHOR": "cody-dr[bot]",
         "REVIEW_BODY": "summary",
     }
-    result = subprocess.run(["bash", ".github/scripts/publish-review.sh"], env=env, capture_output=True, text=True)
+    result = subprocess.run([BASH, ".github/scripts/publish-review.sh"], env=env, capture_output=True, text=True)
     assert result.returncode != 0
     assert "unexpected authenticated app" in result.stderr
 
@@ -235,7 +240,7 @@ def test_reviewer_publisher_rejects_changed_head_before_mutation(tmp_path: Path)
         "EXPECTED_AUTHOR": "cody-dr[bot]",
         "REVIEW_BODY": "summary",
     }
-    result = subprocess.run(["bash", ".github/scripts/publish-review.sh"], env=env, capture_output=True, text=True)
+    result = subprocess.run([BASH, ".github/scripts/publish-review.sh"], env=env, capture_output=True, text=True)
     assert result.returncode != 0
     assert "PR head changed since review" in result.stderr
 

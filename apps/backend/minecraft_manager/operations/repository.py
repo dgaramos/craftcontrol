@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Callable
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Generator
@@ -102,6 +103,37 @@ class SQLiteOperationRepository:
         """Insert or fully replace an operation record."""
         with _write_connect(self._path) as connection:
             self._upsert(connection, operation)
+
+    def fetch_and_update(
+        self,
+        operation_id: str,
+        modifier: Callable[[ServerOperation], None],
+    ) -> ServerOperation | None:
+        """Atomically fetch, modify, and persist an operation under a single write lock.
+
+        Moves the ``get()`` snapshot inside the same ``BEGIN IMMEDIATE``
+        transaction as the write, so the record read by *modifier* is always
+        fresh at the moment the write lock is granted.  Concurrent callers are
+        serialised by SQLite rather than relying on a stale Python-side
+        snapshot, which eliminates the lost-update race described in issue #251.
+
+        *modifier* receives the live ``ServerOperation`` and must mutate it
+        in-place.  If *modifier* raises, the transaction is rolled back.
+
+        Returns the updated operation, or ``None`` when *operation_id* does not
+        exist.
+        """
+        with _write_connect(self._path) as connection:
+            row = connection.execute(
+                "SELECT * FROM server_operations WHERE operation_id=?",
+                (operation_id,),
+            ).fetchone()
+            if row is None:
+                return None
+            operation = self._load(connection, dict(row))
+            modifier(operation)
+            self._upsert(connection, operation)
+            return operation
 
     def update_stage(self, operation: ServerOperation, stage: OperationStage) -> None:
         """Persist the current state of one stage without re-serialising all stages."""

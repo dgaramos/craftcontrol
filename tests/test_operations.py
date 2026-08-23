@@ -317,6 +317,68 @@ class TestSQLiteOperationRepository:
         assert loaded is not None
         assert loaded.state == OperationState.RUNNING
 
+    def test_fetch_and_update_serializes_different_mutations(self, tmp_path: Path):
+        """fetch_and_update must serialise concurrent writers so neither mutation is lost.
+
+        Two threads each write a distinct key into the operation's observation
+        dict via fetch_and_update.  Because the snapshot is taken *inside* the
+        BEGIN IMMEDIATE transaction, the second thread reads the row already
+        committed by the first and merges its own change on top.  The final
+        record must contain both keys — neither write is silently clobbered.
+        """
+        repo = make_repo(tmp_path)
+        op = ServerOperation.create("srv", {})
+        repo.save(op)
+
+        barrier = threading.Barrier(2)
+        errors: list[Exception] = []
+
+        def writer(key: str, value: str) -> None:
+            try:
+                barrier.wait(timeout=5)
+                repo.fetch_and_update(
+                    op.operation_id,
+                    lambda o: o.update_observation({key: value}),
+                )
+            except Exception as exc:
+                errors.append(exc)
+
+        t1 = threading.Thread(target=writer, args=("writer_a", "alpha"))
+        t2 = threading.Thread(target=writer, args=("writer_b", "beta"))
+        t1.start()
+        t2.start()
+        t1.join(timeout=10)
+        t2.join(timeout=10)
+
+        assert not errors, errors
+        loaded = repo.get(op.operation_id)
+        assert loaded is not None
+        # Both mutations must be present — neither was silently lost.
+        assert loaded.observation.get("writer_a") == "alpha"
+        assert loaded.observation.get("writer_b") == "beta"
+
+    def test_fetch_and_update_returns_none_for_missing_operation(self, tmp_path: Path):
+        repo = make_repo(tmp_path)
+        result = repo.fetch_and_update("nonexistent", lambda o: None)
+        assert result is None
+
+    def test_fetch_and_update_rolls_back_when_modifier_raises(self, tmp_path: Path):
+        """A modifier that raises must leave the operation unchanged."""
+        repo = make_repo(tmp_path)
+        op = ServerOperation.create("srv", {})
+        repo.save(op)
+
+        with pytest.raises(RuntimeError, match="modifier failure"):
+            repo.fetch_and_update(
+                op.operation_id,
+                lambda o: (_ for _ in ()).throw(RuntimeError("modifier failure")),
+            )
+
+        loaded = repo.get(op.operation_id)
+        assert loaded is not None
+        assert loaded.state == OperationState.PENDING
+        assert loaded.observation == {}
+
     def test_concurrent_update_stage_does_not_clobber_terminal_state(self, tmp_path: Path):
         """A concurrent update_stage write must not overwrite a terminal state
         written by another thread that holds the write lock first."""

@@ -59,11 +59,20 @@ def wait_for_terminal(
     waiting an arbitrary amount of time.
     """
     deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
+    last_state = None
+    while True:
         op = service.get_operation(operation_id)
-        if op is not None and op.state.is_terminal:
-            return
-        time.sleep(poll_interval)
+        if op is not None:
+            last_state = op.state
+            if op.state.is_terminal:
+                return
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise AssertionError(
+                f"Operation {operation_id} did not reach terminal state "
+                f"before timeout; last_state={last_state!r}"
+            )
+        time.sleep(min(poll_interval, remaining))
 
 
 def make_db(tmp_path: Path) -> Path:

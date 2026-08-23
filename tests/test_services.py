@@ -825,10 +825,17 @@ def test_period_analytics_delegates(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 def _make_service_with_operation_service(tmp_path: Path) -> "ManagerService":
-    """Build a ManagerService wired with a real ServerOperationService."""
+    """Build a ManagerService wired with a real ServerOperationService.
+
+    ``operation_service`` is passed to the constructor so that the composition
+    follows the constructor-injection guideline.  The DB is initialised by
+    ``make_manager_service``; ``SQLiteOperationRepository`` uses the same path
+    and the schema is idempotent.
+    """
     from tests.conftest import make_manager_service
     from minecraft_manager.operations.repository import SQLiteOperationRepository
     from minecraft_manager.operations.service import ServerOperationService
+    from minecraft_manager.repository import StateRepository
 
     class InlineThread:
         def __init__(self, *, target, args, **_kwargs) -> None:
@@ -844,10 +851,10 @@ def _make_service_with_operation_service(tmp_path: Path) -> "ManagerService":
     docker_mock.status.return_value = {"state": "running", "online": True}
     docker_mock.execute.return_value = None
 
-    # make_manager_service initialises the DB (runs migrations) at state.db
-    service = make_manager_service(tmp_path, docker=docker_mock)  # type: ignore[arg-type]
-
+    # Initialise the DB first so the operation repository can share the schema.
     db_path = tmp_path / "state.db"
+    StateRepository(db_path).initialize()
+
     configuration = MagicMock()
     configuration.read_properties.return_value = {"server-name": "NewName"}
 
@@ -860,8 +867,7 @@ def _make_service_with_operation_service(tmp_path: Path) -> "ManagerService":
         server_id="default",
         health_timeout=1,
     )
-    service.operation_service = op_service
-    return service
+    return make_manager_service(tmp_path, docker=docker_mock, operation_service=op_service)  # type: ignore[arg-type]
 
 
 def test_save_settings_routes_through_operation_service_and_returns_operation_id(tmp_path: Path) -> None:
@@ -875,13 +881,14 @@ def test_save_settings_routes_through_operation_service_and_returns_operation_id
 
 def test_save_settings_raises_conflicting_operation_on_concurrent_request(tmp_path: Path) -> None:
     from minecraft_manager.operations.service import ConflictingOperationError
-    from unittest.mock import MagicMock, patch
+    from minecraft_manager.operations.lifecycle import ServerOperation
+    from minecraft_manager.operations.repository import SQLiteOperationRepository
     service = _make_service_with_operation_service(tmp_path)
-    # Simulate an active operation by making get_active return a non-terminal operation
-    active_op = MagicMock()
-    active_op.state.value = "running"
-    with patch.object(
-        service.operation_service._repo, "get_active", return_value=active_op
-    ):
-        with pytest.raises(ConflictingOperationError):
-            service.save_settings({"SERVER_NAME": "Conflict"})
+    # Persist a non-terminal (PENDING) operation in the real repository so that
+    # get_active returns it and save_settings raises ConflictingOperationError.
+    db_path = tmp_path / "state.db"
+    repo = SQLiteOperationRepository(db_path)
+    blocking_op = ServerOperation.create("default", {"SERVER_NAME": "Blocker"})
+    repo.save(blocking_op)
+    with pytest.raises(ConflictingOperationError):
+        service.save_settings({"SERVER_NAME": "Conflict"})

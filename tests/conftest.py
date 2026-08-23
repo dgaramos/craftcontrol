@@ -44,6 +44,7 @@ def make_manager_service(
     directory: Path,
     bedrock: FakeBedrock | None = None,
     docker: FakeDocker | None = None,
+    operation_service=None,
 ) -> ManagerService:
     db_path = directory / "state.db"
     repo = StateRepository(db_path)
@@ -74,6 +75,7 @@ def make_manager_service(
         telemetry_service=telemetry_service,
         world_service=world_service,
         reconciliation_service=reconciliation_service,
+        operation_service=operation_service,
     )
 
 

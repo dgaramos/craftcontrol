@@ -37,4 +37,10 @@ export const es = {
   opStage_confirm: "Confirmar",
   operationLocked: "Los cambios están bloqueados durante una operación del servidor.",
   serverRestarting: "Servidor reiniciando",
+  opReconcile: "Reconciliar",
+  opReconcileHelp: "Volver a observar el servidor y actualizar el resultado de esta operación.",
+  opRetry: "Reintentar",
+  opRetryHelp: "Iniciar una nueva operación vinculada con los mismos cambios.",
+  opRetryConflict: "Otra operación ya está en ejecución. Por favor espere e intente de nuevo.",
+  opParentLink: "Reintento de",
 };

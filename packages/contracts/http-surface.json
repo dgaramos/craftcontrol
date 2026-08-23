@@ -173,6 +173,12 @@
       ]
     },
     {
+      "path": "/api/operations/<operation_id>/retry",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
       "path": "/api/operations/active",
       "methods": [
         "GET"

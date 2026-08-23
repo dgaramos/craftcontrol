@@ -144,8 +144,9 @@ class SQLiteOperationRepository:
         connection.execute(
             "INSERT OR REPLACE INTO server_operations"
             "(operation_id, server_id, state, requested_changes, created_at,"
-            " updated_at, completed_at, terminal_error, observation, correlation_id)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?)",
+            " updated_at, completed_at, terminal_error, observation, correlation_id,"
+            " parent_operation_id)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?)",
             (
                 operation.operation_id,
                 operation.server_id,
@@ -157,6 +158,7 @@ class SQLiteOperationRepository:
                 operation.terminal_error,
                 json.dumps(operation.observation, ensure_ascii=False),
                 operation.correlation_id,
+                operation.parent_operation_id,
             ),
         )
         for record in operation.stages:
@@ -210,6 +212,7 @@ class SQLiteOperationRepository:
                 "terminal_error": row.get("terminal_error"),
                 "observation": json.loads(row["observation"] or "{}"),
                 "correlation_id": row.get("correlation_id"),
+                "parent_operation_id": row.get("parent_operation_id"),
                 "stages": [
                     {
                         "stage": s.stage.value,

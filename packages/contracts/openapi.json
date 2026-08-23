@@ -984,6 +984,78 @@
         "x-craftcontrol-capability": "server.configure"
       }
     },
+    "/api/operations/{operation_id}/retry": {
+      "post": {
+        "operationId": "retryOperation",
+        "summary": "Retry a failed or divergent operation as a new linked operation",
+        "tags": [
+          "Operations"
+        ],
+        "security": [
+          {
+            "cookieAuth": [],
+            "csrfToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          },
+          {
+            "name": "operation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Retry operation created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "operation": {
+                      "$ref": "#/components/schemas/ServerOperation"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Operation cannot be retried",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another operation is already active",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        },
+        "x-craftcontrol-capability": "server.configure"
+      }
+    },
     "/api/players": {
       "get": {
         "tags": [
@@ -2321,6 +2393,11 @@
           "correlation_id": {
             "type": "string",
             "nullable": true
+          },
+          "parent_operation_id": {
+            "type": "string",
+            "nullable": true,
+            "description": "ID of the original operation this was created as a retry of"
           }
         }
       },

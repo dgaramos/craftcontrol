@@ -679,3 +679,135 @@ class TestRepositoryEdgeCases:
         op.stages = []
         # Should not raise; just return early
         repo.update_stage(op, OperationStage.REVIEW)
+
+
+# ---------------------------------------------------------------------------
+# Issue #194 — failure recovery and reconciliation
+# ---------------------------------------------------------------------------
+
+
+class TestRecoveryAndReconciliation:
+    def test_reconciliation_confirms_when_server_is_online_and_config_matches(self, tmp_path: Path):
+        """request_reconciliation transitions FAILED → CONFIRMED when config matches."""
+        docker = MagicMock()
+        docker.status.return_value = {"state": "running", "online": True}
+        docker.execute.side_effect = RuntimeError("container conflict")
+        configuration = MagicMock()
+        configuration.read_properties.return_value = {"max-players": "20"}
+        service = make_service(tmp_path, docker=docker, configuration=configuration, health_timeout=1)
+        op = service.apply_restart_required({"MAX_PLAYERS": "20"}, lambda: None)
+        time.sleep(2)
+        failed = service.get_operation(op.operation_id)
+        assert failed is not None and failed.state == OperationState.FAILED
+
+        # Now fix docker so reconciliation sees the server online
+        docker.status.side_effect = None
+        docker.status.return_value = {"state": "running", "online": True}
+        reconciled = service.request_reconciliation(op.operation_id)
+        assert reconciled is not None
+        assert reconciled.state == OperationState.CONFIRMED
+
+    def test_reconciliation_marks_divergent_when_config_differs(self, tmp_path: Path):
+        """request_reconciliation marks FAILED → DIVERGENT when server online but config differs."""
+        docker = MagicMock()
+        docker.status.return_value = {"state": "running", "online": True}
+        docker.execute.side_effect = RuntimeError("conflict")
+        configuration = MagicMock()
+        configuration.read_properties.return_value = {"max-players": "10"}
+        service = make_service(tmp_path, docker=docker, configuration=configuration, health_timeout=1)
+        op = service.apply_restart_required({"MAX_PLAYERS": "20"}, lambda: None)
+        time.sleep(2)
+        failed = service.get_operation(op.operation_id)
+        assert failed is not None and failed.state == OperationState.FAILED
+
+        docker.status.side_effect = None
+        docker.status.return_value = {"state": "running", "online": True}
+        reconciled = service.request_reconciliation(op.operation_id)
+        assert reconciled is not None
+        assert reconciled.state == OperationState.DIVERGENT
+
+    def test_reconciliation_skips_running_operations(self, tmp_path: Path):
+        """request_reconciliation does not alter non-terminal operations."""
+        service = make_service(tmp_path)
+        op = ServerOperation.create("test-server", {})
+        op.start()
+        service._repo.save(op)
+        result = service.request_reconciliation(op.operation_id)
+        assert result is not None
+        assert result.state == OperationState.RUNNING
+
+    def test_reconciliation_returns_none_for_unknown(self, tmp_path: Path):
+        service = make_service(tmp_path)
+        assert service.request_reconciliation("nonexistent-id") is None
+
+    def test_retry_creates_linked_operation(self, tmp_path: Path):
+        """retry_operation returns a new operation linked to the original via parent_operation_id."""
+        docker = MagicMock()
+        docker.status.return_value = {"state": "running", "online": True}
+        docker.execute.side_effect = RuntimeError("conflict")
+        service = make_service(tmp_path, docker=docker, health_timeout=1)
+        op = service.apply_restart_required({"MAX_PLAYERS": "20"}, lambda: None)
+        time.sleep(2)
+        original = service.get_operation(op.operation_id)
+        assert original is not None and original.state == OperationState.FAILED
+
+        docker.execute.side_effect = None
+        docker.status.return_value = {"state": "running", "online": True}
+        configuration = MagicMock()
+        configuration.read_properties.return_value = {"max-players": "20"}
+        service._configuration = configuration
+
+        retry = service.retry_operation(op.operation_id, lambda: None)
+        assert retry.parent_operation_id == op.operation_id
+        assert retry.requested_changes == {"MAX_PLAYERS": "20"}
+        # Original must be untouched
+        still_original = service.get_operation(op.operation_id)
+        assert still_original is not None
+        assert still_original.state == OperationState.FAILED
+
+    def test_retry_raises_for_unknown_operation(self, tmp_path: Path):
+        service = make_service(tmp_path)
+        with pytest.raises(ValueError, match="not found"):
+            service.retry_operation("nonexistent", lambda: None)
+
+    def test_retry_raises_for_confirmed_operation(self, tmp_path: Path):
+        """retry_operation rejects CONFIRMED operations — only FAILED/DIVERGENT are retryable."""
+        docker = MagicMock()
+        docker.status.return_value = {"state": "running", "online": True}
+        configuration = MagicMock()
+        configuration.read_properties.return_value = {"max-players": "20"}
+        service = make_service(tmp_path, docker=docker, configuration=configuration, thread_factory=InlineThread)
+        op = service.apply_restart_required({"MAX_PLAYERS": "20"}, lambda: None)
+        assert op.state == OperationState.CONFIRMED
+        with pytest.raises(ValueError, match="confirmed"):
+            service.retry_operation(op.operation_id, lambda: None)
+
+    def test_retry_raises_conflict_when_another_operation_active(self, tmp_path: Path):
+        """retry_operation raises ConflictingOperationError when another operation is running."""
+        docker = MagicMock()
+        docker.status.return_value = {"state": "running", "online": True}
+        docker.execute.side_effect = RuntimeError("conflict")
+        service = make_service(tmp_path, docker=docker, health_timeout=1)
+        op = service.apply_restart_required({"MAX_PLAYERS": "20"}, lambda: None)
+        time.sleep(2)
+        original = service.get_operation(op.operation_id)
+        assert original is not None and original.state == OperationState.FAILED
+
+        # Create another active operation directly
+        active = ServerOperation.create("test-server", {})
+        active.start()
+        service._repo.save(active)
+
+        with pytest.raises(ConflictingOperationError):
+            service.retry_operation(op.operation_id, lambda: None)
+
+    def test_parent_operation_id_survives_roundtrip(self, tmp_path: Path):
+        """parent_operation_id is persisted and restored correctly."""
+        repo = make_repo(tmp_path)
+        origin = ServerOperation.create("srv", {})
+        repo.save(origin)
+        child = ServerOperation.create("srv", {}, parent_operation_id=origin.operation_id)
+        repo.save(child)
+        loaded = repo.get(child.operation_id)
+        assert loaded is not None
+        assert loaded.parent_operation_id == origin.operation_id

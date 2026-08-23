@@ -119,17 +119,82 @@ class ServerOperationService:
     def request_reconciliation(self, operation_id: str) -> ServerOperation | None:
         """Re-observe Bedrock for a terminal operation and update its outcome.
 
-        Issue #194 recovery action: returns the refreshed operation or None if
-        the operation does not exist or is still running.
+        Issue #194 recovery action: re-observes the container and, when the
+        server is online and the operation has verifiable changes, re-evaluates
+        whether the effective configuration matches to produce a confirmed,
+        divergent, or failed terminal state.  Returns the refreshed operation
+        or None if the operation does not exist or is still running.
         """
         operation = self._repo.get(operation_id)
         if operation is None or not operation.state.is_terminal:
             return operation
+
         obs = self._observe_container()
         operation.update_observation(obs)
+
+        if obs.get("online") and operation.requested_changes:
+            try:
+                verified, evidence = self._verify_configuration(operation)
+                operation.update_observation(evidence)
+                if verified:
+                    operation.state = OperationState.CONFIRMED
+                    operation.terminal_error = None
+                else:
+                    operation.state = OperationState.DIVERGENT
+                    if not operation.terminal_error:
+                        operation.terminal_error = "effective configuration differs from requested changes"
+            except Exception as exc:
+                LOGGER.warning(
+                    "server_operation reconciliation verification failed operation_id=%s: %s",
+                    operation_id, exc,
+                )
+        elif not obs.get("online") and operation.state == OperationState.DIVERGENT:
+            # Server is now offline; divergent result is no longer observable
+            operation.state = OperationState.FAILED
+            operation.terminal_error = "server offline during reconciliation"
+
         self._repo.save(operation)
         self._publish(operation)
         return operation
+
+    def retry_operation(
+        self,
+        operation_id: str,
+        apply_fn: Any,
+        *,
+        correlation_id: str | None = None,
+    ) -> ServerOperation:
+        """Create a new linked operation as a retry of a failed or divergent one.
+
+        Issue #194: the original operation is preserved unchanged.  The retry
+        is recorded as a separate operation with ``parent_operation_id`` set to
+        the origin's ID so the relationship is auditable.
+
+        Raises ``ValueError`` if the origin operation does not exist or is not
+        in a terminal failure state.  Raises ``ConflictingOperationError`` if
+        another non-terminal operation is already active.
+        """
+        origin = self._repo.get(operation_id)
+        if origin is None:
+            raise ValueError(f"operation {operation_id!r} not found")
+        if origin.state not in {OperationState.FAILED, OperationState.DIVERGENT}:
+            raise ValueError(
+                f"operation {operation_id!r} is in state {origin.state.value!r}; "
+                "only failed or divergent operations may be retried"
+            )
+        retry = self._create_or_reject(
+            origin.requested_changes,
+            correlation_id or origin.correlation_id,
+            parent_operation_id=operation_id,
+        )
+        thread = self._thread_factory(
+            target=self._run,
+            args=(retry, apply_fn),
+            daemon=True,
+            name=f"op-{retry.operation_id[:8]}",
+        )
+        thread.start()
+        return retry
 
     # ------------------------------------------------------------------
     # Background execution
@@ -441,7 +506,10 @@ class ServerOperationService:
     # ------------------------------------------------------------------
 
     def _create_or_reject(
-        self, changes: dict[str, Any], correlation_id: str | None
+        self,
+        changes: dict[str, Any],
+        correlation_id: str | None,
+        parent_operation_id: str | None = None,
     ) -> ServerOperation:
         with self._lock:
             active = self._repo.get_active(self._server_id)
@@ -453,6 +521,7 @@ class ServerOperationService:
                 server_id=self._server_id,
                 requested_changes=changes,
                 correlation_id=correlation_id,
+                parent_operation_id=parent_operation_id,
             )
             self._repo.save(operation)
         return operation

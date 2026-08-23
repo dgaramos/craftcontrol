@@ -174,6 +174,31 @@ class ManagerService:
 
         return list(changes), None
 
+    def retry_settings_operation(self, operation_id: str) -> str:
+        """Retry a failed or divergent settings operation as a new linked operation.
+
+        Issue #194: the original operation is preserved; the retry is linked via
+        ``parent_operation_id``.  Returns the new operation id.
+
+        Raises ``ValueError`` if the operation does not exist, is not a
+        failed/divergent settings operation, or no operation service is wired.
+        Raises ``ConflictingOperationError`` if another operation is active.
+        """
+        if self.operation_service is None:
+            raise ValueError("operation tracking not active")
+        origin = self.operation_service.get_operation(operation_id)
+        if origin is None:
+            raise ValueError(f"operation {operation_id!r} not found")
+        changes = origin.requested_changes
+
+        def _apply() -> None:
+            self.files.write_env(changes)
+            self.repository.store("settings", changes, "manager")
+            self.broker.publish("state.changed", "manager", {"domains": ["settings"], "keys": list(changes)})
+
+        retry = self.operation_service.retry_operation(operation_id, _apply)
+        return retry.operation_id
+
     def set_gamerule(self, rule: str, value: Any) -> str:
         from .schema import GAMERULES, validate_value
         if rule not in GAMERULES:

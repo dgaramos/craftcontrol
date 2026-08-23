@@ -58,6 +58,7 @@ function refreshOperationPanel() {
   if (!container) return;
   const op = operationFeature.getOperation();
   container.innerHTML = op ? operationFeature.renderOperation(op) : "";
+  operationFeature.bindRecoveryActions(container);
 }
 
 operationFeature.setUpdateCallback((op) => {

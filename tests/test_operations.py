@@ -745,7 +745,9 @@ class TestRecoveryAndReconciliation:
         docker = MagicMock()
         docker.status.return_value = {"state": "running", "online": True}
         docker.execute.side_effect = RuntimeError("conflict")
-        service = make_service(tmp_path, docker=docker, health_timeout=1)
+        configuration = MagicMock()
+        configuration.read_properties.return_value = {"max-players": "20"}
+        service = make_service(tmp_path, docker=docker, configuration=configuration, health_timeout=1)
         op = service.apply_restart_required({"MAX_PLAYERS": "20"}, lambda: None)
         time.sleep(2)
         original = service.get_operation(op.operation_id)
@@ -753,9 +755,6 @@ class TestRecoveryAndReconciliation:
 
         docker.execute.side_effect = None
         docker.status.return_value = {"state": "running", "online": True}
-        configuration = MagicMock()
-        configuration.read_properties.return_value = {"max-players": "20"}
-        service._configuration = configuration
 
         retry = service.retry_operation(op.operation_id, lambda: None)
         assert retry.parent_operation_id == op.operation_id
@@ -846,6 +845,70 @@ class TestRecoveryAndReconciliation:
         assert reconciled.state == OperationState.FAILED
         result = reconciled.observation.get("reconciliation_result", {})
         assert "UNKNOWN_KEY" in result.get("evidence", {}).get("unverifiable_settings", [])
+
+    def test_reconciliation_ignores_operation_from_different_server(self, tmp_path: Path):
+        """request_reconciliation returns without modifying ops belonging to another server_id."""
+        service = make_service(tmp_path)
+        op = ServerOperation.create("other-server", {"MAX_PLAYERS": "20"})
+        op.start()
+        op.fail_stage(
+            __import__("minecraft_manager.operations.lifecycle", fromlist=["OperationStage"]).OperationStage.REVIEW,
+            "failed",
+        )
+        service._repo.save(op)
+        result = service.request_reconciliation(op.operation_id)
+        # Returns the operation unchanged (not None) but state must not be modified
+        assert result is not None
+        assert result.state == OperationState.FAILED
+        assert "reconciliation_result" not in result.observation
+
+    def test_reconciliation_confirmed_op_is_not_re_reconciled(self, tmp_path: Path):
+        """request_reconciliation skips CONFIRMED operations."""
+        docker = MagicMock()
+        docker.status.return_value = {"state": "running", "online": True}
+        configuration = MagicMock()
+        configuration.read_properties.return_value = {"max-players": "20"}
+        service = make_service(tmp_path, docker=docker, configuration=configuration, thread_factory=InlineThread)
+        op = service.apply_restart_required({"MAX_PLAYERS": "20"}, lambda: None)
+        assert op.state == OperationState.CONFIRMED
+        result = service.request_reconciliation(op.operation_id)
+        # Confirmed ops are not eligible; returned unchanged
+        assert result is not None
+        assert result.state == OperationState.CONFIRMED
+
+    def test_reconciliation_sets_failed_when_verify_raises(self, tmp_path: Path):
+        """request_reconciliation sets FAILED and records error evidence when _verify_configuration raises."""
+        docker = MagicMock()
+        docker.status.return_value = {"state": "running", "online": True}
+        configuration = MagicMock()
+        configuration.read_properties.side_effect = RuntimeError("disk error")
+        service = make_service(tmp_path, docker=docker, configuration=configuration, health_timeout=1)
+        docker.execute.side_effect = RuntimeError("conflict")
+        op = service.apply_restart_required({"MAX_PLAYERS": "20"}, lambda: None)
+        time.sleep(2)
+        failed = service.get_operation(op.operation_id)
+        assert failed is not None and failed.state == OperationState.FAILED
+
+        docker.execute.side_effect = None
+        reconciled = service.request_reconciliation(op.operation_id)
+        assert reconciled is not None
+        assert reconciled.state == OperationState.FAILED
+        result = reconciled.observation.get("reconciliation_result", {})
+        assert result.get("state") == OperationState.FAILED.value
+        assert "error" in result.get("evidence", {})
+
+    def test_retry_raises_for_different_server_operation(self, tmp_path: Path):
+        """retry_operation rejects operations belonging to a different server_id."""
+        service = make_service(tmp_path)
+        op = ServerOperation.create("other-server", {"MAX_PLAYERS": "20"})
+        op.start()
+        op.fail_stage(
+            __import__("minecraft_manager.operations.lifecycle", fromlist=["OperationStage"]).OperationStage.REVIEW,
+            "failed",
+        )
+        service._repo.save(op)
+        with pytest.raises(ValueError, match="different server"):
+            service.retry_operation(op.operation_id, lambda: None)
 
     def test_parent_operation_id_survives_roundtrip(self, tmp_path: Path):
         """parent_operation_id is persisted and restored correctly."""

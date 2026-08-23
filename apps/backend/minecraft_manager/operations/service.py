@@ -126,7 +126,11 @@ class ServerOperationService:
         or None if the operation does not exist or is still running.
         """
         operation = self._repo.get(operation_id)
-        if operation is None or not operation.state.is_terminal:
+        if (
+            operation is None
+            or operation.server_id != self._server_id
+            or operation.state not in {OperationState.FAILED, OperationState.DIVERGENT}
+        ):
             return operation
 
         obs = self._observe_container()
@@ -163,6 +167,14 @@ class ServerOperationService:
                     "evidence": evidence,
                 }
             except Exception as exc:
+                error_msg = f"reconciliation verification failed: {exc}"
+                operation.state = OperationState.FAILED
+                operation.terminal_error = error_msg
+                operation.observation["reconciliation_result"] = {
+                    "state": OperationState.FAILED.value,
+                    "reconciled_at": _now(),
+                    "evidence": {"error": str(exc)},
+                }
                 LOGGER.warning(
                     "server_operation reconciliation verification failed operation_id=%s: %s",
                     operation_id, exc,
@@ -193,19 +205,29 @@ class ServerOperationService:
         in a terminal failure state.  Raises ``ConflictingOperationError`` if
         another non-terminal operation is already active.
         """
-        origin = self._repo.get(operation_id)
-        if origin is None:
-            raise ValueError(f"operation {operation_id!r} not found")
-        if origin.state not in {OperationState.FAILED, OperationState.DIVERGENT}:
-            raise ValueError(
-                f"operation {operation_id!r} is in state {origin.state.value!r}; "
-                "only failed or divergent operations may be retried"
+        with self._lock:
+            origin = self._repo.get(operation_id)
+            if origin is None:
+                raise ValueError(f"operation {operation_id!r} not found")
+            if origin.server_id != self._server_id:
+                raise ValueError(f"operation {operation_id!r} belongs to a different server")
+            if origin.state not in {OperationState.FAILED, OperationState.DIVERGENT}:
+                raise ValueError(
+                    f"operation {operation_id!r} is in state {origin.state.value!r}; "
+                    "only failed or divergent operations may be retried"
+                )
+            active = self._repo.get_active(self._server_id)
+            if active is not None:
+                raise ConflictingOperationError(
+                    f"Operation {active.operation_id} is already active in state {active.state.value}"
+                )
+            retry = ServerOperation.create(
+                server_id=self._server_id,
+                requested_changes=origin.requested_changes,
+                correlation_id=correlation_id or origin.correlation_id,
+                parent_operation_id=operation_id,
             )
-        retry = self._create_or_reject(
-            origin.requested_changes,
-            correlation_id or origin.correlation_id,
-            parent_operation_id=operation_id,
-        )
+            self._repo.save(retry)
         thread = self._thread_factory(
             target=self._run,
             args=(retry, apply_fn),

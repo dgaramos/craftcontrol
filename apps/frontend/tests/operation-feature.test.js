@@ -306,14 +306,14 @@ describe("createOperationFeature — initialize and SSE", () => {
     const api = jest.fn().mockResolvedValue({ operation: null });
     const feature = createOperationFeature(makeDeps({ api }));
 
-    const savedGet = Storage.prototype.getItem;
-    Storage.prototype.getItem = jest.fn(() => "../../etc/passwd");
+    const savedLocalStorage = global.localStorage;
+    global.localStorage = { getItem: jest.fn(() => "../../etc/passwd"), setItem: jest.fn(), removeItem: jest.fn() };
     try {
       await feature.initialize();
       const storageCall = api.mock.calls.find((c) => c[0].includes("etc"));
       expect(storageCall).toBeUndefined();
     } finally {
-      Storage.prototype.getItem = savedGet;
+      global.localStorage = savedLocalStorage;
     }
   });
 });

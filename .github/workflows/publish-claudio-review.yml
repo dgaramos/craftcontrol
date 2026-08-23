@@ -4,10 +4,10 @@ on:
     inputs:
       pr_number: {description: Pull request number, required: true, type: string}
       event: {description: Review event, required: true, default: REQUEST_CHANGES, type: choice, options: [REQUEST_CHANGES, COMMENT, APPROVE]}
-      review_body: {description: Review summary in Markdown, required: true, type: string}
-      inline_comments_json: {description: JSON array of path, line, and body findings, required: false, default: '[]', type: string}
-      replies_json: {description: JSON array of comment_id and body replies, required: false, default: '[]', type: string}
-      resolve_thread_ids_json: {description: JSON array of thread node IDs, required: false, default: '[]', type: string}
+      review_body: {description: "Review summary in Markdown", required: false, type: string}
+      inline_comments_json: {description: "JSON array of path, line, and body findings", required: false, default: '[]', type: string}
+      replies_json: {description: "JSON array of comment_id and body replies", required: false, default: '[]', type: string}
+      resolve_thread_ids_json: {description: "JSON array of thread node IDs", required: false, default: '[]', type: string}
 permissions: {contents: read}
 jobs:
   publish:

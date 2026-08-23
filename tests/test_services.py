@@ -316,8 +316,9 @@ def test_attach_runtime_twice_raises(tmp_path: Path) -> None:
 
 def test_save_known_setting_persists_and_returns_keys(tmp_path: Path) -> None:
     service = _make_service(tmp_path)
-    changed = service.save_settings({"SERVER_NAME": "TestServer"})
+    changed, operation_id = service.save_settings({"SERVER_NAME": "TestServer"})
     assert changed == ["SERVER_NAME"]
+    assert operation_id is None  # no operation_service wired in this fixture
     _, env_values = ServerFiles(tmp_path / ".env", tmp_path / "server.properties").read_env()
     assert env_values.get("SERVER_NAME") == "TestServer"
 
@@ -817,3 +818,77 @@ def test_period_analytics_delegates(tmp_path: Path) -> None:
     result = service.period_analytics(days=7, limit=5)
     assert result is _SENTINEL
     assert fake_player.periods_calls == [(7, 5)]
+
+
+# ---------------------------------------------------------------------------
+# save_settings routes through operation_service (issue #190)
+# ---------------------------------------------------------------------------
+
+def _make_service_with_operation_service(tmp_path: Path) -> "ManagerService":
+    """Build a ManagerService wired with a real ServerOperationService.
+
+    ``operation_service`` is passed to the constructor so that the composition
+    follows the constructor-injection guideline.  The DB is initialised by
+    ``make_manager_service``; ``SQLiteOperationRepository`` uses the same path
+    and the schema is idempotent.
+    """
+    from tests.conftest import make_manager_service
+    from minecraft_manager.operations.repository import SQLiteOperationRepository
+    from minecraft_manager.operations.service import ServerOperationService
+    from minecraft_manager.repository import StateRepository
+
+    class InlineThread:
+        def __init__(self, *, target, args, **_kwargs) -> None:
+            self._target = target
+            self._args = args
+
+        def start(self) -> None:
+            self._target(*self._args)
+
+    from unittest.mock import MagicMock
+
+    docker_mock = MagicMock()
+    docker_mock.status.return_value = {"state": "running", "online": True}
+    docker_mock.execute.return_value = None
+
+    # Initialise the DB first so the operation repository can share the schema.
+    db_path = tmp_path / "state.db"
+    StateRepository(db_path).initialize()
+
+    configuration = MagicMock()
+    configuration.read_properties.return_value = {"server-name": "NewName"}
+
+    op_service = ServerOperationService(
+        operation_repository=SQLiteOperationRepository(db_path),
+        docker=docker_mock,
+        broker=MagicMock(),
+        configuration=configuration,
+        thread_factory=InlineThread,
+        server_id="default",
+        health_timeout=1,
+    )
+    return make_manager_service(tmp_path, docker=docker_mock, operation_service=op_service)  # type: ignore[arg-type]
+
+
+def test_save_settings_routes_through_operation_service_and_returns_operation_id(tmp_path: Path) -> None:
+    service = _make_service_with_operation_service(tmp_path)
+    (tmp_path / ".env").write_text("SERVER_NAME=old\n")
+    changed, operation_id = service.save_settings({"SERVER_NAME": "NewName"})
+    assert changed == ["SERVER_NAME"]
+    assert operation_id is not None
+    assert len(operation_id) > 8  # uuid-shaped
+
+
+def test_save_settings_raises_conflicting_operation_on_concurrent_request(tmp_path: Path) -> None:
+    from minecraft_manager.operations.service import ConflictingOperationError
+    from minecraft_manager.operations.lifecycle import ServerOperation
+    from minecraft_manager.operations.repository import SQLiteOperationRepository
+    service = _make_service_with_operation_service(tmp_path)
+    # Persist a non-terminal (PENDING) operation in the real repository so that
+    # get_active returns it and save_settings raises ConflictingOperationError.
+    db_path = tmp_path / "state.db"
+    repo = SQLiteOperationRepository(db_path)
+    blocking_op = ServerOperation.create("default", {"SERVER_NAME": "Blocker"})
+    repo.save(blocking_op)
+    with pytest.raises(ConflictingOperationError):
+        service.save_settings({"SERVER_NAME": "Conflict"})

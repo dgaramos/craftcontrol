@@ -118,12 +118,30 @@ def test_status_returns_docker_status(client, service: MagicMock) -> None:
 
 
 def test_update_config_saves_and_returns_ok(client, service: MagicMock) -> None:
-    service.save_settings.return_value = True
+    service.save_settings.return_value = (["difficulty"], None)
     resp = client.put("/api/config", json={"difficulty": "hard"})
     assert resp.status_code == 200
     data = resp.get_json()
     assert data["ok"] is True
     assert data["restart_required"] is True
+    assert "operation_id" not in data
+
+
+def test_update_config_includes_operation_id_when_operation_service_is_active(client, service: MagicMock) -> None:
+    service.save_settings.return_value = (["difficulty"], "op-abc123")
+    resp = client.put("/api/config", json={"difficulty": "hard"})
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["ok"] is True
+    assert data["operation_id"] == "op-abc123"
+
+
+def test_update_config_returns_409_on_conflicting_operation(client, service: MagicMock) -> None:
+    from minecraft_manager.operations import ConflictingOperationError
+    service.save_settings.side_effect = ConflictingOperationError("op-xyz already active")
+    resp = client.put("/api/config", json={"difficulty": "hard"})
+    assert resp.status_code == 409
+    assert "op-xyz already active" in resp.get_json()["error"]
 
 
 def test_update_config_returns_400_on_value_error(client, service: MagicMock) -> None:

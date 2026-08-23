@@ -121,7 +121,7 @@ persistam no head atual e tenham confiança `>= 80`.
 
 O publicador é o GitHub App `cody-dr`, não a conta pessoal autenticada no `gh`.
 Quando existir `.github/workflows/publish-cody-review.yml`, dispare essa
-workflow com `gh workflow run` usando `pr_number`, `event`, `review_body`,
+workflow com `gh workflow run` usando `pr_number`, `reviewed_head_sha`, `event`, `review_body`,
 `inline_comments_json`, `replies_json` e `resolve_thread_ids_json`. Cada finding
 em linha alterada entra como `{path, line, body}`; thread aberta equivalente recebe reply,
 nunca uma thread duplicada. Aguarde a execução terminar e confirme que a review criada tem

@@ -184,6 +184,7 @@ def test_reviewer_publishers_support_thread_replies_without_creating_a_review() 
     ):
         workflow = (ROOT / ".github" / "workflows" / name).read_text()
         assert "inline_comments_json:" in workflow
+        assert "reviewed_head_sha:" in workflow
         assert "replies_json:" in workflow
         assert "resolve_thread_ids_json:" in workflow
         assert "bash .github/scripts/publish-review.sh" in workflow
@@ -195,6 +196,8 @@ def test_reviewer_publishers_support_thread_replies_without_creating_a_review() 
     assert "reply target must be top-level" in publisher
     assert "resolveReviewThread" in publisher
     assert "Publication report:" in publisher
+    assert "PR head changed since review" in publisher
+    assert "unexpected authenticated app" in publisher
 
 
 def test_reviewer_skills_dispatch_thread_replies_through_their_apps() -> None:

@@ -3,6 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       pr_number: {description: Pull request number, required: true, type: string}
+      reviewed_head_sha: {description: "Head SHA analyzed by the reviewer", required: true, type: string}
       event: {description: Review event, required: true, default: REQUEST_CHANGES, type: choice, options: [REQUEST_CHANGES, COMMENT, APPROVE]}
       review_body: {description: "Review summary in Markdown", required: false, type: string}
       inline_comments_json: {description: "JSON array of path, line, and body findings", required: false, default: '[]', type: string}
@@ -26,6 +27,7 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.cody-token.outputs.token }}
           PR_NUMBER: ${{ inputs.pr_number }}
+          REVIEWED_HEAD_SHA: ${{ inputs.reviewed_head_sha }}
           REVIEW_EVENT: ${{ inputs.event }}
           REVIEW_BODY: ${{ inputs.review_body }}
           INLINE_COMMENTS_JSON: ${{ inputs.inline_comments_json }}

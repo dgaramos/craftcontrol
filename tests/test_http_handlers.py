@@ -487,6 +487,24 @@ def test_stream_operations_returns_event_stream(op_client, op_service: MagicMock
     assert "text/event-stream" in resp.content_type
 
 
+def test_stream_operations_emits_keepalive_comment(op_client, op_service: MagicMock) -> None:
+    op_service.broker.stream.return_value = iter([None])
+    resp = op_client.get("/api/operations/stream")
+    assert ": keepalive\n" in resp.data.decode()
+
+
+def test_stream_operations_forwards_last_event_id(op_client, op_service: MagicMock) -> None:
+    op_service.broker.stream.return_value = iter([None])
+    op_client.get("/api/operations/stream", headers={"Last-Event-ID": "17"})
+    op_service.broker.stream.assert_called_once_with(17)
+
+
+def test_stream_operations_defaults_after_id_on_invalid_header(op_client, op_service: MagicMock) -> None:
+    op_service.broker.stream.return_value = iter([None])
+    op_client.get("/api/operations/stream", headers={"Last-Event-ID": "not-a-number"})
+    op_service.broker.stream.assert_called_once_with(0)
+
+
 def test_stream_operations_emits_operation_events(op_client, op_service: MagicMock) -> None:
     import json as _json
     from minecraft_manager.operations.lifecycle import ServerOperation
@@ -520,10 +538,8 @@ def test_stream_operations_skips_non_operation_events(op_client, op_service: Mag
 
 
 def test_reconcile_operation_returns_200_when_found(op_client, op_service: MagicMock) -> None:
-    from minecraft_manager.operations.lifecycle import ServerOperation, OperationState
+    from minecraft_manager.operations.lifecycle import ServerOperation
     op = ServerOperation.create("default", {"difficulty": "hard"})
-    op._assert_state = lambda *a: None
-    op.state = OperationState.CONFIRMED
     op_service.operation_service.request_reconciliation.return_value = op
     resp = op_client.post(f"/api/operations/{op.operation_id}/reconcile")
     assert resp.status_code == 200

@@ -684,16 +684,14 @@
     },
     "/api/operations": {
       "get": {
-        "operationId": "list_operations",
+        "operationId": "listOperations",
         "summary": "List recent server operations",
         "tags": [
-          "operations"
+          "Operations"
         ],
         "security": [
           {
-            "cookieAuth": []
-          },
-          {
+            "cookieAuth": [],
             "csrfToken": []
           }
         ],
@@ -715,22 +713,27 @@
                 }
               }
             }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
           }
-        }
+        },
+        "x-craftcontrol-capability": "server.configure"
       }
     },
     "/api/operations/active": {
       "get": {
-        "operationId": "get_active_operation",
+        "operationId": "getActiveOperation",
         "summary": "Get the current non-terminal server operation",
         "tags": [
-          "operations"
+          "Operations"
         ],
         "security": [
           {
-            "cookieAuth": []
-          },
-          {
+            "cookieAuth": [],
             "csrfToken": []
           }
         ],
@@ -756,22 +759,27 @@
                 }
               }
             }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
           }
-        }
+        },
+        "x-craftcontrol-capability": "server.configure"
       }
     },
     "/api/operations/latest": {
       "get": {
-        "operationId": "get_latest_operation",
+        "operationId": "getLatestOperation",
         "summary": "Get the most recent server operation",
         "tags": [
-          "operations"
+          "Operations"
         ],
         "security": [
           {
-            "cookieAuth": []
-          },
-          {
+            "cookieAuth": [],
             "csrfToken": []
           }
         ],
@@ -797,23 +805,28 @@
                 }
               }
             }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
           }
-        }
+        },
+        "x-craftcontrol-capability": "server.configure"
       }
     },
     "/api/operations/stream": {
       "get": {
-        "operationId": "stream_operations",
+        "operationId": "streamOperations",
         "summary": "SSE stream of operation lifecycle changes",
         "description": "Emits an operation event for every operation.updated broker event. Pass Last-Event-ID on reconnect to avoid missing terminal outcomes.",
         "tags": [
-          "operations"
+          "Operations"
         ],
         "security": [
           {
-            "cookieAuth": []
-          },
-          {
+            "cookieAuth": [],
             "csrfToken": []
           }
         ],
@@ -839,22 +852,27 @@
                 }
               }
             }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
           }
-        }
+        },
+        "x-craftcontrol-capability": "server.configure"
       }
     },
     "/api/operations/{operation_id}": {
       "get": {
-        "operationId": "get_operation",
+        "operationId": "getOperation",
         "summary": "Get a specific server operation by ID",
         "tags": [
-          "operations"
+          "Operations"
         ],
         "security": [
           {
-            "cookieAuth": []
-          },
-          {
+            "cookieAuth": [],
             "csrfToken": []
           }
         ],
@@ -886,22 +904,27 @@
           },
           "404": {
             "description": "Operation not found"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
           }
-        }
+        },
+        "x-craftcontrol-capability": "server.configure"
       }
     },
     "/api/operations/{operation_id}/reconcile": {
       "post": {
-        "operationId": "reconcile_operation",
+        "operationId": "reconcileOperation",
         "summary": "Re-observe Bedrock and refresh a terminal operation outcome",
         "tags": [
-          "operations"
+          "Operations"
         ],
         "security": [
           {
-            "cookieAuth": []
-          },
-          {
+            "cookieAuth": [],
             "csrfToken": []
           }
         ],
@@ -936,8 +959,15 @@
           },
           "404": {
             "description": "Operation not found"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
           }
-        }
+        },
+        "x-craftcontrol-capability": "server.configure"
       }
     },
     "/api/players": {

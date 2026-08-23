@@ -162,7 +162,8 @@ export function startApplication() {
     const element = $("#status");
     element.textContent = status.online ? t("online") : t("stopped");
     element.classList.toggle("online", status.online);
-    $("#server-state-title").textContent = status.online ? t("serverOnline") : t("serverStopped");
+    const titleKey = state.operationActive && !status.online ? "serverRestarting" : (status.online ? "serverOnline" : "serverStopped");
+    $("#server-state-title").textContent = t(titleKey);
     $("#hero").classList.toggle("offline", !status.online);
   }
 
@@ -210,7 +211,7 @@ export function startApplication() {
   }
 
   async function boot() {
-    const [schema, snapshot, status, releases] = await Promise.all([api("/api/schema"), api("/api/state"), api("/api/status"), api("/api/telemetry-pack").catch(() => ({})), getServerFeature().loadFrontendVersion()]);
+    const [schema, snapshot, status, releases] = await Promise.all([api("/api/schema"), api("/api/state"), api("/api/status"), api("/api/telemetry-pack").catch(() => ({})), getServerFeature().loadFrontendVersion(), getServerFeature().initializeOperationProgress()]);
     state.batch(() => {
       state.schema = schema;
       state.config = snapshot.settings || {};
@@ -231,6 +232,12 @@ export function startApplication() {
   state.subscribe("tab", () => {
     getNavigation().renderTabs();
     refreshActivePanel();
+  });
+  state.subscribe("operationActive", () => {
+    if (state.status) setStatus(state.status);
+    getSettingsFeature().updateSaveLabel();
+    if (state.operationActive) $("#changes-drawer").close();
+    if (["world", "rules", "server", "__players__"].includes(state.tab)) refreshActivePanel();
   });
   state.subscribe("locale", applyLocale);
   state.subscribe("config", () => {
@@ -284,6 +291,11 @@ export function startApplication() {
   };
 
   $("#apply-changes").onclick = async () => {
+    if (state.operationActive) {
+      toast(t("operationLocked"), true);
+      $("#changes-drawer").close();
+      return;
+    }
     if (!Object.keys(state.changes).length) return;
     try {
       $("#apply-changes").disabled = true;

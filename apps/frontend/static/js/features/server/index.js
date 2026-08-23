@@ -60,7 +60,10 @@ function refreshOperationPanel() {
   container.innerHTML = op ? operationFeature.renderOperation(op) : "";
 }
 
-operationFeature.setUpdateCallback(() => refreshOperationPanel());
+operationFeature.setUpdateCallback((op) => {
+  state.operationActive = !!(op && (op.state === "pending" || op.state === "running"));
+  refreshOperationPanel();
+});
 
 function operationProgressMarkup() {
   const op = operationFeature.getOperation();
@@ -70,6 +73,8 @@ function operationProgressMarkup() {
 
 async function initializeOperationProgress() {
   await operationFeature.initialize();
+  const op = operationFeature.getOperation();
+  state.operationActive = !!(op && (op.state === "pending" || op.state === "running"));
   refreshOperationPanel();
 }
 
@@ -78,5 +83,5 @@ async function initializeOperationProgress() {
     loadTelemetryPack();
     initializeOperationProgress();
   };
-  return { renderServer, renderReleaseTags, loadFrontendVersion };
+  return { renderServer, renderReleaseTags, loadFrontendVersion, initializeOperationProgress };
 }

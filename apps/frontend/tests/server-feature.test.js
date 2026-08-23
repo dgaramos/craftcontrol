@@ -4,7 +4,7 @@ import { makeEl } from "./helpers.js";
 
 function makeDeps(overrides = {}) {
   const elements = {};
-  const state = { frontendVersion: "1.0.0", ...overrides.state };
+  const state = { frontendVersion: "1.0.0", operationActive: false, ...overrides.state };
   const $ = jest.fn((selector) => elements[selector] ||= makeEl());
   const content = makeEl();
   const api = jest.fn().mockResolvedValue({ installed: false, enabled: false, health: "waiting", capabilities: {} });
@@ -80,6 +80,45 @@ describe("createServerFeature", () => {
     } finally {
       global.confirm = savedConfirm;
     }
+  });
+
+  test("sets state.operationActive true for running/pending operations and false for terminal", async () => {
+    const deps = makeDeps();
+    deps.elements["#telemetry-pack-state"] = makeEl();
+    deps.elements["#release-tags"] = makeEl();
+    deps.elements["#operation-progress-container"] = makeEl();
+    // renderServer fires loadTelemetryPack first, then initializeOperationProgress
+    deps.api = jest.fn()
+      .mockResolvedValueOnce({ installed: false, enabled: false, health: "", capabilities: {}, application: {}, source_version: "1" })
+      .mockResolvedValueOnce({ operation: { operation_id: "op-1", state: "running", stages: [] } });
+    const feature = createServerFeature(deps);
+    feature.renderServer();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(deps.state.operationActive).toBe(true);
+  });
+
+  test("sets state.operationActive false when operation is in terminal state", async () => {
+    const deps = makeDeps();
+    deps.elements["#telemetry-pack-state"] = makeEl();
+    deps.elements["#release-tags"] = makeEl();
+    deps.elements["#operation-progress-container"] = makeEl();
+    deps.api = jest.fn()
+      .mockResolvedValueOnce({ installed: false, enabled: false, health: "", capabilities: {}, application: {}, source_version: "1" })
+      .mockResolvedValueOnce({ operation: { operation_id: "op-1", state: "confirmed", stages: [] } });
+    const feature = createServerFeature(deps);
+    feature.renderServer();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(deps.state.operationActive).toBe(false);
+  });
+
+  test("initializeOperationProgress sets operationActive without requiring renderServer", async () => {
+    const deps = makeDeps();
+    deps.elements["#operation-progress-container"] = makeEl();
+    deps.api = jest.fn()
+      .mockResolvedValueOnce({ operation: { operation_id: "op-2", state: "pending", stages: [] } });
+    const feature = createServerFeature(deps);
+    await feature.initializeOperationProgress();
+    expect(deps.state.operationActive).toBe(true);
   });
 
   test("returns early without DOM targets and accepts only valid frontend releases", async () => {

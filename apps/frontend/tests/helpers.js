@@ -203,6 +203,7 @@ export function makeSettingsDeps(stateOverrides = {}) {
     domains: {},
     schema: { settings: {}, gamerules: {} },
     frontendVersion: null,
+    operationActive: false,
     ...stateOverrides,
   };
   const content = { innerHTML: "", querySelectorAll: jest.fn(() => []) };

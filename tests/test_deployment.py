@@ -341,11 +341,22 @@ def test_claude_workflow_entry_points_are_matching_thin_plugin_wrappers() -> Non
         "ship-issue": "ship-change",
         "start-issue": "start-issue",
     }
-    for entry_point, skill in expected_skills.items():
-        agent = ROOT / ".claude" / "agents" / f"{entry_point}.md"
+    agents_directory = ROOT / ".claude" / "agents"
+    agents = {
+        agent.stem: agent
+        for agent in agents_directory.glob("*.md")
+        if agent.stem in expected_skills
+    }
+    assert agents.keys() == expected_skills.keys()
+
+    for entry_point, agent in agents.items():
+        skill = expected_skills[entry_point]
         duplicate = ROOT / ".claude" / "agents" / entry_point / "SKILL.md"
         assert agent.read_text() == duplicate.read_text()
         text = agent.read_text()
         assert len(text.splitlines()) <= 10
-        assert f"claudio-dr:{skill}" in text
+        frontmatter = text.split("---", maxsplit=2)[1].strip().splitlines()
+        assert f"name: {entry_point}" in frontmatter
+        assert "skills:" in frontmatter
+        assert [line.strip()[2:] for line in frontmatter if line.startswith("  - ")] == [f"claudio-dr:{skill}"]
         assert ".agent-review/craftcontrol/PROFILE.md" in text

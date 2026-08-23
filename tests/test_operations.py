@@ -791,6 +791,28 @@ class TestLifecycleEdgeCases:
 
 
 class TestRepositoryEdgeCases:
+    def test_write_connect_rolls_back_and_reraises_on_exception(self, tmp_path: Path):
+        """_write_connect must roll back the transaction and re-raise when an
+        exception is raised inside the context, leaving the connection closed."""
+        from minecraft_manager.operations.repository import _write_connect
+
+        db = tmp_path / "ops.db"
+        sentinel = RuntimeError("injected failure")
+        with pytest.raises(RuntimeError, match="injected failure"):
+            with _write_connect(db) as conn:
+                conn.execute(
+                    "CREATE TABLE t (id INTEGER PRIMARY KEY)"
+                )
+                raise sentinel
+
+        # The transaction was rolled back — the table must not exist.
+        import sqlite3
+        with sqlite3.connect(db) as check:
+            tables = check.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='t'"
+            ).fetchall()
+        assert tables == []
+
     def test_update_stage_returns_early_for_missing_stage(self, tmp_path: Path):
         """update_stage is a no-op when the stage is not found in operation.stages."""
         repo = make_repo(tmp_path)

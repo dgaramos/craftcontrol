@@ -69,23 +69,49 @@ checks and review findings are resolved. Do not merge directly to `main`.
 
 ## I use Claude Code. Are there skills that help me follow project conventions?
 
-Yes. CraftControl provides native Claude Code skills under `.claude/agents/`.
-Invoke them with `/skill-name`; use the issue number where indicated.
+Yes. CraftControl provides Claude Code agents under `.claude/agents/`.
+The lifecycle agents delegate to the portable Claudio DR workflows from the
+`claudio-dr` plugin, which supply the evidence-first review contract,
+publication authorization, and issue lifecycle. The layer and management
+agents are standalone native utilities.
 
-| Skill | Purpose |
+### Lifecycle agents (backed by Claudio DR portable workflows)
+
+Invoke with `/skill-name`; use the issue number where indicated.
+
+| Agent | Purpose |
 | --- | --- |
 | `/execute-issue <n>` | Run issue preparation, implementation, and shipping in order |
 | `/start-issue <n>` | Verify metadata, read required context, map files, and create a branch |
 | `/implement` | Implement a prepared issue, run tests, and self-review the diff |
 | `/ship-issue` | Commit, push with confirmation, and open a metadata-complete PR |
-| `/review-pr <n>` | Review a PR or local diff by backend, frontend, and docs criteria |
+| `/review-pr <n>` | Review a PR or local diff using Claudio DR evidence-first criteria — accepts a PR number, URL, branch name, or commit range |
 | `/handle-pr-findings <n>` | Triage and address CodeRabbit or human review findings |
-| `/create-issue` | Create a scoped issue with acceptance criteria and required metadata |
+| `/create-issue` | Draft a scoped issue with acceptance criteria and required metadata |
+
+Use `/execute-issue <n>` for a normal issue. Use `/create-issue` before work
+when the request is not yet a complete GitHub issue. These agents load the
+CraftControl-local profile at `.agent-review/craftcontrol/PROFILE.md`, which
+applies architecture, quality gate, and publisher rules to every run.
+
+Claudio DR is the default reviewer and issue author for Claude Code sessions.
+Reviews published through the Claudio GitHub App appear with `claudio-dr[bot]`
+as the author; publication requires explicit authorization — no personal account
+is used as a fallback.
+
+### Layer agents (standalone native utilities)
+
+| Agent | Purpose |
+| --- | --- |
 | `/backend` | Apply backend architecture, DI, persistence, and test conventions |
 | `/frontend` | Apply frontend ESM, injection, i18n, and test conventions |
+
+### Management agents (standalone native utilities)
+
+| Agent | Purpose |
+| --- | --- |
 | `/manage-project` | Inspect and manage GitHub Project membership |
 | `/manage-milestone` | Inspect and assign delivery milestones |
 
-Use `/execute-issue <n>` for a normal issue. Use `/create-issue` before work
-when the request is not yet a complete GitHub issue. Layer skills complement,
-but do not replace, `AGENTS.md`, `CLAUDE.md`, and `CONTRIBUTING.md`.
+All agents complement, but do not replace, `AGENTS.md`, `CLAUDE.md`, and
+`CONTRIBUTING.md`.

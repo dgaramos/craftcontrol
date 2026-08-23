@@ -203,6 +203,8 @@ def test_reviewer_publishers_support_thread_replies_without_creating_a_review() 
     assert "reply target mismatch" in publisher
     assert "reply target must be top-level" in publisher
     assert "resolveReviewThread" in publisher
+    assert "reviewThreads(first: 100)" in publisher
+    assert "resolution target mismatch" in publisher
     assert "Publication report:" in publisher
     assert "PR head changed since review" in publisher
     assert "unexpected authenticated app" in publisher

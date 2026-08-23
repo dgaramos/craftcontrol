@@ -28,7 +28,12 @@ while IFS= read -r reply; do
   [[ -z "$(gh api "repos/${GITHUB_REPOSITORY}/pulls/comments/${comment_id}" --jq '.in_reply_to_id // empty')" ]] || { echo "reply target must be top-level" >&2; exit 1; }
 done < <(jq -c '.[]' <<<"$replies_json")
 while IFS= read -r thread_id; do
-  [[ "$(gh api graphql -f query='query($thread: ID!) { node(id: $thread) { ... on PullRequestReviewThread { pullRequest { number } } } }' -f thread="$thread_id" --jq '.data.node.pullRequest.number')" == "$PR_NUMBER" ]] || { echo "resolution target mismatch" >&2; exit 1; }
+  review_threads="$(gh api graphql \
+    -f query='query($owner: String!, $name: String!, $number: Int!) { repository(owner: $owner, name: $name) { pullRequest(number: $number) { reviewThreads(first: 100) { nodes { id } } } } }' \
+    -f owner="${GITHUB_REPOSITORY%%/*}" \
+    -f name="${GITHUB_REPOSITORY##*/}" \
+    -F number="$PR_NUMBER")"
+  jq -e --arg thread "$thread_id" '.data.repository.pullRequest.reviewThreads.nodes | any(.id == $thread)' <<<"$review_threads" >/dev/null || { echo "resolution target mismatch" >&2; exit 1; }
 done < <(jq -r '.[]' <<<"$resolve_thread_ids_json")
 if [[ "$publish_review" == true ]]; then
   jq -n --arg event "$REVIEW_EVENT" --arg body "${REVIEW_BODY:-}" --arg commit_id "$REVIEWED_HEAD_SHA" --argjson comments "$inline_comments_json" '{event: $event, body: $body, commit_id: $commit_id} + (if ($comments | length) == 0 then {} else {comments: ($comments | map({path, line, side: "RIGHT", body}))} end)' > review.json

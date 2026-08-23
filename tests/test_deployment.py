@@ -318,9 +318,34 @@ def test_reviewer_publisher_rejects_thread_after_all_pages(tmp_path: Path) -> No
 
 def test_reviewer_skills_dispatch_thread_replies_through_their_apps() -> None:
     cody = (ROOT / ".agents" / "skills" / "review-pr" / "SKILL.md").read_text()
-    claudio = (ROOT / ".claude" / "agents" / "review-pr.md").read_text()
-    for skill, reviewer in ((cody, "cody-dr"), (claudio, "claudio-dr")):
+    for skill in (cody,):
         assert "replies_json" in skill
         assert "resolve_thread_ids_json" in skill
         assert "inline_comments_json" in skill
-        assert reviewer in skill
+        assert "cody-dr" in skill
+
+    wrapper = (ROOT / ".claude" / "agents" / "review-pr.md").read_text()
+    duplicate = (ROOT / ".claude" / "agents" / "review-pr" / "SKILL.md").read_text()
+    assert wrapper == duplicate
+    assert "claudio-dr:review-pr" in wrapper
+    assert ".agent-review/craftcontrol/PROFILE.md" in wrapper
+
+
+def test_claude_workflow_entry_points_are_matching_thin_plugin_wrappers() -> None:
+    expected_skills = {
+        "create-issue": "author-issue",
+        "execute-issue": "execute-issue",
+        "handle-pr-findings": "handle-pr-findings",
+        "implement": "implement-issue",
+        "review-pr": "review-pr",
+        "ship-issue": "ship-change",
+        "start-issue": "start-issue",
+    }
+    for entry_point, skill in expected_skills.items():
+        agent = ROOT / ".claude" / "agents" / f"{entry_point}.md"
+        duplicate = ROOT / ".claude" / "agents" / entry_point / "SKILL.md"
+        assert agent.read_text() == duplicate.read_text()
+        text = agent.read_text()
+        assert len(text.splitlines()) <= 10
+        assert f"claudio-dr:{skill}" in text
+        assert ".agent-review/craftcontrol/PROFILE.md" in text

@@ -318,6 +318,189 @@ describe("createOperationFeature — initialize and SSE", () => {
   });
 });
 
+describe("createOperationFeature — recovery actions (issue #194)", () => {
+  function makeTerminalOp(state, extra = {}) {
+    return makeOperation({
+      state,
+      stages: [
+        { stage: "review", result: "completed", started_at: 1700000000, completed_at: 1700000001, evidence: {}, error: null },
+        { stage: "backup_verify", result: "completed", started_at: 1700000001, completed_at: 1700000002, evidence: {}, error: null },
+        { stage: "prepare", result: "completed", started_at: 1700000002, completed_at: 1700000003, evidence: {}, error: null },
+        { stage: "restart", result: "completed", started_at: 1700000003, completed_at: 1700000004, evidence: {}, error: null },
+        { stage: "health_wait", result: "completed", started_at: 1700000004, completed_at: 1700000005, evidence: {}, error: null },
+        { stage: "verify", result: state === "confirmed" ? "completed" : state, started_at: 1700000005, completed_at: state === "confirmed" ? 1700000006 : null, evidence: {}, error: state === "failed" ? "something went wrong" : null },
+        { stage: "confirm", result: state === "confirmed" ? "completed" : "pending", started_at: null, completed_at: null, evidence: {}, error: null },
+      ],
+      completed_at: 1700000010,
+      ...extra,
+    });
+  }
+
+  test("failed operation renders reconcile and retry buttons", () => {
+    const feature = createOperationFeature(makeDeps());
+    const html = feature.renderOperation(makeTerminalOp("failed"));
+    expect(html).toContain('data-op-action="reconcile"');
+    expect(html).toContain('data-op-action="retry"');
+  });
+
+  test("divergent operation renders reconcile and retry buttons", () => {
+    const feature = createOperationFeature(makeDeps());
+    const html = feature.renderOperation(makeTerminalOp("divergent"));
+    expect(html).toContain('data-op-action="reconcile"');
+    expect(html).toContain('data-op-action="retry"');
+  });
+
+  test("confirmed operation does not render recovery buttons", () => {
+    const feature = createOperationFeature(makeDeps());
+    const html = feature.renderOperation(makeTerminalOp("confirmed"));
+    expect(html).not.toContain('data-op-action="reconcile"');
+    expect(html).not.toContain('data-op-action="retry"');
+  });
+
+  test("operation with parent_operation_id renders parent link placeholder", () => {
+    const feature = createOperationFeature(makeDeps());
+    const html = feature.renderOperation(makeTerminalOp("failed", { parent_operation_id: "abcd1234-dead-beef-cafe-000000000000" }));
+    expect(html).toContain("op-parent-link");
+    expect(html).toContain("op-parent-id");
+    // parent_operation_id must NOT be interpolated into innerHTML
+    expect(html).not.toContain("abcd1234");
+  });
+
+  test("operation without parent_operation_id does not render parent link", () => {
+    const feature = createOperationFeature(makeDeps());
+    const html = feature.renderOperation(makeTerminalOp("failed"));
+    expect(html).not.toContain("op-parent-link");
+  });
+
+  // recovery button buttons no longer carry data-op-id; operation_id comes from closure
+  function makeButton(action) {
+    const btn = { dataset: { opAction: action }, disabled: false, onclick: null };
+    return btn;
+  }
+
+  function makeContainer(buttons, parentIdEl = null) {
+    return {
+      querySelector: (sel) => (sel === ".op-parent-id" ? parentIdEl : null),
+      querySelectorAll: () => buttons,
+    };
+  }
+
+  async function initWithOp(api, op) {
+    const feature = createOperationFeature(makeDeps({ api }));
+    // seed currentOperation via initialize → api returns op
+    await feature.initialize();
+    return feature;
+  }
+
+  test("bindRecoveryActions calls reconcile endpoint and invokes onUpdate", async () => {
+    const failedOp = makeTerminalOp("failed", { operation_id: "op-1" });
+    const reconcileResult = makeTerminalOp("confirmed", { operation_id: "op-1" });
+    const api = jest.fn()
+      .mockResolvedValueOnce({ operation: failedOp })   // initialize → /latest
+      .mockResolvedValueOnce({ operation: reconcileResult }); // reconcile
+    const feature = await initWithOp(api, failedOp);
+    let updatedOp = null;
+    feature.setUpdateCallback((op) => { updatedOp = op; });
+
+    const btn = makeButton("reconcile");
+    feature.bindRecoveryActions(makeContainer([btn]));
+    await btn.onclick();
+
+    expect(api).toHaveBeenCalledWith("/api/operations/op-1/reconcile", { method: "POST" });
+    expect(updatedOp).toBe(reconcileResult);
+  });
+
+  test("bindRecoveryActions calls retry endpoint and updates current operation", async () => {
+    const failedOp = makeTerminalOp("failed", { operation_id: "op-1" });
+    const retryResult = makeTerminalOp("running", { operation_id: "op-2", parent_operation_id: "op-1" });
+    const api = jest.fn()
+      .mockResolvedValueOnce({ operation: failedOp })
+      .mockResolvedValueOnce({ operation: retryResult });
+    const feature = await initWithOp(api, failedOp);
+    let updatedOp = null;
+    feature.setUpdateCallback((op) => { updatedOp = op; });
+
+    const btn = makeButton("retry");
+    feature.bindRecoveryActions(makeContainer([btn]));
+    await btn.onclick();
+
+    expect(api).toHaveBeenCalledWith("/api/operations/op-1/retry", { method: "POST" });
+    expect(updatedOp).toBe(retryResult);
+  });
+
+  test("bindRecoveryActions sets parent-id textContent via DOM, not innerHTML", async () => {
+    const failedOp = makeTerminalOp("failed", { operation_id: "op-1", parent_operation_id: "abcd1234-dead-beef-cafe-000000000000" });
+    const api = jest.fn().mockResolvedValue({ operation: failedOp });
+    const feature = await initWithOp(api, failedOp);
+
+    const parentEl = { textContent: "" };
+    feature.bindRecoveryActions(makeContainer([], parentEl));
+
+    expect(parentEl.textContent).toBe("abcd1234");
+  });
+
+  test("bindRecoveryActions does nothing when container is null", () => {
+    const feature = createOperationFeature(makeDeps());
+    expect(() => feature.bindRecoveryActions(null)).not.toThrow();
+  });
+
+  test("bindRecoveryActions shows toast on api error", async () => {
+    const failedOp = makeTerminalOp("failed", { operation_id: "op-1" });
+    const api = jest.fn()
+      .mockResolvedValueOnce({ operation: failedOp })
+      .mockRejectedValueOnce(Object.assign(new Error("server error"), { status: 500 }));
+    const toast = jest.fn();
+    const feature = createOperationFeature(makeDeps({ api, toast }));
+    await feature.initialize();
+
+    const btn = makeButton("reconcile");
+    feature.bindRecoveryActions(makeContainer([btn]));
+    await btn.onclick();
+
+    expect(toast).toHaveBeenCalled();
+  });
+
+  test("bindRecoveryActions shows conflict toast on 409", async () => {
+    const failedOp = makeTerminalOp("failed", { operation_id: "op-1" });
+    const api = jest.fn()
+      .mockResolvedValueOnce({ operation: failedOp })
+      .mockRejectedValueOnce(Object.assign(new Error("conflict"), { status: 409 }));
+    const toast = jest.fn();
+    const feature = createOperationFeature(makeDeps({ api, toast }));
+    await feature.initialize();
+
+    const btn = makeButton("retry");
+    feature.bindRecoveryActions(makeContainer([btn]));
+    await btn.onclick();
+
+    expect(toast).toHaveBeenCalledWith("opRetryConflict", true);
+  });
+
+  test("bindRecoveryActions disables all buttons during request and re-enables after", async () => {
+    const failedOp = makeTerminalOp("failed", { operation_id: "op-1" });
+    let resolveApi;
+    const api = jest.fn()
+      .mockResolvedValueOnce({ operation: failedOp })
+      .mockReturnValueOnce(new Promise((r) => { resolveApi = r; }));
+    const feature = await initWithOp(api, failedOp);
+
+    const btn1 = makeButton("reconcile");
+    const btn2 = makeButton("retry");
+    const container = makeContainer([btn1, btn2]);
+    feature.bindRecoveryActions(container);
+
+    const clickPromise = btn1.onclick();
+    // both buttons should be disabled while the request is in flight
+    expect(btn1.disabled).toBe(true);
+    expect(btn2.disabled).toBe(true);
+
+    resolveApi({ operation: makeTerminalOp("confirmed", { operation_id: "op-1" }) });
+    await clickPromise;
+    expect(btn1.disabled).toBe(false);
+    expect(btn2.disabled).toBe(false);
+  });
+});
+
 describe("createOperationFeature — divergent stage rendering", () => {
   test("stage with result divergent renders as op-stage-divergent", () => {
     const feature = createOperationFeature(makeDeps());

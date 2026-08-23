@@ -134,6 +134,7 @@ class ServerOperation:
     terminal_error: str | None = None
     observation: dict[str, Any] = field(default_factory=dict)
     correlation_id: str | None = None
+    parent_operation_id: str | None = None
 
     # ------------------------------------------------------------------
     # Factory
@@ -145,6 +146,7 @@ class ServerOperation:
         server_id: str,
         requested_changes: dict[str, Any],
         correlation_id: str | None = None,
+        parent_operation_id: str | None = None,
     ) -> ServerOperation:
         now = _now()
         return cls(
@@ -156,6 +158,7 @@ class ServerOperation:
             created_at=now,
             updated_at=now,
             correlation_id=correlation_id,
+            parent_operation_id=parent_operation_id,
         )
 
     # ------------------------------------------------------------------
@@ -264,6 +267,7 @@ class ServerOperation:
             "terminal_error": self.terminal_error,
             "observation": self.observation,
             "correlation_id": self.correlation_id,
+            "parent_operation_id": self.parent_operation_id,
         }
 
     @classmethod
@@ -280,6 +284,7 @@ class ServerOperation:
             terminal_error=data.get("terminal_error"),
             observation=data.get("observation") or {},
             correlation_id=data.get("correlation_id"),
+            parent_operation_id=data.get("parent_operation_id"),
         )
 
     # ------------------------------------------------------------------

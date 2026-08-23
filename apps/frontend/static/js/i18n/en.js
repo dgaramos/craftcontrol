@@ -94,4 +94,10 @@ export const en = {
     opStage_confirm: "Confirm",
     operationLocked: "Changes are locked while a server operation is in progress.",
     serverRestarting: "Server restarting",
+    opReconcile: "Reconcile",
+    opReconcileHelp: "Re-observe the server and update this operation's outcome.",
+    opRetry: "Retry",
+    opRetryHelp: "Start a new linked operation with the same changes.",
+    opRetryConflict: "Another operation is already running. Please wait and try again.",
+    opParentLink: "Retry of",
   };

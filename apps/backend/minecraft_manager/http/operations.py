@@ -17,6 +17,7 @@ from flask import Blueprint, Response, jsonify, request, stream_with_context
 
 from .dependencies import manager
 from ..auth.http import require
+from ..operations.service import ConflictingOperationError
 
 operations_api = Blueprint("operations_api", __name__)
 
@@ -100,3 +101,23 @@ def reconcile_operation(operation_id: str):
     if op is None:
         return jsonify(error="operation not found"), 404
     return jsonify(operation=op.as_dict()), 200
+
+
+@operations_api.post("/api/operations/<operation_id>/retry")
+@require("server.configure")
+def retry_operation(operation_id: str):
+    """Create a new linked operation as a retry of a failed or divergent one (issue #194).
+
+    The original operation is preserved unchanged.  The new operation carries
+    ``parent_operation_id`` pointing to the origin so the audit trail is intact.
+    """
+    try:
+        new_operation_id = manager().retry_settings_operation(operation_id)
+    except ValueError as exc:
+        return jsonify(error=str(exc)), 400
+    except ConflictingOperationError as exc:
+        return jsonify(error=str(exc)), 409
+    op = _op_service().get_operation(new_operation_id)
+    if op is None:
+        return jsonify(error="retry operation not found after creation"), 500
+    return jsonify(operation=op.as_dict()), 202

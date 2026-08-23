@@ -136,12 +136,22 @@ def _migration_005_server_operations(connection: sqlite3.Connection) -> None:
     )
 
 
+def _migration_006_operation_parent_link(connection: sqlite3.Connection) -> None:
+    """Add parent_operation_id to link retry operations to their origin (issue #194)."""
+    columns = {row[1] for row in connection.execute("PRAGMA table_info(server_operations)")}
+    if "parent_operation_id" not in columns:
+        connection.execute(
+            "ALTER TABLE server_operations ADD COLUMN parent_operation_id TEXT"
+        )
+
+
 MIGRATIONS: Mapping[int, Migration] = {
     1: _migration_001_initial_schema,
     2: _migration_002_retain_telemetry_payloads,
     3: _migration_003_local_accounts,
     4: _migration_004_daily_player_aggregates,
     5: _migration_005_server_operations,
+    6: _migration_006_operation_parent_link,
 }
 LATEST_SCHEMA_VERSION = max(MIGRATIONS)
 

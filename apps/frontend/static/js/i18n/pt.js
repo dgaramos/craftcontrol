@@ -94,4 +94,10 @@ export const pt = {
     opStage_confirm: "Confirmar",
     operationLocked: "Alterações bloqueadas durante operação do servidor.",
     serverRestarting: "Servidor reiniciando",
+    opReconcile: "Reconciliar",
+    opReconcileHelp: "Observar novamente o servidor e atualizar o resultado desta operação.",
+    opRetry: "Tentar novamente",
+    opRetryHelp: "Iniciar uma nova operação vinculada com as mesmas alterações.",
+    opRetryConflict: "Outra operação já está em execução. Aguarde e tente novamente.",
+    opParentLink: "Repetição de",
   };

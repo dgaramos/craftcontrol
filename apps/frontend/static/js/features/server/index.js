@@ -51,13 +51,14 @@ async function loadFrontendVersion() {
 // Operation lifecycle progress
 // ------------------------------------------------------------------
 
-const operationFeature = createOperationFeature({ api, t, escapeHtml, formatDate, uiIcon });
+const operationFeature = createOperationFeature({ api, t, escapeHtml, formatDate, uiIcon, toast });
 
 function refreshOperationPanel() {
   const container = $("#operation-progress-container");
   if (!container) return;
   const op = operationFeature.getOperation();
   container.innerHTML = op ? operationFeature.renderOperation(op) : "";
+  operationFeature.bindRecoveryActions(container);
 }
 
 operationFeature.setUpdateCallback((op) => {

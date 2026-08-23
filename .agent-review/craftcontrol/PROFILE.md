@@ -52,3 +52,54 @@ When a reviewer authors a commit, use its matching co-author trailer:
 <dgaramos+claudio@gmail.com>`.
 
 This profile never triggers an automatic review.
+
+## Quality gate
+
+Run `bin/check` before handoff. A failed gate stops implementation, shipping,
+or a claim that a finding is resolved.
+
+## Lifecycle skill mapping
+
+| Local entry point | Portable skill |
+| --- | --- |
+| Start an issue branch | `start-issue` |
+| Implement an issue | `implement-issue` |
+| Ship a completed issue | `ship-change` |
+| Run the full lifecycle | `execute-issue` |
+| Review a pull request | `review-pr` |
+| Triage review findings | `handle-pr-findings` |
+| Draft or publish an issue | `author-issue` |
+
+## PR metadata
+
+- **Base branch:** `main`
+- **Branch naming:** `<issue-number>-<type>/<slug>`
+- **Labels, milestone, assignee, Project and reviewers:** inherit the linked
+  issue; apply and verify each after opening the PR
+- **PR template:** `.github/pull_request_template.md`
+- **Merge policy:** squash merge after required checks and actionable findings
+  are addressed
+
+## Publisher dispatch contract
+
+Publication remains explicitly authorized. Dispatch the matching workflow with
+the current PR number, reviewed head SHA, event, summary, and batched manifest.
+Never use a personal GitHub comment as a fallback for a configured App.
+
+| Reviewer | Mode | Dispatch | Availability |
+| --- | --- | --- | --- |
+| Cody DR | review | `gh workflow run publish-cody-review.yml` | available |
+| Cody DR | create-issue | `gh workflow run publish-cody-issue.yml` | available |
+| Cody DR | reply | `gh workflow run publish-cody-review.yml` with `replies_json` | available |
+| Cody DR | resolve-thread | `gh workflow run publish-cody-review.yml` with `resolve_thread_ids_json` | available |
+| Claudio DR | review | `gh workflow run publish-claudio-review.yml` | available |
+| Claudio DR | create-issue | `gh workflow run publish-claudio-issue.yml` | available |
+| Claudio DR | reply | `gh workflow run publish-claudio-review.yml` with `replies_json` | available |
+| Claudio DR | resolve-thread | `gh workflow run publish-claudio-review.yml` with `resolve_thread_ids_json` | available |
+
+## Post-publication verification
+
+After a review, reply, resolution, or issue publication, verify the target and
+that the author is `cody-dr[bot]` for Cody DR or `claudio-dr[bot]` for Claudio
+DR. A failed verification is a failed publication, not a fallback to a personal
+account.

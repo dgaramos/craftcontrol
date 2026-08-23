@@ -13,12 +13,15 @@ server_api = Blueprint("server_api", __name__)
 @require("server.configure")
 def update_config():
     try:
-        changed = manager().save_settings(request.get_json(force=True))
+        changed, operation_id = manager().save_settings(request.get_json(force=True))
     except ConflictingOperationError as error:
         return jsonify(error=str(error)), 409
     except (TypeError, ValueError) as error:
         return jsonify(error=str(error)), 400
-    return jsonify(ok=True, restart_required=True, changed=changed)
+    response: dict = {"ok": True, "restart_required": True, "changed": changed}
+    if operation_id is not None:
+        response["operation_id"] = operation_id
+    return jsonify(response)
 
 
 @server_api.get("/api/status")

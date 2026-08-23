@@ -139,7 +139,15 @@ class ManagerService:
     # Settings and gamerules
     # ------------------------------------------------------------------
 
-    def save_settings(self, payload: Any) -> list[str]:
+    def save_settings(self, payload: Any) -> tuple[list[str], str | None]:
+        """Persist restart-required settings and return the changed keys and operation id.
+
+        When an operation service is wired, the change is routed through the
+        durable operation lifecycle (issue #190) before the server is restarted.
+        The operation id is returned so the HTTP layer can expose it for polling.
+        Returns ``(changed_keys, operation_id)``; ``operation_id`` is ``None``
+        when operation tracking is not active.
+        """
         from .schema import SETTINGS, validate_value
         if not isinstance(payload, dict):
             raise TypeError("Formato inválido")
@@ -155,7 +163,8 @@ class ManagerService:
                 self.repository.store("settings", changes, "manager")
                 self.broker.publish("state.changed", "manager", {"domains": ["settings"], "keys": list(changes)})
 
-            self.operation_service.apply_restart_required(changes, _apply)
+            operation = self.operation_service.apply_restart_required(changes, _apply)
+            return list(changes), operation.operation_id
         else:
             # Fallback for contexts where operation tracking is not wired in
             # (e.g. existing tests that compose ManagerService directly).
@@ -163,7 +172,7 @@ class ManagerService:
             self.repository.store("settings", changes, "manager")
             self.broker.publish("state.changed", "manager", {"domains": ["settings"], "keys": list(changes)})
 
-        return list(changes)
+        return list(changes), None
 
     def set_gamerule(self, rule: str, value: Any) -> str:
         from .schema import GAMERULES, validate_value

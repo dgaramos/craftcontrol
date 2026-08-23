@@ -197,6 +197,7 @@ def test_reviewer_publishers_support_thread_replies_without_creating_a_review() 
         assert "bash .github/scripts/publish-review.sh" in workflow
         assert "permission-pull-requests: write" in workflow
         assert f"{reviewer}-dr[bot]" in workflow
+        assert "outputs.app-slug" in workflow
 
     assert "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/comments" in publisher
     assert "reply target mismatch" in publisher
@@ -205,12 +206,12 @@ def test_reviewer_publishers_support_thread_replies_without_creating_a_review() 
     assert "Publication report:" in publisher
     assert "PR head changed since review" in publisher
     assert "unexpected authenticated app" in publisher
-    assert "installation/repositories" in publisher
+    assert "PUBLISHER_APP_SLUG" in publisher
 
 
 def test_reviewer_publisher_rejects_unexpected_app_before_mutation(tmp_path: Path) -> None:
     fake_gh = tmp_path / "gh"
-    fake_gh.write_text('#!/usr/bin/env bash\nif [[ "$1" == "api" && "$2" == "installation/repositories" ]]; then echo wrong-app; exit 0; fi\necho unexpected-gh-call >&2; exit 99\n')
+    fake_gh.write_text('#!/usr/bin/env bash\necho unexpected-gh-call >&2; exit 99\n')
     fake_gh.chmod(0o755)
     env = os.environ | {
         "PATH": f"{tmp_path}:{os.environ['PATH']}",
@@ -220,6 +221,7 @@ def test_reviewer_publisher_rejects_unexpected_app_before_mutation(tmp_path: Pat
         "REVIEW_EVENT": "COMMENT",
         "REVIEWED_HEAD_SHA": "a" * 40,
         "EXPECTED_AUTHOR": "cody-dr[bot]",
+        "PUBLISHER_APP_SLUG": "wrong-app",
         "REVIEW_BODY": "summary",
     }
     result = subprocess.run([BASH, ".github/scripts/publish-review.sh"], env=env, capture_output=True, text=True)
@@ -229,7 +231,7 @@ def test_reviewer_publisher_rejects_unexpected_app_before_mutation(tmp_path: Pat
 
 def test_reviewer_publisher_rejects_changed_head_before_mutation(tmp_path: Path) -> None:
     fake_gh = tmp_path / "gh"
-    fake_gh.write_text('#!/usr/bin/env bash\nif [[ "$1" == "api" && "$2" == "installation/repositories" ]]; then echo cody-dr; exit 0; fi\nif [[ "$1" == "api" && "$3" == "--jq" ]]; then echo bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb; exit 0; fi\necho unexpected-gh-call >&2; exit 99\n')
+    fake_gh.write_text('#!/usr/bin/env bash\nif [[ "$1" == "api" && "$3" == "--jq" ]]; then echo bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb; exit 0; fi\necho unexpected-gh-call >&2; exit 99\n')
     fake_gh.chmod(0o755)
     env = os.environ | {
         "PATH": f"{tmp_path}:{os.environ['PATH']}",
@@ -239,6 +241,7 @@ def test_reviewer_publisher_rejects_changed_head_before_mutation(tmp_path: Path)
         "REVIEW_EVENT": "COMMENT",
         "REVIEWED_HEAD_SHA": "a" * 40,
         "EXPECTED_AUTHOR": "cody-dr[bot]",
+        "PUBLISHER_APP_SLUG": "cody-dr",
         "REVIEW_BODY": "summary",
     }
     result = subprocess.run([BASH, ".github/scripts/publish-review.sh"], env=env, capture_output=True, text=True)

@@ -135,9 +135,9 @@ class ServerOperationService:
         unverifiable = sorted(set(operation.requested_changes) - PROPERTY_NAMES.keys())
         verifiable_changes = {k: v for k, v in operation.requested_changes.items() if k in PROPERTY_NAMES}
 
-        if obs.get("online") and not verifiable_changes:
-            # All requested changes lack a PROPERTY_NAMES mapping — cannot confirm
-            # without evidence; keep current terminal state and record the attempt.
+        if unverifiable:
+            # Any unverifiable key blocks confirmation — mirrors _run REVIEW rejection.
+            # Keep the current terminal state and record the attempt.
             operation.observation["reconciliation_result"] = {
                 "state": operation.state.value,
                 "reconciled_at": _now(),

@@ -825,6 +825,28 @@ class TestRecoveryAndReconciliation:
         assert "reconciliation_result" in reconciled.observation
         assert "unverifiable_settings" in reconciled.observation["reconciliation_result"]["evidence"]
 
+    def test_reconciliation_keeps_failed_with_mixed_verifiable_and_unverifiable_changes(self, tmp_path: Path):
+        """Any unverifiable key blocks confirmation even when verifiable keys are also present."""
+        docker = MagicMock()
+        docker.status.return_value = {"state": "running", "online": True}
+        configuration = MagicMock()
+        configuration.read_properties.return_value = {"max-players": "20"}
+        service = make_service(tmp_path, docker=docker, configuration=configuration, health_timeout=1)
+        OperationStage = __import__(
+            "minecraft_manager.operations.lifecycle", fromlist=["OperationStage"]
+        ).OperationStage
+        # Inject a terminal op with one verifiable key and one unverifiable key
+        op = ServerOperation.create("test-server", {"MAX_PLAYERS": "20", "UNKNOWN_KEY": "value"})
+        op.start()
+        op.fail_stage(OperationStage.REVIEW, "requested changes cannot be verified")
+        service._repo.save(op)
+
+        reconciled = service.request_reconciliation(op.operation_id)
+        assert reconciled is not None
+        assert reconciled.state == OperationState.FAILED
+        result = reconciled.observation.get("reconciliation_result", {})
+        assert "UNKNOWN_KEY" in result.get("evidence", {}).get("unverifiable_settings", [])
+
     def test_parent_operation_id_survives_roundtrip(self, tmp_path: Path):
         """parent_operation_id is persisted and restored correctly."""
         repo = make_repo(tmp_path)

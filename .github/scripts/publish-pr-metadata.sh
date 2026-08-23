@@ -15,6 +15,12 @@ actual_author="$(gh api user --jq .login)"
   exit 1
 }
 
+jq -e 'if type == "array" then . else error("not an array") end' <<<"${LABELS_JSON:-[]}" >/dev/null || {
+  echo "LABELS_JSON is not a valid JSON array" >&2; exit 1
+}
+jq -e 'if type == "array" then . else error("not an array") end' <<<"${ASSIGNEES_JSON:-[]}" >/dev/null || {
+  echo "ASSIGNEES_JSON is not a valid JSON array" >&2; exit 1
+}
 mapfile -t labels    < <(jq -er '.[] | strings | select(length > 0)' <<<"${LABELS_JSON:-[]}")
 mapfile -t assignees < <(jq -er '.[] | strings | select(length > 0)' <<<"${ASSIGNEES_JSON:-[]}")
 
@@ -29,6 +35,11 @@ if [[ -n "$project_owner$project_number$project_status" ]]; then
     exit 2
   }
 fi
+
+actual_base="$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json baseRefName --jq .baseRefName)"
+[[ "$actual_base" == "$BASE_BRANCH" ]] || {
+  echo "base branch mismatch: expected $BASE_BRANCH, got $actual_base" >&2; exit 1
+}
 
 for label in "${labels[@]}"; do
   gh pr edit "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --add-label "$label"

@@ -1,4 +1,6 @@
 from pathlib import Path
+import os
+import subprocess
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -198,6 +200,44 @@ def test_reviewer_publishers_support_thread_replies_without_creating_a_review() 
     assert "Publication report:" in publisher
     assert "PR head changed since review" in publisher
     assert "unexpected authenticated app" in publisher
+
+
+def test_reviewer_publisher_rejects_unexpected_app_before_mutation(tmp_path: Path) -> None:
+    fake_gh = tmp_path / "gh"
+    fake_gh.write_text('#!/usr/bin/env bash\nif [[ "$1" == "api" && "$2" == "app" ]]; then echo wrong-app; exit 0; fi\necho unexpected-gh-call >&2; exit 99\n')
+    fake_gh.chmod(0o755)
+    env = os.environ | {
+        "PATH": f"{tmp_path}:{os.environ['PATH']}",
+        "GH_TOKEN": "test",
+        "GITHUB_REPOSITORY": "owner/repo",
+        "PR_NUMBER": "1",
+        "REVIEW_EVENT": "COMMENT",
+        "REVIEWED_HEAD_SHA": "a" * 40,
+        "EXPECTED_AUTHOR": "cody-dr[bot]",
+        "REVIEW_BODY": "summary",
+    }
+    result = subprocess.run(["bash", ".github/scripts/publish-review.sh"], env=env, capture_output=True, text=True)
+    assert result.returncode != 0
+    assert "unexpected authenticated app" in result.stderr
+
+
+def test_reviewer_publisher_rejects_changed_head_before_mutation(tmp_path: Path) -> None:
+    fake_gh = tmp_path / "gh"
+    fake_gh.write_text('#!/usr/bin/env bash\nif [[ "$1" == "api" && "$2" == "app" ]]; then echo cody-dr; exit 0; fi\nif [[ "$1" == "api" && "$3" == "--jq" ]]; then echo bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb; exit 0; fi\necho unexpected-gh-call >&2; exit 99\n')
+    fake_gh.chmod(0o755)
+    env = os.environ | {
+        "PATH": f"{tmp_path}:{os.environ['PATH']}",
+        "GH_TOKEN": "test",
+        "GITHUB_REPOSITORY": "owner/repo",
+        "PR_NUMBER": "1",
+        "REVIEW_EVENT": "COMMENT",
+        "REVIEWED_HEAD_SHA": "a" * 40,
+        "EXPECTED_AUTHOR": "cody-dr[bot]",
+        "REVIEW_BODY": "summary",
+    }
+    result = subprocess.run(["bash", ".github/scripts/publish-review.sh"], env=env, capture_output=True, text=True)
+    assert result.returncode != 0
+    assert "PR head changed since review" in result.stderr
 
 
 def test_reviewer_skills_dispatch_thread_replies_through_their_apps() -> None:

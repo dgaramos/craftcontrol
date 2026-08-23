@@ -13,6 +13,12 @@ def test_rejects_out_of_range_number() -> None:
         validate_value(SETTINGS["MAX_PLAYERS"], 101)
 
 
+@pytest.mark.parametrize("value", [True, 20.5])
+def test_rejects_boolean_and_fractional_number_values(value: object) -> None:
+    with pytest.raises(ValueError, match="valor numérico inválido"):
+        validate_value(SETTINGS["MAX_PLAYERS"], value)
+
+
 def test_rejects_unknown_select_option() -> None:
     with pytest.raises(ValueError, match="opção inválida"):
         validate_value(SETTINGS["DIFFICULTY"], "nightmare")

@@ -357,11 +357,13 @@ describe("createOperationFeature — recovery actions (issue #194)", () => {
     expect(html).not.toContain('data-op-action="retry"');
   });
 
-  test("operation with parent_operation_id renders parent link", () => {
+  test("operation with parent_operation_id renders parent link placeholder", () => {
     const feature = createOperationFeature(makeDeps());
     const html = feature.renderOperation(makeTerminalOp("failed", { parent_operation_id: "abcd1234-dead-beef-cafe-000000000000" }));
     expect(html).toContain("op-parent-link");
-    expect(html).toContain("abcd1234");
+    expect(html).toContain("op-parent-id");
+    // parent_operation_id must NOT be interpolated into innerHTML
+    expect(html).not.toContain("abcd1234");
   });
 
   test("operation without parent_operation_id does not render parent link", () => {
@@ -370,20 +372,38 @@ describe("createOperationFeature — recovery actions (issue #194)", () => {
     expect(html).not.toContain("op-parent-link");
   });
 
-  function makeButton(action, opId) {
-    const btn = { dataset: { opAction: action, opId }, disabled: false, onclick: null };
+  // recovery button buttons no longer carry data-op-id; operation_id comes from closure
+  function makeButton(action) {
+    const btn = { dataset: { opAction: action }, disabled: false, onclick: null };
     return btn;
   }
 
-  test("bindRecoveryActions calls reconcile endpoint and invokes onUpdate", async () => {
-    const reconcileResult = makeTerminalOp("confirmed");
-    const api = jest.fn().mockResolvedValue({ operation: reconcileResult });
-    let updatedOp = null;
+  function makeContainer(buttons, parentIdEl = null) {
+    return {
+      querySelector: (sel) => (sel === ".op-parent-id" ? parentIdEl : null),
+      querySelectorAll: () => buttons,
+    };
+  }
+
+  async function initWithOp(api, op) {
     const feature = createOperationFeature(makeDeps({ api }));
+    // seed currentOperation via initialize → api returns op
+    await feature.initialize();
+    return feature;
+  }
+
+  test("bindRecoveryActions calls reconcile endpoint and invokes onUpdate", async () => {
+    const failedOp = makeTerminalOp("failed", { operation_id: "op-1" });
+    const reconcileResult = makeTerminalOp("confirmed", { operation_id: "op-1" });
+    const api = jest.fn()
+      .mockResolvedValueOnce({ operation: failedOp })   // initialize → /latest
+      .mockResolvedValueOnce({ operation: reconcileResult }); // reconcile
+    const feature = await initWithOp(api, failedOp);
+    let updatedOp = null;
     feature.setUpdateCallback((op) => { updatedOp = op; });
 
-    const btn = makeButton("reconcile", "op-1");
-    feature.bindRecoveryActions({ querySelectorAll: () => [btn] });
+    const btn = makeButton("reconcile");
+    feature.bindRecoveryActions(makeContainer([btn]));
     await btn.onclick();
 
     expect(api).toHaveBeenCalledWith("/api/operations/op-1/reconcile", { method: "POST" });
@@ -391,18 +411,32 @@ describe("createOperationFeature — recovery actions (issue #194)", () => {
   });
 
   test("bindRecoveryActions calls retry endpoint and updates current operation", async () => {
+    const failedOp = makeTerminalOp("failed", { operation_id: "op-1" });
     const retryResult = makeTerminalOp("running", { operation_id: "op-2", parent_operation_id: "op-1" });
-    const api = jest.fn().mockResolvedValue({ operation: retryResult });
+    const api = jest.fn()
+      .mockResolvedValueOnce({ operation: failedOp })
+      .mockResolvedValueOnce({ operation: retryResult });
+    const feature = await initWithOp(api, failedOp);
     let updatedOp = null;
-    const feature = createOperationFeature(makeDeps({ api }));
     feature.setUpdateCallback((op) => { updatedOp = op; });
 
-    const btn = makeButton("retry", "op-1");
-    feature.bindRecoveryActions({ querySelectorAll: () => [btn] });
+    const btn = makeButton("retry");
+    feature.bindRecoveryActions(makeContainer([btn]));
     await btn.onclick();
 
     expect(api).toHaveBeenCalledWith("/api/operations/op-1/retry", { method: "POST" });
     expect(updatedOp).toBe(retryResult);
+  });
+
+  test("bindRecoveryActions sets parent-id textContent via DOM, not innerHTML", async () => {
+    const failedOp = makeTerminalOp("failed", { operation_id: "op-1", parent_operation_id: "abcd1234-dead-beef-cafe-000000000000" });
+    const api = jest.fn().mockResolvedValue({ operation: failedOp });
+    const feature = await initWithOp(api, failedOp);
+
+    const parentEl = { textContent: "" };
+    feature.bindRecoveryActions(makeContainer([], parentEl));
+
+    expect(parentEl.textContent).toBe("abcd1234");
   });
 
   test("bindRecoveryActions does nothing when container is null", () => {
@@ -410,13 +444,60 @@ describe("createOperationFeature — recovery actions (issue #194)", () => {
     expect(() => feature.bindRecoveryActions(null)).not.toThrow();
   });
 
-  test("bindRecoveryActions silently ignores api errors", async () => {
-    const api = jest.fn().mockRejectedValue(new Error("network error"));
-    const feature = createOperationFeature(makeDeps({ api }));
+  test("bindRecoveryActions shows toast on api error", async () => {
+    const failedOp = makeTerminalOp("failed", { operation_id: "op-1" });
+    const api = jest.fn()
+      .mockResolvedValueOnce({ operation: failedOp })
+      .mockRejectedValueOnce(Object.assign(new Error("server error"), { status: 500 }));
+    const toast = jest.fn();
+    const feature = createOperationFeature(makeDeps({ api, toast }));
+    await feature.initialize();
 
-    const btn = makeButton("reconcile", "op-1");
-    feature.bindRecoveryActions({ querySelectorAll: () => [btn] });
-    await expect(btn.onclick()).resolves.not.toThrow();
+    const btn = makeButton("reconcile");
+    feature.bindRecoveryActions(makeContainer([btn]));
+    await btn.onclick();
+
+    expect(toast).toHaveBeenCalled();
+  });
+
+  test("bindRecoveryActions shows conflict toast on 409", async () => {
+    const failedOp = makeTerminalOp("failed", { operation_id: "op-1" });
+    const api = jest.fn()
+      .mockResolvedValueOnce({ operation: failedOp })
+      .mockRejectedValueOnce(Object.assign(new Error("conflict"), { status: 409 }));
+    const toast = jest.fn();
+    const feature = createOperationFeature(makeDeps({ api, toast }));
+    await feature.initialize();
+
+    const btn = makeButton("retry");
+    feature.bindRecoveryActions(makeContainer([btn]));
+    await btn.onclick();
+
+    expect(toast).toHaveBeenCalledWith("opRetryConflict", true);
+  });
+
+  test("bindRecoveryActions disables all buttons during request and re-enables after", async () => {
+    const failedOp = makeTerminalOp("failed", { operation_id: "op-1" });
+    let resolveApi;
+    const api = jest.fn()
+      .mockResolvedValueOnce({ operation: failedOp })
+      .mockReturnValueOnce(new Promise((r) => { resolveApi = r; }));
+    const feature = await initWithOp(api, failedOp);
+
+    const btn1 = makeButton("reconcile");
+    const btn2 = makeButton("retry");
+    const container = makeContainer([btn1, btn2]);
+    feature.bindRecoveryActions(container);
+
+    const clickPromise = btn1.onclick();
+    // both buttons should be disabled while the request is in flight
+    expect(btn1.disabled).toBe(true);
+    expect(btn2.disabled).toBe(true);
+
+    resolveApi({ operation: makeTerminalOp("confirmed", { operation_id: "op-1" }) });
+    await clickPromise;
+    expect(btn1.disabled).toBe(false);
+    expect(btn2.disabled).toBe(false);
   });
 });
 

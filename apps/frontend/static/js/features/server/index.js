@@ -51,7 +51,7 @@ async function loadFrontendVersion() {
 // Operation lifecycle progress
 // ------------------------------------------------------------------
 
-const operationFeature = createOperationFeature({ api, t, escapeHtml, formatDate, uiIcon });
+const operationFeature = createOperationFeature({ api, t, escapeHtml, formatDate, uiIcon, toast });
 
 function refreshOperationPanel() {
   const container = $("#operation-progress-container");

@@ -136,13 +136,21 @@ class ServerOperationService:
             try:
                 verified, evidence = self._verify_configuration(operation)
                 operation.update_observation(evidence)
-                if verified:
+                if not evidence.get("online"):
+                    operation.state = OperationState.FAILED
+                    operation.terminal_error = "server offline during configuration verification"
+                elif verified:
                     operation.state = OperationState.CONFIRMED
                     operation.terminal_error = None
                 else:
                     operation.state = OperationState.DIVERGENT
                     if not operation.terminal_error:
                         operation.terminal_error = "effective configuration differs from requested changes"
+                operation.observation["reconciliation_result"] = {
+                    "state": operation.state.value,
+                    "reconciled_at": _now(),
+                    "evidence": evidence,
+                }
             except Exception as exc:
                 LOGGER.warning(
                     "server_operation reconciliation verification failed operation_id=%s: %s",

@@ -10,7 +10,7 @@
 const STAGE_ORDER = ["review", "backup_verify", "prepare", "restart", "health_wait", "verify", "confirm"];
 const STORAGE_KEY = "craftcontrol-operation-id";
 
-export function createOperationFeature({ api, t, escapeHtml, formatDate, uiIcon }) {
+export function createOperationFeature({ api, t, escapeHtml, formatDate, uiIcon, toast }) {
   let currentOperation = null;
   let eventSource = null;
   let onUpdate = null;
@@ -151,12 +151,12 @@ export function createOperationFeature({ api, t, escapeHtml, formatDate, uiIcon 
       ? `<dl class="op-evidence">${observation.map(([k, v]) => `<div><dt>${escapeHtml(k.replace(/_/g, " "))}</dt><dd>${escapeHtml(String(v))}</dd></div>`).join("")}</dl>`
       : "";
     const parentLink = op.parent_operation_id
-      ? `<p class="op-parent-link"><small>${escapeHtml(t("opParentLink"))} <code>${escapeHtml(op.parent_operation_id.slice(0, 8))}</code></small></p>`
+      ? `<p class="op-parent-link"><small>${escapeHtml(t("opParentLink"))} <code class="op-parent-id"></code></small></p>`
       : "";
     const recoveryActions = ["failed", "divergent"].includes(op.state)
       ? `<div class="op-recovery-actions">
-          <button class="secondary op-action" data-op-action="reconcile" data-op-id="${escapeHtml(op.operation_id)}" title="${escapeHtml(t("opReconcileHelp"))}">${escapeHtml(t("opReconcile"))}</button>
-          <button class="op-action" data-op-action="retry" data-op-id="${escapeHtml(op.operation_id)}" title="${escapeHtml(t("opRetryHelp"))}">${escapeHtml(t("opRetry"))}</button>
+          <button class="secondary op-action" data-op-action="reconcile" title="${escapeHtml(t("opReconcileHelp"))}">${escapeHtml(t("opReconcile"))}</button>
+          <button class="op-action" data-op-action="retry" title="${escapeHtml(t("opRetryHelp"))}">${escapeHtml(t("opRetry"))}</button>
         </div>`
       : "";
     return `<div class="op-terminal">${completed}${errorLine}${observationLine}${parentLink}${recoveryActions}</div>`;
@@ -197,37 +197,56 @@ export function createOperationFeature({ api, t, escapeHtml, formatDate, uiIcon 
   // ------------------------------------------------------------------
 
   async function handleReconcile(operationId) {
-    try {
-      const response = await api(`/api/operations/${operationId}/reconcile`, { method: "POST" });
-      if (response.operation) {
-        currentOperation = response.operation;
-        try { localStorage.setItem(STORAGE_KEY, response.operation.operation_id); } catch (_) { /* storage unavailable */ }
-        if (onUpdate) onUpdate(currentOperation);
-      }
-    } catch (_) { /* reconcile errors are silently skipped; the panel stays as-is */ }
+    const snapshotBefore = currentOperation;
+    const response = await api(`/api/operations/${operationId}/reconcile`, { method: "POST" });
+    if (response.operation && currentOperation === snapshotBefore) {
+      currentOperation = response.operation;
+      try { localStorage.setItem(STORAGE_KEY, response.operation.operation_id); } catch (_) { /* storage unavailable */ }
+      if (onUpdate) onUpdate(currentOperation);
+    }
   }
 
   async function handleRetry(operationId) {
-    try {
-      const response = await api(`/api/operations/${operationId}/retry`, { method: "POST" });
-      if (response.operation) {
-        currentOperation = response.operation;
-        try { localStorage.setItem(STORAGE_KEY, response.operation.operation_id); } catch (_) { /* storage unavailable */ }
-        if (onUpdate) onUpdate(currentOperation);
-      }
-    } catch (_) { /* retry errors are silently skipped; the user can try again */ }
+    const snapshotBefore = currentOperation;
+    const response = await api(`/api/operations/${operationId}/retry`, { method: "POST" });
+    if (response.operation && currentOperation === snapshotBefore) {
+      currentOperation = response.operation;
+      try { localStorage.setItem(STORAGE_KEY, response.operation.operation_id); } catch (_) { /* storage unavailable */ }
+      if (onUpdate) onUpdate(currentOperation);
+    }
   }
+
+  // in-flight guard keyed by operation_id; prevents concurrent reconcile+retry
+  const _inflight = new Set();
 
   function bindRecoveryActions(container) {
     if (!container) return;
+    const op = currentOperation;
+    if (!op) return;
+
+    // Set parent_operation_id via textContent — never via innerHTML interpolation
+    const parentEl = container.querySelector(".op-parent-id");
+    if (parentEl && op.parent_operation_id) {
+      parentEl.textContent = op.parent_operation_id.slice(0, 8);
+    }
+
     container.querySelectorAll("[data-op-action]").forEach((button) => {
       button.onclick = async () => {
-        button.disabled = true;
-        const action = button.dataset.opAction;
-        const opId = button.dataset.opId;
-        if (action === "reconcile") await handleReconcile(opId);
-        else if (action === "retry") await handleRetry(opId);
-        button.disabled = false;
+        const opId = op.operation_id;
+        if (_inflight.has(opId)) return;
+        _inflight.add(opId);
+        container.querySelectorAll("[data-op-action]").forEach((b) => { b.disabled = true; });
+        try {
+          const action = button.dataset.opAction;
+          if (action === "reconcile") await handleReconcile(opId);
+          else if (action === "retry") await handleRetry(opId);
+        } catch (err) {
+          const isConflict = err && (err.status === 409 || (typeof err.message === "string" && err.message.includes("409")));
+          if (toast) toast(isConflict ? t("opRetryConflict") : (err && err.message) || t("opRetry"), true);
+        } finally {
+          _inflight.delete(opId);
+          container.querySelectorAll("[data-op-action]").forEach((b) => { b.disabled = false; });
+        }
       };
     });
   }

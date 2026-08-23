@@ -297,10 +297,10 @@ class TestSQLiteOperationRepository:
 
         def writer(state_transition):
             try:
-                barrier.wait(timeout=5)
                 op_local = repo.get(op.operation_id)
                 assert op_local is not None
                 state_transition(op_local)
+                barrier.wait(timeout=5)
                 repo.save(op_local)
             except Exception as exc:
                 errors.append(exc)
@@ -331,20 +331,20 @@ class TestSQLiteOperationRepository:
 
         def complete_writer():
             try:
-                barrier.wait(timeout=5)
                 op_c = repo.get(op.operation_id)
                 assert op_c is not None
                 op_c.complete_stage(OperationStage.RESTART, evidence={"source": "complete"})
+                barrier.wait(timeout=5)
                 repo.update_stage(op_c, OperationStage.RESTART)
             except Exception as exc:
                 errors.append(exc)
 
         def fail_writer():
             try:
-                barrier.wait(timeout=5)
                 op_f = repo.get(op.operation_id)
                 assert op_f is not None
                 op_f.fail_stage(OperationStage.RESTART, error="simulated failure")
+                barrier.wait(timeout=5)
                 repo.update_stage(op_f, OperationStage.RESTART)
             except Exception as exc:
                 errors.append(exc)
@@ -365,6 +365,16 @@ class TestSQLiteOperationRepository:
         )
         assert restart_stage is not None
         assert restart_stage.result in (StageResult.COMPLETED, StageResult.FAILED)
+        # State and stage result must be coherent: a FAILED stage must not leave
+        # the operation in RUNNING, and a COMPLETED stage must not carry a terminal_error.
+        if restart_stage.result == StageResult.FAILED:
+            assert loaded.state != OperationState.RUNNING, (
+                "operation must not remain RUNNING after a FAILED stage"
+            )
+        else:
+            assert loaded.terminal_error is None, (
+                "operation must not carry a terminal_error after a COMPLETED stage"
+            )
 
 
 # ---------------------------------------------------------------------------

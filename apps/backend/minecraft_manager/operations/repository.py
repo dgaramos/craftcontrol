@@ -76,7 +76,8 @@ def _write_connect(path: Path) -> Generator[sqlite3.Connection, None, None]:
         yield connection
         connection.execute("COMMIT")
     except Exception:
-        connection.execute("ROLLBACK")
+        if connection.in_transaction:
+            connection.execute("ROLLBACK")
         raise
     finally:
         connection.close()

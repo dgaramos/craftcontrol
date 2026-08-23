@@ -82,24 +82,36 @@ or a claim that a finding is resolved.
 
 ## Publisher dispatch contract
 
-Publication remains explicitly authorized. Dispatch the matching workflow with
-the current PR number, reviewed head SHA, event, summary, and batched manifest.
-Never use a personal GitHub comment as a fallback for a configured App.
+Publication remains explicitly authorized. Never use a personal GitHub comment
+as a fallback for a configured App.
 
-| Reviewer | Mode | Dispatch | Availability |
-| --- | --- | --- | --- |
-| Cody DR | review | `gh workflow run publish-cody-review.yml` | available |
-| Cody DR | create-issue | `gh workflow run publish-cody-issue.yml` | available |
-| Cody DR | reply | `gh workflow run publish-cody-review.yml` with `replies_json` | available |
-| Cody DR | resolve-thread | `gh workflow run publish-cody-review.yml` with `resolve_thread_ids_json` | available |
-| Claudio DR | review | `gh workflow run publish-claudio-review.yml` | available |
-| Claudio DR | create-issue | `gh workflow run publish-claudio-issue.yml` | available |
-| Claudio DR | reply | `gh workflow run publish-claudio-review.yml` with `replies_json` | available |
-| Claudio DR | resolve-thread | `gh workflow run publish-claudio-review.yml` with `resolve_thread_ids_json` | available |
+### Review
+
+Dispatch `publish-cody-review.yml` or `publish-claudio-review.yml` with
+`pr_number`, `reviewed_head_sha`, `event`, `review_body`, and the optional
+review manifests `inline_comments_json`, `replies_json`, and
+`resolve_thread_ids_json`.
+
+### Create issue
+
+Dispatch `publish-cody-issue.yml` or `publish-claudio-issue.yml` with required
+`title` and `body`; `labels`, `assignees`, and `milestone_number` are optional.
+Do not supply review-only fields to this mode.
+
+| Reviewer | Mode | Availability |
+| --- | --- | --- |
+| Cody DR | review | available |
+| Cody DR | create-issue | available |
+| Cody DR | reply | unavailable until #238 |
+| Cody DR | resolve-thread | unavailable until #238 |
+| Claudio DR | review | available |
+| Claudio DR | create-issue | available |
+| Claudio DR | reply | unavailable until #238 |
+| Claudio DR | resolve-thread | unavailable until #238 |
 
 ## Post-publication verification
 
-After a review, reply, resolution, or issue publication, verify the target and
-that the author is `cody-dr[bot]` for Cody DR or `claudio-dr[bot]` for Claudio
-DR. A failed verification is a failed publication, not a fallback to a personal
-account.
+After a review or issue publication, verify the target and that the author is
+`cody-dr[bot]` for Cody DR or `claudio-dr[bot]` for Claudio DR. Reply and
+resolution verification becomes applicable only after #238. A failed
+verification is a failed publication, not a fallback to a personal account.

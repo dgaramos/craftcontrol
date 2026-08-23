@@ -121,18 +121,19 @@ persistam no head atual e tenham confiança `>= 80`.
 
 O publicador é o GitHub App `cody-dr`, não a conta pessoal autenticada no `gh`.
 Quando existir `.github/workflows/publish-cody-review.yml`, dispare essa
-workflow com `gh workflow run` usando os campos `pr_number`, `event`,
-`review_body` e, para um finding inline, `comment_path`, `comment_line` e
-`comment_body`. Aguarde a execução terminar e confirme que a review criada tem
+workflow com `gh workflow run` usando `pr_number`, `event`, `review_body`,
+`inline_comments_json`, `replies_json` e `resolve_thread_ids_json`. Cada finding
+em linha alterada entra como `{path, line, body}`; thread aberta equivalente recebe reply,
+nunca uma thread duplicada. Aguarde a execução terminar e confirme que a review criada tem
 autor `cody-dr` e o evento esperado.
 
-Para responder uma thread existente, use somente os campos `pr_number`,
-`reply_comment_id` e `reply_body` da mesma workflow. Confirme que a resposta
+Para responder uma thread existente, inclua `{comment_id, body}` em `replies_json`.
+Confirme que a resposta
 foi criada pelo `cody-dr` na thread indicada; não envie também uma nova review
 ou comentário inline.
 
 Quando um finding estiver comprovadamente corrigido, a workflow também aceita
-`resolve_thread_id`. Verifique o código e os testes no head atual, responda a
+`resolve_thread_ids_json`. Verifique o código e os testes no head atual, responda a
 thread com o status verificado quando necessário e só então resolva-a pelo
 `cody-dr`.
 

@@ -5,12 +5,15 @@ Provides:
 - GET  /api/operations/active   — the current non-terminal operation, if any
 - GET  /api/operations/<id>     — a specific operation by its UUID
 - GET  /api/operations          — recent operation list
+- GET  /api/operations/stream   — SSE stream of operation.updated lifecycle events
 - POST /api/operations/<id>/reconcile — re-observe and refresh terminal outcome
 """
 
 from __future__ import annotations
 
-from flask import Blueprint, jsonify
+import json
+
+from flask import Blueprint, Response, jsonify, request, stream_with_context
 
 from .dependencies import manager
 from ..auth.http import require
@@ -54,6 +57,39 @@ def get_operation(operation_id: str):
 def list_operations():
     ops = _op_service().list_recent()
     return jsonify(operations=[op.as_dict() for op in ops]), 200
+
+
+@operations_api.get("/api/operations/stream")
+@require("server.configure")
+def stream_operations():
+    """SSE stream of operation lifecycle changes (issue #191).
+
+    Emits an ``operation`` event for every ``operation.updated`` broker event.
+    Clients should pass the ``Last-Event-ID`` header on reconnect so no
+    terminal outcome is missed.  A keepalive comment is emitted on broker
+    heartbeat ticks so the connection stays alive through idle periods.
+    """
+    try:
+        after_id = int(request.headers.get("Last-Event-ID", "0") or 0)
+    except ValueError:
+        after_id = 0
+
+    @stream_with_context
+    def generate():
+        for event in manager().broker.stream(after_id):
+            if event is None:
+                yield ": keepalive\n\n"
+                continue
+            if event.topic != "operation.updated":
+                yield f"id: {event.id}\n: skip\n\n"
+                continue
+            payload = json.dumps(event.payload, ensure_ascii=False)
+            yield f"id: {event.id}\nevent: operation\ndata: {payload}\n\n"
+
+    return Response(generate(), mimetype="text/event-stream", headers={
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",
+    })
 
 
 @operations_api.post("/api/operations/<operation_id>/reconcile")

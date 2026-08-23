@@ -185,6 +185,14 @@
       ]
     },
     {
+      "path": "/api/operations/stream",
+      "methods": [
+        "GET"
+      ],
+      "owner": "backend",
+      "protocol": "sse"
+    },
+    {
       "path": "/api/players",
       "methods": [
         "GET"

@@ -393,3 +393,160 @@ def test_telemetry_pack_action_file_not_found_returns_400(client) -> None:
     with patch("minecraft_manager.http.telemetry.telemetry_installer", return_value=fake_installer):
         resp = client.post("/api/telemetry-pack/install")
     assert resp.status_code == 400
+
+
+# ---------------------------------------------------------------------------
+# operations_api
+# ---------------------------------------------------------------------------
+
+def _make_operations_app(manager: MagicMock, *, auth_mode: str = "disabled") -> Flask:
+    from minecraft_manager.http.operations import operations_api as ops_bp
+    app = Flask(__name__, template_folder="../apps/frontend/templates")
+    app.extensions["manager_service"] = manager
+    auth = make_auth_mock()
+    wire_auth(app, auth, mode=auth_mode)
+    app.register_blueprint(ops_bp)
+    return app
+
+
+@pytest.fixture
+def op_service() -> MagicMock:
+    svc = MagicMock()
+    svc.operation_service = MagicMock()
+    svc.broker = MagicMock()
+    return svc
+
+
+@pytest.fixture
+def op_client(op_service: MagicMock):
+    return _make_operations_app(op_service).test_client()
+
+
+def test_get_latest_operation_returns_200_when_found(op_client, op_service: MagicMock) -> None:
+    from minecraft_manager.operations.lifecycle import ServerOperation
+    op = ServerOperation.create("default", {"difficulty": "hard"})
+    op_service.operation_service.get_latest.return_value = op
+    resp = op_client.get("/api/operations/latest")
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["operation"]["operation_id"] == op.operation_id
+
+
+def test_get_latest_operation_returns_null_when_none(op_client, op_service: MagicMock) -> None:
+    op_service.operation_service.get_latest.return_value = None
+    resp = op_client.get("/api/operations/latest")
+    assert resp.status_code == 200
+    assert resp.get_json()["operation"] is None
+
+
+def test_get_active_operation_returns_200_when_found(op_client, op_service: MagicMock) -> None:
+    from minecraft_manager.operations.lifecycle import ServerOperation
+    op = ServerOperation.create("default", {"difficulty": "hard"})
+    op_service.operation_service.get_active.return_value = op
+    resp = op_client.get("/api/operations/active")
+    assert resp.status_code == 200
+    assert resp.get_json()["operation"]["operation_id"] == op.operation_id
+
+
+def test_get_active_operation_returns_null_when_none(op_client, op_service: MagicMock) -> None:
+    op_service.operation_service.get_active.return_value = None
+    resp = op_client.get("/api/operations/active")
+    assert resp.status_code == 200
+    assert resp.get_json()["operation"] is None
+
+
+def test_get_operation_by_id_returns_200_when_found(op_client, op_service: MagicMock) -> None:
+    from minecraft_manager.operations.lifecycle import ServerOperation
+    op = ServerOperation.create("default", {"difficulty": "hard"})
+    op_service.operation_service.get_operation.return_value = op
+    resp = op_client.get(f"/api/operations/{op.operation_id}")
+    assert resp.status_code == 200
+    assert resp.get_json()["operation"]["operation_id"] == op.operation_id
+
+
+def test_get_operation_by_id_returns_404_when_not_found(op_client, op_service: MagicMock) -> None:
+    op_service.operation_service.get_operation.return_value = None
+    resp = op_client.get("/api/operations/does-not-exist")
+    assert resp.status_code == 404
+
+
+def test_list_operations_returns_recent_list(op_client, op_service: MagicMock) -> None:
+    from minecraft_manager.operations.lifecycle import ServerOperation
+    ops = [ServerOperation.create("default", {"difficulty": "hard"})]
+    op_service.operation_service.list_recent.return_value = ops
+    resp = op_client.get("/api/operations")
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert len(data["operations"]) == 1
+
+
+def test_stream_operations_returns_event_stream(op_client, op_service: MagicMock) -> None:
+    op_service.broker.stream.return_value = iter([None])
+    resp = op_client.get("/api/operations/stream")
+    assert resp.status_code == 200
+    assert "text/event-stream" in resp.content_type
+
+
+def test_stream_operations_emits_keepalive_comment(op_client, op_service: MagicMock) -> None:
+    op_service.broker.stream.return_value = iter([None])
+    resp = op_client.get("/api/operations/stream")
+    assert ": keepalive\n" in resp.data.decode()
+
+
+def test_stream_operations_forwards_last_event_id(op_client, op_service: MagicMock) -> None:
+    op_service.broker.stream.return_value = iter([None])
+    op_client.get("/api/operations/stream", headers={"Last-Event-ID": "17"})
+    op_service.broker.stream.assert_called_once_with(17)
+
+
+def test_stream_operations_defaults_after_id_on_invalid_header(op_client, op_service: MagicMock) -> None:
+    op_service.broker.stream.return_value = iter([None])
+    op_client.get("/api/operations/stream", headers={"Last-Event-ID": "not-a-number"})
+    op_service.broker.stream.assert_called_once_with(0)
+
+
+def test_stream_operations_emits_operation_events(op_client, op_service: MagicMock) -> None:
+    import json as _json
+    from minecraft_manager.operations.lifecycle import ServerOperation
+
+    op = ServerOperation.create("default", {"difficulty": "hard"})
+
+    class FakeEvent:
+        id = 42
+        topic = "operation.updated"
+        payload = op.as_dict()
+
+    op_service.broker.stream.return_value = iter([FakeEvent(), None])
+    resp = op_client.get("/api/operations/stream")
+    body = resp.data.decode()
+    assert "event: operation\n" in body
+    assert "id: 42\n" in body
+    assert op.operation_id in body
+
+
+def test_stream_operations_skips_non_operation_events(op_client, op_service: MagicMock) -> None:
+    class FakeOtherEvent:
+        id = 7
+        topic = "server.state"
+        payload = {"online": True}
+
+    op_service.broker.stream.return_value = iter([FakeOtherEvent(), None])
+    resp = op_client.get("/api/operations/stream")
+    body = resp.data.decode()
+    assert "event: operation\n" not in body
+    assert ": skip\n" in body
+
+
+def test_reconcile_operation_returns_200_when_found(op_client, op_service: MagicMock) -> None:
+    from minecraft_manager.operations.lifecycle import ServerOperation
+    op = ServerOperation.create("default", {"difficulty": "hard"})
+    op_service.operation_service.request_reconciliation.return_value = op
+    resp = op_client.post(f"/api/operations/{op.operation_id}/reconcile")
+    assert resp.status_code == 200
+    assert resp.get_json()["operation"]["operation_id"] == op.operation_id
+
+
+def test_reconcile_operation_returns_404_when_not_found(op_client, op_service: MagicMock) -> None:
+    op_service.operation_service.request_reconciliation.return_value = None
+    resp = op_client.post("/api/operations/ghost/reconcile")
+    assert resp.status_code == 404

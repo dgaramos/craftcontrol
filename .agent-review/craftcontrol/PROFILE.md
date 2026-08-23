@@ -98,14 +98,30 @@ Dispatch `publish-cody-issue.yml` or `publish-claudio-issue.yml` with required
 `title` and `body`; `labels`, `assignees`, and `milestone_number` are optional.
 Do not supply review-only fields to this mode.
 
+### Apply PR metadata
+
+Dispatch `publish-cody-pr-metadata.yml` or `publish-claudio-pr-metadata.yml`
+with `pr_number` and `base_branch` (required), plus any of `labels_json`
+(JSON array), `assignees_json` (JSON array), `milestone_number` (numeric string),
+and the three project fields `project_owner`, `project_number`, `project_status`
+(must be supplied together or not at all).
+
+The workflow authenticates as the matching App, verifies the publishing identity,
+applies all supplied metadata, and then re-reads the PR to confirm every field.
+A missing permission or a verification mismatch fails the workflow; there is no
+fallback to the personal account. If Projects write permission is not available
+for the App installation, supply no project fields — the failure is explicit.
+
 | Reviewer | Mode | Availability |
 | --- | --- | --- |
 | Cody DR | review | available |
 | Cody DR | create-issue | available |
+| Cody DR | apply-pr-metadata | available |
 | Cody DR | reply | unavailable until #238 |
 | Cody DR | resolve-thread | unavailable until #238 |
 | Claudio DR | review | available |
 | Claudio DR | create-issue | available |
+| Claudio DR | apply-pr-metadata | available |
 | Claudio DR | reply | available |
 | Claudio DR | resolve-thread | available |
 

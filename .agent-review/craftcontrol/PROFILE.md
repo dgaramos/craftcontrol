@@ -106,12 +106,13 @@ Do not supply review-only fields to this mode.
 | Cody DR | resolve-thread | unavailable until #238 |
 | Claudio DR | review | available |
 | Claudio DR | create-issue | available |
-| Claudio DR | reply | unavailable until #238 |
-| Claudio DR | resolve-thread | unavailable until #238 |
+| Claudio DR | reply | available |
+| Claudio DR | resolve-thread | available |
 
 ## Post-publication verification
 
 After a review or issue publication, verify the target and that the author is
 `cody-dr[bot]` for Cody DR or `claudio-dr[bot]` for Claudio DR. Reply and
-resolution verification becomes applicable only after #238. A failed
+resolution verification applies to Claudio DR; Cody DR reply and resolution
+remain unavailable until their publisher workflows are implemented. A failed
 verification is a failed publication, not a fallback to a personal account.

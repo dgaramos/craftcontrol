@@ -203,7 +203,9 @@ def test_reviewer_publishers_support_thread_replies_without_creating_a_review() 
     assert "reply target mismatch" in publisher
     assert "reply target must be top-level" in publisher
     assert "resolveReviewThread" in publisher
-    assert "reviewThreads(first: 100)" in publisher
+    assert "reviewThreads(first: 100, after: $after)" in publisher
+    assert "pageInfo { hasNextPage endCursor }" in publisher
+    assert "graphql_args+=(-f after" in publisher
     assert "resolution target mismatch" in publisher
     assert "Publication report:" in publisher
     assert "PR head changed since review" in publisher
@@ -249,6 +251,69 @@ def test_reviewer_publisher_rejects_changed_head_before_mutation(tmp_path: Path)
     result = subprocess.run([BASH, ".github/scripts/publish-review.sh"], env=env, capture_output=True, text=True)
     assert result.returncode != 0
     assert "PR head changed since review" in result.stderr
+
+
+def test_reviewer_publisher_paginates_thread_validation_before_resolving(tmp_path: Path) -> None:
+    fake_gh = tmp_path / "gh"
+    call_log = tmp_path / "calls"
+    fake_gh.write_text(
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "printf '%s\\n' \"$*\" >> \"${FAKE_GH_CALL_LOG:?}\"\n"
+        "if [[ \"$1 $2\" == 'api repos/owner/repo/pulls/1' ]]; then echo aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa; exit 0; fi\n"
+        "if [[ \"$*\" == *'resolveReviewThread'* ]]; then echo true; exit 0; fi\n"
+        "if [[ \"$1 $2 $3\" == 'api graphql -f' && \"$*\" == *'after=cursor-one'* ]]; then\n"
+        "  echo '{\"data\":{\"repository\":{\"pullRequest\":{\"reviewThreads\":{\"nodes\":[{\"id\":\"thread-two\"}],\"pageInfo\":{\"hasNextPage\":false,\"endCursor\":null}}}}}}'\n"
+        "  exit 0\n"
+        "fi\n"
+        "if [[ \"$1 $2 $3\" == 'api graphql -f' ]]; then\n"
+        "  echo '{\"data\":{\"repository\":{\"pullRequest\":{\"reviewThreads\":{\"nodes\":[{\"id\":\"thread-one\"}],\"pageInfo\":{\"hasNextPage\":true,\"endCursor\":\"cursor-one\"}}}}}}'\n"
+        "  exit 0\n"
+        "fi\n"
+        "echo unexpected-gh-call >&2; exit 99\n"
+    )
+    fake_gh.chmod(0o755)
+    env = os.environ | {
+        "PATH": f"{tmp_path}:{os.environ['PATH']}",
+        "FAKE_GH_CALL_LOG": str(call_log),
+        "GH_TOKEN": "test",
+        "GITHUB_REPOSITORY": "owner/repo",
+        "PR_NUMBER": "1",
+        "REVIEW_EVENT": "COMMENT",
+        "REVIEWED_HEAD_SHA": "a" * 40,
+        "EXPECTED_AUTHOR": "cody-dr[bot]",
+        "PUBLISHER_APP_SLUG": "cody-dr",
+        "RESOLVE_THREAD_IDS_JSON": '["thread-two"]',
+    }
+    result = subprocess.run([BASH, ".github/scripts/publish-review.sh"], env=env, capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert "after=cursor-one" in call_log.read_text()
+    assert "resolveReviewThread" in call_log.read_text()
+
+
+def test_reviewer_publisher_rejects_thread_after_all_pages(tmp_path: Path) -> None:
+    fake_gh = tmp_path / "gh"
+    fake_gh.write_text(
+        "#!/usr/bin/env bash\n"
+        "if [[ \"$1 $2\" == 'api repos/owner/repo/pulls/1' ]]; then echo aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa; exit 0; fi\n"
+        "if [[ \"$1 $2 $3\" == 'api graphql -f' ]]; then echo '{\"data\":{\"repository\":{\"pullRequest\":{\"reviewThreads\":{\"nodes\":[],\"pageInfo\":{\"hasNextPage\":false,\"endCursor\":null}}}}}}'; exit 0; fi\n"
+        "echo unexpected-gh-call >&2; exit 99\n"
+    )
+    fake_gh.chmod(0o755)
+    env = os.environ | {
+        "PATH": f"{tmp_path}:{os.environ['PATH']}",
+        "GH_TOKEN": "test",
+        "GITHUB_REPOSITORY": "owner/repo",
+        "PR_NUMBER": "1",
+        "REVIEW_EVENT": "COMMENT",
+        "REVIEWED_HEAD_SHA": "a" * 40,
+        "EXPECTED_AUTHOR": "cody-dr[bot]",
+        "PUBLISHER_APP_SLUG": "cody-dr",
+        "RESOLVE_THREAD_IDS_JSON": '["missing-thread"]',
+    }
+    result = subprocess.run([BASH, ".github/scripts/publish-review.sh"], env=env, capture_output=True, text=True)
+    assert result.returncode != 0
+    assert "resolution target mismatch" in result.stderr
 
 
 def test_reviewer_skills_dispatch_thread_replies_through_their_apps() -> None:

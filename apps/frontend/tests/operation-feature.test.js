@@ -318,6 +318,108 @@ describe("createOperationFeature — initialize and SSE", () => {
   });
 });
 
+describe("createOperationFeature — recovery actions (issue #194)", () => {
+  function makeTerminalOp(state, extra = {}) {
+    return makeOperation({
+      state,
+      stages: [
+        { stage: "review", result: "completed", started_at: 1700000000, completed_at: 1700000001, evidence: {}, error: null },
+        { stage: "backup_verify", result: "completed", started_at: 1700000001, completed_at: 1700000002, evidence: {}, error: null },
+        { stage: "prepare", result: "completed", started_at: 1700000002, completed_at: 1700000003, evidence: {}, error: null },
+        { stage: "restart", result: "completed", started_at: 1700000003, completed_at: 1700000004, evidence: {}, error: null },
+        { stage: "health_wait", result: "completed", started_at: 1700000004, completed_at: 1700000005, evidence: {}, error: null },
+        { stage: "verify", result: state === "confirmed" ? "completed" : state, started_at: 1700000005, completed_at: state === "confirmed" ? 1700000006 : null, evidence: {}, error: state === "failed" ? "something went wrong" : null },
+        { stage: "confirm", result: state === "confirmed" ? "completed" : "pending", started_at: null, completed_at: null, evidence: {}, error: null },
+      ],
+      completed_at: 1700000010,
+      ...extra,
+    });
+  }
+
+  test("failed operation renders reconcile and retry buttons", () => {
+    const feature = createOperationFeature(makeDeps());
+    const html = feature.renderOperation(makeTerminalOp("failed"));
+    expect(html).toContain('data-op-action="reconcile"');
+    expect(html).toContain('data-op-action="retry"');
+  });
+
+  test("divergent operation renders reconcile and retry buttons", () => {
+    const feature = createOperationFeature(makeDeps());
+    const html = feature.renderOperation(makeTerminalOp("divergent"));
+    expect(html).toContain('data-op-action="reconcile"');
+    expect(html).toContain('data-op-action="retry"');
+  });
+
+  test("confirmed operation does not render recovery buttons", () => {
+    const feature = createOperationFeature(makeDeps());
+    const html = feature.renderOperation(makeTerminalOp("confirmed"));
+    expect(html).not.toContain('data-op-action="reconcile"');
+    expect(html).not.toContain('data-op-action="retry"');
+  });
+
+  test("operation with parent_operation_id renders parent link", () => {
+    const feature = createOperationFeature(makeDeps());
+    const html = feature.renderOperation(makeTerminalOp("failed", { parent_operation_id: "abcd1234-dead-beef-cafe-000000000000" }));
+    expect(html).toContain("op-parent-link");
+    expect(html).toContain("abcd1234");
+  });
+
+  test("operation without parent_operation_id does not render parent link", () => {
+    const feature = createOperationFeature(makeDeps());
+    const html = feature.renderOperation(makeTerminalOp("failed"));
+    expect(html).not.toContain("op-parent-link");
+  });
+
+  function makeButton(action, opId) {
+    const btn = { dataset: { opAction: action, opId }, disabled: false, onclick: null };
+    return btn;
+  }
+
+  test("bindRecoveryActions calls reconcile endpoint and invokes onUpdate", async () => {
+    const reconcileResult = makeTerminalOp("confirmed");
+    const api = jest.fn().mockResolvedValue({ operation: reconcileResult });
+    let updatedOp = null;
+    const feature = createOperationFeature(makeDeps({ api }));
+    feature.setUpdateCallback((op) => { updatedOp = op; });
+
+    const btn = makeButton("reconcile", "op-1");
+    feature.bindRecoveryActions({ querySelectorAll: () => [btn] });
+    await btn.onclick();
+
+    expect(api).toHaveBeenCalledWith("/api/operations/op-1/reconcile", { method: "POST" });
+    expect(updatedOp).toBe(reconcileResult);
+  });
+
+  test("bindRecoveryActions calls retry endpoint and updates current operation", async () => {
+    const retryResult = makeTerminalOp("running", { operation_id: "op-2", parent_operation_id: "op-1" });
+    const api = jest.fn().mockResolvedValue({ operation: retryResult });
+    let updatedOp = null;
+    const feature = createOperationFeature(makeDeps({ api }));
+    feature.setUpdateCallback((op) => { updatedOp = op; });
+
+    const btn = makeButton("retry", "op-1");
+    feature.bindRecoveryActions({ querySelectorAll: () => [btn] });
+    await btn.onclick();
+
+    expect(api).toHaveBeenCalledWith("/api/operations/op-1/retry", { method: "POST" });
+    expect(updatedOp).toBe(retryResult);
+  });
+
+  test("bindRecoveryActions does nothing when container is null", () => {
+    const feature = createOperationFeature(makeDeps());
+    expect(() => feature.bindRecoveryActions(null)).not.toThrow();
+  });
+
+  test("bindRecoveryActions silently ignores api errors", async () => {
+    const api = jest.fn().mockRejectedValue(new Error("network error"));
+    const feature = createOperationFeature(makeDeps({ api }));
+
+    const btn = makeButton("reconcile", "op-1");
+    feature.bindRecoveryActions({ querySelectorAll: () => [btn] });
+    await expect(btn.onclick()).resolves.not.toThrow();
+  });
+});
+
 describe("createOperationFeature — divergent stage rendering", () => {
   test("stage with result divergent renders as op-stage-divergent", () => {
     const feature = createOperationFeature(makeDeps());

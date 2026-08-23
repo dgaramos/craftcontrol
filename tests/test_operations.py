@@ -336,7 +336,10 @@ class TestServerOperationService:
 
         review = next(stage for stage in operation.stages if stage.stage == OperationStage.REVIEW)
         assert operation.state == OperationState.FAILED
-        assert set(review.evidence["invalid_settings"]) == {"MAX_PLAYERS", "DIFFICULTY"}
+        assert review.evidence["invalid_settings"] == {
+            "MAX_PLAYERS": "valor fora do intervalo",
+            "DIFFICULTY": "opção inválida",
+        }
 
     def test_operation_fails_before_apply_when_a_setting_cannot_be_verified(self, tmp_path: Path):
         service = make_service(tmp_path, thread_factory=InlineThread)

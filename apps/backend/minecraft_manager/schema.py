@@ -187,7 +187,12 @@ def validate_value(definition: Field, value: Any) -> str:
             raise ValueError("valor booleano inválido")
         return "true" if value in (True, "true") else "false"
     if kind == "number":
-        number = int(value)
+        if isinstance(value, bool) or isinstance(value, float):
+            raise ValueError("valor numérico inválido")
+        try:
+            number = int(value)
+        except (TypeError, ValueError) as error:
+            raise ValueError("valor numérico inválido") from error
         if number < definition.get("min", number) or number > definition.get("max", number):
             raise ValueError("valor fora do intervalo")
         return str(number)

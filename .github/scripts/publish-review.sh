@@ -8,7 +8,10 @@ readonly resolve_thread_ids_json="${RESOLVE_THREAD_IDS_JSON:-[]}"
 [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]] || { echo "invalid PR number" >&2; exit 1; }
 [[ "$REVIEWED_HEAD_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "invalid reviewed head SHA" >&2; exit 1; }
 expected_app_slug="${EXPECTED_AUTHOR%\[bot\]}"
-[[ "$(gh api app --jq .slug)" == "$expected_app_slug" ]] || { echo "unexpected authenticated app" >&2; exit 1; }
+# Installation tokens cannot call GET /app. This endpoint returns the installation
+# metadata, including the App slug, and is available to the token that will
+# perform the review mutations below.
+[[ "$(gh api installation/repositories --jq .installation.app_slug)" == "$expected_app_slug" ]] || { echo "unexpected authenticated app" >&2; exit 1; }
 case "$REVIEW_EVENT" in APPROVE) expected_state=APPROVED ;; COMMENT) expected_state=COMMENTED ;; REQUEST_CHANGES) expected_state=CHANGES_REQUESTED ;; *) echo "invalid review event" >&2; exit 1 ;; esac
 jq -e 'type == "array" and all(.[]; type == "object" and (.path | type == "string" and length > 0) and (.line | type == "number" and floor == . and . > 0) and (.body | type == "string" and length > 0))' <<<"$inline_comments_json" >/dev/null || { echo "invalid inline_comments_json" >&2; exit 1; }
 jq -e 'type == "array" and all(.[]; type == "object" and (.comment_id | type == "number" and floor == . and . > 0) and (.body | type == "string" and length > 0))' <<<"$replies_json" >/dev/null || { echo "invalid replies_json" >&2; exit 1; }

@@ -111,6 +111,16 @@ describe("createServerFeature", () => {
     expect(deps.state.operationActive).toBe(false);
   });
 
+  test("initializeOperationProgress sets operationActive without requiring renderServer", async () => {
+    const deps = makeDeps();
+    deps.elements["#operation-progress-container"] = makeEl();
+    deps.api = jest.fn()
+      .mockResolvedValueOnce({ operation: { operation_id: "op-2", state: "pending", stages: [] } });
+    const feature = createServerFeature(deps);
+    await feature.initializeOperationProgress();
+    expect(deps.state.operationActive).toBe(true);
+  });
+
   test("returns early without DOM targets and accepts only valid frontend releases", async () => {
     const savedFetch = global.fetch;
     const deps = makeDeps();

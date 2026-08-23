@@ -139,6 +139,8 @@ export function createSettingsFeature({ state, content, t, api, $, escapeHtml, t
       [...persistent, ...live].forEach(([key]) => {
         const element = $(`#field-${key}`);
         if (element) element.disabled = true;
+        const segmented = element?.closest(".segmented");
+        if (segmented) segmented.querySelectorAll(".segment").forEach((btn) => { btn.disabled = true; });
       });
       return;
     }

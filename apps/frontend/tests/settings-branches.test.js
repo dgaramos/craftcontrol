@@ -336,6 +336,18 @@ describe("operation lock", () => {
     expect(gameruleEl.disabled).toBe(true);
   });
 
+  test("bindSettingFields disables segmented-control buttons when operationActive", () => {
+    const deps = makeLockedDeps();
+    const segmentBtn = makeEl();
+    const segmentedContainer = makeEl({ querySelectorAll: jest.fn(() => [segmentBtn]) });
+    const hiddenInput = makeEl({ closest: jest.fn(() => segmentedContainer) });
+    deps.elements["#field-max_players"] = hiddenInput;
+    deps.elements["#field-showcoordinates"] = makeEl();
+    const { bindSettingFields } = createSettingsFeature(deps);
+    bindSettingFields(["G"]);
+    expect(segmentBtn.disabled).toBe(true);
+  });
+
   test("bindSettingFields skips event binding when operationActive", () => {
     const deps = makeLockedDeps();
     const settingsEl = makeEl();

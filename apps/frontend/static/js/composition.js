@@ -211,7 +211,7 @@ export function startApplication() {
   }
 
   async function boot() {
-    const [schema, snapshot, status, releases] = await Promise.all([api("/api/schema"), api("/api/state"), api("/api/status"), api("/api/telemetry-pack").catch(() => ({})), getServerFeature().loadFrontendVersion()]);
+    const [schema, snapshot, status, releases] = await Promise.all([api("/api/schema"), api("/api/state"), api("/api/status"), api("/api/telemetry-pack").catch(() => ({})), getServerFeature().loadFrontendVersion(), getServerFeature().initializeOperationProgress()]);
     state.batch(() => {
       state.schema = schema;
       state.config = snapshot.settings || {};
@@ -236,7 +236,8 @@ export function startApplication() {
   state.subscribe("operationActive", () => {
     if (state.status) setStatus(state.status);
     getSettingsFeature().updateSaveLabel();
-    if (["world", "rules", "server"].includes(state.tab)) refreshActivePanel();
+    if (state.operationActive) $("#changes-drawer").close();
+    if (["world", "rules", "server", "__players__"].includes(state.tab)) refreshActivePanel();
   });
   state.subscribe("locale", applyLocale);
   state.subscribe("config", () => {
@@ -290,6 +291,11 @@ export function startApplication() {
   };
 
   $("#apply-changes").onclick = async () => {
+    if (state.operationActive) {
+      toast(t("operationLocked"), true);
+      $("#changes-drawer").close();
+      return;
+    }
     if (!Object.keys(state.changes).length) return;
     try {
       $("#apply-changes").disabled = true;

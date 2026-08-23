@@ -83,5 +83,5 @@ async function initializeOperationProgress() {
     loadTelemetryPack();
     initializeOperationProgress();
   };
-  return { renderServer, renderReleaseTags, loadFrontendVersion };
+  return { renderServer, renderReleaseTags, loadFrontendVersion, initializeOperationProgress };
 }

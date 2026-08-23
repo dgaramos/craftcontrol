@@ -46,6 +46,35 @@ class InlineThread:
         self._target(*self._args)
 
 
+def wait_for_terminal(
+    service: "ServerOperationService",
+    operation_id: str,
+    timeout: float = 10.0,
+    poll_interval: float = 0.05,
+) -> None:
+    """Poll until the operation reaches a terminal state or the timeout expires.
+
+    Replaces fixed ``time.sleep`` calls so tests are deterministic under CI
+    load: they return as soon as the background thread finishes rather than
+    waiting an arbitrary amount of time.
+    """
+    deadline = time.monotonic() + timeout
+    last_state = None
+    while True:
+        op = service.get_operation(operation_id)
+        if op is not None:
+            last_state = op.state
+            if op.state.is_terminal:
+                return
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise AssertionError(
+                f"Operation {operation_id} did not reach terminal state "
+                f"before timeout; last_state={last_state!r}"
+            )
+        time.sleep(min(poll_interval, remaining))
+
+
 def make_db(tmp_path: Path) -> Path:
     db = tmp_path / "state.db"
     with sqlite3.connect(db) as conn:
@@ -362,8 +391,7 @@ class TestServerOperationService:
         op = service.apply_restart_required({"MAX_PLAYERS": "1"}, apply_fn)
         assert op.operation_id
         assert op.state in {OperationState.PENDING, OperationState.RUNNING}
-        # Wait for background thread
-        time.sleep(2)
+        wait_for_terminal(service, op.operation_id)
         assert len(applied) == 1
         refreshed = service.get_operation(op.operation_id)
         assert refreshed is not None
@@ -397,7 +425,7 @@ class TestServerOperationService:
             raise RuntimeError("disk full")
 
         op = service.apply_restart_required({"MAX_PLAYERS": "1"}, bad_apply)
-        time.sleep(1)
+        wait_for_terminal(service, op.operation_id)
         refreshed = service.get_operation(op.operation_id)
         assert refreshed is not None
         assert refreshed.state == OperationState.FAILED
@@ -409,7 +437,7 @@ class TestServerOperationService:
         docker.execute.side_effect = RuntimeError("container conflict")
         service = make_service(tmp_path, docker=docker, health_timeout=1)
         op = service.apply_restart_required({}, lambda: None)
-        time.sleep(1)
+        wait_for_terminal(service, op.operation_id)
         refreshed = service.get_operation(op.operation_id)
         assert refreshed is not None
         assert refreshed.state == OperationState.FAILED
@@ -421,7 +449,7 @@ class TestServerOperationService:
         docker.execute.return_value = None
         service = make_service(tmp_path, docker=docker, health_timeout=1)
         op = service.apply_restart_required({}, lambda: None)
-        time.sleep(2)
+        wait_for_terminal(service, op.operation_id)
         refreshed = service.get_operation(op.operation_id)
         assert refreshed is not None
         assert refreshed.state == OperationState.FAILED
@@ -433,13 +461,13 @@ class TestServerOperationService:
         broker = MagicMock()
         service = make_service(tmp_path, broker=broker, health_timeout=1)
         op = service.apply_restart_required({}, lambda: None)
-        time.sleep(2)
+        wait_for_terminal(service, op.operation_id)
         assert broker.publish.call_count >= 3
 
     def test_get_latest_returns_most_recent(self, tmp_path: Path):
         service = make_service(tmp_path, health_timeout=1)
         op = service.apply_restart_required({}, lambda: None)
-        time.sleep(2)
+        wait_for_terminal(service, op.operation_id)
         latest = service.get_latest()
         assert latest is not None
         assert latest.operation_id == op.operation_id
@@ -450,7 +478,7 @@ class TestServerOperationService:
         docker.execute.return_value = None
         service = make_service(tmp_path, docker=docker, health_timeout=1)
         op = service.apply_restart_required({}, lambda: None)
-        time.sleep(2)
+        wait_for_terminal(service, op.operation_id)
         refreshed = service.request_reconciliation(op.operation_id)
         assert refreshed is not None
         assert "container_state" in refreshed.observation
@@ -466,7 +494,7 @@ class TestServerOperationService:
     def test_list_recent_returns_operations(self, tmp_path: Path):
         service = make_service(tmp_path, health_timeout=1)
         op = service.apply_restart_required({}, lambda: None)
-        time.sleep(2)
+        wait_for_terminal(service, op.operation_id)
         results = service.list_recent(limit=5)
         assert len(results) >= 1
         assert any(r.operation_id == op.operation_id for r in results)
@@ -480,7 +508,7 @@ class TestServerOperationService:
         service = make_service(tmp_path, docker=docker, broker=broker, health_timeout=1)
         # Trigger the error branch via apply which calls _observe_container during RESTART failure
         op = service.apply_restart_required({}, lambda: None)
-        time.sleep(2)
+        wait_for_terminal(service, op.operation_id)
         refreshed = service.get_operation(op.operation_id)
         assert refreshed is not None
         # Operation fails because health wait uses _observe_container which returns online=False
@@ -519,7 +547,7 @@ class TestServerOperationService:
             health_timeout=1,
         )
         op = service.apply_restart_required({}, lambda: None)
-        time.sleep(1)
+        wait_for_terminal(service, op.operation_id)
         refreshed = service.get_operation(op.operation_id)
         assert refreshed is not None
         assert refreshed.state == OperationState.FAILED
@@ -531,7 +559,7 @@ class TestServerOperationService:
         broker.publish.side_effect = RuntimeError("broker unavailable")
         service = make_service(tmp_path, broker=broker, health_timeout=1)
         op = service.apply_restart_required({}, lambda: None)
-        time.sleep(2)
+        wait_for_terminal(service, op.operation_id)
         # Operation still reaches terminal state despite broker failures
         refreshed = service.get_operation(op.operation_id)
         assert refreshed is not None
@@ -696,7 +724,7 @@ class TestRecoveryAndReconciliation:
         configuration.read_properties.return_value = {"max-players": "20"}
         service = make_service(tmp_path, docker=docker, configuration=configuration, health_timeout=1)
         op = service.apply_restart_required({"MAX_PLAYERS": "20"}, lambda: None)
-        time.sleep(2)
+        wait_for_terminal(service, op.operation_id)
         failed = service.get_operation(op.operation_id)
         assert failed is not None and failed.state == OperationState.FAILED
 
@@ -716,7 +744,7 @@ class TestRecoveryAndReconciliation:
         configuration.read_properties.return_value = {"max-players": "10"}
         service = make_service(tmp_path, docker=docker, configuration=configuration, health_timeout=1)
         op = service.apply_restart_required({"MAX_PLAYERS": "20"}, lambda: None)
-        time.sleep(2)
+        wait_for_terminal(service, op.operation_id)
         failed = service.get_operation(op.operation_id)
         assert failed is not None and failed.state == OperationState.FAILED
 
@@ -749,7 +777,7 @@ class TestRecoveryAndReconciliation:
         configuration.read_properties.return_value = {"max-players": "20"}
         service = make_service(tmp_path, docker=docker, configuration=configuration, health_timeout=1)
         op = service.apply_restart_required({"MAX_PLAYERS": "20"}, lambda: None)
-        time.sleep(2)
+        wait_for_terminal(service, op.operation_id)
         original = service.get_operation(op.operation_id)
         assert original is not None and original.state == OperationState.FAILED
 
@@ -788,7 +816,7 @@ class TestRecoveryAndReconciliation:
         docker.execute.side_effect = RuntimeError("conflict")
         service = make_service(tmp_path, docker=docker, health_timeout=1)
         op = service.apply_restart_required({"MAX_PLAYERS": "20"}, lambda: None)
-        time.sleep(2)
+        wait_for_terminal(service, op.operation_id)
         original = service.get_operation(op.operation_id)
         assert original is not None and original.state == OperationState.FAILED
 
@@ -885,7 +913,7 @@ class TestRecoveryAndReconciliation:
         service = make_service(tmp_path, docker=docker, configuration=configuration, health_timeout=1)
         docker.execute.side_effect = RuntimeError("conflict")
         op = service.apply_restart_required({"MAX_PLAYERS": "20"}, lambda: None)
-        time.sleep(2)
+        wait_for_terminal(service, op.operation_id)
         failed = service.get_operation(op.operation_id)
         assert failed is not None and failed.state == OperationState.FAILED
 

@@ -85,7 +85,7 @@ Invoke with `/skill-name`; use the issue number where indicated.
 | `/start-issue <n>` | Verify metadata, read required context, map files, and create a branch |
 | `/implement` | Implement a prepared issue, run tests, and self-review the diff |
 | `/ship-issue` | Commit, push with confirmation, and open a metadata-complete PR |
-| `/review-pr <n>` | Review a PR or local diff using Claudio DR evidence-first criteria |
+| `/review-pr <n>` | Review a PR or local diff using Claudio DR evidence-first criteria — accepts a PR number, URL, branch name, or commit range |
 | `/handle-pr-findings <n>` | Triage and address CodeRabbit or human review findings |
 | `/create-issue` | Draft a scoped issue with acceptance criteria and required metadata |
 

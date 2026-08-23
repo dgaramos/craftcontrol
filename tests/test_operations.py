@@ -801,6 +801,30 @@ class TestRecoveryAndReconciliation:
         with pytest.raises(ConflictingOperationError):
             service.retry_operation(op.operation_id, lambda: None)
 
+    def test_reconciliation_keeps_failed_when_no_verifiable_changes(self, tmp_path: Path):
+        """request_reconciliation must not confirm an op whose changes have no PROPERTY_NAMES mapping."""
+        docker = MagicMock()
+        docker.status.return_value = {"state": "running", "online": True}
+        docker.execute.side_effect = RuntimeError("conflict")
+        service = make_service(tmp_path, docker=docker, health_timeout=1)
+        # UNKNOWN_KEY is not in PROPERTY_NAMES — review stage would reject this,
+        # but we inject a terminal op directly to simulate an edge-case record.
+        op = ServerOperation.create("test-server", {"UNKNOWN_KEY": "value"})
+        op.start()
+        op.fail_stage(
+            __import__("minecraft_manager.operations.lifecycle", fromlist=["OperationStage"]).OperationStage.REVIEW,
+            "requested changes cannot be verified",
+        )
+        service._repo.save(op)
+
+        docker.status.side_effect = None
+        reconciled = service.request_reconciliation(op.operation_id)
+        assert reconciled is not None
+        # State must remain FAILED — not flipped to CONFIRMED with empty evidence
+        assert reconciled.state == OperationState.FAILED
+        assert "reconciliation_result" in reconciled.observation
+        assert "unverifiable_settings" in reconciled.observation["reconciliation_result"]["evidence"]
+
     def test_parent_operation_id_survives_roundtrip(self, tmp_path: Path):
         """parent_operation_id is persisted and restored correctly."""
         repo = make_repo(tmp_path)

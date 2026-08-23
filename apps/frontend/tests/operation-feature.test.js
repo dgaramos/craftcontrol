@@ -261,6 +261,47 @@ describe("createOperationFeature — initialize and SSE", () => {
     }
   });
 
+  test("onopen does not overwrite currentOperation when SSE event arrives before /latest resolves", async () => {
+    const opFromSSE = makeOperation({ operation_id: "op-sse", state: "confirmed" });
+    const opFromLatest = makeOperation({ operation_id: "op-latest", state: "running" });
+
+    let resolveLatest;
+    const latestPromise = new Promise((resolve) => { resolveLatest = resolve; });
+    const api = jest.fn().mockReturnValue(latestPromise);
+
+    const feature = createOperationFeature(makeDeps({ api }));
+    const callback = jest.fn();
+    feature.setUpdateCallback(callback);
+
+    const listeners = {};
+    let capturedOnopen = null;
+    const mockEventSource = {
+      addEventListener: jest.fn((type, fn) => { listeners[type] = fn; }),
+      onerror: null,
+      set onopen(fn) { capturedOnopen = fn; },
+    };
+    const savedES = global.EventSource;
+    global.EventSource = jest.fn(() => mockEventSource);
+    try {
+      feature.connectStream();
+
+      // Start the onopen handler (it will await loadLatest which is pending)
+      const openPromise = capturedOnopen();
+
+      // SSE event arrives while /latest is still in-flight
+      listeners["operation"]({ data: JSON.stringify(opFromSSE) });
+
+      // Now /latest resolves with an older snapshot
+      resolveLatest({ operation: opFromLatest });
+      await openPromise;
+
+      // The SSE-delivered operation should win; /latest must not overwrite it
+      expect(feature.getOperation().operation_id).toBe("op-sse");
+    } finally {
+      global.EventSource = savedES;
+    }
+  });
+
   test("loadFromStorage rejects a non-UUID stored id without calling api", async () => {
     const api = jest.fn().mockResolvedValue({ operation: null });
     const feature = createOperationFeature(makeDeps({ api }));

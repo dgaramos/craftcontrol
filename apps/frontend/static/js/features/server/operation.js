@@ -49,9 +49,12 @@ export function createOperationFeature({ api, t, escapeHtml, formatDate, uiIcon 
   // ------------------------------------------------------------------
 
   async function loadLatest() {
+    const snapshotBefore = currentOperation;
     try {
       const response = await api("/api/operations/latest");
-      if (response.operation) {
+      // Only apply the REST response if no SSE event updated currentOperation
+      // while the request was in-flight, preserving event-driven freshness.
+      if (response.operation && currentOperation === snapshotBefore) {
         currentOperation = response.operation;
         try { localStorage.setItem(STORAGE_KEY, response.operation.operation_id); } catch (_) { /* storage unavailable */ }
       }

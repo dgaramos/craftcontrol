@@ -282,6 +282,100 @@ class TestSQLiteOperationRepository:
         assert loaded is not None
         assert loaded.state == OperationState.RUNNING
 
+    def test_concurrent_save_last_writer_wins_without_corruption(self, tmp_path: Path):
+        """Two threads saving the same operation concurrently must not corrupt data.
+
+        With BEGIN IMMEDIATE the second thread is blocked until the first
+        commits, ensuring a clean serialised write rather than a lost update.
+        """
+        repo = make_repo(tmp_path)
+        op = ServerOperation.create("srv", {})
+        repo.save(op)
+
+        barrier = threading.Barrier(2)
+        errors: list[Exception] = []
+
+        def writer(state_transition):
+            try:
+                op_local = repo.get(op.operation_id)
+                assert op_local is not None
+                state_transition(op_local)
+                barrier.wait(timeout=5)
+                repo.save(op_local)
+            except Exception as exc:
+                errors.append(exc)
+
+        t1 = threading.Thread(target=writer, args=(lambda o: o.start(),))
+        t2 = threading.Thread(target=writer, args=(lambda o: o.start(),))
+        t1.start()
+        t2.start()
+        t1.join(timeout=10)
+        t2.join(timeout=10)
+
+        assert not errors, errors
+        loaded = repo.get(op.operation_id)
+        assert loaded is not None
+        assert loaded.state == OperationState.RUNNING
+
+    def test_concurrent_update_stage_does_not_clobber_terminal_state(self, tmp_path: Path):
+        """A concurrent update_stage write must not overwrite a terminal state
+        written by another thread that holds the write lock first."""
+        repo = make_repo(tmp_path)
+        op = ServerOperation.create("srv", {})
+        op.start()
+        op.complete_stage(OperationStage.REVIEW, evidence={})
+        repo.save(op)
+
+        barrier = threading.Barrier(2)
+        errors: list[Exception] = []
+
+        def complete_writer():
+            try:
+                op_c = repo.get(op.operation_id)
+                assert op_c is not None
+                op_c.complete_stage(OperationStage.RESTART, evidence={"source": "complete"})
+                barrier.wait(timeout=5)
+                repo.update_stage(op_c, OperationStage.RESTART)
+            except Exception as exc:
+                errors.append(exc)
+
+        def fail_writer():
+            try:
+                op_f = repo.get(op.operation_id)
+                assert op_f is not None
+                op_f.fail_stage(OperationStage.RESTART, error="simulated failure")
+                barrier.wait(timeout=5)
+                repo.update_stage(op_f, OperationStage.RESTART)
+            except Exception as exc:
+                errors.append(exc)
+
+        t1 = threading.Thread(target=complete_writer)
+        t2 = threading.Thread(target=fail_writer)
+        t1.start()
+        t2.start()
+        t1.join(timeout=10)
+        t2.join(timeout=10)
+
+        assert not errors, errors
+        # The database must reflect exactly one of the two outcomes — not a mix.
+        loaded = repo.get(op.operation_id)
+        assert loaded is not None
+        restart_stage = next(
+            (s for s in loaded.stages if s.stage == OperationStage.RESTART), None
+        )
+        assert restart_stage is not None
+        assert restart_stage.result in (StageResult.COMPLETED, StageResult.FAILED)
+        # State and stage result must be coherent: a FAILED stage must not leave
+        # the operation in RUNNING, and a COMPLETED stage must not carry a terminal_error.
+        if restart_stage.result == StageResult.FAILED:
+            assert loaded.state != OperationState.RUNNING, (
+                "operation must not remain RUNNING after a FAILED stage"
+            )
+        else:
+            assert loaded.terminal_error is None, (
+                "operation must not carry a terminal_error after a COMPLETED stage"
+            )
+
 
 # ---------------------------------------------------------------------------
 # Service tests
@@ -697,6 +791,28 @@ class TestLifecycleEdgeCases:
 
 
 class TestRepositoryEdgeCases:
+    def test_write_connect_rolls_back_and_reraises_on_exception(self, tmp_path: Path):
+        """_write_connect must roll back the transaction and re-raise when an
+        exception is raised inside the context, leaving the connection closed."""
+        from minecraft_manager.operations.repository import _write_connect
+
+        db = tmp_path / "ops.db"
+        sentinel = RuntimeError("injected failure")
+        with pytest.raises(RuntimeError, match="injected failure"):
+            with _write_connect(db) as conn:
+                conn.execute(
+                    "CREATE TABLE t (id INTEGER PRIMARY KEY)"
+                )
+                raise sentinel
+
+        # The transaction was rolled back — the table must not exist.
+        import sqlite3
+        with sqlite3.connect(db) as check:
+            tables = check.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='t'"
+            ).fetchall()
+        assert tables == []
+
     def test_update_stage_returns_early_for_missing_stage(self, tmp_path: Path):
         """update_stage is a no-op when the stage is not found in operation.stages."""
         repo = make_repo(tmp_path)

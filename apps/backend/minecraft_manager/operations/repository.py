@@ -18,16 +18,67 @@ from .lifecycle import OperationState, OperationStage, ServerOperation, StageRec
 SQLITE_BUSY_TIMEOUT_MS = 30_000
 
 
-@contextmanager
-def _connect(path: Path) -> Generator[sqlite3.Connection, None, None]:
+def _open(path: Path, *, autocommit: bool = False) -> sqlite3.Connection:
+    """Open a SQLite connection with standard pragmas applied.
+
+    Parameters
+    ----------
+    path:
+        Database file path.  The parent directory is created when absent.
+    autocommit:
+        When ``True`` the connection is opened with ``isolation_level=None``
+        so callers can issue explicit ``BEGIN IMMEDIATE`` / ``COMMIT`` /
+        ``ROLLBACK`` statements without interference from the sqlite3 module's
+        implicit transaction management.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
-    connection = sqlite3.connect(path, timeout=SQLITE_BUSY_TIMEOUT_MS / 1000)
+    kwargs: dict[str, Any] = {"timeout": SQLITE_BUSY_TIMEOUT_MS / 1000}
+    if autocommit:
+        kwargs["isolation_level"] = None
+    connection = sqlite3.connect(path, **kwargs)
     connection.execute(f"PRAGMA busy_timeout={SQLITE_BUSY_TIMEOUT_MS}")
     connection.execute("PRAGMA foreign_keys=ON")
     connection.row_factory = sqlite3.Row
+    return connection
+
+
+@contextmanager
+def _connect(path: Path) -> Generator[sqlite3.Connection, None, None]:
+    """Read-path context manager.  Uses the sqlite3 module's implicit
+    transaction management (DEFERRED begin) — suitable for read-only or
+    idempotent single-statement writes that do not require exclusive access
+    from the start of the transaction."""
+    connection = _open(path)
     try:
         with connection:
             yield connection
+    finally:
+        connection.close()
+
+
+@contextmanager
+def _write_connect(path: Path) -> Generator[sqlite3.Connection, None, None]:
+    """Write-path context manager.
+
+    Opens the connection with ``isolation_level=None`` (autocommit) and
+    immediately issues ``BEGIN IMMEDIATE``.  This gives SQLite an exclusive
+    write lock from the start of the transaction, preventing lost updates when
+    two connections race to read-then-write the same row.
+
+    The isolation_level=None mode is required because Python's sqlite3 module
+    would otherwise inject its own implicit ``BEGIN`` (DEFERRED) before the
+    first DML, which can silently downgrade an explicit ``BEGIN IMMEDIATE``
+    issued inside a ``with connection:`` block on Python 3.12+.
+    """
+    connection = _open(path, autocommit=True)
+    try:
+        connection.execute("BEGIN IMMEDIATE")
+        yield connection
+        connection.execute("COMMIT")
+    except Exception:
+        if connection.in_transaction:
+            connection.execute("ROLLBACK")
+        raise
     finally:
         connection.close()
 
@@ -49,8 +100,7 @@ class SQLiteOperationRepository:
 
     def save(self, operation: ServerOperation) -> None:
         """Insert or fully replace an operation record."""
-        with _connect(self._path) as connection:
-            connection.execute("BEGIN IMMEDIATE")
+        with _write_connect(self._path) as connection:
             self._upsert(connection, operation)
 
     def update_stage(self, operation: ServerOperation, stage: OperationStage) -> None:
@@ -58,8 +108,7 @@ class SQLiteOperationRepository:
         record = next((s for s in operation.stages if s.stage == stage), None)
         if record is None:
             return
-        with _connect(self._path) as connection:
-            connection.execute("BEGIN IMMEDIATE")
+        with _write_connect(self._path) as connection:
             connection.execute(
                 "INSERT INTO operation_stages"
                 "(operation_id, stage, result, started_at, completed_at, evidence, error)"

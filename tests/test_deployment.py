@@ -1,7 +1,14 @@
 from pathlib import Path
+import os
+import shutil
+import subprocess
 
 
 ROOT = Path(__file__).resolve().parents[1]
+BASH = shutil.which("bash")
+
+if BASH is None:
+    raise RuntimeError("bash is required to test the review publisher")
 
 
 def test_component_deploy_canaries_use_the_production_port_default() -> None:
@@ -177,31 +184,72 @@ def test_deploy_command_anchors_compose_and_protects_state() -> None:
 
 
 def test_reviewer_publishers_support_thread_replies_without_creating_a_review() -> None:
+    publisher = (ROOT / ".github" / "scripts" / "publish-review.sh").read_text()
     for name, reviewer in (
         ("publish-cody-review.yml", "cody"),
         ("publish-claudio-review.yml", "claudio"),
     ):
         workflow = (ROOT / ".github" / "workflows" / name).read_text()
-        assert "reply_comment_id:" in workflow
-        assert "reply_body:" in workflow
-        assert "resolve_thread_id:" in workflow
-        assert "reply_comment_id and reply_body must be provided together" in workflow
-        assert "reply mode cannot include review inputs" in workflow
-        assert "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/comments" in workflow
-        assert '-F in_reply_to="$REPLY_COMMENT_ID"' in workflow
-        assert "reply comment does not belong to pr_number" in workflow
-        assert "reply_comment_id must be a top-level review comment, not a reply" in workflow
-        assert "resolve thread does not belong to pr_number" in workflow
-        assert "resolveReviewThread" in workflow
+        assert "inline_comments_json:" in workflow
+        assert "reviewed_head_sha:" in workflow
+        assert "replies_json:" in workflow
+        assert "resolve_thread_ids_json:" in workflow
+        assert "bash .github/scripts/publish-review.sh" in workflow
         assert "permission-pull-requests: write" in workflow
-        assert f"Create a {reviewer.title()} DR installation token" in workflow
+        assert f"{reviewer}-dr[bot]" in workflow
+
+    assert "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/comments" in publisher
+    assert "reply target mismatch" in publisher
+    assert "reply target must be top-level" in publisher
+    assert "resolveReviewThread" in publisher
+    assert "Publication report:" in publisher
+    assert "PR head changed since review" in publisher
+    assert "unexpected authenticated app" in publisher
+
+
+def test_reviewer_publisher_rejects_unexpected_app_before_mutation(tmp_path: Path) -> None:
+    fake_gh = tmp_path / "gh"
+    fake_gh.write_text('#!/usr/bin/env bash\nif [[ "$1" == "api" && "$2" == "app" ]]; then echo wrong-app; exit 0; fi\necho unexpected-gh-call >&2; exit 99\n')
+    fake_gh.chmod(0o755)
+    env = os.environ | {
+        "PATH": f"{tmp_path}:{os.environ['PATH']}",
+        "GH_TOKEN": "test",
+        "GITHUB_REPOSITORY": "owner/repo",
+        "PR_NUMBER": "1",
+        "REVIEW_EVENT": "COMMENT",
+        "REVIEWED_HEAD_SHA": "a" * 40,
+        "EXPECTED_AUTHOR": "cody-dr[bot]",
+        "REVIEW_BODY": "summary",
+    }
+    result = subprocess.run([BASH, ".github/scripts/publish-review.sh"], env=env, capture_output=True, text=True)
+    assert result.returncode != 0
+    assert "unexpected authenticated app" in result.stderr
+
+
+def test_reviewer_publisher_rejects_changed_head_before_mutation(tmp_path: Path) -> None:
+    fake_gh = tmp_path / "gh"
+    fake_gh.write_text('#!/usr/bin/env bash\nif [[ "$1" == "api" && "$2" == "app" ]]; then echo cody-dr; exit 0; fi\nif [[ "$1" == "api" && "$3" == "--jq" ]]; then echo bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb; exit 0; fi\necho unexpected-gh-call >&2; exit 99\n')
+    fake_gh.chmod(0o755)
+    env = os.environ | {
+        "PATH": f"{tmp_path}:{os.environ['PATH']}",
+        "GH_TOKEN": "test",
+        "GITHUB_REPOSITORY": "owner/repo",
+        "PR_NUMBER": "1",
+        "REVIEW_EVENT": "COMMENT",
+        "REVIEWED_HEAD_SHA": "a" * 40,
+        "EXPECTED_AUTHOR": "cody-dr[bot]",
+        "REVIEW_BODY": "summary",
+    }
+    result = subprocess.run([BASH, ".github/scripts/publish-review.sh"], env=env, capture_output=True, text=True)
+    assert result.returncode != 0
+    assert "PR head changed since review" in result.stderr
 
 
 def test_reviewer_skills_dispatch_thread_replies_through_their_apps() -> None:
     cody = (ROOT / ".agents" / "skills" / "review-pr" / "SKILL.md").read_text()
     claudio = (ROOT / ".claude" / "agents" / "review-pr.md").read_text()
     for skill, reviewer in ((cody, "cody-dr"), (claudio, "claudio-dr")):
-        assert "reply_comment_id" in skill
-        assert "reply_body" in skill
-        assert "resolve_thread_id" in skill
+        assert "replies_json" in skill
+        assert "resolve_thread_ids_json" in skill
+        assert "inline_comments_json" in skill
         assert reviewer in skill

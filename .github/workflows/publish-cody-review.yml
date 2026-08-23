@@ -1,123 +1,40 @@
 name: Publish Cody DR review
-
 on:
   workflow_dispatch:
     inputs:
-      pr_number:
-        description: Pull request number
-        required: true
-        type: string
-      event:
-        description: Review event
-        required: true
-        default: REQUEST_CHANGES
-        type: choice
-        options: [REQUEST_CHANGES, COMMENT, APPROVE]
-      review_body:
-        description: Review summary in Markdown
-        required: false
-        type: string
-      comment_path:
-        description: Optional changed-file path for an inline finding
-        required: false
-        type: string
-      comment_line:
-        description: Optional line on the RIGHT side of the diff
-        required: false
-        type: string
-      comment_body:
-        description: Optional inline finding in Markdown
-        required: false
-        type: string
-      reply_comment_id:
-        description: Optional PR review-comment identifier to reply to
-        required: false
-        type: string
-      reply_body:
-        description: Optional reply body for an existing PR review thread
-        required: false
-        type: string
-      resolve_thread_id:
-        description: Optional PR review-thread node identifier to resolve
-        required: false
-        type: string
-
-permissions:
-  contents: read
-
+      pr_number: {description: Pull request number, required: true, type: string}
+      reviewed_head_sha: {description: "Head SHA analyzed by the reviewer", required: true, type: string}
+      event: {description: Review event, required: true, default: REQUEST_CHANGES, type: choice, options: [REQUEST_CHANGES, COMMENT, APPROVE]}
+      review_body: {description: "Review summary in Markdown", required: false, type: string}
+      inline_comments_json: {description: "JSON array of path, line, and body findings", required: false, default: '[]', type: string}
+      replies_json: {description: "JSON array of comment_id and body replies", required: false, default: '[]', type: string}
+      resolve_thread_ids_json: {description: "JSON array of thread node IDs", required: false, default: '[]', type: string}
+permissions: {contents: read}
 jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - name: Create a Cody DR installation token
-        id: cody-token
-        # v3.2.0
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - id: cody-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           client-id: ${{ vars.CODY_DR_CLIENT_ID }}
           private-key: ${{ secrets.CODY_DR_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
           permission-pull-requests: write
-
-      - name: Submit review
+      - name: Submit batched review and thread actions
         env:
           GH_TOKEN: ${{ steps.cody-token.outputs.token }}
           PR_NUMBER: ${{ inputs.pr_number }}
+          REVIEWED_HEAD_SHA: ${{ inputs.reviewed_head_sha }}
           REVIEW_EVENT: ${{ inputs.event }}
           REVIEW_BODY: ${{ inputs.review_body }}
-          COMMENT_PATH: ${{ inputs.comment_path }}
-          COMMENT_LINE: ${{ inputs.comment_line }}
-          COMMENT_BODY: ${{ inputs.comment_body }}
-          REPLY_COMMENT_ID: ${{ inputs.reply_comment_id }}
-          REPLY_BODY: ${{ inputs.reply_body }}
-          RESOLVE_THREAD_ID: ${{ inputs.resolve_thread_id }}
-        run: |
-          set -euo pipefail
-          [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]] || { echo "pr_number must be a positive integer" >&2; exit 1; }
-          supplied_reply_fields=0
-          for value in "$REPLY_COMMENT_ID" "$REPLY_BODY"; do
-            [[ -n "$value" ]] && ((supplied_reply_fields += 1))
-          done
-          [[ "$supplied_reply_fields" -eq 0 || "$supplied_reply_fields" -eq 2 ]] || { echo "reply_comment_id and reply_body must be provided together" >&2; exit 1; }
-          if [[ "$supplied_reply_fields" -eq 2 || -n "$RESOLVE_THREAD_ID" ]]; then
-            [[ -z "$REVIEW_BODY$COMMENT_PATH$COMMENT_LINE$COMMENT_BODY" ]] || { echo "reply mode cannot include review inputs" >&2; exit 1; }
-            if [[ "$supplied_reply_fields" -eq 2 ]]; then
-              [[ "$REPLY_COMMENT_ID" =~ ^[1-9][0-9]*$ ]] || { echo "reply_comment_id must be a positive integer" >&2; exit 1; }
-              expected_pr_url="https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}"
-              actual_pr_url="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/comments/${REPLY_COMMENT_ID}" --jq .pull_request_url)"
-              [[ "$actual_pr_url" == "$expected_pr_url" ]] || { echo "reply comment does not belong to pr_number" >&2; exit 1; }
-              in_reply_to_id="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/comments/${REPLY_COMMENT_ID}" --jq '.in_reply_to_id // empty')"
-              [[ -z "$in_reply_to_id" ]] || { echo "reply_comment_id must be a top-level review comment, not a reply" >&2; exit 1; }
-              gh api --method POST "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/comments" \
-                -f body="$REPLY_BODY" \
-                -F in_reply_to="$REPLY_COMMENT_ID"
-            fi
-            if [[ -n "$RESOLVE_THREAD_ID" ]]; then
-              actual_thread_pr_number="$(gh api graphql -f query='query($thread: ID!) { node(id: $thread) { ... on PullRequestReviewThread { pullRequest { number } } } }' -f thread="$RESOLVE_THREAD_ID" --jq '.data.node.pullRequest.number')"
-              [[ "$actual_thread_pr_number" == "$PR_NUMBER" ]] || { echo "resolve thread does not belong to pr_number" >&2; exit 1; }
-              gh api graphql -f query='mutation($thread: ID!) { resolveReviewThread(input: {threadId: $thread}) { thread { isResolved } } }' -f thread="$RESOLVE_THREAD_ID"
-            fi
-            exit 0
-          fi
-          [[ -n "$REVIEW_BODY" ]] || { echo "review_body is required outside reply mode" >&2; exit 1; }
-          supplied_comment_fields=0
-          for value in "$COMMENT_PATH" "$COMMENT_LINE" "$COMMENT_BODY"; do
-            [[ -n "$value" ]] && ((supplied_comment_fields += 1))
-          done
-          [[ "$supplied_comment_fields" -eq 0 || "$supplied_comment_fields" -eq 3 ]] || { echo "inline comment path, line, and body must be provided together" >&2; exit 1; }
-          [[ "$supplied_comment_fields" -eq 0 || "$COMMENT_LINE" =~ ^[1-9][0-9]*$ ]] || { echo "comment_line must be a positive integer" >&2; exit 1; }
-          head_sha="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq .head.sha)"
-          jq -n \
-            --arg event "$REVIEW_EVENT" \
-            --arg body "$REVIEW_BODY" \
-            --arg commit_id "$head_sha" \
-            --arg path "$COMMENT_PATH" \
-            --arg line "$COMMENT_LINE" \
-            --arg comment "$COMMENT_BODY" \
-            '{event: $event, body: $body, commit_id: $commit_id}
-             + (if $path != "" and $line != "" and $comment != ""
-                then {comments: [{path: $path, line: ($line | tonumber), side: "RIGHT", body: $comment}]}
-                else {}
-                end)' > review.json
-          gh api --method POST "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/reviews" --input review.json
+          INLINE_COMMENTS_JSON: ${{ inputs.inline_comments_json }}
+          REPLIES_JSON: ${{ inputs.replies_json }}
+          RESOLVE_THREAD_IDS_JSON: ${{ inputs.resolve_thread_ids_json }}
+          EXPECTED_AUTHOR: cody-dr[bot]
+        run: bash .github/scripts/publish-review.sh

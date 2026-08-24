@@ -145,6 +145,7 @@ Authenticated installations expose:
 - `/api/openapi.json` — machine-readable contract;
 - `/api/docs` — Swagger UI using the current session;
 - `/api/events` — persisted and live Server-Sent Events.
+- `/api/diagnostics` — owner-only local telemetry and SSE diagnostics; it does not require an observability stack.
 
 Swagger attaches the session-bound CSRF token to unsafe “Try it out” requests and never bypasses role capabilities. There is no arbitrary shell or console endpoint.
 

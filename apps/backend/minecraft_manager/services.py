@@ -99,6 +99,14 @@ class ManagerService:
         snapshot.pop("bootstrap", None)
         return snapshot
 
+    def diagnostics(self) -> dict[str, Any]:
+        broker_diagnostics = getattr(self.broker, "diagnostics", None)
+        return {
+            "telemetry": self.telemetry_service.diagnostics(),
+            "broker": broker_diagnostics() if callable(broker_diagnostics) else {},
+            "runtime_refreshing": self.refreshing,
+        }
+
     # ------------------------------------------------------------------
     # Reconciliation delegates
     # ------------------------------------------------------------------

@@ -41,6 +41,16 @@ describe("createServerFeature", () => {
     expect(deps.elements["#telemetry-pack-state"].textContent).toBe("telemetry unavailable");
   });
 
+  test("renders local diagnostics when the owner panel requests them", async () => {
+    const deps = makeDeps();
+    deps.elements["#diagnostics-state"] = makeEl();
+    deps.api.mockResolvedValue({ telemetry: { accepted: 4, rejected: 1, ingestion_duration_ms_average: 2.5 }, broker: { sse_connections: 3 } });
+    const feature = createServerFeature(deps);
+    await feature.loadDiagnostics();
+    expect(deps.elements["#diagnostics-state"].innerHTML).toContain("telemetryAccepted");
+    expect(deps.elements["#diagnostics-state"].innerHTML).toContain("2.5 ms");
+  });
+
   test("renders release tags with and without frontend version", () => {
     const deps = makeDeps({ state: { frontendVersion: "" } });
     deps.elements["#release-tags"] = makeEl();
@@ -59,7 +69,7 @@ describe("createServerFeature", () => {
     deps.elements["#telemetry-pack-state"] = makeEl({ querySelectorAll: jest.fn(() => [install, disable, rollback]) });
     deps.elements["#release-tags"] = makeEl();
     deps.api = jest.fn()
-      // Initial telemetry pack load and operations/latest (order non-deterministic)
+      // Initial telemetry pack load and operations/latest.
       .mockResolvedValueOnce({ installed: false, enabled: false, health: "", storage_status: "not-required", capabilities: {}, application: {}, installed_version: "", runtime_version: "", source_version: "1" })
       .mockResolvedValueOnce({ operation: null })
       // install button click: restart_required; then telemetry reload; then rollback error
@@ -74,7 +84,7 @@ describe("createServerFeature", () => {
       await new Promise((resolve) => queueMicrotask(resolve));
       expect(deps.elements["#telemetry-pack-state"].innerHTML).toContain("installPack");
       await install.onclick();
-      // confirm returns false — install was skipped; telemetry + operations = 2 initial calls
+      // confirm returns false — install was skipped; telemetry + operations = 2 initial calls.
       expect(deps.api).toHaveBeenCalledTimes(2);
       await disable.onclick();
       expect(deps.toast).toHaveBeenCalledWith("restartPackNotice");

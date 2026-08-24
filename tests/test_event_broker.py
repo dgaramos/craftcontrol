@@ -44,6 +44,15 @@ def test_publish_uses_empty_payload_when_none_given(broker: EventBroker, store: 
     store.record_event.assert_called_once_with("ping", "system", {})
 
 
+def test_diagnostics_reports_topic_counts_without_exposing_payloads(broker: EventBroker) -> None:
+    broker.publish("telemetry.snapshot.finished", "behavior-pack", {"player": "private"})
+    assert broker.diagnostics() == {
+        "events_by_topic": {"telemetry.snapshot.finished": 1},
+        "sse_connections": 0,
+        "sse_connections_total": 0,
+    }
+
+
 def test_publish_delivers_to_active_subscriber(broker: EventBroker) -> None:
     received: list[Event] = []
     done = threading.Event()

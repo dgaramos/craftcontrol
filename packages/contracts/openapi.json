@@ -1319,6 +1319,34 @@
         }
       }
     },
+    "/api/diagnostics": {
+      "get": {
+        "tags": [
+          "Telemetry"
+        ],
+        "operationId": "getDiagnostics",
+        "summary": "Get local telemetry and event-stream diagnostics",
+        "x-craftcontrol-capability": "telemetry.manage",
+        "responses": {
+          "200": {
+            "description": "Process-local diagnostics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonMap"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
     "/api/telemetry-pack/{action}": {
       "post": {
         "tags": [

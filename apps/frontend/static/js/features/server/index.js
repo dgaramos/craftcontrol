@@ -2,7 +2,18 @@ import { createOperationFeature } from "./operation.js";
 
 export function createServerFeature({ state, content, t, api, $, escapeHtml, uiIcon, formatDate, toast, getSettingsFeature }) {
 function telemetryPackMarkup() {
-  return `<section class="telemetry-pack-card block-panel"><div><span class="eyebrow">CRAFTCONTROL</span><h3>${t("telemetryPack")}</h3><p>${t("telemetryPackHelp")}</p></div><div id="telemetry-pack-state" class="telemetry-pack-state">${t("checking")}</div></section>`;
+  return `<section class="telemetry-pack-card block-panel"><div><span class="eyebrow">CRAFTCONTROL</span><h3>${t("telemetryPack")}</h3><p>${t("telemetryPackHelp")}</p></div><div id="telemetry-pack-state" class="telemetry-pack-state">${t("checking")}</div><div id="diagnostics-state" class="telemetry-pack-state"></div></section>`;
+}
+
+async function loadDiagnostics() {
+  const target = $("#diagnostics-state");
+  if (!target) return;
+  try {
+    const result = await api("/api/diagnostics");
+    const telemetry = result.telemetry || {};
+    const broker = result.broker || {};
+    target.innerHTML = `<section class="capability-panel"><div><strong>${t("diagnostics")}</strong><small>${t("diagnosticsHelp")}</small></div><dl><div><dt>${t("telemetryAccepted")}</dt><dd>${escapeHtml(telemetry.accepted || 0)}</dd></div><div><dt>${t("telemetryRejected")}</dt><dd>${escapeHtml(telemetry.rejected || 0)}</dd></div><div><dt>${t("ingestionDuration")}</dt><dd>${escapeHtml(telemetry.ingestion_duration_ms_average || 0)} ms</dd></div><div><dt>${t("sseConnections")}</dt><dd>${escapeHtml(broker.sse_connections || 0)}</dd></div></dl></section>`;
+  } catch (_) { target.textContent = ""; }
 }
 
 async function loadTelemetryPack() {
@@ -85,5 +96,5 @@ async function initializeOperationProgress() {
     loadTelemetryPack();
     initializeOperationProgress();
   };
-  return { renderServer, renderReleaseTags, loadFrontendVersion, initializeOperationProgress };
+  return { renderServer, renderReleaseTags, loadFrontendVersion, initializeOperationProgress, loadDiagnostics };
 }

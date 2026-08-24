@@ -11,6 +11,12 @@ from ..version import STARTED_AT, VERSION
 telemetry_api = Blueprint("telemetry_api", __name__)
 
 
+@telemetry_api.get("/api/diagnostics")
+@require("telemetry.manage")
+def diagnostics():
+    return jsonify(manager().diagnostics())
+
+
 @telemetry_api.get("/api/telemetry-pack")
 def telemetry_pack_status():
     try:

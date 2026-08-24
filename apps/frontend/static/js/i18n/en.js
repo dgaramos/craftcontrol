@@ -77,6 +77,7 @@ export const en = {
     movementSampling: "Distance", snapshotRequests: "Snapshots",
     craftControlImage: "CraftControl image", activeSince: "Active since", packObserved: "Observed pack", packInstalledAt: "Files updated at",
     packHealthTitle: "Pack health", packHealthHelp: "Volume and performance indicators for the active telemetry behavior pack.", eventVolume: "Event volume", sequenceHealth: "Sequence health", noPackHealth: "The telemetry pack is not reporting yet. Install and activate it to see health data.", resetCount: "Resets", lastGap: "Last gap",
+    diagnostics: "Internal diagnostics", diagnosticsHelp: "Live process counters; no external observability service is required.", telemetryAccepted: "Accepted events", telemetryRejected: "Rejected events", ingestionDuration: "Average ingestion", sseConnections: "Active SSE connections",
     behaviorPackEyebrow: "Behavior Pack", statusEyebrow: "Status", volumeEyebrow: "Volume", telemetryEyebrow: "Telemetry",
     opStages: "Operation stages",
     opChanges: "Requested changes",

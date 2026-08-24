@@ -52,11 +52,17 @@ class TestPublishWorkflowEvent:
 
     def test_options_list_contains_only_comment(self) -> None:
         text = CLAUDIO_WORKFLOW.read_text()
-        # Find the options list: options: [COMMENT]
-        match = re.search(r"options:\s*\[([^\]]+)\]", text)
-        assert match is not None, "Could not locate event options list in publish-claudio-review.yml"
-        options_str = match.group(1)
-        options = [o.strip() for o in options_str.split(",")]
+        # Anchor to the event input line to avoid matching unrelated options lists.
+        # The workflow uses inline YAML: event: {... options: [COMMENT]}
+        event_block = re.search(
+            r"\bevent:\s*\{[^}]*options:\s*\[([^\]]+)\]",
+            text,
+        )
+        assert event_block is not None, (
+            "Could not locate the 'event' input options list in publish-claudio-review.yml. "
+            "Expected: event: {... options: [COMMENT] ...}"
+        )
+        options = [o.strip() for o in event_block.group(1).split(",")]
         assert options == ["COMMENT"], (
             "publish-claudio-review.yml must list exactly [COMMENT] as the only "
             "allowed event. APPROVE and REQUEST_CHANGES are human decisions and "
@@ -89,14 +95,17 @@ class TestProfileReviewEventRules:
 
     def test_profile_requires_inline_diff_comments_for_findings(self) -> None:
         text = PROFILE.read_text()
-        assert "inline_comments_json" in text, (
-            "PROFILE.md must name inline_comments_json as the delivery mechanism "
-            "for findings that have a diff location."
+        # inline_comments_json, inline-location condition, and body-text prohibition
+        # must all appear in one coherent rule clause.
+        pattern = (
+            r"inline_comments_json\b[^.]*?"
+            r"(?:not\s+embedded|not\s+as\s+body|not\s+in\s+the\s+body|not\s+embed)"
         )
-        # Must also prohibit body-text findings when an inline location is available.
-        assert re.search(r"not(?:\s+embedded|\s+as\s+body|\s+in\s+the\s+body|\s+embed)", text), (
-            "PROFILE.md must explicitly forbid embedding findings as body text "
-            "when an inline diff location is available."
+        assert re.search(pattern, text, re.DOTALL), (
+            "PROFILE.md must contain a coherent rule clause that names "
+            "inline_comments_json as the delivery mechanism for findings that have "
+            "an inline diff location AND explicitly forbids embedding those findings "
+            "as body text — all within the same rule, not as independent matches."
         )
 
     def test_profile_requires_informational_observations_to_be_non_blocking(self) -> None:
@@ -116,16 +125,17 @@ class TestProfileReviewEventRules:
 
     def test_profile_requires_auth_claims_to_be_grounded_in_real_rules(self) -> None:
         text = PROFILE.read_text()
-        # Must cite the actual auth directory path so reviewers know where to look.
-        assert re.search(r"minecraft_manager/auth/", text), (
-            "PROFILE.md must cite the repository's actual authentication rules path "
-            "(minecraft_manager/auth/) so auth/CSRF claims are grounded in real code, "
-            "not mutation-only assumptions."
+        # minecraft_manager/auth/ path and grounding requirement must appear
+        # together in one coherent rule clause.
+        pattern = (
+            r"minecraft_manager/auth/[^.]*?"
+            r"(?:grounded|real auth rules|actual auth)"
+            r"|(?:grounded|real auth rules|actual auth)[^.]*?minecraft_manager/auth/"
         )
-        # Must require grounding before a claim is included in a finding.
-        assert re.search(r"grounded|real auth rules|actual auth", text), (
-            "PROFILE.md must require auth/CSRF claims to be grounded in the "
-            "repository's real authentication rules before inclusion in any finding."
+        assert re.search(pattern, text, re.DOTALL), (
+            "PROFILE.md must contain a coherent rule clause that cites "
+            "minecraft_manager/auth/ as the real auth rules location AND requires "
+            "auth/CSRF claims to be grounded there before inclusion in any finding."
         )
 
 

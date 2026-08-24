@@ -157,6 +157,18 @@ def open_connection_with_retry(
     retry pressure.  When the budget is exhausted the final failure is recorded
     as a contention failure and re-raised.
     """
+    if not isinstance(max_retries, int) or isinstance(max_retries, bool):
+        raise ValueError(
+            f"max_retries must be an integer; got {type(max_retries).__name__!r}"
+        )
+    if max_retries < 0:
+        raise ValueError(
+            f"max_retries must be >= 0; got {max_retries}"
+        )
+    if max_retries > SQLITE_MAX_RETRIES:
+        raise ValueError(
+            f"max_retries must be <= SQLITE_MAX_RETRIES ({SQLITE_MAX_RETRIES}); got {max_retries}"
+        )
     last_error: sqlite3.OperationalError | None = None
     for attempt in range(max_retries + 1):
         if attempt > 0:

@@ -14,6 +14,7 @@ import pytest
 from unittest.mock import patch
 
 from minecraft_manager._db import (
+    SQLITE_MAX_RETRIES,
     database_size_bytes,
     open_connection,
     open_connection_with_retry,
@@ -443,3 +444,44 @@ def test_diagnostics_retries_is_non_negative(tmp_path: Path) -> None:
     result = sqlite_diagnostics()
     assert "retries" in result, "sqlite_diagnostics must include 'retries'"
     assert result["retries"] >= 0, f"'retries' must be non-negative, got {result['retries']!r}"
+
+
+# ---------------------------------------------------------------------------
+# open_connection_with_retry — max_retries validation
+# ---------------------------------------------------------------------------
+
+
+def test_open_connection_with_retry_rejects_negative_max_retries(tmp_path: Path) -> None:
+    """open_connection_with_retry must raise ValueError for negative max_retries."""
+    path = _initialized_db(tmp_path)
+    with pytest.raises(ValueError, match="max_retries must be >= 0"):
+        open_connection_with_retry(path, lambda conn: None, max_retries=-1)
+
+
+def test_open_connection_with_retry_rejects_oversized_max_retries(tmp_path: Path) -> None:
+    """open_connection_with_retry must raise ValueError when max_retries > SQLITE_MAX_RETRIES."""
+    path = _initialized_db(tmp_path)
+    with pytest.raises(ValueError, match="SQLITE_MAX_RETRIES"):
+        open_connection_with_retry(path, lambda conn: None, max_retries=SQLITE_MAX_RETRIES + 1)
+
+
+def test_open_connection_with_retry_rejects_non_integer_max_retries(tmp_path: Path) -> None:
+    """open_connection_with_retry must raise ValueError for non-integer max_retries."""
+    path = _initialized_db(tmp_path)
+    with pytest.raises(ValueError, match="must be an integer"):
+        open_connection_with_retry(path, lambda conn: None, max_retries=1.5)  # type: ignore[arg-type]
+
+
+def test_open_connection_with_retry_zero_succeeds_without_connecting(tmp_path: Path) -> None:
+    """open_connection_with_retry with max_retries=0 calls executor exactly once (no retries)."""
+    path = _initialized_db(tmp_path)
+    call_count = 0
+
+    def executor(conn: object) -> int:
+        nonlocal call_count
+        call_count += 1
+        return 42
+
+    result = open_connection_with_retry(path, executor, max_retries=0)
+    assert result == 42
+    assert call_count == 1, f"expected 1 call with max_retries=0, got {call_count}"

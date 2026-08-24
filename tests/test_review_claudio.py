@@ -50,16 +50,17 @@ class TestPublishWorkflowEvent:
             "APPROVE and REQUEST_CHANGES are human decisions."
         )
 
-    def test_comment_appears_before_approve_and_request_changes_in_options(self) -> None:
+    def test_options_list_contains_only_comment(self) -> None:
         text = CLAUDIO_WORKFLOW.read_text()
-        # Find the options list: options: [COMMENT, REQUEST_CHANGES, APPROVE]
+        # Find the options list: options: [COMMENT]
         match = re.search(r"options:\s*\[([^\]]+)\]", text)
         assert match is not None, "Could not locate event options list in publish-claudio-review.yml"
         options_str = match.group(1)
         options = [o.strip() for o in options_str.split(",")]
-        assert options[0] == "COMMENT", (
-            "COMMENT must be the first listed option so it is the most visible "
-            f"choice. Current order: {options}."
+        assert options == ["COMMENT"], (
+            "publish-claudio-review.yml must list exactly [COMMENT] as the only "
+            "allowed event. APPROVE and REQUEST_CHANGES are human decisions and "
+            f"must not appear as selectable options. Current options: {options}."
         )
 
 
@@ -69,35 +70,61 @@ class TestProfileReviewEventRules:
 
     def test_profile_forbids_approve_and_request_changes_events(self) -> None:
         text = PROFILE.read_text()
-        assert "APPROVE" in text and "REQUEST_CHANGES" in text, (
-            "PROFILE.md must explicitly name both APPROVE and REQUEST_CHANGES "
-            "in its review event rules section."
+        # Both events must be named in the profile.
+        assert "APPROVE" in text, (
+            "PROFILE.md must explicitly name APPROVE in its review event rules section."
         )
-        # The text must prohibit these events, not just mention them.
-        assert re.search(r"[Nn]ever use[^.]*(?:APPROVE|REQUEST_CHANGES)", text), (
-            "PROFILE.md must explicitly forbid APPROVE and REQUEST_CHANGES "
-            "for Claudio DR reviews."
+        assert "REQUEST_CHANGES" in text, (
+            "PROFILE.md must explicitly name REQUEST_CHANGES in its review event rules section."
+        )
+        # The profile must explicitly forbid BOTH events, not merely mention them.
+        assert re.search(r"[Nn]ever use[^.]*APPROVE", text), (
+            "PROFILE.md must explicitly forbid APPROVE for Claudio DR reviews. "
+            "Approval is a human decision."
+        )
+        assert re.search(r"[Nn]ever use[^.]*REQUEST_CHANGES", text), (
+            "PROFILE.md must explicitly forbid REQUEST_CHANGES for Claudio DR reviews. "
+            "Merge blocking is a human decision."
         )
 
     def test_profile_requires_inline_diff_comments_for_findings(self) -> None:
         text = PROFILE.read_text()
-        assert "inline" in text and "inline_comments_json" in text, (
-            "PROFILE.md must require that findings within the diff are delivered "
-            "as inline diff comments, not as body text."
+        assert "inline_comments_json" in text, (
+            "PROFILE.md must name inline_comments_json as the delivery mechanism "
+            "for findings that have a diff location."
+        )
+        # Must also prohibit body-text findings when an inline location is available.
+        assert re.search(r"not(?:\s+embedded|\s+as\s+body|\s+in\s+the\s+body|\s+embed)", text), (
+            "PROFILE.md must explicitly forbid embedding findings as body text "
+            "when an inline diff location is available."
         )
 
     def test_profile_requires_informational_observations_to_be_non_blocking(self) -> None:
         text = PROFILE.read_text()
-        assert "non-actionable" in text or "Informational observations" in text, (
-            "PROFILE.md must state that informational observations are non-actionable "
-            "and must not appear in merge-risk justification."
+        assert "Informational observations" in text, (
+            "PROFILE.md must name 'Informational observations' as a distinct category."
+        )
+        # Must exclude informational observations from merge-risk justification.
+        assert re.search(r"merge.risk|merge-risk|approval rationale", text), (
+            "PROFILE.md must state that informational observations must not appear "
+            "in the merge-risk justification or approval rationale."
+        )
+        assert re.search(r"non-actionable", text), (
+            "PROFILE.md must label informational observations as non-actionable."
         )
 
     def test_profile_requires_auth_claims_to_be_grounded_in_real_rules(self) -> None:
         text = PROFILE.read_text()
-        assert "auth/" in text or "real auth" in text or "repository's real auth" in text, (
+        # Must cite the actual auth directory path so reviewers know where to look.
+        assert re.search(r"apps/backend/[^\s)]*auth/", text), (
+            "PROFILE.md must cite the repository's actual authentication rules path "
+            "(apps/backend/.../auth/) so auth/CSRF claims are grounded in real code, "
+            "not mutation-only assumptions."
+        )
+        # Must require grounding before a claim is included in a finding.
+        assert re.search(r"grounded|real auth rules|actual auth", text), (
             "PROFILE.md must require auth/CSRF claims to be grounded in the "
-            "repository's actual auth rules before inclusion in a finding."
+            "repository's real authentication rules before inclusion in any finding."
         )
 
 
@@ -143,49 +170,63 @@ class TestDiagnosticsRBAC:
     be denied.
     """
 
+    def _capability_aware_require(self, user: dict, capability: str) -> None:
+        """Raise PermissionError when the user lacks the requested capability.
+
+        Mirrors AuthService.require_capability: grants access only when the
+        user holds '*' (all capabilities) or the exact capability string.
+        """
+        held = set(user.get("capabilities", []))
+        if "*" not in held and capability not in held:
+            raise PermissionError(capability)
+
     def test_operator_receives_403_on_diagnostics(self) -> None:
         app = _make_diagnostics_fixture_app(auth_mode="local")
         auth: MagicMock = app.extensions["auth_service"]
-        auth.authenticate.return_value = {
+        operator_user = {
             "id": "2", "name": "Alex", "role": "operator", "capabilities": [
                 "server.read", "server.configure", "world.manage",
                 "players.manage_permissions", "server.lifecycle.start",
                 "server.lifecycle.restart",
             ],
         }
-        auth.require_capability.side_effect = PermissionError("insufficient permission")
+        auth.authenticate.return_value = operator_user
+        auth.require_capability.side_effect = lambda user, cap: self._capability_aware_require(user, cap)
         with app.test_client() as client:
             resp = client.get("/api/diagnostics")
         assert resp.status_code == 403, (
             "operator role must not access /api/diagnostics "
             f"(got {resp.status_code})"
         )
-        auth.require_capability.assert_called_once()
+        auth.require_capability.assert_called_once_with(operator_user, "telemetry.manage")
 
     def test_viewer_receives_403_on_diagnostics(self) -> None:
         app = _make_diagnostics_fixture_app(auth_mode="local")
         auth: MagicMock = app.extensions["auth_service"]
-        auth.authenticate.return_value = {
+        viewer_user = {
             "id": "3", "name": "Notch", "role": "viewer", "capabilities": ["server.read"],
         }
-        auth.require_capability.side_effect = PermissionError("insufficient permission")
+        auth.authenticate.return_value = viewer_user
+        auth.require_capability.side_effect = lambda user, cap: self._capability_aware_require(user, cap)
         with app.test_client() as client:
             resp = client.get("/api/diagnostics")
         assert resp.status_code == 403, (
             "viewer role must not access /api/diagnostics "
             f"(got {resp.status_code})"
         )
-        auth.require_capability.assert_called_once()
+        auth.require_capability.assert_called_once_with(viewer_user, "telemetry.manage")
 
     def test_owner_receives_200_on_diagnostics(self) -> None:
         app = _make_diagnostics_fixture_app(auth_mode="local")
         auth: MagicMock = app.extensions["auth_service"]
-        auth.authenticate.return_value = {
+        owner_user = {
             "id": "1", "name": "Steve", "role": "owner", "capabilities": ["*"],
         }
-        auth.require_capability.return_value = None
+        auth.authenticate.return_value = owner_user
+        auth.require_capability.side_effect = lambda user, cap: self._capability_aware_require(user, cap)
         with app.test_client() as client:
             resp = client.get("/api/diagnostics")
         assert resp.status_code == 200, (
             f"owner must access /api/diagnostics (got {resp.status_code})"
         )
+        auth.require_capability.assert_called_once_with(owner_user, "telemetry.manage")

@@ -16,7 +16,7 @@ from unittest.mock import patch
 from minecraft_manager._db import sqlite_diagnostics, open_connection
 from minecraft_manager.auth.service import AuthService
 from minecraft_manager.core.repository import StateRepository
-from minecraft_manager.operations.repository import SQLiteOperationRepository, _connect as _ops_connect
+from minecraft_manager.operations.repository import SQLiteOperationRepository, _connect as _ops_connect, _write_connect as _ops_write_connect
 from minecraft_manager.players.repository import SQLitePlayerRepository
 from minecraft_manager.telemetry_repository import SQLiteTelemetryRepository
 from minecraft_manager.migrations import run_migrations, LATEST_SCHEMA_VERSION
@@ -279,3 +279,29 @@ def test_operations_connect_records_contention_failure(tmp_path: Path) -> None:
 
     after = int(sqlite_diagnostics()["contention_failures"])
     assert after > before, "operations._connect did not increment contention_failures counter"
+
+
+def test_operations_write_connect_records_contention_failure(tmp_path: Path) -> None:
+    """operations._write_connect must call _record_contention_failure when OperationalError('locked') is raised."""
+    path = _initialized_db(tmp_path)
+    before = int(sqlite_diagnostics()["contention_failures"])
+
+    locker = _hold_real_connection(path)
+    try:
+        with pytest.raises(sqlite3.OperationalError):
+            with _ops_write_connect(path):
+                raise sqlite3.OperationalError("database is locked")
+    finally:
+        locker.close()
+
+    after = int(sqlite_diagnostics()["contention_failures"])
+    assert after > before, "operations._write_connect did not increment contention_failures counter"
+
+
+def test_operations_write_connect_rollback_on_non_operational_error(tmp_path: Path) -> None:
+    """operations._write_connect must roll back and re-raise non-OperationalError exceptions."""
+    path = _initialized_db(tmp_path)
+
+    with pytest.raises(ValueError, match="unexpected"):
+        with _ops_write_connect(path):
+            raise ValueError("unexpected")

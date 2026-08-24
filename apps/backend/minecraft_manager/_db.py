@@ -21,8 +21,19 @@ from zoneinfo import ZoneInfo
 
 
 SQLITE_BUSY_TIMEOUT_MS = 30_000
-_SQLITE_METRICS = {"connections": 0, "wait_ms_total": 0.0, "wait_ms_max": 0.0, "contention_failures": 0}
+_SQLITE_METRICS = {
+    "connections": 0,
+    "wait_ms_total": 0.0,
+    "wait_ms_max": 0.0,
+    "contention_failures": 0,
+    "retries": 0,
+}
 _SQLITE_METRICS_LOCK = threading.Lock()
+
+#: Maximum number of retry attempts for idempotent read operations.
+SQLITE_MAX_RETRIES = 3
+#: Base delay in seconds between retry attempts (doubles each attempt).
+SQLITE_RETRY_BASE_DELAY_S = 0.05
 
 
 def _record_connection_wait(elapsed_ms: float) -> None:
@@ -44,6 +55,30 @@ def _record_contention_failure() -> None:
         _SQLITE_METRICS["contention_failures"] += 1
 
 
+def _record_retry() -> None:
+    """Increment the shared retry counter.
+
+    Called once per retry attempt by ``open_connection_with_retry`` so that
+    ``sqlite_diagnostics`` exposes cumulative retry pressure across all
+    idempotent manager paths.
+    """
+    with _SQLITE_METRICS_LOCK:
+        _SQLITE_METRICS["retries"] += 1
+
+
+def database_size_bytes(path: Path) -> int | None:
+    """Return the byte size of the SQLite database file at *path*, or ``None``
+    if the file does not exist.
+
+    Only the file size is reported — no file-system path or database contents
+    are exposed through this function.
+    """
+    try:
+        return path.stat().st_size
+    except FileNotFoundError:
+        return None
+
+
 def sqlite_diagnostics() -> dict[str, float | int]:
     with _SQLITE_METRICS_LOCK:
         connections = int(_SQLITE_METRICS["connections"])
@@ -52,6 +87,7 @@ def sqlite_diagnostics() -> dict[str, float | int]:
             "wait_ms_average": round(float(_SQLITE_METRICS["wait_ms_total"]) / connections, 2) if connections else 0,
             "wait_ms_max": round(float(_SQLITE_METRICS["wait_ms_max"]), 2),
             "contention_failures": int(_SQLITE_METRICS["contention_failures"]),
+            "retries": int(_SQLITE_METRICS["retries"]),
         }
 
 ALLOWED_DAILY_FIELDS = frozenset({
@@ -77,6 +113,39 @@ def open_connection(path: Path):
         raise
     finally:
         connection.close()
+
+
+@contextmanager
+def open_connection_with_retry(path: Path, max_retries: int = SQLITE_MAX_RETRIES):
+    """Open a SQLite connection with bounded retries for transient contention.
+
+    Use this only for **idempotent read operations** that are safe to retry
+    without side effects.  Write operations that are not idempotent must use
+    ``open_connection`` directly so that contention fails immediately and never
+    produces duplicate side effects.
+
+    Each transient "locked" or "busy" failure decrements the retry budget and
+    increments the shared ``retries`` counter so diagnostics reflect cumulative
+    retry pressure.  When the budget is exhausted the final failure is recorded
+    as a contention failure and re-raised.
+    """
+    last_error: sqlite3.OperationalError | None = None
+    for attempt in range(max_retries + 1):
+        if attempt > 0:
+            _record_retry()
+            time.sleep(SQLITE_RETRY_BASE_DELAY_S * (2 ** (attempt - 1)))
+        try:
+            with open_connection(path) as conn:
+                yield conn
+                return
+        except sqlite3.OperationalError as error:
+            if "locked" in str(error).lower() or "busy" in str(error).lower():
+                last_error = error
+                continue
+            raise
+    # Budget exhausted — final failure already recorded by open_connection's
+    # except clause; raise to surface the error to the caller.
+    raise last_error  # type: ignore[misc]
 
 
 def temporary_identity(name: str) -> str:

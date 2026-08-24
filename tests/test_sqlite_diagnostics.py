@@ -13,7 +13,12 @@ import pytest
 
 from unittest.mock import patch
 
-from minecraft_manager._db import sqlite_diagnostics, open_connection
+from minecraft_manager._db import (
+    database_size_bytes,
+    open_connection,
+    open_connection_with_retry,
+    sqlite_diagnostics,
+)
 from minecraft_manager.auth.service import AuthService
 from minecraft_manager.core.repository import StateRepository
 from minecraft_manager.operations.repository import SQLiteOperationRepository, _connect as _ops_connect, _write_connect as _ops_write_connect
@@ -139,7 +144,7 @@ def test_diagnostics_keys_are_complete(tmp_path: Path) -> None:
     StateRepository(path).database_schema_version()
 
     result = sqlite_diagnostics()
-    assert set(result.keys()) == {"connections", "wait_ms_average", "wait_ms_max", "contention_failures"}
+    assert set(result.keys()) == {"connections", "wait_ms_average", "wait_ms_max", "contention_failures", "retries"}
 
 
 def test_diagnostics_values_are_non_negative(tmp_path: Path) -> None:
@@ -305,3 +310,135 @@ def test_operations_write_connect_rollback_on_non_operational_error(tmp_path: Pa
     with pytest.raises(ValueError, match="unexpected"):
         with _ops_write_connect(path):
             raise ValueError("unexpected")
+
+
+# ---------------------------------------------------------------------------
+# Issue #279: bounded retry metrics
+# ---------------------------------------------------------------------------
+
+
+def test_open_connection_with_retry_succeeds_without_contention(tmp_path: Path) -> None:
+    """open_connection_with_retry must succeed on a healthy database without incrementing retries."""
+    path = _initialized_db(tmp_path)
+    before_retries = int(sqlite_diagnostics()["retries"])
+
+    with open_connection_with_retry(path) as conn:
+        result = conn.execute("SELECT 1").fetchone()
+
+    assert result == (1,)
+    after_retries = int(sqlite_diagnostics()["retries"])
+    assert after_retries == before_retries, "retries incremented on a non-contended connection"
+
+
+def test_open_connection_with_retry_increments_retries_on_contention(tmp_path: Path) -> None:
+    """open_connection_with_retry must increment the shared retries counter on transient contention."""
+    path = _initialized_db(tmp_path)
+    before_retries = int(sqlite_diagnostics()["retries"])
+    call_count = 0
+
+    original_open = open_connection.__wrapped__ if hasattr(open_connection, "__wrapped__") else None
+
+    # Patch open_connection inside _db to raise on the first call then succeed.
+    import minecraft_manager._db as _db_module
+
+    _original = _db_module.open_connection
+
+    @_db_module.contextmanager
+    def _failing_once(p):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            _db_module._record_contention_failure()
+            raise sqlite3.OperationalError("database is locked")
+        with _original(p) as conn:
+            yield conn
+
+    with patch.object(_db_module, "open_connection", _failing_once):
+        with open_connection_with_retry(path) as conn:
+            conn.execute("SELECT 1").fetchone()
+
+    after_retries = int(sqlite_diagnostics()["retries"])
+    assert after_retries > before_retries, "retries counter was not incremented after transient contention"
+
+
+def test_open_connection_with_retry_exhausts_budget_and_raises(tmp_path: Path) -> None:
+    """open_connection_with_retry must raise after exhausting all retry attempts."""
+    path = _initialized_db(tmp_path)
+    before_retries = int(sqlite_diagnostics()["retries"])
+
+    import minecraft_manager._db as _db_module
+
+    @_db_module.contextmanager
+    def _always_locked(p):
+        _db_module._record_contention_failure()
+        raise sqlite3.OperationalError("database is locked")
+        yield  # make it a generator
+
+    with patch.object(_db_module, "open_connection", _always_locked):
+        with pytest.raises(sqlite3.OperationalError, match="locked"):
+            with open_connection_with_retry(path, max_retries=2) as _conn:
+                pass
+
+    after_retries = int(sqlite_diagnostics()["retries"])
+    assert after_retries >= before_retries + 2, (
+        "retries counter must reflect at least 2 retry attempts after budget exhaustion"
+    )
+
+
+def test_open_connection_with_retry_does_not_retry_non_contention_error(tmp_path: Path) -> None:
+    """open_connection_with_retry must not retry errors that are not locked/busy."""
+    path = _initialized_db(tmp_path)
+    before_retries = int(sqlite_diagnostics()["retries"])
+
+    import minecraft_manager._db as _db_module
+
+    @_db_module.contextmanager
+    def _schema_error(p):
+        raise sqlite3.OperationalError("no such table: nonexistent")
+        yield
+
+    with patch.object(_db_module, "open_connection", _schema_error):
+        with pytest.raises(sqlite3.OperationalError, match="no such table"):
+            with open_connection_with_retry(path) as _conn:
+                pass
+
+    after_retries = int(sqlite_diagnostics()["retries"])
+    assert after_retries == before_retries, "retries must not increment for non-contention errors"
+
+
+# ---------------------------------------------------------------------------
+# Issue #279: database size reporting
+# ---------------------------------------------------------------------------
+
+
+def test_database_size_bytes_returns_positive_for_existing_db(tmp_path: Path) -> None:
+    """database_size_bytes must return a positive integer for an existing database."""
+    path = _initialized_db(tmp_path)
+    size = database_size_bytes(path)
+    assert size is not None, "expected a size value for an existing database"
+    assert size > 0, f"expected positive size, got {size}"
+
+
+def test_database_size_bytes_returns_none_for_missing_db(tmp_path: Path) -> None:
+    """database_size_bytes must return None when the database file does not exist."""
+    path = tmp_path / "nonexistent.db"
+    assert not path.exists()
+    size = database_size_bytes(path)
+    assert size is None, f"expected None for a missing database, got {size!r}"
+
+
+def test_database_size_bytes_does_not_expose_path(tmp_path: Path) -> None:
+    """database_size_bytes must return only a numeric byte count, never a path string."""
+    path = _initialized_db(tmp_path)
+    result = database_size_bytes(path)
+    assert isinstance(result, int), f"expected int, got {type(result).__name__}"
+
+
+def test_diagnostics_retries_is_non_negative(tmp_path: Path) -> None:
+    """sqlite_diagnostics must always include a non-negative 'retries' key."""
+    path = _initialized_db(tmp_path)
+    StateRepository(path).database_schema_version()
+
+    result = sqlite_diagnostics()
+    assert "retries" in result, "sqlite_diagnostics must include 'retries'"
+    assert result["retries"] >= 0, f"'retries' must be non-negative, got {result['retries']!r}"

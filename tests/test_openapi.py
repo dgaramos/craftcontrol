@@ -102,6 +102,13 @@ def test_spec_is_openapi_31_with_cookie_and_csrf_security(openapi_specs) -> None
     assert csrf["required"]
 
 
+def test_operation_pagination_documents_bad_request_response(openapi_specs) -> None:
+    spec, _ = openapi_specs
+    assert spec["paths"]["/api/operations"]["get"]["responses"]["400"] == {
+        "$ref": "#/components/responses/BadRequest"
+    }
+
+
 def test_spec_methods_match_every_application_api_route(openapi_specs) -> None:
     spec, surface = openapi_specs
     expected = {

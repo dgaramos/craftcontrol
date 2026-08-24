@@ -263,8 +263,18 @@ class TestSQLiteOperationRepository:
             op = ServerOperation.create("srv", {})
             op.created_at = float(i)
             repo.save(op)
-        ops = repo.list_recent("srv", limit=2)
-        assert len(ops) == 2
+        ops, total = repo.list_recent("srv", limit=2, page=2)
+        assert total == 3
+        assert len(ops) == 1
+        assert ops[0].created_at == 0
+
+    def test_list_recent_returns_total_for_an_empty_page(self, tmp_path: Path):
+        repo = make_repo(tmp_path)
+        op = ServerOperation.create("srv", {})
+        repo.save(op)
+        ops, total = repo.list_recent("srv", limit=2, page=2)
+        assert total == 1
+        assert ops == []
 
     def test_returns_none_for_missing(self, tmp_path: Path):
         repo = make_repo(tmp_path)
@@ -652,8 +662,15 @@ class TestServerOperationService:
         op = service.apply_restart_required({}, lambda: None)
         wait_for_terminal(service, op.operation_id)
         results = service.list_recent(limit=5)
-        assert len(results) >= 1
-        assert any(r.operation_id == op.operation_id for r in results)
+        assert results["total"] >= 1
+        assert any(r.operation_id == op.operation_id for r in results["operations"])
+
+    def test_list_recent_rejects_invalid_pagination(self, tmp_path: Path):
+        service = make_service(tmp_path)
+        with pytest.raises(ValueError, match="limit"):
+            service.list_recent(limit=0)
+        with pytest.raises(ValueError, match="page"):
+            service.list_recent(page=0)
 
     def test_observe_container_error_branch(self, tmp_path: Path):
         """_observe_container catches docker.status() exceptions and returns error dict."""

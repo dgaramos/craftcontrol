@@ -113,8 +113,19 @@ class ServerOperationService:
     def get_active(self) -> ServerOperation | None:
         return self._repo.get_active(self._server_id)
 
-    def list_recent(self, limit: int = 10) -> list[ServerOperation]:
-        return self._repo.list_recent(self._server_id, limit)
+    def list_recent(self, limit: int = 10, page: int = 1) -> dict[str, Any]:
+        if not 1 <= limit <= 100:
+            raise ValueError("limit must be between 1 and 100")
+        if page < 1:
+            raise ValueError("page must be at least 1")
+        operations, total = self._repo.list_recent(self._server_id, limit, page)
+        return {
+            "operations": operations,
+            "page": page,
+            "page_size": limit,
+            "total": total,
+            "pages": max(1, (total + limit - 1) // limit),
+        }
 
     def request_reconciliation(self, operation_id: str) -> ServerOperation | None:
         """Re-observe Bedrock for a terminal operation and update its outcome.

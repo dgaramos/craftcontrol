@@ -503,11 +503,24 @@ def test_get_operation_by_id_returns_404_when_not_found(op_client, op_service: M
 def test_list_operations_returns_recent_list(op_client, op_service: MagicMock) -> None:
     from minecraft_manager.operations.lifecycle import ServerOperation
     ops = [ServerOperation.create("default", {"difficulty": "hard"})]
-    op_service.operation_service.list_recent.return_value = ops
-    resp = op_client.get("/api/operations")
+    op_service.operation_service.list_recent.return_value = {
+        "operations": ops, "page": 2, "page_size": 1, "total": 2, "pages": 2,
+    }
+    resp = op_client.get("/api/operations?page=2&limit=1")
     assert resp.status_code == 200
     data = resp.get_json()
     assert len(data["operations"]) == 1
+    assert data["page"] == 2
+    assert data["page_size"] == 1
+    assert data["total"] == 2
+    assert data["pages"] == 2
+    op_service.operation_service.list_recent.assert_called_once_with(page=2, limit=1)
+
+
+@pytest.mark.parametrize("query", ("?page=0", "?page=nope", "?limit=0", "?limit=101"))
+def test_list_operations_rejects_invalid_pagination(op_client, query: str) -> None:
+    resp = op_client.get(f"/api/operations{query}")
+    assert resp.status_code == 400
 
 
 def test_stream_operations_returns_event_stream(op_client, op_service: MagicMock) -> None:

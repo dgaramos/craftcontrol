@@ -56,8 +56,23 @@ def get_operation(operation_id: str):
 @operations_api.get("/api/operations")
 @require("server.configure")
 def list_operations():
-    ops = _op_service().list_recent()
-    return jsonify(operations=[op.as_dict() for op in ops]), 200
+    try:
+        page = int(request.args.get("page", "1"))
+        limit = int(request.args.get("limit", "10"))
+        if page < 1:
+            raise ValueError("page must be at least 1")
+        if not 1 <= limit <= 100:
+            raise ValueError("limit must be between 1 and 100")
+        result = _op_service().list_recent(page=page, limit=limit)
+    except ValueError as error:
+        return jsonify(error=str(error)), 400
+    return jsonify(
+        operations=[op.as_dict() for op in result["operations"]],
+        page=result["page"],
+        page_size=result["page_size"],
+        total=result["total"],
+        pages=result["pages"],
+    ), 200
 
 
 @operations_api.get("/api/operations/stream")

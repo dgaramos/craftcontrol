@@ -208,14 +208,18 @@ class SQLiteOperationRepository:
                 return None
             return self._load(connection, dict(row))
 
-    def list_recent(self, server_id: str, limit: int = 10) -> list[ServerOperation]:
+    def list_recent(self, server_id: str, limit: int = 10, page: int = 1) -> tuple[list[ServerOperation], int]:
+        offset = (page - 1) * limit
         with _connect(self._path) as connection:
+            total = int(connection.execute(
+                "SELECT count(*) FROM server_operations WHERE server_id=?", (server_id,)
+            ).fetchone()[0])
             rows = connection.execute(
                 "SELECT * FROM server_operations WHERE server_id=?"
-                " ORDER BY created_at DESC LIMIT ?",
-                (server_id, limit),
+                " ORDER BY created_at DESC, operation_id DESC LIMIT ? OFFSET ?",
+                (server_id, limit, offset),
             ).fetchall()
-            return [self._load(connection, dict(row)) for row in rows]
+            return [self._load(connection, dict(row)) for row in rows], total
 
     # ------------------------------------------------------------------
     # Internal

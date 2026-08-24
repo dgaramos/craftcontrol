@@ -21,6 +21,13 @@
 #identity { display: flex; align-items: center; gap: 8px; }
 #identity small { text-transform: uppercase; color: #91aa98; }
 #identity button { display: inline-flex; align-items: center; min-height: 38px; }
+#account-dialog { width: min(calc(100% - 32px), 430px); padding: 0; color: inherit; background: transparent; border: 0; }
+#account-dialog::backdrop { background: rgba(8, 12, 10, .74); }
+.account-card { display: grid; gap: 14px; padding: 24px; }
+.account-card h2 { margin: 4px 0 0; }
+.account-card label { display: grid; gap: 7px; font-weight: 700; }
+.account-card input { min-height: 48px; padding: 0 12px; font: inherit; border: 2px solid #526258; background: #111814; color: #fff; }
+.account-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 @media (max-width: 620px) {
   #identity { gap: 0; }
   #identity > span, #identity > small, #identity button > span { display: none; }

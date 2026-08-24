@@ -46,6 +46,51 @@ def test_login_logout_and_alias_identity(auth_db) -> None:
     assert auth.authenticate(second_session) is not None
 
 
+def test_change_password_rotates_current_session_and_revokes_existing_sessions(auth_db) -> None:
+    path, auth = auth_db
+    invitation = auth.create_invitation("Nicole", "operator")
+    current_session, _ = auth.claim("Nicole", invitation, "a sufficiently long password")
+    other_session, _ = auth.login("Nicole", "a sufficiently long password")
+
+    rotated_session, user = auth.change_password(
+        current_session, "a sufficiently long password", "a different secure password",
+    )
+
+    assert user["name"] == "Nicole"
+    assert rotated_session != current_session
+    assert auth.authenticate(current_session) is None
+    assert auth.authenticate(other_session) is None
+    assert auth.authenticate(rotated_session) is not None
+    with pytest.raises(ValueError, match="invalid credentials"):
+        auth.login("Nicole", "a sufficiently long password")
+    replacement_session, _ = auth.login("Nicole", "a different secure password")
+    assert auth.authenticate(replacement_session) is not None
+
+
+def test_change_password_rejects_invalid_current_password_without_state_changes(auth_db) -> None:
+    path, auth = auth_db
+    invitation = auth.create_invitation("Nicole", "viewer")
+    session, _ = auth.claim("Nicole", invitation, "a sufficiently long password")
+
+    with pytest.raises(ValueError, match="current password is incorrect"):
+        auth.change_password(session, "wrong password", "a different secure password")
+
+    assert auth.authenticate(session) is not None
+    replacement_session, _ = auth.login("Nicole", "a sufficiently long password")
+    assert auth.authenticate(replacement_session) is not None
+
+
+def test_change_password_rejects_an_oversized_current_password(auth_db) -> None:
+    path, auth = auth_db
+    invitation = auth.create_invitation("Nicole", "viewer")
+    session, _ = auth.claim("Nicole", invitation, "a sufficiently long password")
+
+    with pytest.raises(ValueError, match="8 to 128"):
+        auth.change_password(session, "x" * 129, "a different secure password")
+
+    assert auth.authenticate(session) is not None
+
+
 def test_authentication_throttles_session_writes(auth_db) -> None:
     path, auth = auth_db
     auth.idle_seconds = 120
@@ -213,6 +258,34 @@ def test_csrf_tokens_cannot_be_reused_across_sessions(auth_db) -> None:
     second, _ = auth.login("Nicole", "a sufficiently long password")
     assert auth.csrf_token(first) != auth.csrf_token(second)
     assert not auth.verify_csrf(second, auth.csrf_token(first))
+
+
+def test_http_password_change_requires_csrf_and_rotates_cookie_session(auth_db) -> None:
+    path, auth = auth_db
+    invitation = auth.create_invitation("Nicole", "operator")
+    app = Flask(__name__)
+    install_auth(app, auth, "local", secure_cookie=False)
+    app.register_blueprint(auth_api)
+    client = app.test_client()
+    claim = client.post("/api/auth/claim", json={
+        "player": "Nicole", "token": invitation, "password": "a sufficiently long password",
+    })
+    csrf_token = claim.get_json()["csrf_token"]
+    old_cookie = claim.headers["Set-Cookie"].split(";", 1)[0].split("=", 1)[1]
+
+    assert client.put("/api/auth/password", json={
+        "current_password": "a sufficiently long password", "new_password": "a different secure password",
+    }).status_code == 403
+    response = client.put("/api/auth/password", headers={"X-CSRF-Token": csrf_token}, json={
+        "current_password": "a sufficiently long password", "new_password": "a different secure password",
+    })
+
+    assert response.status_code == 200
+    new_cookie = response.headers["Set-Cookie"].split(";", 1)[0].split("=", 1)[1]
+    assert new_cookie != old_cookie
+    assert auth.authenticate(old_cookie) is None
+    assert auth.authenticate(new_cookie) is not None
+    assert response.get_json()["csrf_token"] != csrf_token
 
 
 def test_expired_session_is_rejected_before_csrf_validation(auth_db) -> None:

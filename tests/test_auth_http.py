@@ -86,6 +86,25 @@ def test_claim_returns_400_on_invalid_token(client, auth: MagicMock) -> None:
 
 
 # ---------------------------------------------------------------------------
+# /api/auth/password
+# ---------------------------------------------------------------------------
+
+def test_change_password_returns_rotated_session(client, auth: MagicMock) -> None:
+    auth.change_password.return_value = ("new-token", {"id": "1", "name": "VonCrush", "role": "owner", "capabilities": ["*"]})
+    resp = client.put("/api/auth/password", json={"current_password": "currentpass", "new_password": "newpassword"})
+    assert resp.status_code == 200
+    auth.change_password.assert_called_once_with("", "currentpass", "newpassword")
+    assert "craftcontrol_session=new-token" in resp.headers["Set-Cookie"]
+
+
+def test_change_password_returns_400_for_invalid_current_password(client, auth: MagicMock) -> None:
+    auth.change_password.side_effect = ValueError("current password is incorrect")
+    resp = client.put("/api/auth/password", json={"current_password": "wrong", "new_password": "newpassword"})
+    assert resp.status_code == 400
+    assert resp.get_json()["error"] == "current password is incorrect"
+
+
+# ---------------------------------------------------------------------------
 # /api/auth/access — access_list
 # ---------------------------------------------------------------------------
 

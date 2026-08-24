@@ -227,6 +227,8 @@ docker compose -f docker-compose.split.yml exec craftcontrol-backend \
 
 Owners generate invitation or recovery codes from an individual player profile. Codes expire after 15 minutes, work once, and are stored only as hashes. Passwords use salted `scrypt`; opaque server-side sessions have idle and absolute expiration. Every authenticated mutation requires a CSRF token tied to the exact session and a valid same-origin request.
 
+Authenticated users can change their own password from the account control. CraftControl verifies the current password, revokes the account's existing sessions, and issues a fresh session only to the browser completing the change.
+
 See [Local authentication and authorization](docs/authentication.md).
 
 ## Player data and analytics

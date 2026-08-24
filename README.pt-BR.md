@@ -228,6 +228,8 @@ docker compose -f docker-compose.split.yml exec craftcontrol-backend \
 
 Proprietários geram códigos de convite ou recuperação a partir do perfil individual de um jogador. Códigos expiram em 15 minutos, funcionam uma vez e são armazenados apenas como hashes. Senhas usam `scrypt` com salt; sessões opacas no servidor têm expiração ociosa e absoluta. Toda mutação autenticada exige token CSRF associado à sessão exata e requisição válida de mesma origem.
 
+Usuários autenticados podem alterar a própria senha pelo controle da conta. O CraftControl verifica a senha atual, revoga as sessões existentes da conta e emite uma sessão nova somente para o navegador que concluiu a alteração.
+
 Veja [Autenticação e autorização locais](docs/authentication.md).
 
 ## Dados de jogadores e análises

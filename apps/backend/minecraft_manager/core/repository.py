@@ -56,8 +56,9 @@ class StateRepository:
         if destination.exists():
             return destination
         started = time.perf_counter()
-        backup = sqlite3.connect(destination)
+        backup = sqlite3.connect(destination, timeout=SQLITE_BUSY_TIMEOUT_MS / 1000)
         _record_connection_wait((time.perf_counter() - started) * 1000)
+        backup.execute(f"PRAGMA busy_timeout={SQLITE_BUSY_TIMEOUT_MS}")
         try:
             connection.backup(backup)
         finally:

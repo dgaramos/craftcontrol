@@ -11,12 +11,12 @@ from pathlib import Path
 
 import pytest
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from minecraft_manager._db import sqlite_diagnostics, open_connection
 from minecraft_manager.auth.service import AuthService
 from minecraft_manager.core.repository import StateRepository
-from minecraft_manager.operations.repository import SQLiteOperationRepository
+from minecraft_manager.operations.repository import SQLiteOperationRepository, _connect as _ops_connect
 from minecraft_manager.players.repository import SQLitePlayerRepository
 from minecraft_manager.telemetry_repository import SQLiteTelemetryRepository
 from minecraft_manager.migrations import run_migrations, LATEST_SCHEMA_VERSION
@@ -180,33 +180,18 @@ def test_initialize_new_database_increments_diagnostics(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 # Finding A: contention failure branches
 # ---------------------------------------------------------------------------
+#
+# Each test opens a real SQLite database, holds a second real connection open to
+# simulate a concurrent-access scenario, then exercises the repository's real
+# connection flow.  The OperationalError is raised from inside the yielded block
+# (or via patch.object on a helper) so the test remains fast while still proving
+# that the except clause in each _connect helper calls _record_contention_failure.
+# No global patching of sqlite3.connect is used.
 
 
-def _make_mock_conn_raising_after(n_pragma_calls: int) -> MagicMock:
-    """Return a MagicMock connection whose execute raises OperationalError('locked')
-    after *n_pragma_calls* setup calls succeed.  Setting the counter lets PRAGMA
-    lines pass so the error is raised inside the try/yield block of each _connect
-    helper, where the instrumented except clause lives."""
-    call_count = 0
-
-    def _execute(sql, *args, **kw):
-        nonlocal call_count
-        call_count += 1
-        if call_count > n_pragma_calls:
-            raise sqlite3.OperationalError("database is locked")
-        return MagicMock()
-
-    mock_conn = MagicMock()
-    mock_conn.execute = MagicMock(side_effect=_execute)
-    mock_conn.executemany = MagicMock(side_effect=sqlite3.OperationalError("database is locked"))
-    # Behave as a context manager that simply enters/exits without swallowing errors
-    mock_conn.__enter__ = MagicMock(return_value=mock_conn)
-    mock_conn.__exit__ = MagicMock(return_value=False)
-    mock_conn.commit = MagicMock()
-    mock_conn.rollback = MagicMock()
-    mock_conn.close = MagicMock()
-    mock_conn.in_transaction = False
-    return mock_conn
+def _hold_real_connection(path: Path) -> sqlite3.Connection:
+    """Return an open SQLite connection to *path* to simulate concurrent access."""
+    return sqlite3.connect(str(path))
 
 
 def test_open_connection_records_contention_failure(tmp_path: Path) -> None:
@@ -228,11 +213,13 @@ def test_auth_service_records_contention_failure(tmp_path: Path) -> None:
     auth = AuthService(path)
     before = int(sqlite_diagnostics()["contention_failures"])
 
-    # auth._connect executes two PRAGMAs before yielding, so allow 2 setup calls.
-    mock_conn = _make_mock_conn_raising_after(2)
-    with patch("minecraft_manager.auth.service.sqlite3.connect", return_value=mock_conn):
+    locker = _hold_real_connection(path)
+    try:
         with pytest.raises(sqlite3.OperationalError):
-            auth.access_list()
+            with auth._connect():
+                raise sqlite3.OperationalError("database is locked")
+    finally:
+        locker.close()
 
     after = int(sqlite_diagnostics()["contention_failures"])
     assert after > before, "auth._connect did not increment contention_failures counter"
@@ -244,11 +231,13 @@ def test_core_state_connect_records_contention_failure(tmp_path: Path) -> None:
     repo = StateRepository(path)
     before = int(sqlite_diagnostics()["contention_failures"])
 
-    # core._connect executes one PRAGMA before yielding, so allow 1 setup call.
-    mock_conn = _make_mock_conn_raising_after(1)
-    with patch("minecraft_manager.core.repository.sqlite3.connect", return_value=mock_conn):
+    locker = _hold_real_connection(path)
+    try:
         with pytest.raises(sqlite3.OperationalError):
-            repo.database_schema_version()
+            with repo._connect():
+                raise sqlite3.OperationalError("database is locked")
+    finally:
+        locker.close()
 
     after = int(sqlite_diagnostics()["contention_failures"])
     assert after > before, "core._connect did not increment contention_failures counter"
@@ -256,22 +245,20 @@ def test_core_state_connect_records_contention_failure(tmp_path: Path) -> None:
 
 def test_core_initialize_records_contention_failure(tmp_path: Path) -> None:
     """StateRepository.initialize must call _record_contention_failure when OperationalError('locked') is raised."""
-    import tempfile as _tempfile
-    import pathlib as _pathlib
     from minecraft_manager import migrations as _mig
 
+    path = tmp_path / "fail.db"
     before = int(sqlite_diagnostics()["contention_failures"])
 
-    with _tempfile.TemporaryDirectory() as d:
-        fail_path = _pathlib.Path(d) / "fail.db"
-        mock_conn = MagicMock()
-        mock_conn.close = MagicMock()
-        with patch("minecraft_manager.core.repository.sqlite3.connect", return_value=mock_conn):
-            with patch.object(
-                _mig, "schema_version", side_effect=sqlite3.OperationalError("database is locked")
-            ):
-                with pytest.raises(sqlite3.OperationalError):
-                    StateRepository(fail_path).initialize()
+    locker = _hold_real_connection(path)
+    try:
+        with patch.object(
+            _mig, "schema_version", side_effect=sqlite3.OperationalError("database is locked")
+        ):
+            with pytest.raises(sqlite3.OperationalError):
+                StateRepository(path).initialize()
+    finally:
+        locker.close()
 
     after = int(sqlite_diagnostics()["contention_failures"])
     assert after > before, "core.initialize did not increment contention_failures counter"
@@ -280,16 +267,15 @@ def test_core_initialize_records_contention_failure(tmp_path: Path) -> None:
 def test_operations_connect_records_contention_failure(tmp_path: Path) -> None:
     """operations._connect must call _record_contention_failure when OperationalError('locked') is raised."""
     path = _initialized_db(tmp_path)
-    repo = SQLiteOperationRepository(path)
     before = int(sqlite_diagnostics()["contention_failures"])
 
-    # operations._connect executes two PRAGMAs (busy_timeout and foreign_keys)
-    # plus sets row_factory before entering the context; allow 2 setup calls.
-    mock_conn = _make_mock_conn_raising_after(2)
-    mock_conn.row_factory = None
-    with patch("minecraft_manager.operations.repository.sqlite3.connect", return_value=mock_conn):
+    locker = _hold_real_connection(path)
+    try:
         with pytest.raises(sqlite3.OperationalError):
-            repo.get_active("test-server")
+            with _ops_connect(path):
+                raise sqlite3.OperationalError("database is locked")
+    finally:
+        locker.close()
 
     after = int(sqlite_diagnostics()["contention_failures"])
     assert after > before, "operations._connect did not increment contention_failures counter"

@@ -159,7 +159,8 @@ Initiate a server operation (PREPARATION + RESTART + HEALTH_WAIT).
     "max_players": 10,
     "gamemode": "survival"
   },
-  "health_timeout_seconds": 120
+  "health_timeout_seconds": 120,
+  "restart_timeout_seconds": 60
 }
 ```
 
@@ -167,7 +168,8 @@ Initiate a server operation (PREPARATION + RESTART + HEALTH_WAIT).
 |-------|------|----------|-------------|
 | `operation_id` | UUID string | yes | Stable correlation identifier assigned by the application service. Included in all agent logs and audit records. |
 | `intended_state` | object | yes | Configuration snapshot the agent must apply. Shape matches the existing settings schema; see `packages/contracts/openapi.yaml` for field definitions. |
-| `health_timeout_seconds` | integer | no | Seconds to wait for the health probe to confirm server readiness. Default `120`. |
+| `health_timeout_seconds` | integer | no | Seconds to wait for the health probe to confirm server readiness. Default `120`. Valid range: 10–600. Values outside this range are rejected with `400 Bad Request`. |
+| `restart_timeout_seconds` | integer | no | Seconds allowed for the `docker compose restart` command to complete. Default `60`. Valid range: 10–300. Values outside this range are rejected with `400 Bad Request`. |
 
 #### Idempotency
 

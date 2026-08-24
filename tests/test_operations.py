@@ -1103,6 +1103,110 @@ class TestRecoveryAndReconciliation:
         assert result.get("state") == OperationState.FAILED.value
         assert "error" in result.get("evidence", {})
 
+    def test_reconciliation_sets_failed_when_verify_returns_offline(self, tmp_path: Path):
+        """request_reconciliation sets FAILED when _verify_configuration returns online=False in evidence."""
+        from unittest.mock import patch as _patch
+
+        docker = MagicMock()
+        docker.status.return_value = {"state": "running", "online": True}
+        service = make_service(tmp_path, docker=docker)
+        op = ServerOperation.create("test-server", {"MAX_PLAYERS": "20"})
+        op.start()
+        op.fail_stage(OperationStage.REVIEW, "boom")
+        service._repo.save(op)
+
+        # obs is online so we enter the verify branch, but evidence says offline
+        with _patch.object(service, "_verify_configuration", return_value=(False, {"online": False})):
+            reconciled = service.request_reconciliation(op.operation_id)
+
+        assert reconciled is not None
+        assert reconciled.state == OperationState.FAILED
+        assert reconciled.terminal_error == "server offline during configuration verification"
+
+    def test_reconciliation_sets_failed_for_divergent_when_server_offline(self, tmp_path: Path):
+        """request_reconciliation transitions DIVERGENT→FAILED when the server is offline."""
+        docker = MagicMock()
+        docker.status.return_value = {"state": "stopped", "online": False}
+        service = make_service(tmp_path, docker=docker)
+        op = ServerOperation.create("test-server", {"MAX_PLAYERS": "20"})
+        op.start()
+        op.diverge("config mismatch", observation={})
+        service._repo.save(op)
+        reconciled = service.request_reconciliation(op.operation_id)
+        assert reconciled is not None
+        assert reconciled.state == OperationState.FAILED
+        assert "offline" in (reconciled.terminal_error or "")
+
+    def test_reconciliation_returns_none_when_operation_deleted_between_probe_and_lock(self, tmp_path: Path):
+        """request_reconciliation returns None when the operation is removed after the probe read."""
+        from unittest.mock import patch as _patch
+
+        docker = MagicMock()
+        docker.status.return_value = {"state": "running", "online": True}
+        service = make_service(tmp_path, docker=docker)
+        op = ServerOperation.create("test-server", {"MAX_PLAYERS": "20"})
+        op.start()
+        op.fail_stage(OperationStage.REVIEW, "boom")
+        service._repo.save(op)
+
+        original_fetch = service._repo.fetch_and_update
+
+        def fetch_returns_none(operation_id, modifier):
+            return None
+
+        with _patch.object(service._repo, "fetch_and_update", side_effect=fetch_returns_none):
+            result = service.request_reconciliation(op.operation_id)
+
+        assert result is None
+
+    def test_reconciliation_inner_recheck_skips_ineligible_state_change(self, tmp_path: Path):
+        """_apply inner re-check returns early when state changed between probe and write lock."""
+        from unittest.mock import patch as _patch
+
+        docker = MagicMock()
+        docker.status.return_value = {"state": "running", "online": True}
+        service = make_service(tmp_path, docker=docker)
+        op = ServerOperation.create("test-server", {"MAX_PLAYERS": "20"})
+        op.start()
+        op.fail_stage(OperationStage.REVIEW, "boom")
+        service._repo.save(op)
+
+        original_fetch = service._repo.fetch_and_update
+
+        def fetch_with_confirmed_snapshot(operation_id, modifier):
+            # Supply a snapshot where the state has already been confirmed —
+            # simulates another thread confirming between probe and lock.
+            confirmed = service._repo.get(operation_id)
+            assert confirmed is not None
+            confirmed.state = OperationState.CONFIRMED
+            modifier(confirmed)
+            return confirmed
+
+        with _patch.object(service._repo, "fetch_and_update", side_effect=fetch_with_confirmed_snapshot):
+            result = service.request_reconciliation(op.operation_id)
+
+        assert result is not None
+        assert result.state == OperationState.CONFIRMED
+        assert "reconciliation_result" not in result.observation
+
+    def test_reconciliation_divergent_without_terminal_error_gets_default_message(self, tmp_path: Path):
+        """When verify returns divergent and no terminal_error exists, a default message is set."""
+        docker = MagicMock()
+        docker.status.return_value = {"state": "running", "online": True}
+        configuration = MagicMock()
+        # Return mismatched values so verify produces divergent
+        configuration.read_properties.return_value = {"max-players": "10"}
+        service = make_service(tmp_path, docker=docker, configuration=configuration)
+        op = ServerOperation.create("test-server", {"MAX_PLAYERS": "20"})
+        op.start()
+        op.fail_stage(OperationStage.REVIEW, "boom")
+        op.terminal_error = None  # ensure no pre-existing message
+        service._repo.save(op)
+        reconciled = service.request_reconciliation(op.operation_id)
+        assert reconciled is not None
+        assert reconciled.state == OperationState.DIVERGENT
+        assert reconciled.terminal_error == "effective configuration differs from requested changes"
+
     def test_retry_raises_for_different_server_operation(self, tmp_path: Path):
         """retry_operation rejects operations belonging to a different server_id."""
         service = make_service(tmp_path)

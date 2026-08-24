@@ -184,6 +184,14 @@ If `execute` is called with the same `operation_id` after the first call
 completed, the agent returns the stored result immediately (idempotent replay).
 Results are retained for at least 10 minutes.
 
+**After agent restart:** In-memory operation records are lost on restart.
+`GET /v1/status/{operation_id}` returns `404` for any operation that was
+in-flight or completed before the restart. The caller must treat this `404` as
+an **ambiguous** result, not a safe-retry opportunity: the operation may have
+partially or fully executed before the restart. The backend must surface this
+as a recoverable failure (`error_code: executor_internal_error`) and require
+explicit operator confirmation before retrying.
+
 #### Response — `202 Accepted`
 
 The call returns immediately after accepting the request. The caller polls

@@ -102,7 +102,7 @@ missing or mismatched token returns `401 Unauthorized` with the body:
    ```
 
 2. Store the same token where the backend can read it. In the Docker Compose
-   deployment, mount it as a secret or environment variable:
+   deployment, mount it as a Docker secret:
 
    ```yaml
    secrets:

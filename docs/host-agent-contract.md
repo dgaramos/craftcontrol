@@ -74,7 +74,7 @@ Docker network.
 Every request from the backend to the agent carries a bearer token in the
 `Authorization` header:
 
-```
+```http
 Authorization: Bearer <token>
 ```
 

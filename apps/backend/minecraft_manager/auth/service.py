@@ -211,6 +211,7 @@ class AuthService:
         password_hash = self.hash_password(new_password)
         now = time.time()
         with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
             row = connection.execute(
                 "SELECT s.identity,a.password_hash,a.status FROM panel_sessions s "
                 "JOIN panel_accounts a ON a.identity=s.identity WHERE s.token_hash=? "

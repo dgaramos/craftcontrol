@@ -16,10 +16,23 @@ import time
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Callable, TypeVar
+from contextlib import AbstractContextManager
+from typing import Any, Callable, Protocol, TypeVar
 
 _T = TypeVar("_T")
 from zoneinfo import ZoneInfo
+
+
+class ConnectionFactory(Protocol):
+    """A callable that accepts a ``Path`` and returns a context manager
+    yielding a ``sqlite3.Connection``.
+
+    The default implementation is :func:`open_connection`.  Tests may supply
+    a fake factory to avoid real filesystem access.
+    """
+
+    def __call__(self, path: Path) -> AbstractContextManager[sqlite3.Connection]:
+        ...
 
 
 SQLITE_BUSY_TIMEOUT_MS = 30_000
@@ -122,7 +135,7 @@ def open_connection_with_retry(
     executor: Callable[[sqlite3.Connection], _T],
     max_retries: int = SQLITE_MAX_RETRIES,
     *,
-    connection_factory: Callable[..., Any] = open_connection,
+    connection_factory: ConnectionFactory = open_connection,
 ) -> _T:
     """Open a SQLite connection with bounded retries for transient contention.
 

@@ -256,8 +256,10 @@ The `outcome`, `executor_ref`, `health_reached`, `failed_stage`, `detail`,
 `error_code`, and `exception_type` fields conform exactly to the
 **Executor result shape** defined in
 [operation-lifecycle.md — Executor result shape](operation-lifecycle.md#executor-result-shape).
-The application service maps these fields to the stage log and operation record
-without transformation.
+The adapter returns this shape as-is. The application service then performs the
+lifecycle mapping described in `operation-lifecycle.md` — expanding the result
+into `stage_log` entries and writing the operation record — so no application
+service or use-case changes are required when this adapter is introduced.
 
 #### Response — `200 OK` (in progress)
 

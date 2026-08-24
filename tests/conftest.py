@@ -45,6 +45,7 @@ def make_manager_service(
     bedrock: FakeBedrock | None = None,
     docker: FakeDocker | None = None,
     operation_service=None,
+    manager_broker=None,
 ) -> ManagerService:
     db_path = directory / "state.db"
     repo = StateRepository(db_path)
@@ -70,7 +71,7 @@ def make_manager_service(
         files,
         bedrock,  # type: ignore[arg-type]
         docker,  # type: ignore[arg-type]
-        broker=broker,
+        broker=broker if manager_broker is None else manager_broker,
         player_service=player_service,
         telemetry_service=telemetry_service,
         world_service=world_service,

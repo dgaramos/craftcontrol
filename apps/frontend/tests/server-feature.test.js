@@ -60,6 +60,11 @@ describe("createServerFeature", () => {
     expect(rendered).toContain("telemetryDuplicates");
     expect(rendered).toContain("telemetryOld");
     expect(rendered).toContain("2.5 ms");
+    expect(rendered).toContain("9 ms");
+    expect(rendered).toContain("sseConnections3");
+    expect(rendered).toContain("sseConnectionsTotal8");
+    expect(rendered).toContain("runtimeRefreshingyes");
+    expect(rendered).toContain("telemetry.started: 2");
     expect(rendered).toContain("3");
     expect(rendered).toContain("telemetryDetails");
     expect(rendered).toContain("diagnosticStatus: healthy");
@@ -72,6 +77,7 @@ describe("createServerFeature", () => {
   test("hides diagnostics when its protected API request fails", async () => {
     const deps = makeDeps();
     deps.elements["#diagnostics-state"] = makeEl();
+    deps.elements["#diagnostics-state"].textContent = "stale";
     deps.api.mockRejectedValue(new Error("forbidden"));
     await createServerFeature(deps).loadDiagnostics();
     expect(deps.elements["#diagnostics-state"].textContent).toBe("");

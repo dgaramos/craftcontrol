@@ -92,6 +92,24 @@ Dispatch `publish-cody-review.yml` or `publish-claudio-review.yml` with
 review manifests `inline_comments_json`, `replies_json`, and
 `resolve_thread_ids_json`.
 
+**Review event rules (enforced):**
+
+- Always use `event: COMMENT`. Never use `APPROVE` or `REQUEST_CHANGES`.
+  Merge blocking and approval are human decisions; no reviewer bot may submit
+  either state for this project.
+- Every formal finding whose evidence line is within the diff must be delivered
+  as an inline diff comment in `inline_comments_json`, not embedded as body
+  text in the top-level review comment.
+- Informational observations must be labelled non-actionable and must not
+  appear in the merge-risk justification or approval rationale.
+- A claim about authentication, CSRF, or authorization must be grounded in the
+  repository's real auth rules (see `apps/backend/minecraft_manager/auth/`)
+  before it is included in any finding. Mutation-only assumptions must not be
+  applied to read-only endpoints.
+- A recommendation to change an OpenAPI response schema must identify a
+  concrete contract risk and its consumer impact before it is classified as a
+  finding.
+
 ### Create issue
 
 Dispatch `publish-cody-issue.yml` or `publish-claudio-issue.yml` with required

@@ -81,6 +81,7 @@ function showAuth() {
 function showPasswordChange() {
   const words = copy[locale()];
   const dialog = document.querySelector("#account-dialog");
+  dialog.setAttribute("aria-label", words.changePasswordTitle);
   dialog.innerHTML = `<form method="dialog" class="account-card block-panel"><div><span class="eyebrow">CRAFTCONTROL</span><h2>${words.changePasswordTitle}</h2></div><label>${words.currentPassword}${passwordInput(words, "current_password", "current-password")}</label><label>${words.newPassword}${passwordInput(words, "new_password", "new-password", 'minlength="8"')}</label><p class="auth-error" role="alert"></p><div class="account-actions"><button class="secondary" value="cancel" type="button">${words.cancel}</button><button class="primary" type="submit">${words.savePassword}</button></div></form>`;
   dialog.querySelector(".secondary").onclick = () => dialog.close();
   dialog.querySelectorAll(".password-toggle").forEach((button) => {

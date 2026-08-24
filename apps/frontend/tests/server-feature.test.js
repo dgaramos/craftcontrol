@@ -41,6 +41,48 @@ describe("createServerFeature", () => {
     expect(deps.elements["#telemetry-pack-state"].textContent).toBe("telemetry unavailable");
   });
 
+  test("renders local diagnostics when the owner panel requests them", async () => {
+    const deps = makeDeps();
+    deps.elements["#diagnostics-state"] = makeEl();
+    deps.api.mockResolvedValue({
+      telemetry: { accepted: 4, rejected: 1, duplicates: 2, old: 3, ingestion_duration_ms_average: 2.5, ingestion_duration_ms_max: 9 },
+      broker: { sse_connections: 3, sse_connections_total: 8, events_by_topic: { "telemetry.started": 2 } },
+      runtime_refreshing: true,
+      telemetry_state: { status: "healthy", sequence: "10", expected_sequence: "11", gap_count: "0", missing_events: "0", reset_count: "0", last_snapshot_at: "1", last_event_at: "1" },
+      persistence: { connections: 4, wait_ms_average: 1.5, wait_ms_max: 3, contention_failures: 0 },
+      runtime: { refreshing: false, pending_gamerule_refreshes: 2, gamerule_worker_running: true, snapshot_running: false },
+    });
+    const feature = createServerFeature(deps);
+    await feature.loadDiagnostics();
+    const rendered = deps.elements["#diagnostics-state"].children[0].textContent;
+    expect(rendered).toContain("telemetryAccepted");
+    expect(rendered).toContain("telemetryRejected");
+    expect(rendered).toContain("telemetryDuplicates");
+    expect(rendered).toContain("telemetryOld");
+    expect(rendered).toContain("2.5 ms");
+    expect(rendered).toContain("9 ms");
+    expect(rendered).toContain("sseConnections3");
+    expect(rendered).toContain("sseConnectionsTotal8");
+    expect(rendered).toContain("runtimeRefreshingyes");
+    expect(rendered).toContain("telemetry.started: 2");
+    expect(rendered).toContain("3");
+    expect(rendered).toContain("telemetryDetails");
+    expect(rendered).toContain("diagnosticStatus: healthy");
+    expect(rendered).toContain("persistenceDiagnostics");
+    expect(rendered).toContain("sqliteWaitAverage: 1.5 ms");
+    expect(rendered).toContain("runtimeDiagnostics");
+    expect(rendered).toContain("pendingGameruleRefreshes: 2");
+  });
+
+  test("hides diagnostics when its protected API request fails", async () => {
+    const deps = makeDeps();
+    deps.elements["#diagnostics-state"] = makeEl();
+    deps.elements["#diagnostics-state"].textContent = "stale";
+    deps.api.mockRejectedValue(new Error("forbidden"));
+    await createServerFeature(deps).loadDiagnostics();
+    expect(deps.elements["#diagnostics-state"].textContent).toBe("");
+  });
+
   test("renders release tags with and without frontend version", () => {
     const deps = makeDeps({ state: { frontendVersion: "" } });
     deps.elements["#release-tags"] = makeEl();
@@ -59,7 +101,7 @@ describe("createServerFeature", () => {
     deps.elements["#telemetry-pack-state"] = makeEl({ querySelectorAll: jest.fn(() => [install, disable, rollback]) });
     deps.elements["#release-tags"] = makeEl();
     deps.api = jest.fn()
-      // Initial telemetry pack load and operations/latest (order non-deterministic)
+      // Initial telemetry pack load and operations/latest.
       .mockResolvedValueOnce({ installed: false, enabled: false, health: "", storage_status: "not-required", capabilities: {}, application: {}, installed_version: "", runtime_version: "", source_version: "1" })
       .mockResolvedValueOnce({ operation: null })
       // install button click: restart_required; then telemetry reload; then rollback error
@@ -74,7 +116,7 @@ describe("createServerFeature", () => {
       await new Promise((resolve) => queueMicrotask(resolve));
       expect(deps.elements["#telemetry-pack-state"].innerHTML).toContain("installPack");
       await install.onclick();
-      // confirm returns false — install was skipped; telemetry + operations = 2 initial calls
+      // confirm returns false — install was skipped; telemetry + operations = 2 initial calls.
       expect(deps.api).toHaveBeenCalledTimes(2);
       await disable.onclick();
       expect(deps.toast).toHaveBeenCalledWith("restartPackNotice");

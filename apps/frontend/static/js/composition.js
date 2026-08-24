@@ -47,7 +47,7 @@ export function startApplication() {
     if (state.tab === "home") { content.innerHTML = ""; return; }
     if (state.tab === "world") getWorldFeature().renderWorld();
     else if (state.tab === "rules") getRulesFeature().renderRules();
-    else if (state.tab === "server") getServerFeature().renderServer();
+    else if (state.tab === "server") { getServerFeature().renderServer(); getServerFeature().loadDiagnostics(); }
   }
 
   let worldFeature = null;

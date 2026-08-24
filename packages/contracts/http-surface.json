@@ -227,6 +227,13 @@
       "owner": "backend"
     },
     {
+      "path": "/api/diagnostics",
+      "methods": [
+        "GET"
+      ],
+      "owner": "backend"
+    },
+    {
       "path": "/api/schema",
       "methods": [
         "GET"

@@ -63,6 +63,36 @@ def test_health_returns_ok(client) -> None:
     assert resp.get_json()["ok"] is True
 
 
+def test_diagnostics_returns_manager_data(client, service: MagicMock) -> None:
+    service.diagnostics.return_value = {"telemetry": {"accepted": 1}, "broker": {}}
+    resp = client.get("/api/diagnostics")
+    assert resp.status_code == 200
+    assert resp.get_json()["telemetry"]["accepted"] == 1
+    service.diagnostics.assert_called_once()
+
+
+def test_diagnostics_requires_telemetry_manage_capability(service: MagicMock) -> None:
+    app = _make_app(service, auth_mode="local")
+    auth = app.extensions["auth_service"]
+    client = app.test_client()
+
+    auth.authenticate.return_value = None
+    assert client.get("/api/diagnostics").status_code == 401
+
+    def require_telemetry_manage(user, capability):
+        if capability not in user["capabilities"] and "*" not in user["capabilities"]:
+            raise PermissionError(capability)
+
+    auth.require_capability.side_effect = require_telemetry_manage
+    for role in ("viewer", "operator"):
+        auth.authenticate.return_value = {"id": role, "role": role, "capabilities": []}
+        assert client.get("/api/diagnostics").status_code == 403
+
+    auth.authenticate.return_value = {"id": "1", "role": "owner", "capabilities": ["*"]}
+    service.diagnostics.return_value = {"telemetry": {}, "broker": {}, "runtime_refreshing": False}
+    assert client.get("/api/diagnostics").status_code == 200
+
+
 def test_state_returns_public_state(client, service: MagicMock) -> None:
     resp = client.get("/api/state")
     assert resp.status_code == 200

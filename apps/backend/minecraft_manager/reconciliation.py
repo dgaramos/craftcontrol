@@ -61,6 +61,15 @@ class ReconciliationService:
     def refreshing(self) -> bool:
         return self._refreshing
 
+    def diagnostics(self) -> dict[str, int | bool]:
+        with self._pending_rules_lock, self._telemetry_sync_lock:
+            return {
+                "refreshing": self._refreshing,
+                "pending_gamerule_refreshes": len(self._pending_rules),
+                "gamerule_worker_running": self._gamerule_worker_running,
+                "snapshot_running": self._telemetry_sync_running,
+            }
+
     # ------------------------------------------------------------------
     # Full reconciliation
     # ------------------------------------------------------------------

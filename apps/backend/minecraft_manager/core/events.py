@@ -23,6 +23,9 @@ class EventBroker:
         self.repository = repository
         self._subscribers: set[queue.Queue[Event]] = set()
         self._lock = threading.Lock()
+        self._topic_counts: dict[str, int] = {}
+        self._active_stream_connections = 0
+        self._stream_connections = 0
 
     def publish(self, topic: str, source: str, payload: dict[str, Any] | None = None) -> Event:
         payload = payload or {}
@@ -30,6 +33,7 @@ class EventBroker:
         event_id = self.repository.record_event(topic, source, payload)
         event = Event(event_id, topic, timestamp, source, payload)
         with self._lock:
+            self._topic_counts[topic] = self._topic_counts.get(topic, 0) + 1
             subscribers = tuple(self._subscribers)
         for subscriber in subscribers:
             try:
@@ -38,13 +42,24 @@ class EventBroker:
                 pass
         return event
 
-    def stream(self, after_id: int = 0) -> Iterator[Event | None]:
-        for saved in self.repository.events_after(after_id):
-            yield Event(saved["id"], saved["topic"], saved["timestamp"], saved["source"], saved["payload"])
-        subscriber: queue.Queue[Event] = queue.Queue(maxsize=100)
+    def diagnostics(self) -> dict[str, Any]:
         with self._lock:
-            self._subscribers.add(subscriber)
+            return {
+                "events_by_topic": dict(sorted(self._topic_counts.items())),
+                "sse_connections": self._active_stream_connections,
+                "sse_connections_total": self._stream_connections,
+            }
+
+    def stream(self, after_id: int = 0) -> Iterator[Event | None]:
+        with self._lock:
+            self._active_stream_connections += 1
+            self._stream_connections += 1
         try:
+            for saved in self.repository.events_after(after_id):
+                yield Event(saved["id"], saved["topic"], saved["timestamp"], saved["source"], saved["payload"])
+            subscriber: queue.Queue[Event] = queue.Queue(maxsize=100)
+            with self._lock:
+                self._subscribers.add(subscriber)
             while True:
                 try:
                     yield subscriber.get(timeout=20)
@@ -52,4 +67,6 @@ class EventBroker:
                     yield None
         finally:
             with self._lock:
-                self._subscribers.discard(subscriber)
+                self._active_stream_connections -= 1
+                if "subscriber" in locals():
+                    self._subscribers.discard(subscriber)

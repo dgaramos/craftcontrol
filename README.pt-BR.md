@@ -145,6 +145,7 @@ Instalações autenticadas expõem:
 - `/api/openapi.json` — contrato legível por máquina;
 - `/api/docs` — Swagger UI usando a sessão atual;
 - `/api/events` — Server-Sent Events persistidos e ao vivo.
+- `/api/diagnostics` — diagnósticos locais de telemetria e SSE para owners; não exige uma stack de observabilidade.
 
 O Swagger anexa o token CSRF vinculado à sessão a requisições inseguras de “Try it out” e nunca ignora capabilities de papel. Não há endpoint arbitrário de shell ou console.
 

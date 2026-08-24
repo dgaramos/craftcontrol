@@ -216,7 +216,7 @@ Returned when the request body is malformed, a required field is missing, or
 
 Poll the result of a previously submitted operation.
 
-#### Response — `200 OK` (terminal)
+#### Response — `200 OK` (terminal — success)
 
 ```json
 {
@@ -231,6 +231,26 @@ Poll the result of a previously submitted operation.
   "exception_type": null
 }
 ```
+
+#### Response — `200 OK` (terminal — failure)
+
+```json
+{
+  "operation_id": "<UUID>",
+  "status": "done",
+  "outcome": "error",
+  "executor_ref": null,
+  "health_reached": false,
+  "failed_stage": "HEALTH_WAIT",
+  "detail": "Server did not reach healthy state within 120s",
+  "error_code": "health_probe_timeout",
+  "exception_type": null
+}
+```
+
+`status` is always `"done"` for a terminal response, regardless of `outcome`.
+`outcome` is `"ok"` on success and `"error"` on failure. A terminal failure
+response always includes a non-null `failed_stage` and `error_code`.
 
 The `outcome`, `executor_ref`, `health_reached`, `failed_stage`, `detail`,
 `error_code`, and `exception_type` fields conform exactly to the

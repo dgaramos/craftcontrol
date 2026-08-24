@@ -63,6 +63,14 @@ def test_health_returns_ok(client) -> None:
     assert resp.get_json()["ok"] is True
 
 
+def test_diagnostics_returns_manager_data(client, service: MagicMock) -> None:
+    service.diagnostics.return_value = {"telemetry": {"accepted": 1}, "broker": {}}
+    resp = client.get("/api/diagnostics")
+    assert resp.status_code == 200
+    assert resp.get_json()["telemetry"]["accepted"] == 1
+    service.diagnostics.assert_called_once()
+
+
 def test_state_returns_public_state(client, service: MagicMock) -> None:
     resp = client.get("/api/state")
     assert resp.status_code == 200

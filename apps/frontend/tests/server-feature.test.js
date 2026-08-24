@@ -51,6 +51,14 @@ describe("createServerFeature", () => {
     expect(deps.elements["#diagnostics-state"].innerHTML).toContain("2.5 ms");
   });
 
+  test("hides diagnostics when its protected API request fails", async () => {
+    const deps = makeDeps();
+    deps.elements["#diagnostics-state"] = makeEl();
+    deps.api.mockRejectedValue(new Error("forbidden"));
+    await createServerFeature(deps).loadDiagnostics();
+    expect(deps.elements["#diagnostics-state"].textContent).toBe("");
+  });
+
   test("renders release tags with and without frontend version", () => {
     const deps = makeDeps({ state: { frontendVersion: "" } });
     deps.elements["#release-tags"] = makeEl();

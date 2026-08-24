@@ -91,6 +91,25 @@ def test_manual_snapshot_is_ingested_synchronously(tmp_path: Path) -> None:
     assert service.state()["telemetry"]["last_topic"] == "snapshot.finished"
 
 
+def test_diagnostics_summarize_telemetry_and_broker_counters(tmp_path: Path) -> None:
+    service = _make_service(tmp_path)
+    service.telemetry_event({"schema": 1, "sequence": 10, "type": "block.broken", "timestamp": 1, "player": {"name": "VonCrush"}, "data": {}})
+    service.telemetry_event({"schema": 1, "sequence": 10, "type": "block.broken", "timestamp": 2, "player": {"name": "VonCrush"}, "data": {}})
+
+    diagnostics = service.diagnostics()
+
+    assert diagnostics["telemetry"]["accepted"] == 1
+    assert diagnostics["telemetry"]["rejected"] == 1
+    assert diagnostics["telemetry"]["ingestion_duration_ms_max"] >= 0
+    assert diagnostics["broker"]["events_by_topic"]["telemetry.sequence.rejected"] == 1
+
+
+def test_diagnostics_tolerate_a_broker_without_diagnostics(tmp_path: Path) -> None:
+    service = _make_service(tmp_path)
+    service.broker = object()  # type: ignore[assignment]
+    assert service.diagnostics()["broker"] == {}
+
+
 def test_empty_snapshot_response_is_degraded_instead_of_stuck_syncing(tmp_path: Path) -> None:
     bedrock = FakeBedrock()
     bedrock.telemetry_output = ""

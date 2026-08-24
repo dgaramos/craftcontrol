@@ -205,6 +205,32 @@ class AuthService:
             with self._connect() as connection:
                 connection.execute("UPDATE panel_sessions SET revoked_at=? WHERE token_hash=?", (time.time(), self._token_hash(token)))
 
+    def change_password(self, session_token: str, current_password: str, new_password: str) -> tuple[str, dict[str, Any]]:
+        """Replace an authenticated account password and rotate all of its sessions."""
+        self.validate_password(current_password)
+        password_hash = self.hash_password(new_password)
+        now = time.time()
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(
+                "SELECT s.identity,a.password_hash,a.status FROM panel_sessions s "
+                "JOIN panel_accounts a ON a.identity=s.identity WHERE s.token_hash=? "
+                "AND s.revoked_at IS NULL AND s.idle_expires_at>=? AND s.absolute_expires_at>=?",
+                (self._token_hash(session_token), now, now),
+            ).fetchone()
+            if not row or row[2] != "active" or not self.verify_password(current_password, row[1]):
+                raise ValueError("current password is incorrect")
+            identity = str(row[0])
+            connection.execute(
+                "UPDATE panel_accounts SET password_hash=?,updated_at=? WHERE identity=?",
+                (password_hash, now, identity),
+            )
+            connection.execute(
+                "UPDATE panel_sessions SET revoked_at=? WHERE identity=? AND revoked_at IS NULL",
+                (now, identity),
+            )
+            return self._create_session(connection, identity, now)
+
     def access_list(self) -> list[dict[str, Any]]:
         with self._connect() as connection:
             rows = connection.execute(

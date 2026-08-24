@@ -119,6 +119,20 @@ def logout():
     return response
 
 
+@auth_api.put("/api/auth/password")
+def change_password():
+    try:
+        payload = request.get_json(force=True)
+        token, user = auth_service().change_password(
+            request.cookies.get(COOKIE_NAME) or "",
+            str(payload.get("current_password", "")),
+            str(payload.get("new_password", "")),
+        )
+    except (AttributeError, TypeError, ValueError) as error:
+        return jsonify(error=str(error)), 400
+    return _session_response(user, token)
+
+
 @auth_api.get("/api/auth/access")
 @require("security.manage_users")
 def access_list():

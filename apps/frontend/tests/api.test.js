@@ -140,3 +140,17 @@ describe("api — POST mutation with CSRF", () => {
     expect(mutationCount).toBe(2);
   });
 });
+
+describe("api — password changes", () => {
+  test("PUT /api/auth/password sends the current CSRF token", async () => {
+    jest.resetModules();
+    const { api: isolatedApi } = await import("../static/js/api.js");
+    global.fetch = jest.fn().mockImplementation((url) => {
+      if (url === "/api/auth/me") return meResponse("password-token");
+      return Promise.resolve({ ok: true, status: 200, json: async () => ({ csrf_token: "rotated-token" }) });
+    });
+    await isolatedApi("/api/auth/password", { method: "PUT", body: "{}" });
+    const mutationCall = global.fetch.mock.calls.find(([url]) => url === "/api/auth/password");
+    expect(mutationCall[1].headers["X-CSRF-Token"]).toBe("password-token");
+  });
+});

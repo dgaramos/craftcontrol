@@ -103,6 +103,13 @@
       "owner": "backend"
     },
     {
+      "path": "/api/auth/password",
+      "methods": [
+        "PUT"
+      ],
+      "owner": "backend"
+    },
+    {
       "path": "/api/config",
       "methods": [
         "GET",

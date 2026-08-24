@@ -1616,7 +1616,7 @@
       },
       "Diagnostics": {
         "type": "object",
-        "required": ["telemetry", "broker", "runtime_refreshing"],
+        "required": ["telemetry", "broker", "runtime_refreshing", "persistence", "runtime", "telemetry_state"],
         "properties": {
           "telemetry": {
             "type": "object",
@@ -1639,14 +1639,39 @@
               "sse_connections_total": {"type": "integer", "minimum": 0}
             }
           },
-          "runtime_refreshing": {"type": "boolean"}
-          ,"persistence": {
+          "runtime_refreshing": {"type": "boolean"},
+          "persistence": {
             "type": "object",
+            "required": ["connections", "wait_ms_average", "wait_ms_max", "contention_failures"],
             "properties": {
               "connections": {"type": "integer", "minimum": 0},
               "wait_ms_average": {"type": "number", "minimum": 0},
               "wait_ms_max": {"type": "number", "minimum": 0},
               "contention_failures": {"type": "integer", "minimum": 0}
+            }
+          },
+          "runtime": {
+            "type": "object",
+            "required": ["refreshing", "pending_gamerule_refreshes", "gamerule_worker_running", "snapshot_running"],
+            "properties": {
+              "refreshing": {"type": "boolean"},
+              "pending_gamerule_refreshes": {"type": "integer", "minimum": 0},
+              "gamerule_worker_running": {"type": "boolean"},
+              "snapshot_running": {"type": "boolean"}
+            }
+          },
+          "telemetry_state": {
+            "type": "object",
+            "required": ["status", "sequence", "expected_sequence", "gap_count", "missing_events", "reset_count", "last_snapshot_at", "last_event_at"],
+            "properties": {
+              "status": {"type": ["string", "null"]},
+              "sequence": {"type": ["string", "null"]},
+              "expected_sequence": {"type": ["string", "null"]},
+              "gap_count": {"type": ["string", "null"]},
+              "missing_events": {"type": ["string", "null"]},
+              "reset_count": {"type": ["string", "null"]},
+              "last_snapshot_at": {"type": ["string", "null"]},
+              "last_event_at": {"type": ["string", "null"]}
             }
           }
         }

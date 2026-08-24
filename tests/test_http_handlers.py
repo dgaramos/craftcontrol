@@ -71,7 +71,7 @@ def test_diagnostics_returns_manager_data(client, service: MagicMock) -> None:
     service.diagnostics.assert_called_once()
 
 
-def test_diagnostics_requires_an_owner_capability(service: MagicMock) -> None:
+def test_diagnostics_requires_telemetry_manage_capability(service: MagicMock) -> None:
     app = _make_app(service, auth_mode="local")
     auth = app.extensions["auth_service"]
     client = app.test_client()
@@ -79,12 +79,16 @@ def test_diagnostics_requires_an_owner_capability(service: MagicMock) -> None:
     auth.authenticate.return_value = None
     assert client.get("/api/diagnostics").status_code == 401
 
-    auth.authenticate.return_value = {"id": "2", "role": "viewer", "capabilities": []}
-    auth.require_capability.side_effect = PermissionError("telemetry.manage")
-    assert client.get("/api/diagnostics").status_code == 403
+    def require_telemetry_manage(user, capability):
+        if capability not in user["capabilities"] and "*" not in user["capabilities"]:
+            raise PermissionError(capability)
+
+    auth.require_capability.side_effect = require_telemetry_manage
+    for role in ("viewer", "operator"):
+        auth.authenticate.return_value = {"id": role, "role": role, "capabilities": []}
+        assert client.get("/api/diagnostics").status_code == 403
 
     auth.authenticate.return_value = {"id": "1", "role": "owner", "capabilities": ["*"]}
-    auth.require_capability.side_effect = None
     service.diagnostics.return_value = {"telemetry": {}, "broker": {}, "runtime_refreshing": False}
     assert client.get("/api/diagnostics").status_code == 200
 

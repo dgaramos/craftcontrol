@@ -23,6 +23,7 @@ export const es = {
   behaviorPackEyebrow: "Behavior Pack", statusEyebrow: "Estado", volumeEyebrow: "Volumen", telemetryEyebrow: "Telemetría",
   diagnostics: "Diagnóstico interno", diagnosticsHelp: "Contadores del proceso en tiempo real; no se requiere un servicio externo de observabilidad.", telemetryAccepted: "Eventos aceptados", telemetryRejected: "Eventos rechazados", ingestionDuration: "Ingestión media", sseConnections: "Conexiones SSE activas",
   ingestionDurationMax: "Ingestión más lenta", sseConnectionsTotal: "Conexiones SSE desde el inicio", runtimeRefreshing: "Reconciliación en curso", yes: "Sí", no: "No",
+  telemetryDetails: "Estado de telemetría", persistenceDiagnostics: "Persistencia SQLite", runtimeDiagnostics: "Trabajo del runtime", telemetryDuplicates: "Eventos duplicados", telemetryOld: "Eventos fuera de orden", diagnosticStatus: "Estado", expectedSequence: "Secuencia esperada", sqliteConnections: "Conexiones SQLite", sqliteWaitAverage: "Espera media de SQLite", sqliteWaitMax: "Espera máxima de SQLite", sqliteContentionFailures: "Fallos de contención SQLite", pendingGameruleRefreshes: "Actualizaciones de reglas pendientes", gameruleWorkerRunning: "Worker de reglas en ejecución", snapshotRunning: "Solicitud de snapshot en ejecución",
   opStages: "Etapas de la operación",
   opChanges: "Cambios solicitados",
   opState_pending: "Preparando operación",

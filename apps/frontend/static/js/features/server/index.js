@@ -21,6 +21,7 @@ async function loadDiagnostics() {
     help.textContent = t("diagnosticsHelp");
     heading.append(title, help);
     const metrics = document.createElement("dl");
+    const groups = [];
     const add = (label, value) => {
       const item = document.createElement("div");
       const term = document.createElement("dt");
@@ -32,12 +33,51 @@ async function loadDiagnostics() {
     };
     add(t("telemetryAccepted"), telemetry.accepted || 0);
     add(t("telemetryRejected"), telemetry.rejected || 0);
+    add(t("telemetryDuplicates"), telemetry.duplicates || 0);
+    add(t("telemetryOld"), telemetry.old || 0);
     add(t("ingestionDuration"), `${telemetry.ingestion_duration_ms_average || 0} ms`);
     add(t("ingestionDurationMax"), `${telemetry.ingestion_duration_ms_max || 0} ms`);
     add(t("sseConnections"), broker.sse_connections || 0);
     add(t("sseConnectionsTotal"), broker.sse_connections_total || 0);
     add(t("runtimeRefreshing"), result.runtime_refreshing ? t("yes") : t("no"));
-    section.append(heading, metrics);
+    const addGroup = (title, values, definitions) => {
+      if (!values || !definitions.some(({ key }) => values[key] !== null && values[key] !== undefined)) return;
+      const group = document.createElement("div");
+      const label = document.createElement("strong");
+      label.textContent = title;
+      group.append(label);
+      definitions.forEach(({ key, label, format }) => {
+        const value = values[key];
+        if (value === null || value === undefined) return;
+        const item = document.createElement("small");
+        item.textContent = `${t(label)}: ${format ? format(value) : value}`;
+        group.append(item);
+      });
+      groups.push(group);
+    };
+    addGroup(t("telemetryDetails"), result.telemetry_state, [
+      { key: "status", label: "diagnosticStatus" },
+      { key: "sequence", label: "telemetrySequence" },
+      { key: "expected_sequence", label: "expectedSequence" },
+      { key: "gap_count", label: "detectedGaps" },
+      { key: "missing_events", label: "missingEvents" },
+      { key: "reset_count", label: "resetCount" },
+      { key: "last_snapshot_at", label: "lastSnapshot", format: formatDate },
+      { key: "last_event_at", label: "lastResponse", format: formatDate },
+    ]);
+    addGroup(t("persistenceDiagnostics"), result.persistence, [
+      { key: "connections", label: "sqliteConnections" },
+      { key: "wait_ms_average", label: "sqliteWaitAverage", format: (value) => `${value} ms` },
+      { key: "wait_ms_max", label: "sqliteWaitMax", format: (value) => `${value} ms` },
+      { key: "contention_failures", label: "sqliteContentionFailures" },
+    ]);
+    addGroup(t("runtimeDiagnostics"), result.runtime, [
+      { key: "refreshing", label: "runtimeRefreshing", format: (value) => value ? t("yes") : t("no") },
+      { key: "pending_gamerule_refreshes", label: "pendingGameruleRefreshes" },
+      { key: "gamerule_worker_running", label: "gameruleWorkerRunning", format: (value) => value ? t("yes") : t("no") },
+      { key: "snapshot_running", label: "snapshotRunning", format: (value) => value ? t("yes") : t("no") },
+    ]);
+    section.append(heading, metrics, ...groups);
     const topics = Object.entries(broker.events_by_topic || {});
     if (topics.length) {
       const list = document.createElement("ul");

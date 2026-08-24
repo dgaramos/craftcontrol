@@ -104,6 +104,9 @@ def test_diagnostics_summarize_telemetry_and_broker_counters(tmp_path: Path) -> 
     assert diagnostics["telemetry"]["old"] == 0
     assert diagnostics["telemetry"]["ingestion_duration_ms_max"] >= 0
     assert diagnostics["broker"]["events_by_topic"]["telemetry.sequence.rejected"] == 1
+    assert diagnostics["persistence"].keys() == {"connections", "wait_ms_average", "wait_ms_max", "contention_failures"}
+    assert diagnostics["runtime"].keys() == {"refreshing", "pending_gamerule_refreshes", "gamerule_worker_running", "snapshot_running"}
+    assert diagnostics["telemetry_state"].keys() == {"status", "sequence", "expected_sequence", "gap_count", "missing_events", "reset_count", "last_snapshot_at", "last_event_at"}
 
 
 def test_diagnostics_tolerate_a_broker_without_diagnostics(tmp_path: Path) -> None:

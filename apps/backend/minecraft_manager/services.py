@@ -108,6 +108,7 @@ class ManagerService:
             "broker": broker_diagnostics() if callable(broker_diagnostics) else {},
             "runtime_refreshing": self.refreshing,
             "persistence": sqlite_diagnostics(),
+            "runtime": self._reconciliation.diagnostics(),
             "telemetry_state": {
                 key: telemetry_state.get(key)
                 for key in ("status", "sequence", "expected_sequence", "gap_count", "missing_events", "reset_count", "last_snapshot_at", "last_event_at")

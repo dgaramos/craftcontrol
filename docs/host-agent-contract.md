@@ -340,11 +340,15 @@ implementation.
 
 ## Unavailability handling
 
-When the backend cannot reach the agent (connection refused, timeout, or
-`5xx` response from `/v1/execute` or `/v1/status`), it must:
+Agent unavailability is handled differently depending on whether the failure
+occurred before or after the agent received the request.
 
-1. Set `outcome: error`, `failed_stage` to the stage that was in progress
-   (or `PREPARATION` if the call never connected), `error_code:
+#### Pre-delivery failures (safe to fail immediately)
+
+A connection refused or a timeout that fires before the TCP connection to the
+agent is established means the request was never delivered. The backend must:
+
+1. Set `outcome: error`, `failed_stage: PREPARATION`, `error_code:
    executor_internal_error`, and `detail` to a human-readable connectivity
    description.
 2. Transition the operation to `FAILED` via the standard lifecycle path.
@@ -352,8 +356,28 @@ When the backend cannot reach the agent (connection refused, timeout, or
 4. Not expose host internals (agent address, filesystem paths, or container
    names) in the UI or public API responses.
 
-Agent unavailability is a recoverable failure: the operator may restart the
-agent and retry the operation.
+The operator may restart the agent and retry the operation.
+
+#### Post-delivery ambiguous failures
+
+A `5xx` response or a timeout that fires after the TCP connection was established
+means the agent may have accepted and begun executing the request. Immediately
+marking the operation `FAILED` would race with a successful execution; a
+subsequent retry may receive `409 Conflict`.
+
+The backend must:
+
+1. Poll `GET /v1/status/{operation_id}` up to three times with a 5 s interval
+   before concluding failure.
+2. If polling returns a terminal result, process it normally.
+3. If polling returns `404` or a transport error on every attempt, treat the
+   outcome as ambiguous: set `outcome: error`, `failed_stage` to the last known
+   stage (or `PREPARATION` if unknown), `error_code: executor_internal_error`,
+   and `detail` to a message indicating the result is unknown.
+4. Transition the operation to `FAILED` and emit `operation.failed` over SSE.
+5. Not expose host internals in the UI or public API responses.
+
+An ambiguous result requires explicit operator confirmation before retrying.
 
 ---
 

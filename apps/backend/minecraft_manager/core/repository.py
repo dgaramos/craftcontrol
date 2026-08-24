@@ -9,7 +9,7 @@ import json
 import logging
 
 from ..migrations import LATEST_SCHEMA_VERSION, run_migrations, schema_version
-from .._db import SQLITE_BUSY_TIMEOUT_MS
+from .._db import SQLITE_BUSY_TIMEOUT_MS, _record_connection_wait, _record_contention_failure
 
 
 LOGGER = logging.getLogger(__name__)
@@ -28,7 +28,9 @@ class StateRepository:
     def initialize(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         existing_database = self.path.is_file() and self.path.stat().st_size > 0
+        started = time.perf_counter()
         connection = sqlite3.connect(self.path, timeout=SQLITE_BUSY_TIMEOUT_MS / 1000)
+        _record_connection_wait((time.perf_counter() - started) * 1000)
         try:
             before = schema_version(connection)
             if existing_database and before < LATEST_SCHEMA_VERSION:
@@ -36,6 +38,10 @@ class StateRepository:
             after = run_migrations(connection)
             connection.execute("PRAGMA journal_mode=WAL")
             LOGGER.info("database schema ready version=%s migrated_from=%s", after, before)
+        except sqlite3.OperationalError as error:
+            if "locked" in str(error).lower() or "busy" in str(error).lower():
+                _record_contention_failure()
+            raise
         finally:
             connection.close()
 
@@ -49,7 +55,10 @@ class StateRepository:
         destination = directory / f"{self.path.name}.pre-v{version}.bak"
         if destination.exists():
             return destination
-        backup = sqlite3.connect(destination)
+        started = time.perf_counter()
+        backup = sqlite3.connect(destination, timeout=SQLITE_BUSY_TIMEOUT_MS / 1000)
+        _record_connection_wait((time.perf_counter() - started) * 1000)
+        backup.execute(f"PRAGMA busy_timeout={SQLITE_BUSY_TIMEOUT_MS}")
         try:
             connection.backup(backup)
         finally:
@@ -60,11 +69,17 @@ class StateRepository:
     @contextmanager
     def _connect(self):
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        started = time.perf_counter()
         connection = sqlite3.connect(self.path, timeout=SQLITE_BUSY_TIMEOUT_MS / 1000)
+        _record_connection_wait((time.perf_counter() - started) * 1000)
         connection.execute(f"PRAGMA busy_timeout={SQLITE_BUSY_TIMEOUT_MS}")
         try:
             with connection:
                 yield connection
+        except sqlite3.OperationalError as error:
+            if "locked" in str(error).lower() or "busy" in str(error).lower():
+                _record_contention_failure()
+            raise
         finally:
             connection.close()
 

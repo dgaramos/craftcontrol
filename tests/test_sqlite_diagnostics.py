@@ -322,8 +322,7 @@ def test_open_connection_with_retry_succeeds_without_contention(tmp_path: Path) 
     path = _initialized_db(tmp_path)
     before_retries = int(sqlite_diagnostics()["retries"])
 
-    with open_connection_with_retry(path) as conn:
-        result = conn.execute("SELECT 1").fetchone()
+    result = open_connection_with_retry(path, lambda conn: conn.execute("SELECT 1").fetchone())
 
     assert result == (1,)
     after_retries = int(sqlite_diagnostics()["retries"])
@@ -336,12 +335,7 @@ def test_open_connection_with_retry_increments_retries_on_contention(tmp_path: P
     before_retries = int(sqlite_diagnostics()["retries"])
     call_count = 0
 
-    original_open = open_connection.__wrapped__ if hasattr(open_connection, "__wrapped__") else None
-
-    # Patch open_connection inside _db to raise on the first call then succeed.
     import minecraft_manager._db as _db_module
-
-    _original = _db_module.open_connection
 
     @_db_module.contextmanager
     def _failing_once(p):
@@ -350,12 +344,14 @@ def test_open_connection_with_retry_increments_retries_on_contention(tmp_path: P
         if call_count == 1:
             _db_module._record_contention_failure()
             raise sqlite3.OperationalError("database is locked")
-        with _original(p) as conn:
+        with open_connection(p) as conn:
             yield conn
 
-    with patch.object(_db_module, "open_connection", _failing_once):
-        with open_connection_with_retry(path) as conn:
-            conn.execute("SELECT 1").fetchone()
+    open_connection_with_retry(
+        path,
+        lambda conn: conn.execute("SELECT 1").fetchone(),
+        connection_factory=_failing_once,
+    )
 
     after_retries = int(sqlite_diagnostics()["retries"])
     assert after_retries > before_retries, "retries counter was not incremented after transient contention"
@@ -374,10 +370,13 @@ def test_open_connection_with_retry_exhausts_budget_and_raises(tmp_path: Path) -
         raise sqlite3.OperationalError("database is locked")
         yield  # make it a generator
 
-    with patch.object(_db_module, "open_connection", _always_locked):
-        with pytest.raises(sqlite3.OperationalError, match="locked"):
-            with open_connection_with_retry(path, max_retries=2) as _conn:
-                pass
+    with pytest.raises(sqlite3.OperationalError, match="locked"):
+        open_connection_with_retry(
+            path,
+            lambda conn: None,
+            max_retries=2,
+            connection_factory=_always_locked,
+        )
 
     after_retries = int(sqlite_diagnostics()["retries"])
     assert after_retries >= before_retries + 2, (
@@ -397,10 +396,12 @@ def test_open_connection_with_retry_does_not_retry_non_contention_error(tmp_path
         raise sqlite3.OperationalError("no such table: nonexistent")
         yield
 
-    with patch.object(_db_module, "open_connection", _schema_error):
-        with pytest.raises(sqlite3.OperationalError, match="no such table"):
-            with open_connection_with_retry(path) as _conn:
-                pass
+    with pytest.raises(sqlite3.OperationalError, match="no such table"):
+        open_connection_with_retry(
+            path,
+            lambda conn: None,
+            connection_factory=_schema_error,
+        )
 
     after_retries = int(sqlite_diagnostics()["retries"])
     assert after_retries == before_retries, "retries must not increment for non-contention errors"

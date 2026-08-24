@@ -16,7 +16,9 @@ import time
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, TypeVar
+
+_T = TypeVar("_T")
 from zoneinfo import ZoneInfo
 
 
@@ -115,14 +117,27 @@ def open_connection(path: Path):
         connection.close()
 
 
-@contextmanager
-def open_connection_with_retry(path: Path, max_retries: int = SQLITE_MAX_RETRIES):
+def open_connection_with_retry(
+    path: Path,
+    executor: Callable[[sqlite3.Connection], _T],
+    max_retries: int = SQLITE_MAX_RETRIES,
+    *,
+    connection_factory: Callable[..., Any] = open_connection,
+) -> _T:
     """Open a SQLite connection with bounded retries for transient contention.
 
     Use this only for **idempotent read operations** that are safe to retry
     without side effects.  Write operations that are not idempotent must use
     ``open_connection`` directly so that contention fails immediately and never
     produces duplicate side effects.
+
+    ``executor`` receives an open connection and performs the desired read
+    operation.  It is called inside each retry attempt so that only failures
+    that occur during connection open or operation execution — not errors
+    thrown by the caller after the call returns — are eligible for retry.
+
+    ``connection_factory`` defaults to ``open_connection`` and may be replaced
+    in tests to inject a fake connection without global monkey-patching.
 
     Each transient "locked" or "busy" failure decrements the retry budget and
     increments the shared ``retries`` counter so diagnostics reflect cumulative
@@ -135,15 +150,14 @@ def open_connection_with_retry(path: Path, max_retries: int = SQLITE_MAX_RETRIES
             _record_retry()
             time.sleep(SQLITE_RETRY_BASE_DELAY_S * (2 ** (attempt - 1)))
         try:
-            with open_connection(path) as conn:
-                yield conn
-                return
+            with connection_factory(path) as conn:
+                return executor(conn)
         except sqlite3.OperationalError as error:
             if "locked" in str(error).lower() or "busy" in str(error).lower():
                 last_error = error
                 continue
             raise
-    # Budget exhausted — final failure already recorded by open_connection's
+    # Budget exhausted — final failure already recorded by connection_factory's
     # except clause; raise to surface the error to the caller.
     raise last_error  # type: ignore[misc]
 

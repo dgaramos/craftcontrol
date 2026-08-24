@@ -43,18 +43,25 @@ operational overhead of a PKI.
 
 ## Transport
 
-The agent exposes an **HTTP/1.1 server bound to `127.0.0.1` on a configurable
-port** (default `7890`). Unix sockets were considered and rejected: they require
-the socket path to be accessible from inside the CraftControl container, which
-either demands a bind mount of `/var/run` or a dedicated socket directory.
-Loopback HTTP avoids that constraint while preserving the same effective network
-isolation, because `127.0.0.1` is not reachable from the container network
-without an explicit port mapping.
+The agent exposes an **HTTP/1.1 server on a configurable address and port**
+(default bind `0.0.0.0:7890`). Unix sockets were considered and rejected: they
+require the socket path to be accessible from inside the CraftControl container,
+which either demands a bind mount of `/var/run` or a dedicated socket directory.
+
+On Linux with Docker bridge networking, a service bound only to `127.0.0.1` is
+not reachable from inside a container even when `host-gateway` is configured,
+because `host-gateway` resolves to the bridge gateway IP (e.g. `172.17.0.1`),
+and traffic from that interface arrives on the bridge, not the loopback. The
+agent therefore binds to `0.0.0.0` by default. Network isolation is maintained
+by a host firewall rule (e.g. `iptables` or `ufw`) that restricts inbound
+connections on port `7890` to the Docker bridge subnet only. A deployment that
+can guarantee the Docker bridge address (e.g. `172.17.0.1`) may bind to that
+address instead.
 
 The CraftControl backend reaches the agent via the Docker host gateway address
 visible from inside the container (typically `host-gateway`, configured in
-`docker-compose.yml` as an extra host). The agent itself is not part of any
-Docker network.
+`docker-compose.yml` as an `extra_hosts` entry). The agent itself is not part
+of any Docker network.
 
 ### Configuration
 
@@ -62,7 +69,7 @@ Docker network.
 |----------|---------|-------------|
 | `HOST_AGENT_URL` | `http://host-gateway:7890` | Base URL the backend uses to reach the agent. |
 | `HOST_AGENT_TOKEN_FILE` | `/run/secrets/host_agent_token` | Path to the shared-secret file, read at startup. |
-| `HOST_AGENT_BIND` | `127.0.0.1:7890` | Address the agent listens on (agent side). |
+| `HOST_AGENT_BIND` | `0.0.0.0:7890` | Address the agent listens on (agent side). Restrict access to the Docker bridge subnet via a host firewall rule. |
 | `HOST_AGENT_SECRET_FILE` | `/etc/craftcontrol/host-agent-token` | Path to the token file on the host (agent side). |
 
 ---
@@ -326,8 +333,8 @@ added in #230).
 |----------|-------|
 | Service name | `craftcontrol-host-agent` |
 | OS user | `craftcontrol-agent` (no login shell, no sudo) |
-| Binds to | `127.0.0.1:7890` |
-| Network exposure | Loopback only — not reachable from the LAN or the container network |
+| Binds to | `0.0.0.0:7890` (default) |
+| Network exposure | Restricted to the Docker bridge subnet via host firewall rule; not reachable from the LAN |
 | Secret file | `/etc/craftcontrol/host-agent-token`, mode `0600`, owned by `craftcontrol-agent` |
 | Docker socket access | Group membership in `docker` for `craftcontrol-agent` |
 

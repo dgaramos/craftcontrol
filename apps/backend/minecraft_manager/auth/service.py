@@ -12,6 +12,8 @@ from typing import Any
 from contextlib import contextmanager
 from collections.abc import Iterator
 
+from .._db import _record_connection_wait, _record_contention_failure
+
 
 ROLE_CAPABILITIES = {
     "viewer": {"server.read"},
@@ -36,12 +38,19 @@ class AuthService:
 
     @contextmanager
     def _connect(self) -> Iterator[sqlite3.Connection]:
+        started = time.perf_counter()
         connection = sqlite3.connect(self.database, timeout=30)
+        _record_connection_wait((time.perf_counter() - started) * 1000)
         connection.execute("PRAGMA busy_timeout=30000")
         connection.execute("PRAGMA foreign_keys=ON")
         try:
             yield connection
             connection.commit()
+        except sqlite3.OperationalError as error:
+            connection.rollback()
+            if "locked" in str(error).lower() or "busy" in str(error).lower():
+                _record_contention_failure()
+            raise
         except Exception:
             connection.rollback()
             raise

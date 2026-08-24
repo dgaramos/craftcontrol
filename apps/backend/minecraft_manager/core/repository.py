@@ -9,7 +9,7 @@ import json
 import logging
 
 from ..migrations import LATEST_SCHEMA_VERSION, run_migrations, schema_version
-from .._db import SQLITE_BUSY_TIMEOUT_MS
+from .._db import SQLITE_BUSY_TIMEOUT_MS, _record_connection_wait, _record_contention_failure
 
 
 LOGGER = logging.getLogger(__name__)
@@ -60,11 +60,17 @@ class StateRepository:
     @contextmanager
     def _connect(self):
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        started = time.perf_counter()
         connection = sqlite3.connect(self.path, timeout=SQLITE_BUSY_TIMEOUT_MS / 1000)
+        _record_connection_wait((time.perf_counter() - started) * 1000)
         connection.execute(f"PRAGMA busy_timeout={SQLITE_BUSY_TIMEOUT_MS}")
         try:
             with connection:
                 yield connection
+        except sqlite3.OperationalError as error:
+            if "locked" in str(error).lower() or "busy" in str(error).lower():
+                _record_contention_failure()
+            raise
         finally:
             connection.close()
 

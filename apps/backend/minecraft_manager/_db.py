@@ -25,6 +25,25 @@ _SQLITE_METRICS = {"connections": 0, "wait_ms_total": 0.0, "wait_ms_max": 0.0, "
 _SQLITE_METRICS_LOCK = threading.Lock()
 
 
+def _record_connection_wait(elapsed_ms: float) -> None:
+    """Record a single connection-open wait into the shared diagnostics counters.
+
+    Called by every SQLite connection helper across all manager paths so that
+    ``sqlite_diagnostics`` covers auth, operations, core state, player, and
+    telemetry connections consistently.
+    """
+    with _SQLITE_METRICS_LOCK:
+        _SQLITE_METRICS["connections"] += 1
+        _SQLITE_METRICS["wait_ms_total"] += elapsed_ms
+        _SQLITE_METRICS["wait_ms_max"] = max(float(_SQLITE_METRICS["wait_ms_max"]), elapsed_ms)
+
+
+def _record_contention_failure() -> None:
+    """Increment the shared contention-failure counter."""
+    with _SQLITE_METRICS_LOCK:
+        _SQLITE_METRICS["contention_failures"] += 1
+
+
 def sqlite_diagnostics() -> dict[str, float | int]:
     with _SQLITE_METRICS_LOCK:
         connections = int(_SQLITE_METRICS["connections"])
@@ -47,19 +66,14 @@ def open_connection(path: Path):
     path.parent.mkdir(parents=True, exist_ok=True)
     started = time.perf_counter()
     connection = sqlite3.connect(path, timeout=SQLITE_BUSY_TIMEOUT_MS / 1000)
-    elapsed = (time.perf_counter() - started) * 1000
-    with _SQLITE_METRICS_LOCK:
-        _SQLITE_METRICS["connections"] += 1
-        _SQLITE_METRICS["wait_ms_total"] += elapsed
-        _SQLITE_METRICS["wait_ms_max"] = max(float(_SQLITE_METRICS["wait_ms_max"]), elapsed)
+    _record_connection_wait((time.perf_counter() - started) * 1000)
     connection.execute(f"PRAGMA busy_timeout={SQLITE_BUSY_TIMEOUT_MS}")
     try:
         with connection:
             yield connection
     except sqlite3.OperationalError as error:
         if "locked" in str(error).lower() or "busy" in str(error).lower():
-            with _SQLITE_METRICS_LOCK:
-                _SQLITE_METRICS["contention_failures"] += 1
+            _record_contention_failure()
         raise
     finally:
         connection.close()

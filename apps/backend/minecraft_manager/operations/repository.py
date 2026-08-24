@@ -8,12 +8,14 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import time
 from collections.abc import Callable
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Generator
 
 from .lifecycle import OperationState, OperationStage, ServerOperation, StageRecord
+from .._db import _record_connection_wait, _record_contention_failure
 
 
 SQLITE_BUSY_TIMEOUT_MS = 30_000
@@ -36,7 +38,9 @@ def _open(path: Path, *, autocommit: bool = False) -> sqlite3.Connection:
     kwargs: dict[str, Any] = {"timeout": SQLITE_BUSY_TIMEOUT_MS / 1000}
     if autocommit:
         kwargs["isolation_level"] = None
+    started = time.perf_counter()
     connection = sqlite3.connect(path, **kwargs)
+    _record_connection_wait((time.perf_counter() - started) * 1000)
     connection.execute(f"PRAGMA busy_timeout={SQLITE_BUSY_TIMEOUT_MS}")
     connection.execute("PRAGMA foreign_keys=ON")
     connection.row_factory = sqlite3.Row
@@ -53,6 +57,10 @@ def _connect(path: Path) -> Generator[sqlite3.Connection, None, None]:
     try:
         with connection:
             yield connection
+    except sqlite3.OperationalError as error:
+        if "locked" in str(error).lower() or "busy" in str(error).lower():
+            _record_contention_failure()
+        raise
     finally:
         connection.close()
 
@@ -76,6 +84,12 @@ def _write_connect(path: Path) -> Generator[sqlite3.Connection, None, None]:
         connection.execute("BEGIN IMMEDIATE")
         yield connection
         connection.execute("COMMIT")
+    except sqlite3.OperationalError as error:
+        if connection.in_transaction:
+            connection.execute("ROLLBACK")
+        if "locked" in str(error).lower() or "busy" in str(error).lower():
+            _record_contention_failure()
+        raise
     except Exception:
         if connection.in_transaction:
             connection.execute("ROLLBACK")

@@ -101,24 +101,25 @@ class TestProfileReviewEventRules:
 
     def test_profile_requires_informational_observations_to_be_non_blocking(self) -> None:
         text = PROFILE.read_text()
-        assert "Informational observations" in text, (
-            "PROFILE.md must name 'Informational observations' as a distinct category."
+        # All three properties must appear together in one coherent rule clause:
+        # named category + non-actionable label + exclusion from merge-risk/approval.
+        pattern = (
+            r"Informational observations\b[^.]*?"
+            r"(?:non-actionable|not\s+appear\s+in\s+the\s+merge.risk|merge-risk|approval rationale)"
         )
-        # Must exclude informational observations from merge-risk justification.
-        assert re.search(r"merge.risk|merge-risk|approval rationale", text), (
-            "PROFILE.md must state that informational observations must not appear "
-            "in the merge-risk justification or approval rationale."
-        )
-        assert re.search(r"non-actionable", text), (
-            "PROFILE.md must label informational observations as non-actionable."
+        assert re.search(pattern, text, re.DOTALL), (
+            "PROFILE.md must contain a coherent rule clause that names "
+            "'Informational observations', labels them non-actionable, and excludes "
+            "them from merge-risk justification or approval rationale — all in the "
+            "same section, not as independent document-wide matches."
         )
 
     def test_profile_requires_auth_claims_to_be_grounded_in_real_rules(self) -> None:
         text = PROFILE.read_text()
         # Must cite the actual auth directory path so reviewers know where to look.
-        assert re.search(r"apps/backend/[^\s)]*auth/", text), (
+        assert re.search(r"minecraft_manager/auth/", text), (
             "PROFILE.md must cite the repository's actual authentication rules path "
-            "(apps/backend/.../auth/) so auth/CSRF claims are grounded in real code, "
+            "(minecraft_manager/auth/) so auth/CSRF claims are grounded in real code, "
             "not mutation-only assumptions."
         )
         # Must require grounding before a claim is included in a finding.

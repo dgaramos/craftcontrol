@@ -147,6 +147,8 @@ Instalações autenticadas expõem:
 - `/api/events` — Server-Sent Events persistidos e ao vivo.
 - `/api/diagnostics` — diagnósticos locais de telemetria e SSE para owners; não exige uma stack de observabilidade.
 
+`GET /api/operations` retorna histórico de operações limitado e paginado pelos parâmetros de consulta `page` e `limit`, ambos baseados em uma página inicial 1.
+
 O Swagger anexa o token CSRF vinculado à sessão a requisições inseguras de “Try it out” e nunca ignora capabilities de papel. Não há endpoint arbitrário de shell ou console.
 
 ## Estado e telemetria orientados por eventos

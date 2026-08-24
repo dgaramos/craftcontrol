@@ -147,6 +147,8 @@ Authenticated installations expose:
 - `/api/events` — persisted and live Server-Sent Events.
 - `/api/diagnostics` — owner-only local telemetry and SSE diagnostics; it does not require an observability stack.
 
+`GET /api/operations` returns bounded, paginated operation history through one-based `page` and `limit` query parameters.
+
 Swagger attaches the session-bound CSRF token to unsafe “Try it out” requests and never bypasses role capabilities. There is no arbitrary shell or console endpoint.
 
 ## Event-driven state and telemetry

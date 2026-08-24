@@ -40,6 +40,9 @@
     },
     {
       "name": "World"
+    },
+    {
+      "name": "Operations"
     }
   ],
   "paths": {
@@ -691,8 +694,7 @@
         ],
         "security": [
           {
-            "cookieAuth": [],
-            "csrfToken": []
+            "cookieAuth": []
           }
         ],
         "responses": {
@@ -733,8 +735,7 @@
         ],
         "security": [
           {
-            "cookieAuth": [],
-            "csrfToken": []
+            "cookieAuth": []
           }
         ],
         "responses": {
@@ -779,8 +780,7 @@
         ],
         "security": [
           {
-            "cookieAuth": [],
-            "csrfToken": []
+            "cookieAuth": []
           }
         ],
         "responses": {
@@ -826,8 +826,7 @@
         ],
         "security": [
           {
-            "cookieAuth": [],
-            "csrfToken": []
+            "cookieAuth": []
           }
         ],
         "parameters": [
@@ -872,8 +871,7 @@
         ],
         "security": [
           {
-            "cookieAuth": [],
-            "csrfToken": []
+            "cookieAuth": []
           }
         ],
         "parameters": [
@@ -931,8 +929,7 @@
         ],
         "security": [
           {
-            "cookieAuth": [],
-            "csrfToken": []
+            "cookieAuth": []
           }
         ],
         "parameters": [
@@ -993,8 +990,7 @@
         ],
         "security": [
           {
-            "cookieAuth": [],
-            "csrfToken": []
+            "cookieAuth": []
           }
         ],
         "parameters": [

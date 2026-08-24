@@ -81,8 +81,9 @@ Confirme que a resposta foi publicada pelo App esperado na thread indicada e
 que a resolução, quando solicitada, foi aplicada. Uma falha de dispatch ou de
 verificação do App é uma falha de publicação; não use fallback nesse caso.
 
-Use o `gh api` com a conta pessoal autenticada somente se a operação do App
-correspondente estiver explicitamente indisponível ou não configurada **antes**
+Antes de usar uma conta pessoal, confirme a autorização explícita do usuário
+para o fallback. Use o `gh api` com a conta pessoal autenticada somente se a
+operação do App correspondente estiver explicitamente indisponível ou não configurada **antes**
 do dispatch. Registre no resumo que a ação foi um fallback pessoal e qual login
 a publicou. O fallback nunca deve se apresentar como Cody DR ou Claudio DR.
 

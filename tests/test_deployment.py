@@ -348,11 +348,15 @@ def test_local_findings_skill_prefers_reviewer_app_with_explicit_personal_fallba
 
     thread_section = skill.split("### 4. Atualizar o PR e as threads", 1)[1]
     thread_section = thread_section.split("### 5.", 1)[0]
+    authorization_at = thread_section.index("autorização explícita do usuário")
     fallback_at = thread_section.index(
         "Use o `gh api` com a conta pessoal autenticada somente se"
     )
+    personal_endpoint_at = thread_section.index("gh api repos/{owner}/{repo}/pulls")
+    assert authorization_at < fallback_at
+    assert authorization_at < personal_endpoint_at
     assert "gh api" not in thread_section[:fallback_at]
-    assert "gh api repos/{owner}/{repo}/pulls" in thread_section[fallback_at:]
+    assert personal_endpoint_at > fallback_at
 
 
 def test_claude_workflow_entry_points_are_matching_thin_plugin_wrappers() -> None:

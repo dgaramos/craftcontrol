@@ -44,8 +44,10 @@ commit roadmap content, `.env`, databases, world data, credentials, or keys.
 
 Codex reviews are attributed to **Cody DR** and Claude Code reviews to
 **Claudio DR**. The optional GitHub App publishers are `cody-dr` and
-`claudio-dr`. Without explicit user authorization and a configured publisher,
-return publication-ready content marked not published.
+`claudio-dr`. Without explicit user authorization, return publication-ready
+content marked not published. With explicit authorization, a personal GitHub
+account may publish only as a disclosed fallback when the requested App
+operation is unconfigured or unavailable before dispatch.
 
 When a reviewer authors a commit, use its matching co-author trailer:
 `Cody DR <dgaramos+cody@gmail.com>` or `Claudio DR
@@ -82,8 +84,11 @@ or a claim that a finding is resolved.
 
 ## Publisher dispatch contract
 
-Publication remains explicitly authorized. Never use a personal GitHub comment
-as a fallback for a configured App.
+Publication remains explicitly authorized. Use the configured reviewer App
+first. A personal GitHub account is permitted only as an explicitly authorized
+fallback when the requested App operation is unconfigured or unavailable before
+dispatch; record its login in the outcome. Never fall back after an App dispatch
+or verification failure.
 
 ### Review
 
@@ -135,8 +140,8 @@ for the App installation, supply no project fields — the failure is explicit.
 | Cody DR | review | available |
 | Cody DR | create-issue | available |
 | Cody DR | apply-pr-metadata | available |
-| Cody DR | reply | unavailable until #238 |
-| Cody DR | resolve-thread | unavailable until #238 |
+| Cody DR | reply | available |
+| Cody DR | resolve-thread | available |
 | Claudio DR | review | available |
 | Claudio DR | create-issue | available |
 | Claudio DR | apply-pr-metadata | available |
@@ -145,8 +150,10 @@ for the App installation, supply no project fields — the failure is explicit.
 
 ## Post-publication verification
 
-After a review or issue publication, verify the target and that the author is
-`cody-dr[bot]` for Cody DR or `claudio-dr[bot]` for Claudio DR. Reply and
-resolution verification applies to Claudio DR; Cody DR reply and resolution
-remain unavailable until their publisher workflows are implemented. A failed
-verification is a failed publication, not a fallback to a personal account.
+After an App publication, verify the target and that the author is
+`cody-dr[bot]` for Cody DR or `claudio-dr[bot]` for Claudio DR. Verify reply
+and resolution actions for both reviewers. A failed App verification is a
+failed publication, not a fallback to a personal account. When an App operation
+was unavailable before dispatch and a personal fallback was explicitly
+authorized, verify the authenticated personal actor and report it as a personal
+fallback rather than a reviewer-App action.

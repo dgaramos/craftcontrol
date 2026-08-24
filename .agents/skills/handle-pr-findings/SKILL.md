@@ -62,14 +62,32 @@ Um finding = um commit separado. Nunca agrupe findings em um único commit.
 
 ### 4. Atualizar o PR e as threads
 
-Após cada commit, responda na thread do finding no GitHub:
+Após cada commit, prepare a resposta e a resolução da thread. Quando a operação
+do App do revisor estiver configurada e disponível, publique primeiro pelo
+publisher correspondente e verifique autoria e thread. Para Cody DR, dispare
+`publish-cody-review.yml`; para Claudio DR, `publish-claudio-review.yml`, com
+`replies_json` e, quando aplicável, `resolve_thread_ids_json`.
 
 ```bash
-gh api repos/{owner}/{repo}/pulls/<número>/comments/<comment-id>/replies \
-  -f body="Corrigido no commit <sha>: <descrição breve do que foi feito>."
+gh workflow run publish-cody-review.yml \
+  -f pr_number=<número> \
+  -f reviewed_head_sha=<sha> \
+  -f event=COMMENT \
+  -f replies_json='[{"comment_id":<comment-id>,"body":"Fixed in commit <sha>: <brief description>."}]' \
+  -f resolve_thread_ids_json='["<thread-node-id>"]'
 ```
 
-Se o finding foi rejeitado ou adiado:
+Confirme que a resposta foi publicada pelo App esperado na thread indicada e
+que a resolução, quando solicitada, foi aplicada. Uma falha de dispatch ou de
+verificação do App é uma falha de publicação; não use fallback nesse caso.
+
+Use o `gh api` com a conta pessoal autenticada somente se a operação do App
+correspondente estiver explicitamente indisponível ou não configurada **antes**
+do dispatch. Registre no resumo que a ação foi um fallback pessoal e qual login
+a publicou. O fallback nunca deve se apresentar como Cody DR ou Claudio DR.
+
+Se o finding foi rejeitado ou adiado, aplique a mesma política de publisher.
+Use o exemplo abaixo apenas no fallback pessoal explicitamente permitido:
 
 ```bash
 gh api repos/{owner}/{repo}/pulls/<número>/comments/<comment-id>/replies \
@@ -111,5 +129,7 @@ Reporte ao usuário:
 - Trate finding válido e dentro de escopo sem pedir confirmação intermediária.
 - Um finding = um commit. Sem pacotes.
 - Todo commit criado pelo Cody DR inclui `Co-authored-by: Cody DR <dgaramos+cody@gmail.com>`.
+- Prefira sempre o App do revisor para replies e resoluções; `gh api` pessoal é
+  somente fallback explícito quando o App não está disponível antes do dispatch.
 - Nunca mergear.
 - Nunca commitar segredos.

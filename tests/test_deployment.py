@@ -331,6 +331,22 @@ def test_reviewer_skills_dispatch_thread_replies_through_their_apps() -> None:
     assert ".agent-review/craftcontrol/PROFILE.md" in wrapper
 
 
+def test_local_findings_skill_prefers_reviewer_app_with_explicit_personal_fallback() -> None:
+    skill = (ROOT / ".agents" / "skills" / "handle-pr-findings" / "SKILL.md").read_text()
+    profile = (ROOT / ".agent-review" / "craftcontrol" / "PROFILE.md").read_text()
+
+    assert "publish-cody-review.yml" in skill
+    assert "replies_json" in skill
+    assert "resolve_thread_ids_json" in skill
+    assert "indisponível ou não configurada **antes**" in skill
+    assert "não use fallback nesse caso" in skill
+    assert "Cody DR | reply | available" in profile
+    assert "Cody DR | resolve-thread | available" in profile
+    assert "personal GitHub account is permitted" in profile
+    assert "unconfigured or unavailable before dispatch" in profile
+    assert "Without explicit user authorization, return publication-ready" in profile
+
+
 def test_claude_workflow_entry_points_are_matching_thin_plugin_wrappers() -> None:
     expected_skills = {
         "create-issue": "author-issue",

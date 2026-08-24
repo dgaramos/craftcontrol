@@ -71,6 +71,24 @@ def test_diagnostics_returns_manager_data(client, service: MagicMock) -> None:
     service.diagnostics.assert_called_once()
 
 
+def test_diagnostics_requires_an_owner_capability(service: MagicMock) -> None:
+    app = _make_app(service, auth_mode="local")
+    auth = app.extensions["auth_service"]
+    client = app.test_client()
+
+    auth.authenticate.return_value = None
+    assert client.get("/api/diagnostics").status_code == 401
+
+    auth.authenticate.return_value = {"id": "2", "role": "viewer", "capabilities": []}
+    auth.require_capability.side_effect = PermissionError("telemetry.manage")
+    assert client.get("/api/diagnostics").status_code == 403
+
+    auth.authenticate.return_value = {"id": "1", "role": "owner", "capabilities": ["*"]}
+    auth.require_capability.side_effect = None
+    service.diagnostics.return_value = {"telemetry": {}, "broker": {}, "runtime_refreshing": False}
+    assert client.get("/api/diagnostics").status_code == 200
+
+
 def test_state_returns_public_state(client, service: MagicMock) -> None:
     resp = client.get("/api/state")
     assert resp.status_code == 200

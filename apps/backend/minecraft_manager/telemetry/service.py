@@ -20,20 +20,26 @@ class TelemetryService:
         self.repository = repository
         self.events = events
         self._lock = threading.RLock()
-        self._diagnostics: dict[str, float | int] = {"accepted": 0, "rejected": 0, "duration_total_ms": 0.0, "duration_max_ms": 0.0}
+        self._diagnostics: dict[str, float | int] = {"accepted": 0, "rejected": 0, "attempted": 0, "duration_total_ms": 0.0, "duration_max_ms": 0.0}
 
     def diagnostics(self) -> dict[str, float | int]:
         with self._lock:
             accepted = int(self._diagnostics["accepted"])
+            attempted = int(self._diagnostics["attempted"])
             return {
                 "accepted": accepted,
                 "rejected": int(self._diagnostics["rejected"]),
-                "ingestion_duration_ms_average": round(float(self._diagnostics["duration_total_ms"]) / accepted, 2) if accepted else 0,
+                "ingestion_duration_ms_average": round(float(self._diagnostics["duration_total_ms"]) / attempted, 2) if attempted else 0,
                 "ingestion_duration_ms_max": round(float(self._diagnostics["duration_max_ms"]), 2),
             }
 
     def ingest(self, envelope: dict[str, Any], request_snapshot: Callable[[str], None]) -> None:
         started = time.perf_counter()
+        def record_duration() -> None:
+            duration = (time.perf_counter() - started) * 1000
+            self._diagnostics["attempted"] += 1
+            self._diagnostics["duration_total_ms"] += duration
+            self._diagnostics["duration_max_ms"] = max(float(self._diagnostics["duration_max_ms"]), duration)
         with self._lock:
             topic = envelope["type"]
             sequence = int(envelope["sequence"])
@@ -52,6 +58,7 @@ class TelemetryService:
             pack_reset = topic == "telemetry.started" and last_sequence is not None and sequence < last_sequence
             if not snapshot_topic and last_sequence is not None and sequence <= last_sequence and not pack_reset:
                 self._diagnostics["rejected"] += 1
+                record_duration()
                 self.events.publish("telemetry.sequence.rejected", "behavior-pack", {
                     "sequence": sequence, "last_sequence": last_sequence, "topic": topic,
                 })
@@ -114,12 +121,11 @@ class TelemetryService:
             accepted, players = self.repository.ingest_telemetry(envelope)
             if not accepted:
                 self._diagnostics["rejected"] += 1
+                record_duration()
                 return
             self.repository.store("telemetry", updates, "behavior-pack")
-            duration = (time.perf_counter() - started) * 1000
             self._diagnostics["accepted"] += 1
-            self._diagnostics["duration_total_ms"] += duration
-            self._diagnostics["duration_max_ms"] = max(float(self._diagnostics["duration_max_ms"]), duration)
+            record_duration()
 
         self.events.publish(f"telemetry.{topic}", "behavior-pack", {"players": players, "sequence": envelope["sequence"]})
         if players or topic in {"snapshot.finished", "telemetry.started"}:

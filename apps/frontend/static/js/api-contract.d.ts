@@ -9,6 +9,7 @@ export type LoginRequest = { player: string; password: string; };
 export type ClaimRequest = { player: string; token: string; password: string; };
 export type Health = { ok: true; };
 export type JsonMap = { [key: string]: unknown; };
+export type Diagnostics = { telemetry: { accepted: number; rejected: number; ingestion_duration_ms_average: number; ingestion_duration_ms_max: number; }; broker: { events_by_topic: { [key: string]: number; }; sse_connections: number; sse_connections_total: number; }; runtime_refreshing: boolean; };
 export type NullableTimestamp = number | null;
 export type SchemaDocument = { settings: { [key: string]: { [key: string]: unknown; }; }; gamerules: { [key: string]: { [key: string]: unknown; }; }; };
 export type StateSnapshot = { settings: JsonMap; gamerules: JsonMap; players: JsonMap; server: JsonMap; domains: JsonMap; telemetry: JsonMap; refreshing: boolean; };

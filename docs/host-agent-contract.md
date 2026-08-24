@@ -241,7 +241,7 @@ Poll the result of a previously submitted operation.
   "outcome": "error",
   "executor_ref": null,
   "health_reached": false,
-  "failed_stage": "HEALTH_WAIT",
+  "failed_stage": "health_wait",
   "detail": "Server did not reach healthy state within 120s",
   "error_code": "health_probe_timeout",
   "exception_type": null
@@ -267,31 +267,32 @@ service or use-case changes are required when this adapter is introduced.
 {
   "operation_id": "<UUID>",
   "status": "running",
-  "current_stage": "HEALTH_WAIT"
+  "current_stage": "health_wait"
 }
 ```
 
 | `current_stage` | Description |
 |-----------------|-------------|
-| `PREPARATION` | Writing configuration files and staging the Compose project. |
-| `RESTART` | Issuing the Compose restart command. |
-| `HEALTH_WAIT` | Polling the Bedrock health probe. |
+| `prepare` | Writing configuration files and staging the Compose project. |
+| `restart` | Issuing the Compose restart command. |
+| `health_wait` | Polling the Bedrock health probe. |
 
 #### Bedrock health probe specification
 
 The health probe runs in the agent's network namespace (the Docker host, outside
-all containers). A successful probe is a TCP connection that is accepted on the
-target port.
+all containers). Bedrock Dedicated Server uses UDP/RakNet; a UDP datagram is
+sent to the target port and a non-empty response indicates the server is ready.
 
 | Parameter | Value |
 |-----------|-------|
 | Host | `127.0.0.1` |
 | Port | `19132` (Bedrock default; overridable by `intended_state.server_port` when present) |
-| Protocol | TCP |
-| Per-attempt connection timeout | 2 s |
+| Protocol | UDP |
+| Datagram | A Bedrock unconnected ping (`\x01`) or equivalent minimal probe |
+| Per-attempt read timeout | 2 s |
 | Polling interval | 5 s |
-| Success condition | TCP connection accepted (any response or clean close) |
-| Failure condition | Connection refused, connection timeout, or no response within 2 s |
+| Success condition | Any non-empty UDP response received within the read timeout |
+| Failure condition | No response or OS error within 2 s |
 
 `health_reached` is set to `true` only when the probe succeeds at least once
 within `health_timeout_seconds`. Any implementation must use these exact
@@ -328,12 +329,12 @@ implementation.
 
 | Code | Stage | Description |
 |------|-------|-------------|
-| `preparation_write_failed` | `PREPARATION` | A configuration file could not be written. |
-| `preparation_compose_invalid` | `PREPARATION` | The staged Compose configuration failed validation. |
-| `restart_command_failed` | `RESTART` | The `docker compose restart` command exited non-zero. |
-| `restart_timeout` | `RESTART` | The restart command did not complete within the configured deadline. |
-| `health_probe_failed` | `HEALTH_WAIT` | The health probe returned a non-healthy response. |
-| `health_probe_timeout` | `HEALTH_WAIT` | The server did not reach healthy state before `health_timeout_seconds`. |
+| `preparation_write_failed` | `prepare` | A configuration file could not be written. |
+| `preparation_compose_invalid` | `prepare` | The staged Compose configuration failed validation. |
+| `restart_command_failed` | `restart` | The `docker compose restart` command exited non-zero. |
+| `restart_timeout` | `restart` | The restart command did not complete within the configured deadline. |
+| `health_probe_failed` | `health_wait` | The health probe returned a non-healthy response. |
+| `health_probe_timeout` | `health_wait` | The server did not reach healthy state before `health_timeout_seconds`. |
 | `executor_internal_error` | any | An unhandled exception occurred in the agent. |
 
 ---
@@ -343,7 +344,7 @@ implementation.
 Agent unavailability is handled differently depending on whether the failure
 occurred before or after the agent received the request.
 
-#### Pre-delivery failures (safe to fail immediately)
+### Pre-delivery failures (safe to fail immediately)
 
 A connection refused or a timeout that fires before the TCP connection to the
 agent is established means the request was never delivered. The backend must:
@@ -358,12 +359,14 @@ agent is established means the request was never delivered. The backend must:
 
 The operator may restart the agent and retry the operation.
 
-#### Post-delivery ambiguous failures
+### Post-delivery ambiguous failures
 
-A `5xx` response or a timeout that fires after the TCP connection was established
-means the agent may have accepted and begun executing the request. Immediately
-marking the operation `FAILED` would race with a successful execution; a
-subsequent retry may receive `409 Conflict`.
+A `5xx` response, a timeout that fires after the TCP connection was established,
+a connection reset, an EOF, a write failure, or a protocol error — whenever the
+agent may have already received `POST /v1/execute` — means the agent may have
+accepted and begun executing the request. Immediately marking the operation
+`FAILED` would race with a successful execution; a subsequent retry may receive
+`409 Conflict`.
 
 The backend must:
 
@@ -389,10 +392,10 @@ in this table must be rejected with `400 Bad Request`.
 
 | Operation | Trigger | Host privilege required |
 |-----------|---------|------------------------|
-| Write server configuration files to the Bedrock data directory | `POST /v1/execute` (PREPARATION) | Write access to the Bedrock data path |
-| Stage and validate the Compose project file | `POST /v1/execute` (PREPARATION) | Read access to the Compose project directory |
-| `docker compose restart minecraft-server` | `POST /v1/execute` (RESTART) | Docker socket access |
-| Poll the Bedrock TCP health probe (`nc` or equivalent) | `POST /v1/execute` (HEALTH_WAIT) | Network access to localhost |
+| Write server configuration files to the Bedrock data directory | `POST /v1/execute` (`prepare`) | Write access to the Bedrock data path |
+| Stage and validate the Compose project file | `POST /v1/execute` (`prepare`) | Read access to the Compose project directory |
+| `docker compose restart minecraft-server` | `POST /v1/execute` (`restart`) | Docker socket access |
+| Poll the Bedrock UDP health probe | `POST /v1/execute` (`health_wait`) | Network access to localhost |
 
 No console commands, arbitrary shell execution, world data mutations, or `.env`
 file writes are permitted.

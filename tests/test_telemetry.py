@@ -8,6 +8,7 @@ from minecraft_manager.players.repository import SQLitePlayerRepository
 from minecraft_manager.repository import StateRepository
 from minecraft_manager.telemetry import parse_telemetry_line
 from minecraft_manager.telemetry_repository import SQLiteTelemetryRepository
+from minecraft_manager._db import sqlite_diagnostics
 
 
 @pytest.fixture
@@ -33,6 +34,14 @@ def test_parses_actual_bedrock_content_log_fixture() -> None:
     assert [item["type"] for item in envelopes if item] == [
         "telemetry.started", "snapshot.started", "snapshot.player", "snapshot.finished",
     ]
+
+
+def test_sqlite_diagnostics_report_connection_metrics(telemetry_repo: SQLiteTelemetryRepository) -> None:
+    telemetry_repo.snapshot()
+    diagnostics = sqlite_diagnostics()
+    assert diagnostics["connections"] >= 1
+    assert diagnostics["wait_ms_average"] >= 0
+    assert diagnostics["contention_failures"] >= 0
 
 
 def test_parses_prefixed_content_log() -> None:

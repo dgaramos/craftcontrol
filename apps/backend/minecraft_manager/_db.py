@@ -11,6 +11,8 @@ from __future__ import annotations
 import hashlib
 import os
 import sqlite3
+import threading
+import time
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -19,6 +21,19 @@ from zoneinfo import ZoneInfo
 
 
 SQLITE_BUSY_TIMEOUT_MS = 30_000
+_SQLITE_METRICS = {"connections": 0, "wait_ms_total": 0.0, "wait_ms_max": 0.0, "contention_failures": 0}
+_SQLITE_METRICS_LOCK = threading.Lock()
+
+
+def sqlite_diagnostics() -> dict[str, float | int]:
+    with _SQLITE_METRICS_LOCK:
+        connections = int(_SQLITE_METRICS["connections"])
+        return {
+            "connections": connections,
+            "wait_ms_average": round(float(_SQLITE_METRICS["wait_ms_total"]) / connections, 2) if connections else 0,
+            "wait_ms_max": round(float(_SQLITE_METRICS["wait_ms_max"]), 2),
+            "contention_failures": int(_SQLITE_METRICS["contention_failures"]),
+        }
 
 ALLOWED_DAILY_FIELDS = frozenset({
     "play_seconds", "sessions", "joins", "deaths", "player_kills", "mob_kills",
@@ -30,11 +45,22 @@ ALLOWED_DAILY_FIELDS = frozenset({
 @contextmanager
 def open_connection(path: Path):
     path.parent.mkdir(parents=True, exist_ok=True)
+    started = time.perf_counter()
     connection = sqlite3.connect(path, timeout=SQLITE_BUSY_TIMEOUT_MS / 1000)
+    elapsed = (time.perf_counter() - started) * 1000
+    with _SQLITE_METRICS_LOCK:
+        _SQLITE_METRICS["connections"] += 1
+        _SQLITE_METRICS["wait_ms_total"] += elapsed
+        _SQLITE_METRICS["wait_ms_max"] = max(float(_SQLITE_METRICS["wait_ms_max"]), elapsed)
     connection.execute(f"PRAGMA busy_timeout={SQLITE_BUSY_TIMEOUT_MS}")
     try:
         with connection:
             yield connection
+    except sqlite3.OperationalError as error:
+        if "locked" in str(error).lower() or "busy" in str(error).lower():
+            with _SQLITE_METRICS_LOCK:
+                _SQLITE_METRICS["contention_failures"] += 1
+        raise
     finally:
         connection.close()
 

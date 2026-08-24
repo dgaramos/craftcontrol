@@ -8,6 +8,7 @@ from .telemetry_service import TelemetryService
 from .server import WorldService
 from .reconciliation import ReconciliationService
 from .operations import ServerOperationService
+from ._db import sqlite_diagnostics
 
 
 class ManagerService:
@@ -106,6 +107,7 @@ class ManagerService:
             "telemetry": self.telemetry_service.diagnostics(),
             "broker": broker_diagnostics() if callable(broker_diagnostics) else {},
             "runtime_refreshing": self.refreshing,
+            "persistence": sqlite_diagnostics(),
             "telemetry_state": {
                 key: telemetry_state.get(key)
                 for key in ("status", "sequence", "expected_sequence", "gap_count", "missing_events", "reset_count", "last_snapshot_at", "last_event_at")

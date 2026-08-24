@@ -1640,6 +1640,15 @@
             }
           },
           "runtime_refreshing": {"type": "boolean"}
+          ,"persistence": {
+            "type": "object",
+            "properties": {
+              "connections": {"type": "integer", "minimum": 0},
+              "wait_ms_average": {"type": "number", "minimum": 0},
+              "wait_ms_max": {"type": "number", "minimum": 0},
+              "contention_failures": {"type": "integer", "minimum": 0}
+            }
+          }
         }
       },
       "NullableTimestamp": {

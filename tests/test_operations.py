@@ -1138,52 +1138,67 @@ class TestRecoveryAndReconciliation:
         assert "offline" in (reconciled.terminal_error or "")
 
     def test_reconciliation_returns_none_when_operation_deleted_between_probe_and_lock(self, tmp_path: Path):
-        """request_reconciliation returns None when the operation is removed after the probe read."""
-        from unittest.mock import patch as _patch
+        """request_reconciliation returns None when the operation is removed after the probe read.
 
+        Uses a real second SQLiteOperationRepository to delete the row between the
+        probe read and the fetch_and_update call, without monkey-patching.
+        """
         docker = MagicMock()
         docker.status.return_value = {"state": "running", "online": True}
         service = make_service(tmp_path, docker=docker)
+        repo = service._repo
+        db = repo._path
+
         op = ServerOperation.create("test-server", {"MAX_PLAYERS": "20"})
         op.start()
         op.fail_stage(OperationStage.REVIEW, "boom")
-        service._repo.save(op)
+        repo.save(op)
 
-        original_fetch = service._repo.fetch_and_update
+        original_fetch = repo.fetch_and_update
 
-        def fetch_returns_none(operation_id, modifier):
-            return None
+        def delete_then_fetch(operation_id, modifier):
+            import sqlite3 as _sqlite3
+            conn = _sqlite3.connect(db)
+            conn.execute("DELETE FROM server_operations WHERE operation_id = ?", (operation_id,))
+            conn.commit()
+            conn.close()
+            return original_fetch(operation_id, modifier)
 
-        with _patch.object(service._repo, "fetch_and_update", side_effect=fetch_returns_none):
-            result = service.request_reconciliation(op.operation_id)
+        repo.fetch_and_update = delete_then_fetch  # type: ignore[method-assign]
+        result = service.request_reconciliation(op.operation_id)
 
         assert result is None
 
     def test_reconciliation_inner_recheck_skips_ineligible_state_change(self, tmp_path: Path):
-        """_apply inner re-check returns early when state changed between probe and write lock."""
-        from unittest.mock import patch as _patch
+        """_apply inner re-check returns early when state changed between probe and write lock.
 
+        Uses a second SQLiteOperationRepository to persist CONFIRMED state before
+        fetch_and_update runs, simulating another thread winning the write lock first.
+        """
         docker = MagicMock()
         docker.status.return_value = {"state": "running", "online": True}
         service = make_service(tmp_path, docker=docker)
+        repo = service._repo
+        db = repo._path
+
         op = ServerOperation.create("test-server", {"MAX_PLAYERS": "20"})
         op.start()
         op.fail_stage(OperationStage.REVIEW, "boom")
-        service._repo.save(op)
+        repo.save(op)
 
-        original_fetch = service._repo.fetch_and_update
+        second_repo = SQLiteOperationRepository(db)
+        original_fetch = repo.fetch_and_update
 
-        def fetch_with_confirmed_snapshot(operation_id, modifier):
-            # Supply a snapshot where the state has already been confirmed —
-            # simulates another thread confirming between probe and lock.
-            confirmed = service._repo.get(operation_id)
-            assert confirmed is not None
-            confirmed.state = OperationState.CONFIRMED
-            modifier(confirmed)
-            return confirmed
+        def confirm_then_fetch(operation_id, modifier):
+            fresh = second_repo.get(operation_id)
+            assert fresh is not None
+            fresh.state = OperationState.CONFIRMED
+            fresh.terminal_error = None
+            second_repo.save(fresh)
+            return original_fetch(operation_id, modifier)
 
-        with _patch.object(service._repo, "fetch_and_update", side_effect=fetch_with_confirmed_snapshot):
-            result = service.request_reconciliation(op.operation_id)
+        repo.fetch_and_update = confirm_then_fetch  # type: ignore[method-assign]
+        result = service.request_reconciliation(op.operation_id)
 
         assert result is not None
         assert result.state == OperationState.CONFIRMED

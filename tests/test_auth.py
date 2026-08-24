@@ -47,7 +47,7 @@ def test_login_logout_and_alias_identity(auth_db) -> None:
 
 
 def test_change_password_rotates_current_session_and_revokes_existing_sessions(auth_db) -> None:
-    path, auth = auth_db
+    _, auth = auth_db
     invitation = auth.create_invitation("Nicole", "operator")
     current_session, _ = auth.claim("Nicole", invitation, "a sufficiently long password")
     other_session, _ = auth.login("Nicole", "a sufficiently long password")
@@ -68,7 +68,7 @@ def test_change_password_rotates_current_session_and_revokes_existing_sessions(a
 
 
 def test_change_password_rejects_invalid_current_password_without_state_changes(auth_db) -> None:
-    path, auth = auth_db
+    _, auth = auth_db
     invitation = auth.create_invitation("Nicole", "viewer")
     session, _ = auth.claim("Nicole", invitation, "a sufficiently long password")
 
@@ -81,7 +81,7 @@ def test_change_password_rejects_invalid_current_password_without_state_changes(
 
 
 def test_change_password_rejects_an_oversized_current_password(auth_db) -> None:
-    path, auth = auth_db
+    _, auth = auth_db
     invitation = auth.create_invitation("Nicole", "viewer")
     session, _ = auth.claim("Nicole", invitation, "a sufficiently long password")
 
@@ -261,7 +261,7 @@ def test_csrf_tokens_cannot_be_reused_across_sessions(auth_db) -> None:
 
 
 def test_http_password_change_requires_csrf_and_rotates_cookie_session(auth_db) -> None:
-    path, auth = auth_db
+    _, auth = auth_db
     invitation = auth.create_invitation("Nicole", "operator")
     app = Flask(__name__)
     install_auth(app, auth, "local", secure_cookie=False)

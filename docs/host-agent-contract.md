@@ -288,11 +288,11 @@ sent to the target port and a non-empty response indicates the server is ready.
 | Host | `127.0.0.1` |
 | Port | `19132` (Bedrock default; overridable by `intended_state.server_port` when present) |
 | Protocol | UDP |
-| Datagram | A Bedrock unconnected ping (`\x01`) or equivalent minimal probe |
+| Datagram | A complete RakNet unconnected ping (25 bytes): `0x01` (packet ID) + 8-byte timestamp (uint64 BE) + 16-byte magic (`00 ff ff 00 fe fe fe fe fd fd fd fd 12 34 56 78`) + 8-byte client GUID (uint64 BE) |
 | Per-attempt read timeout | 2 s |
 | Polling interval | 5 s |
-| Success condition | Any non-empty UDP response received within the read timeout |
-| Failure condition | No response or OS error within 2 s |
+| Success condition | A UDP response of at least 35 bytes whose first byte is `0x1c` (`ID_UNCONNECTED_PONG`) and whose bytes 17–32 match the RakNet magic sequence |
+| Failure condition | No response, a response that fails the pong validation above, or an OS error within 2 s |
 
 `health_reached` is set to `true` only when the probe succeeds at least once
 within `health_timeout_seconds`. Any implementation must use these exact

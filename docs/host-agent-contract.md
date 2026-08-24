@@ -281,14 +281,14 @@ service or use-case changes are required when this adapter is introduced.
 
 The health probe runs in the agent's network namespace (the Docker host, outside
 all containers). Bedrock Dedicated Server uses UDP/RakNet; a UDP datagram is
-sent to the target port and a non-empty response indicates the server is ready.
+sent to the target port and a validated `ID_UNCONNECTED_PONG` response (minimum 35 bytes, correct magic) indicates the server is ready.
 
 | Parameter | Value |
 |-----------|-------|
 | Host | `127.0.0.1` |
 | Port | `19132` (Bedrock default; overridable by `intended_state.server_port` when present) |
 | Protocol | UDP |
-| Datagram | A complete RakNet unconnected ping (25 bytes): `0x01` (packet ID) + 8-byte timestamp (uint64 BE) + 16-byte magic (`00 ff ff 00 fe fe fe fe fd fd fd fd 12 34 56 78`) + 8-byte client GUID (uint64 BE) |
+| Datagram | A complete RakNet unconnected ping (33 bytes): `0x01` (packet ID) + 8-byte timestamp (uint64 BE) + 16-byte magic (`00 ff ff 00 fe fe fe fe fd fd fd fd 12 34 56 78`) + 8-byte client GUID (uint64 BE) |
 | Per-attempt read timeout | 2 s |
 | Polling interval | 5 s |
 | Success condition | A UDP response of at least 35 bytes whose first byte is `0x1c` (`ID_UNCONNECTED_PONG`) and whose bytes 17–32 match the RakNet magic sequence |

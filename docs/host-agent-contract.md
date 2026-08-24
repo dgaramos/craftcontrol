@@ -277,6 +277,26 @@ service or use-case changes are required when this adapter is introduced.
 | `RESTART` | Issuing the Compose restart command. |
 | `HEALTH_WAIT` | Polling the Bedrock health probe. |
 
+#### Bedrock health probe specification
+
+The health probe runs in the agent's network namespace (the Docker host, outside
+all containers). A successful probe is a TCP connection that is accepted on the
+target port.
+
+| Parameter | Value |
+|-----------|-------|
+| Host | `127.0.0.1` |
+| Port | `19132` (Bedrock default; overridable by `intended_state.server_port` when present) |
+| Protocol | TCP |
+| Per-attempt connection timeout | 2 s |
+| Polling interval | 5 s |
+| Success condition | TCP connection accepted (any response or clean close) |
+| Failure condition | Connection refused, connection timeout, or no response within 2 s |
+
+`health_reached` is set to `true` only when the probe succeeds at least once
+within `health_timeout_seconds`. Any implementation must use these exact
+parameters so that `health_reached` values are comparable across adapters.
+
 #### Response — `404 Not Found`
 
 Returned when the `operation_id` is not known to the agent.

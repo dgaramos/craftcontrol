@@ -101,10 +101,15 @@ class ManagerService:
 
     def diagnostics(self) -> dict[str, Any]:
         broker_diagnostics = getattr(self.broker, "diagnostics", None)
+        telemetry_state = self.state().get("telemetry", {})
         return {
             "telemetry": self.telemetry_service.diagnostics(),
             "broker": broker_diagnostics() if callable(broker_diagnostics) else {},
             "runtime_refreshing": self.refreshing,
+            "telemetry_state": {
+                key: telemetry_state.get(key)
+                for key in ("status", "sequence", "expected_sequence", "gap_count", "missing_events", "reset_count", "last_snapshot_at", "last_event_at")
+            },
         }
 
     # ------------------------------------------------------------------

@@ -12,7 +12,43 @@ async function loadDiagnostics() {
     const result = await api("/api/diagnostics");
     const telemetry = result.telemetry || {};
     const broker = result.broker || {};
-    target.innerHTML = `<section class="capability-panel"><div><strong>${t("diagnostics")}</strong><small>${t("diagnosticsHelp")}</small></div><dl><div><dt>${t("telemetryAccepted")}</dt><dd>${escapeHtml(telemetry.accepted || 0)}</dd></div><div><dt>${t("telemetryRejected")}</dt><dd>${escapeHtml(telemetry.rejected || 0)}</dd></div><div><dt>${t("ingestionDuration")}</dt><dd>${escapeHtml(telemetry.ingestion_duration_ms_average || 0)} ms</dd></div><div><dt>${t("sseConnections")}</dt><dd>${escapeHtml(broker.sse_connections || 0)}</dd></div></dl></section>`;
+    const section = document.createElement("section");
+    section.className = "capability-panel";
+    const heading = document.createElement("div");
+    const title = document.createElement("strong");
+    title.textContent = t("diagnostics");
+    const help = document.createElement("small");
+    help.textContent = t("diagnosticsHelp");
+    heading.append(title, help);
+    const metrics = document.createElement("dl");
+    const add = (label, value) => {
+      const item = document.createElement("div");
+      const term = document.createElement("dt");
+      term.textContent = label;
+      const detail = document.createElement("dd");
+      detail.textContent = String(value);
+      item.append(term, detail);
+      metrics.append(item);
+    };
+    add(t("telemetryAccepted"), telemetry.accepted || 0);
+    add(t("telemetryRejected"), telemetry.rejected || 0);
+    add(t("ingestionDuration"), `${telemetry.ingestion_duration_ms_average || 0} ms`);
+    add(t("ingestionDurationMax"), `${telemetry.ingestion_duration_ms_max || 0} ms`);
+    add(t("sseConnections"), broker.sse_connections || 0);
+    add(t("sseConnectionsTotal"), broker.sse_connections_total || 0);
+    add(t("runtimeRefreshing"), result.runtime_refreshing ? t("yes") : t("no"));
+    section.append(heading, metrics);
+    const topics = Object.entries(broker.events_by_topic || {});
+    if (topics.length) {
+      const list = document.createElement("ul");
+      topics.forEach(([topic, count]) => {
+        const item = document.createElement("li");
+        item.textContent = `${topic}: ${count}`;
+        list.append(item);
+      });
+      section.append(list);
+    }
+    target.replaceChildren(section);
   } catch (_) { target.textContent = ""; }
 }
 

@@ -100,6 +100,8 @@ def test_diagnostics_summarize_telemetry_and_broker_counters(tmp_path: Path) -> 
 
     assert diagnostics["telemetry"]["accepted"] == 1
     assert diagnostics["telemetry"]["rejected"] == 1
+    assert diagnostics["telemetry"]["duplicates"] == 1
+    assert diagnostics["telemetry"]["old"] == 0
     assert diagnostics["telemetry"]["ingestion_duration_ms_max"] >= 0
     assert diagnostics["broker"]["events_by_topic"]["telemetry.sequence.rejected"] == 1
 

@@ -22,6 +22,7 @@ export const es = {
   telemetryPackHelp: "Estadísticas nativas e historial estructurado del mundo.", installedVersion: "Versión instalada", bundledVersion: "Versión disponible", packHealth: "Estado", lastResponse: "Última respuesta", packActive: "Instalado y activo", packInactive: "Desactivado", packMissing: "No instalado", upgradeAvailable: "Actualización disponible", installPack: "Instalar", upgradePack: "Actualizar", disablePack: "Desactivar", rollbackPack: "Restaurar copia", healthy: "Saludable", syncing: "Sincronizando", degraded: "Degradado", waiting: "Esperando", craftControlImage: "Imagen de CraftControl", activeSince: "Activa desde", packObserved: "Pack observado", packInstalledAt: "Archivos actualizados el",
   behaviorPackEyebrow: "Behavior Pack", statusEyebrow: "Estado", volumeEyebrow: "Volumen", telemetryEyebrow: "Telemetría",
   diagnostics: "Diagnóstico interno", diagnosticsHelp: "Contadores del proceso en tiempo real; no se requiere un servicio externo de observabilidad.", telemetryAccepted: "Eventos aceptados", telemetryRejected: "Eventos rechazados", ingestionDuration: "Ingestión media", sseConnections: "Conexiones SSE activas",
+  ingestionDurationMax: "Ingestión más lenta", sseConnectionsTotal: "Conexiones SSE desde el inicio", runtimeRefreshing: "Reconciliación en curso", yes: "Sí", no: "No",
   opStages: "Etapas de la operación",
   opChanges: "Cambios solicitados",
   opState_pending: "Preparando operación",

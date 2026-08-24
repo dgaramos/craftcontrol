@@ -44,11 +44,14 @@ describe("createServerFeature", () => {
   test("renders local diagnostics when the owner panel requests them", async () => {
     const deps = makeDeps();
     deps.elements["#diagnostics-state"] = makeEl();
-    deps.api.mockResolvedValue({ telemetry: { accepted: 4, rejected: 1, ingestion_duration_ms_average: 2.5 }, broker: { sse_connections: 3 } });
+    deps.api.mockResolvedValue({ telemetry: { accepted: 4, rejected: 1, ingestion_duration_ms_average: 2.5, ingestion_duration_ms_max: 9 }, broker: { sse_connections: 3, sse_connections_total: 8, events_by_topic: { "telemetry.started": 2 } }, runtime_refreshing: true });
     const feature = createServerFeature(deps);
     await feature.loadDiagnostics();
-    expect(deps.elements["#diagnostics-state"].innerHTML).toContain("telemetryAccepted");
-    expect(deps.elements["#diagnostics-state"].innerHTML).toContain("2.5 ms");
+    const rendered = deps.elements["#diagnostics-state"].children[0].textContent;
+    expect(rendered).toContain("telemetryAccepted");
+    expect(rendered).toContain("telemetryRejected");
+    expect(rendered).toContain("2.5 ms");
+    expect(rendered).toContain("3");
   });
 
   test("hides diagnostics when its protected API request fails", async () => {

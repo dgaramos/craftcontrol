@@ -96,10 +96,9 @@ missing or mismatched token returns `401 Unauthorized` with the body:
 1. Generate the token on the host before deploying the agent:
 
    ```bash
-   python3 -c "import secrets; print(secrets.token_urlsafe(32))" \
-     | sudo tee /etc/craftcontrol/host-agent-token
-   sudo chmod 600 /etc/craftcontrol/host-agent-token
-   sudo chown craftcontrol-agent:craftcontrol-agent /etc/craftcontrol/host-agent-token
+   TOKEN=$(python3 -c "import secrets; print(secrets.token_urlsafe(32), end='')")
+   echo -n "$TOKEN" | sudo install -m 0600 -o craftcontrol-agent -g craftcontrol-agent \
+     /dev/stdin /etc/craftcontrol/host-agent-token
    ```
 
 2. Store the same token where the backend can read it. In the Docker Compose

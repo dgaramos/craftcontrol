@@ -7,8 +7,8 @@ structurally.
 
 from __future__ import annotations
 
-from collections.abc import Iterator
-from typing import Any, Callable, Protocol, TYPE_CHECKING
+from collections.abc import Callable, Iterator
+from typing import Any, Protocol, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .operations.lifecycle import OperationStage, ServerOperation
@@ -111,6 +111,11 @@ class OperationStore(Protocol):
 
     def save(self, operation: ServerOperation) -> None: ...
     def update_stage(self, operation: ServerOperation, stage: OperationStage) -> None: ...
+    def fetch_and_update(
+        self,
+        operation_id: str,
+        modifier: Callable[[ServerOperation], None],
+    ) -> ServerOperation | None: ...
     def get(self, operation_id: str) -> ServerOperation | None: ...
     def get_latest(self, server_id: str) -> ServerOperation | None: ...
     def get_active(self, server_id: str) -> ServerOperation | None: ...

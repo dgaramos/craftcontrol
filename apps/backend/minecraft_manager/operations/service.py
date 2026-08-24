@@ -124,67 +124,90 @@ class ServerOperationService:
         whether the effective configuration matches to produce a confirmed,
         divergent, or failed terminal state.  Returns the refreshed operation
         or None if the operation does not exist or is still running.
+
+        The read-modify-write is performed atomically via ``fetch_and_update``
+        (issue #251) so the snapshot fed to the reconciliation logic is always
+        fresh at the moment the write lock is granted.
         """
-        operation = self._repo.get(operation_id)
+        # A quick non-locking read lets us bail out early (wrong server, not
+        # terminal, or not found) without acquiring the write lock at all.
+        probe = self._repo.get(operation_id)
         if (
-            operation is None
-            or operation.server_id != self._server_id
-            or operation.state not in {OperationState.FAILED, OperationState.DIVERGENT}
+            probe is None
+            or probe.server_id != self._server_id
+            or probe.state not in {OperationState.FAILED, OperationState.DIVERGENT}
         ):
-            return operation
+            return probe
 
+        # Observe the container outside the write lock — it may be slow.
         obs = self._observe_container()
-        operation.update_observation(obs)
 
-        unverifiable = sorted(set(operation.requested_changes) - PROPERTY_NAMES.keys())
-        verifiable_changes = {k: v for k, v in operation.requested_changes.items() if k in PROPERTY_NAMES}
+        result: ServerOperation | None = None
 
-        if unverifiable:
-            # Any unverifiable key blocks confirmation — mirrors _run REVIEW rejection.
-            # Keep the current terminal state and record the attempt.
-            operation.observation["reconciliation_result"] = {
-                "state": operation.state.value,
-                "reconciled_at": _now(),
-                "evidence": {"unverifiable_settings": unverifiable},
-            }
-        elif obs.get("online") and verifiable_changes:
-            try:
-                verified, evidence = self._verify_configuration(operation)
-                operation.update_observation(evidence)
-                if not evidence.get("online"):
-                    operation.state = OperationState.FAILED
-                    operation.terminal_error = "server offline during configuration verification"
-                elif verified:
-                    operation.state = OperationState.CONFIRMED
-                    operation.terminal_error = None
-                else:
-                    operation.state = OperationState.DIVERGENT
-                    if not operation.terminal_error:
-                        operation.terminal_error = "effective configuration differs from requested changes"
+        def _apply(operation: ServerOperation) -> None:
+            nonlocal result
+            # Re-check eligibility on the fresh snapshot inside the write lock.
+            if (
+                operation.server_id != self._server_id
+                or operation.state not in {OperationState.FAILED, OperationState.DIVERGENT}
+            ):
+                result = operation
+                return
+
+            operation.update_observation(obs)
+
+            unverifiable = sorted(set(operation.requested_changes) - PROPERTY_NAMES.keys())
+            verifiable_changes = {k: v for k, v in operation.requested_changes.items() if k in PROPERTY_NAMES}
+
+            if unverifiable:
+                # Any unverifiable key blocks confirmation — mirrors _run REVIEW rejection.
                 operation.observation["reconciliation_result"] = {
                     "state": operation.state.value,
                     "reconciled_at": _now(),
-                    "evidence": evidence,
+                    "evidence": {"unverifiable_settings": unverifiable},
                 }
-            except Exception as exc:
-                error_msg = f"reconciliation verification failed: {exc}"
+            elif obs.get("online") and verifiable_changes:
+                try:
+                    verified, evidence = self._verify_configuration(operation)
+                    operation.update_observation(evidence)
+                    if not evidence.get("online"):
+                        operation.state = OperationState.FAILED
+                        operation.terminal_error = "server offline during configuration verification"
+                    elif verified:
+                        operation.state = OperationState.CONFIRMED
+                        operation.terminal_error = None
+                    else:
+                        operation.state = OperationState.DIVERGENT
+                        if not operation.terminal_error:
+                            operation.terminal_error = "effective configuration differs from requested changes"
+                    operation.observation["reconciliation_result"] = {
+                        "state": operation.state.value,
+                        "reconciled_at": _now(),
+                        "evidence": evidence,
+                    }
+                except Exception as exc:
+                    operation.state = OperationState.FAILED
+                    operation.terminal_error = f"reconciliation verification failed: {exc}"
+                    operation.observation["reconciliation_result"] = {
+                        "state": OperationState.FAILED.value,
+                        "reconciled_at": _now(),
+                        "evidence": {"error": str(exc)},
+                    }
+                    LOGGER.warning(
+                        "server_operation reconciliation verification failed operation_id=%s: %s",
+                        operation_id, exc,
+                    )
+            elif not obs.get("online") and operation.state == OperationState.DIVERGENT:
+                # Server is now offline; divergent result is no longer observable.
                 operation.state = OperationState.FAILED
-                operation.terminal_error = error_msg
-                operation.observation["reconciliation_result"] = {
-                    "state": OperationState.FAILED.value,
-                    "reconciled_at": _now(),
-                    "evidence": {"error": str(exc)},
-                }
-                LOGGER.warning(
-                    "server_operation reconciliation verification failed operation_id=%s: %s",
-                    operation_id, exc,
-                )
-        elif not obs.get("online") and operation.state == OperationState.DIVERGENT:
-            # Server is now offline; divergent result is no longer observable
-            operation.state = OperationState.FAILED
-            operation.terminal_error = "server offline during reconciliation"
+                operation.terminal_error = "server offline during reconciliation"
 
-        self._repo.save(operation)
+            result = operation
+
+        updated = self._repo.fetch_and_update(operation_id, _apply)
+        if updated is None:
+            return None
+        operation = result if result is not None else updated
         self._publish(operation)
         return operation
 

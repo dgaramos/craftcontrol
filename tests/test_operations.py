@@ -317,6 +317,68 @@ class TestSQLiteOperationRepository:
         assert loaded is not None
         assert loaded.state == OperationState.RUNNING
 
+    def test_fetch_and_update_serializes_different_mutations(self, tmp_path: Path):
+        """fetch_and_update must serialise concurrent writers so neither mutation is lost.
+
+        Two threads each write a distinct key into the operation's observation
+        dict via fetch_and_update.  Because the snapshot is taken *inside* the
+        BEGIN IMMEDIATE transaction, the second thread reads the row already
+        committed by the first and merges its own change on top.  The final
+        record must contain both keys — neither write is silently clobbered.
+        """
+        repo = make_repo(tmp_path)
+        op = ServerOperation.create("srv", {})
+        repo.save(op)
+
+        barrier = threading.Barrier(2)
+        errors: list[Exception] = []
+
+        def writer(key: str, value: str) -> None:
+            try:
+                barrier.wait(timeout=5)
+                repo.fetch_and_update(
+                    op.operation_id,
+                    lambda o: o.update_observation({key: value}),
+                )
+            except Exception as exc:
+                errors.append(exc)
+
+        t1 = threading.Thread(target=writer, args=("writer_a", "alpha"))
+        t2 = threading.Thread(target=writer, args=("writer_b", "beta"))
+        t1.start()
+        t2.start()
+        t1.join(timeout=10)
+        t2.join(timeout=10)
+
+        assert not errors, errors
+        loaded = repo.get(op.operation_id)
+        assert loaded is not None
+        # Both mutations must be present — neither was silently lost.
+        assert loaded.observation.get("writer_a") == "alpha"
+        assert loaded.observation.get("writer_b") == "beta"
+
+    def test_fetch_and_update_returns_none_for_missing_operation(self, tmp_path: Path):
+        repo = make_repo(tmp_path)
+        result = repo.fetch_and_update("nonexistent", lambda o: None)
+        assert result is None
+
+    def test_fetch_and_update_rolls_back_when_modifier_raises(self, tmp_path: Path):
+        """A modifier that raises must leave the operation unchanged."""
+        repo = make_repo(tmp_path)
+        op = ServerOperation.create("srv", {})
+        repo.save(op)
+
+        with pytest.raises(RuntimeError, match="modifier failure"):
+            repo.fetch_and_update(
+                op.operation_id,
+                lambda o: (_ for _ in ()).throw(RuntimeError("modifier failure")),
+            )
+
+        loaded = repo.get(op.operation_id)
+        assert loaded is not None
+        assert loaded.state == OperationState.PENDING
+        assert loaded.observation == {}
+
     def test_concurrent_update_stage_does_not_clobber_terminal_state(self, tmp_path: Path):
         """A concurrent update_stage write must not overwrite a terminal state
         written by another thread that holds the write lock first."""
@@ -1040,6 +1102,125 @@ class TestRecoveryAndReconciliation:
         result = reconciled.observation.get("reconciliation_result", {})
         assert result.get("state") == OperationState.FAILED.value
         assert "error" in result.get("evidence", {})
+
+    def test_reconciliation_sets_failed_when_verify_returns_offline(self, tmp_path: Path):
+        """request_reconciliation sets FAILED when _verify_configuration returns online=False in evidence."""
+        from unittest.mock import patch as _patch
+
+        docker = MagicMock()
+        docker.status.return_value = {"state": "running", "online": True}
+        service = make_service(tmp_path, docker=docker)
+        op = ServerOperation.create("test-server", {"MAX_PLAYERS": "20"})
+        op.start()
+        op.fail_stage(OperationStage.REVIEW, "boom")
+        service._repo.save(op)
+
+        # obs is online so we enter the verify branch, but evidence says offline
+        with _patch.object(service, "_verify_configuration", return_value=(False, {"online": False})):
+            reconciled = service.request_reconciliation(op.operation_id)
+
+        assert reconciled is not None
+        assert reconciled.state == OperationState.FAILED
+        assert reconciled.terminal_error == "server offline during configuration verification"
+
+    def test_reconciliation_sets_failed_for_divergent_when_server_offline(self, tmp_path: Path):
+        """request_reconciliation transitions DIVERGENT→FAILED when the server is offline."""
+        docker = MagicMock()
+        docker.status.return_value = {"state": "stopped", "online": False}
+        service = make_service(tmp_path, docker=docker)
+        op = ServerOperation.create("test-server", {"MAX_PLAYERS": "20"})
+        op.start()
+        op.diverge("config mismatch", observation={})
+        service._repo.save(op)
+        reconciled = service.request_reconciliation(op.operation_id)
+        assert reconciled is not None
+        assert reconciled.state == OperationState.FAILED
+        assert "offline" in (reconciled.terminal_error or "")
+
+    def test_reconciliation_returns_none_when_operation_deleted_between_probe_and_lock(self, tmp_path: Path):
+        """request_reconciliation returns None when the operation is removed after the probe read.
+
+        Uses a real second SQLiteOperationRepository to delete the row between the
+        probe read and the fetch_and_update call, without monkey-patching.
+        """
+        docker = MagicMock()
+        docker.status.return_value = {"state": "running", "online": True}
+        service = make_service(tmp_path, docker=docker)
+        repo = service._repo
+        db = repo._path
+
+        op = ServerOperation.create("test-server", {"MAX_PLAYERS": "20"})
+        op.start()
+        op.fail_stage(OperationStage.REVIEW, "boom")
+        repo.save(op)
+
+        original_fetch = repo.fetch_and_update
+
+        def delete_then_fetch(operation_id, modifier):
+            import sqlite3 as _sqlite3
+            conn = _sqlite3.connect(db)
+            conn.execute("DELETE FROM server_operations WHERE operation_id = ?", (operation_id,))
+            conn.commit()
+            conn.close()
+            return original_fetch(operation_id, modifier)
+
+        repo.fetch_and_update = delete_then_fetch  # type: ignore[method-assign]
+        result = service.request_reconciliation(op.operation_id)
+
+        assert result is None
+
+    def test_reconciliation_inner_recheck_skips_ineligible_state_change(self, tmp_path: Path):
+        """_apply inner re-check returns early when state changed between probe and write lock.
+
+        Uses a second SQLiteOperationRepository to persist CONFIRMED state before
+        fetch_and_update runs, simulating another thread winning the write lock first.
+        """
+        docker = MagicMock()
+        docker.status.return_value = {"state": "running", "online": True}
+        service = make_service(tmp_path, docker=docker)
+        repo = service._repo
+        db = repo._path
+
+        op = ServerOperation.create("test-server", {"MAX_PLAYERS": "20"})
+        op.start()
+        op.fail_stage(OperationStage.REVIEW, "boom")
+        repo.save(op)
+
+        second_repo = SQLiteOperationRepository(db)
+        original_fetch = repo.fetch_and_update
+
+        def confirm_then_fetch(operation_id, modifier):
+            fresh = second_repo.get(operation_id)
+            assert fresh is not None
+            fresh.state = OperationState.CONFIRMED
+            fresh.terminal_error = None
+            second_repo.save(fresh)
+            return original_fetch(operation_id, modifier)
+
+        repo.fetch_and_update = confirm_then_fetch  # type: ignore[method-assign]
+        result = service.request_reconciliation(op.operation_id)
+
+        assert result is not None
+        assert result.state == OperationState.CONFIRMED
+        assert "reconciliation_result" not in result.observation
+
+    def test_reconciliation_divergent_without_terminal_error_gets_default_message(self, tmp_path: Path):
+        """When verify returns divergent and no terminal_error exists, a default message is set."""
+        docker = MagicMock()
+        docker.status.return_value = {"state": "running", "online": True}
+        configuration = MagicMock()
+        # Return mismatched values so verify produces divergent
+        configuration.read_properties.return_value = {"max-players": "10"}
+        service = make_service(tmp_path, docker=docker, configuration=configuration)
+        op = ServerOperation.create("test-server", {"MAX_PLAYERS": "20"})
+        op.start()
+        op.fail_stage(OperationStage.REVIEW, "boom")
+        op.terminal_error = None  # ensure no pre-existing message
+        service._repo.save(op)
+        reconciled = service.request_reconciliation(op.operation_id)
+        assert reconciled is not None
+        assert reconciled.state == OperationState.DIVERGENT
+        assert reconciled.terminal_error == "effective configuration differs from requested changes"
 
     def test_retry_raises_for_different_server_operation(self, tmp_path: Path):
         """retry_operation rejects operations belonging to a different server_id."""

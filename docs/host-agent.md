@@ -106,20 +106,30 @@ Set `HOST_AGENT_TOKEN_FILE=/run/host-agent-token` in the backend environment
 
 The agent binds to `0.0.0.0:7890` by default because `127.0.0.1` is not
 reachable from Docker bridge containers even when `host-gateway` is configured.
-Restrict inbound connections on port 7890 to the Docker bridge subnet only:
+Restrict inbound connections on port 7890 to the Docker bridge subnet only and
+deny all other sources explicitly.
+
+**UFW:**
 
 ```bash
 # Allow the Docker bridge subnet (adjust for your bridge, e.g. 172.17.0.0/16)
 sudo ufw allow from 172.17.0.0/16 to any port 7890
-# Or with iptables:
-sudo iptables -A INPUT -p tcp --dport 7890 -s 172.17.0.0/16 -j ACCEPT
-sudo iptables -A INPUT -p tcp --dport 7890 -j DROP
+# Explicitly deny all other sources on port 7890 — do not rely solely on the
+# default UFW policy, which may be permissive on some distributions.
+sudo ufw deny 7890
+# Enable UFW if not already active (persists across reboots automatically):
+sudo ufw enable
+sudo ufw status verbose
 ```
 
-Verify the bridge subnet with:
+**iptables:**
 
 ```bash
-docker network inspect bridge --format '{{range .IPAM.Config}}{{.Subnet}}{{end}}'
+sudo iptables -A INPUT -p tcp --dport 7890 -s 172.17.0.0/16 -j ACCEPT
+sudo iptables -A INPUT -p tcp --dport 7890 -j DROP
+# Persist rules across reboots with iptables-persistent:
+sudo apt-get install -y iptables-persistent
+sudo netfilter-persistent save
 ```
 
 ---

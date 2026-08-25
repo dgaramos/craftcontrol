@@ -8,8 +8,9 @@ GitHub-hosted runners never receive Docker or LAN access.
 The workflow checks out the exact accepted GitHub commit and asks the runner's
 local deployment agent to run the guarded coordinated deployment:
 
-```text
-merge to main -> Quality gates -> homelab runner -> preflight -> prepare images -> backup -> activate -> canaries
+```mermaid
+flowchart LR
+    merge["merge to main"] --> quality["Quality gates"] --> runner["homelab runner"] --> preflight --> images["prepare images"] --> backup --> activate --> canaries
 ```
 
 The preflight and deployment use `bin/deploy-craftcontrol-release`. They retain

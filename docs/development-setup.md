@@ -204,15 +204,16 @@ docker compose -f docker-compose.split.yml exec craftcontrol-backend \
 
 ## Project layout reference
 
-```text
-apps/
-├── frontend/           Nginx image, HTML, CSS, and native ES modules
-└── backend/            Flask image, composition root, and Python application
-packages/contracts/     Canonical OpenAPI 3.1 contract and generated types
-packs/telemetry/        Embedded Behavior Pack and lifecycle assets
-bin/                    Quality, deployment, backup, and recovery commands
-docs/                   Architecture, security, telemetry, and operations guides
-tests/                  Backend integration and persistence tests
+```mermaid
+flowchart TD
+    repo["CraftControl repository"] --> apps["apps/"]
+    apps --> frontend["frontend/ — Nginx image, HTML, CSS, and native ES modules"]
+    apps --> backend["backend/ — Flask image, composition root, and Python application"]
+    repo --> contracts["packages/contracts/ — canonical OpenAPI 3.1 contract and generated types"]
+    repo --> telemetry["packs/telemetry/ — embedded Behavior Pack and lifecycle assets"]
+    repo --> bin["bin/ — quality, deployment, backup, and recovery commands"]
+    repo --> docs["docs/ — architecture, security, telemetry, and operations guides"]
+    repo --> tests["tests/ — backend integration and persistence tests"]
 ```
 
 See [Architecture](architecture.md) for a full description of layers, dependency rules, and the incremental refactor target layout.

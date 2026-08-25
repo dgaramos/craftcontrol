@@ -55,7 +55,15 @@ class _HttpClient(Protocol):
 
 
 class _UrllibClient:
-    """Production HTTP client wrapping ``urllib.request``."""
+    """Production HTTP client wrapping ``urllib.request``.
+
+    An injectable *opener* callable can be supplied for testing; it defaults
+    to ``urllib.request.urlopen``.  Tests should pass an explicit fake opener
+    rather than monkey-patching the global.
+    """
+
+    def __init__(self, opener: Any = None) -> None:
+        self._opener = opener if opener is not None else urllib.request.urlopen
 
     def request(
         self,
@@ -70,7 +78,7 @@ class _UrllibClient:
         for key, value in (headers or {}).items():
             req.add_header(key, value)
         try:
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
+            with self._opener(req, timeout=timeout) as resp:
                 raw = resp.read()
                 return resp.status, json.loads(raw) if raw else {}
         except urllib.error.HTTPError as exc:
@@ -159,7 +167,7 @@ class HostAgentContainerOperations:
         operation_id: str | None = None,
         intended_state: dict[str, Any] | None = None,
         health_timeout_seconds: int = 120,
-        restart_timeout_seconds: int = 120,
+        restart_timeout_seconds: int = 60,
     ) -> None:
         """Execute a server operation via the host agent.
 

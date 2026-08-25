@@ -76,7 +76,15 @@ class ServerConsole(Protocol):
 
 class ContainerOperations(Protocol):
     def status(self) -> dict[str, Any]: ...
-    def execute(self, action: str) -> None: ...
+    def execute(
+        self,
+        action: str,
+        *,
+        operation_id: str | None = None,
+        intended_state: dict[str, Any] | None = None,
+        health_timeout_seconds: int = 120,
+        restart_timeout_seconds: int = 60,
+    ) -> None: ...
 
 
 class ThreadLike(Protocol):

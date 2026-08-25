@@ -9,6 +9,7 @@ from .config import Settings
 from .docker_ops import DockerOperations
 from .events import EventBroker
 from .files import ServerFiles
+from .host_agent import HostAgentContainerOperations, _load_token
 from .ports import ContainerOperations, RuntimeSupervisor, ServerConsole
 from .repository import StateRepository
 from .runtime import EventRuntime
@@ -40,7 +41,11 @@ def compose_manager(
     if bedrock is None:
         bedrock = BedrockClient(settings.container, list(GAMERULES), settings.console_wait_seconds)
     if docker is None:
-        docker = DockerOperations(settings.container, settings.project, compose_project=settings.compose_project)
+        if settings.host_agent_url:
+            token = _load_token(settings.host_agent_token_file)
+            docker = HostAgentContainerOperations(settings.host_agent_url, token)
+        else:
+            docker = DockerOperations(settings.container, settings.project, compose_project=settings.compose_project)
     broker = EventBroker(repository)
     players = PlayerService(
         SQLitePlayerRepository(settings.database), files, bedrock, broker, settings.bootstrap_operator

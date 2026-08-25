@@ -21,6 +21,8 @@ class Settings:
     backup_root: Path = Path("/data/backups/coordinated")
     auth_mode: str = "local"
     auth_cookie_secure: bool = True
+    host_agent_url: str = ""
+    host_agent_token_file: str = "/run/secrets/host_agent_token"
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -38,6 +40,8 @@ class Settings:
             backup_root=Path(os.getenv("BACKUP_ROOT", "/data/backups/coordinated")),
             auth_mode=os.getenv("AUTH_MODE", "local").lower(),
             auth_cookie_secure=os.getenv("AUTH_COOKIE_SECURE", "true").lower() == "true",
+            host_agent_url=os.getenv("HOST_AGENT_URL", ""),
+            host_agent_token_file=os.getenv("HOST_AGENT_TOKEN_FILE", "/run/secrets/host_agent_token"),
         )
 
     @property

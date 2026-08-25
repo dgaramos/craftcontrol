@@ -21,9 +21,14 @@ services:
       AUTH_COOKIE_SECURE: "${AUTH_COOKIE_SECURE:-true}"
       TZ: "${TZ:-America/Sao_Paulo}"
       CRAFTCONTROL_VERSION: "${CRAFTCONTROL_BACKEND_VERSION:-0.1.0}"
+      # Host agent adapter (optional). Set HOST_AGENT_URL to enable.
+      # When active, the Docker socket mount below can be removed.
+      HOST_AGENT_URL: "${HOST_AGENT_URL:-}"
+      HOST_AGENT_TOKEN_FILE: "${HOST_AGENT_TOKEN_FILE:-/run/secrets/host_agent_token}"
     expose:
       - "8082"
     volumes:
+      # Remove /var/run/docker.sock when HOST_AGENT_URL is configured.
       - /var/run/docker.sock:/var/run/docker.sock
       - ../minecraft-bedrock:/minecraft-project
       - ./data:/data

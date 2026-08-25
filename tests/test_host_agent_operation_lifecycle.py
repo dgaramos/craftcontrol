@@ -283,17 +283,31 @@ class TestAgentFiveXxResponse:
         refreshed = service.get_operation(op.operation_id)
         assert refreshed is not None
 
-        error = refreshed.terminal_error or ""
-        assert not _contains_host_internal(error), (
-            f"terminal_error exposes host internals: {error!r}"
+        # Mandatory field: terminal_error must be persisted for a FAILED operation.
+        assert refreshed.terminal_error is not None, (
+            "terminal_error must be set on a FAILED operation"
+        )
+        assert not _contains_host_internal(refreshed.terminal_error), (
+            f"terminal_error exposes host internals: {refreshed.terminal_error!r}"
         )
 
-        # Check stage error messages and evidence as well.
+        # The failed stage must carry a non-empty error.
+        failed = refreshed.failed_stage
+        assert failed is not None, "Expected a failed stage to be recorded"
+        assert failed.error, "Failed stage must have a non-empty error field"
+
+        # Check all stage error messages and evidence — fields must be present,
+        # not masked with 'or' fallbacks.
         for stage in refreshed.stages:
-            for value in (stage.error or "", str(stage.result or {}), str(stage.evidence or {})):
-                assert not _contains_host_internal(value), (
-                    f"Stage {stage.stage} evidence exposes host internals: {value!r}"
-                )
+            assert not _contains_host_internal(stage.error or ""), (
+                f"Stage {stage.stage} error exposes host internals: {stage.error!r}"
+            )
+            assert not _contains_host_internal(str(stage.result or {})), (
+                f"Stage {stage.stage} result exposes host internals: {stage.result!r}"
+            )
+            assert not _contains_host_internal(str(stage.evidence or {})), (
+                f"Stage {stage.stage} evidence exposes host internals: {stage.evidence!r}"
+            )
 
     def test_5xx_then_recovery_success_confirms_operation(self, tmp_path: Path) -> None:
         """POST 5xx followed by a successful recovery poll → operation CONFIRMED.

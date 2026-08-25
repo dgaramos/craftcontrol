@@ -25,7 +25,7 @@ services:
       # the craftcontrol-host-agent systemd service (docs/host-agent.md).
       # The Docker socket is not mounted in this topology.
       HOST_AGENT_URL: "${HOST_AGENT_URL:-http://host-gateway:7890}"
-      HOST_AGENT_TOKEN_FILE: "${HOST_AGENT_TOKEN_FILE:-/run/host-agent-token}"
+      HOST_AGENT_TOKEN_FILE: /run/host-agent-token
     extra_hosts:
       - "host-gateway:host-gateway"
     expose:

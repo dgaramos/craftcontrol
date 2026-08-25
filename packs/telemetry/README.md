@@ -70,6 +70,15 @@ flowchart TD
     tests --> runtimeTest["runtime.test.js — simulated Bedrock Script API integration flow"]
 ```
 
+Exact paths remain available as plain text for readers without Mermaid rendering:
+
+```text
+behavior_pack/manifest.json
+behavior_pack/scripts/{main.js,migrations.js,model.js,store.js,transport.js}
+scripts/{install.mjs,install.sh,package.sh}
+tests/{model.test.js,runtime.test.js}
+```
+
 ## Requirements
 
 - Minecraft Bedrock Dedicated Server compatible with `@minecraft/server` 2.0.0

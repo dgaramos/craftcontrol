@@ -40,4 +40,5 @@ jobs:
           PROJECT_NUMBER: ${{ inputs.project_number }}
           PROJECT_STATUS: ${{ inputs.project_status }}
           EXPECTED_AUTHOR: claudio-dr[bot]
+          PUBLISHER_APP_SLUG: ${{ steps.claudio-token.outputs.app-slug }}
         run: bash .github/scripts/publish-pr-metadata.sh

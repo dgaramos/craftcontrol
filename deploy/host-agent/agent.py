@@ -153,8 +153,16 @@ class OperationStore:
             for k, v in kwargs.items():
                 setattr(rec, k, v)
 
-    def evict_expired(self) -> None:
-        cutoff = time.monotonic() - RESULT_RETENTION_SECONDS
+    def evict_expired(self, time_func: Any = None) -> None:
+        """Remove completed records older than RESULT_RETENTION_SECONDS.
+
+        Args:
+            time_func: Callable returning the current monotonic time (seconds).
+                       Defaults to ``time.monotonic``. Inject a controlled
+                       clock in tests to avoid timing-dependent failures.
+        """
+        now = (time_func or time.monotonic)()
+        cutoff = now - RESULT_RETENTION_SECONDS
         with self._lock:
             expired = [
                 oid for oid, rec in self._records.items()

@@ -622,24 +622,30 @@ class TestOperationStoreEviction:
         store = ha.OperationStore()
         op_id = _op_id()
         store.create(op_id)
-        # Mark as done far in the past
-        store.update(op_id, status="done", completed_at=0.0)
-        store.evict_expired()
+        # Completed at t=1000; clock is now at t=1000+RETENTION+1 → expired.
+        completed_at = 1000.0
+        now = completed_at + ha.RESULT_RETENTION_SECONDS + 1
+        store.update(op_id, status="done", completed_at=completed_at)
+        store.evict_expired(time_func=lambda: now)
         assert store.get(op_id) is None
 
     def test_evict_does_not_remove_recent_completed(self) -> None:
         store = ha.OperationStore()
         op_id = _op_id()
         store.create(op_id)
-        store.update(op_id, status="done", completed_at=time.monotonic())
-        store.evict_expired()
+        # Completed just now; clock has not advanced past the retention window.
+        completed_at = 1000.0
+        now = completed_at + 1  # only 1 second later — well within retention
+        store.update(op_id, status="done", completed_at=completed_at)
+        store.evict_expired(time_func=lambda: now)
         assert store.get(op_id) is not None
 
     def test_evict_does_not_remove_running(self) -> None:
         store = ha.OperationStore()
         op_id = _op_id()
         store.create(op_id)
-        store.evict_expired()
+        # Running records have completed_at=None; eviction must ignore them.
+        store.evict_expired(time_func=lambda: 999999.0)
         assert store.get(op_id) is not None
 
 

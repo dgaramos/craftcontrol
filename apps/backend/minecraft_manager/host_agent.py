@@ -27,6 +27,12 @@ _MAX_POLL_ATTEMPTS = 120  # 120 * 5s = 10 minutes ceiling
 # How many times to retry GET /v1/status after a post-delivery ambiguous failure.
 _POST_DELIVERY_RETRY_COUNT = 3
 _POST_DELIVERY_RETRY_INTERVAL_SECONDS = 5.0
+# Absolute wall-clock ceiling for the combined poll+recovery cycle (seconds).
+# Protects against unbounded mutual recursion between _poll_until_done and
+# _poll_with_recovery when the agent alternates between "running" and unexpected
+# responses.  Set to 15 minutes to cover the worst-case _MAX_POLL_ATTEMPTS window
+# plus recovery headroom.
+_GLOBAL_POLL_DEADLINE_SECONDS = 900.0
 
 
 class _HttpClient(Protocol):
@@ -250,23 +256,37 @@ class HostAgentContainerOperations:
                 "host_agent execute returned %d — polling for status operation_id=%s",
                 code, operation_id,
             )
-            self._poll_with_recovery(operation_id, headers)
+            deadline = time.monotonic() + _GLOBAL_POLL_DEADLINE_SECONDS
+            self._poll_with_recovery(operation_id, headers, deadline)
             return
 
         # 202 Accepted: agent received the request; poll for terminal result.
-        self._poll_until_done(operation_id, headers)
+        deadline = time.monotonic() + _GLOBAL_POLL_DEADLINE_SECONDS
+        self._poll_until_done(operation_id, headers, deadline)
 
     # ------------------------------------------------------------------
     # Polling helpers
     # ------------------------------------------------------------------
 
-    def _poll_until_done(self, operation_id: str, headers: dict[str, str]) -> None:
+    def _poll_until_done(
+        self, operation_id: str, headers: dict[str, str], deadline: float
+    ) -> None:
         """Poll GET /v1/status/{operation_id} until a terminal result is returned.
+
+        *deadline* is an absolute ``time.monotonic()`` timestamp.  The method
+        raises ``RuntimeError`` once the deadline is exceeded so that the
+        ``_poll_until_done`` / ``_poll_with_recovery`` mutual-recursion cycle
+        cannot run past the global ceiling set in ``_GLOBAL_POLL_DEADLINE_SECONDS``.
 
         Raises ``RuntimeError`` on failure outcomes or transport errors.
         """
         status_url = f"{self._base_url}/v1/status/{operation_id}"
         for _ in range(_MAX_POLL_ATTEMPTS):
+            if time.monotonic() >= deadline:
+                raise RuntimeError(
+                    f"host agent polling exceeded the global deadline for operation "
+                    f"{operation_id!r} — explicit confirmation required before retry"
+                )
             try:
                 code, body = self._client.request(
                     "GET", status_url, headers=headers, timeout=10.0
@@ -277,7 +297,7 @@ class HostAgentContainerOperations:
                     "host_agent status transport error operation_id=%s: %s — entering recovery",
                     operation_id, exc,
                 )
-                self._poll_with_recovery(operation_id, headers)
+                self._poll_with_recovery(operation_id, headers, deadline)
                 return
 
             if code == 200:
@@ -299,7 +319,7 @@ class HostAgentContainerOperations:
                 "host_agent status returned unexpected %d operation_id=%s — entering recovery",
                 code, operation_id,
             )
-            self._poll_with_recovery(operation_id, headers)
+            self._poll_with_recovery(operation_id, headers, deadline)
             return
 
         raise RuntimeError(
@@ -307,12 +327,22 @@ class HostAgentContainerOperations:
             f"for operation {operation_id!r}"
         )
 
-    def _poll_with_recovery(self, operation_id: str, headers: dict[str, str]) -> None:
+    def _poll_with_recovery(
+        self, operation_id: str, headers: dict[str, str], deadline: float
+    ) -> None:
         """Retry GET /v1/status up to three times after a post-delivery failure.
+
+        *deadline* is forwarded to ``_poll_until_done`` if the operation is found
+        still running, bounding the combined cycle to ``_GLOBAL_POLL_DEADLINE_SECONDS``.
 
         Per the host-agent contract, a ``404`` or repeated transport errors mean
         the outcome is ambiguous and explicit operator confirmation is required.
         """
+        if time.monotonic() >= deadline:
+            raise RuntimeError(
+                f"host agent polling exceeded the global deadline for operation "
+                f"{operation_id!r} — explicit confirmation required before retry"
+            )
         status_url = f"{self._base_url}/v1/status/{operation_id}"
         last_error: str = "unknown"
         for attempt in range(_POST_DELIVERY_RETRY_COUNT):
@@ -333,8 +363,8 @@ class HostAgentContainerOperations:
                 self._handle_terminal_result(operation_id, body)
                 return
             if code == 200 and body.get("status") == "running":
-                # Still running; back to normal polling.
-                self._poll_until_done(operation_id, headers)
+                # Still running; back to normal polling with the shared deadline.
+                self._poll_until_done(operation_id, headers, deadline)
                 return
             last_error = f"HTTP {code}: {body}"
 

@@ -27,7 +27,7 @@ flowchart TD
     events["Stable Bedrock world events"] --> adapters["Behavior pack adapters"]
     adapters --> aggregates["in-memory aggregates"] --> properties["metadata + per-player world properties"]
     adapters --> telemetry["[BEDROCK_TELEMETRY] JSON"] --> log["BDS log"] --> consumer["external consumer"]
-    sync["/scriptevent bedrock_telemetry:sync full"] --> reconciliation["snapshot reconciliation"]
+    sync["snapshot request"] --> reconciliation["snapshot reconciliation"]
     consumer --> reconciliation
 ```
 

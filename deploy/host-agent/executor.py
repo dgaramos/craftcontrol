@@ -410,10 +410,18 @@ class OperationExecutor:
                 merged.append(f"{k}={v}\n")
 
         tmp_file = props_file.with_suffix(".tmp")
+        # Capture the original file's mode so we can replicate it on the
+        # replacement.  Fall back to 0o644 when the file does not yet exist.
+        original_mode = props_file.stat().st_mode if props_file.exists() else 0o644
         try:
             tmp_file.write_text("".join(merged), encoding="utf-8")
+            tmp_file.chmod(original_mode)
             tmp_file.replace(props_file)
         except OSError as exc:
+            try:
+                tmp_file.unlink(missing_ok=True)
+            except OSError:
+                pass
             raise RuntimeError(f"Failed to write server.properties: {exc}") from exc
 
         logger.info("Wrote/updated %d properties in %s", len(updates), props_file)

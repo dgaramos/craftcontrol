@@ -37,5 +37,5 @@ class HealthProbe(Protocol):
 class ContainerStatusChecker(Protocol):
     """Check whether the Bedrock container is currently running."""
 
-    def is_running(self, container_name: str) -> bool:
+    def is_running(self, container_name: str) -> bool:  # pragma: no cover
         ...

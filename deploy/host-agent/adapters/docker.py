@@ -74,7 +74,7 @@ class DockerContainerStatus:
         return result.returncode == 0 and result.stdout.strip().lower() == "true"
 
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     # Static checks: adapters must satisfy their respective protocols.
     _r: ContainerRunner = DockerComposeRunner.__new__(DockerComposeRunner)
     _s: ContainerStatusChecker = DockerContainerStatus.__new__(DockerContainerStatus)

@@ -12,19 +12,33 @@ Covers:
 - execute("apply"): agent restart during polling (404 from status)
 - execute(): unsupported action raises RuntimeError
 - execute(): missing operation_id raises ValueError
+- execute(): None intended_state defaults to empty dict
+- execute(): OSError during status polling triggers recovery
+- execute(): unexpected status code during polling triggers recovery
+- execute(): recovery: "running" response returns to normal polling
+- execute(): recovery: OSError on all attempts raises ambiguous error
+- _UrllibClient.request(): successful response
+- _UrllibClient.request(): HTTPError returns (code, body)
+- _UrllibClient.request(): URLError with OSError reason re-raises reason
+- _UrllibClient.request(): URLError with non-OSError reason raises OSError
 - _load_token(): reads file, strips whitespace, raises on missing file
 """
 from __future__ import annotations
 
+import io
+import json
 import tempfile
+import urllib.error
+import urllib.request
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from minecraft_manager.host_agent import (
     HostAgentContainerOperations,
+    _UrllibClient,
     _load_token,
 )
 
@@ -255,6 +269,172 @@ class TestPostDeliveryRecovery:
         client.request.side_effect = OSError("broken pipe")
         with pytest.raises(RuntimeError, match="transport error"):
             _execute(_adapter(client))
+
+
+# ---------------------------------------------------------------------------
+# execute(): additional branch coverage
+# ---------------------------------------------------------------------------
+
+class TestExecuteBranchCoverage:
+    def test_none_intended_state_defaults_to_empty_dict(self) -> None:
+        """intended_state=None should be replaced with {} without error."""
+        client = _make_client([
+            (202, {"operation_id": OP_ID, "status": "accepted"}),
+            (200, {"status": "done", "outcome": "ok", "executor_ref": "r",
+                   "health_reached": True, "failed_stage": None,
+                   "detail": "ok", "error_code": None, "exception_type": None}),
+        ])
+        adapter = _adapter(client)
+        # Should not raise even though intended_state is None
+        adapter.execute("apply", operation_id=OP_ID, intended_state=None)
+
+    def test_oserror_during_status_poll_enters_recovery(self) -> None:
+        """OSError on GET /v1/status during _poll_until_done enters recovery."""
+        client = MagicMock()
+        # POST 202 accepted, then GET /v1/status raises OSError, then recovery
+        # poll also fails -> ambiguous error
+        client.request.side_effect = [
+            (202, {"operation_id": OP_ID, "status": "accepted"}),
+            # OSError during _poll_until_done triggers recovery
+            OSError("connection reset"),
+            # All 3 _poll_with_recovery attempts also fail
+            OSError("connection reset"),
+            OSError("connection reset"),
+            OSError("connection reset"),
+        ]
+        with pytest.raises(RuntimeError, match="ambiguous"):
+            _execute(_adapter(client))
+
+    def test_unexpected_status_code_during_poll_enters_recovery(self) -> None:
+        """503 on GET /v1/status during _poll_until_done enters recovery."""
+        client = _make_client([
+            (202, {"operation_id": OP_ID, "status": "accepted"}),
+            # Unexpected status code during polling
+            (503, {"error": "overloaded"}),
+            # Recovery poll: done ok
+            (200, {"status": "done", "outcome": "ok", "executor_ref": "r",
+                   "health_reached": True, "failed_stage": None,
+                   "detail": "ok", "error_code": None, "exception_type": None}),
+        ])
+        _execute(_adapter(client))  # must not raise
+
+    def test_recovery_running_returns_to_normal_poll(self) -> None:
+        """'running' response in _poll_with_recovery returns to _poll_until_done."""
+        client = _make_client([
+            # POST 5xx -> recovery
+            (500, {}),
+            # Recovery poll: still running -> back to _poll_until_done
+            (200, {"status": "running"}),
+            # Normal poll: done ok
+            (200, {"status": "done", "outcome": "ok", "executor_ref": "r",
+                   "health_reached": True, "failed_stage": None,
+                   "detail": "ok", "error_code": None, "exception_type": None}),
+        ])
+        _execute(_adapter(client))  # must not raise
+
+    def test_recovery_oserror_all_attempts_exhausted(self) -> None:
+        """All _poll_with_recovery attempts fail with OSError -> ambiguous error."""
+        client = MagicMock()
+        client.request.side_effect = [
+            # POST 5xx triggers recovery
+            (500, {}),
+            # All 3 recovery poll attempts fail
+            OSError("broken"),
+            OSError("broken"),
+            OSError("broken"),
+        ]
+        with pytest.raises(RuntimeError, match="ambiguous"):
+            _execute(_adapter(client))
+
+
+# ---------------------------------------------------------------------------
+# _UrllibClient.request()
+# ---------------------------------------------------------------------------
+
+class TestUrllibClient:
+    def _make_response(self, status: int, body: dict[str, Any]) -> MagicMock:
+        raw = json.dumps(body).encode()
+        resp = MagicMock()
+        resp.status = status
+        resp.read.return_value = raw
+        resp.__enter__ = lambda s: s
+        resp.__exit__ = MagicMock(return_value=False)
+        return resp
+
+    def test_successful_get_returns_status_and_json(self) -> None:
+        resp = self._make_response(200, {"ok": True})
+        with patch("urllib.request.urlopen", return_value=resp):
+            code, body = _UrllibClient().request("GET", "http://host/v1/health")
+        assert code == 200
+        assert body == {"ok": True}
+
+    def test_http_error_returns_code_and_parsed_body(self) -> None:
+        raw = json.dumps({"message": "not found"}).encode()
+        exc = urllib.error.HTTPError(
+            url="http://host/v1/health",
+            code=404,
+            msg="Not Found",
+            hdrs=MagicMock(),  # type: ignore[arg-type]
+            fp=io.BytesIO(raw),
+        )
+        with patch("urllib.request.urlopen", side_effect=exc):
+            code, body = _UrllibClient().request("GET", "http://host/v1/health")
+        assert code == 404
+        assert body == {"message": "not found"}
+
+    def test_http_error_with_invalid_json_returns_empty_body(self) -> None:
+        exc = urllib.error.HTTPError(
+            url="http://host/v1/health",
+            code=502,
+            msg="Bad Gateway",
+            hdrs=MagicMock(),  # type: ignore[arg-type]
+            fp=io.BytesIO(b"<html>bad gateway</html>"),
+        )
+        with patch("urllib.request.urlopen", side_effect=exc):
+            code, body = _UrllibClient().request("GET", "http://host/v1/health")
+        assert code == 502
+        assert body == {}
+
+    def test_url_error_with_oserror_reason_reraises_reason(self) -> None:
+        inner = ConnectionRefusedError(111, "Connection refused")
+        exc = urllib.error.URLError(reason=inner)
+        with patch("urllib.request.urlopen", side_effect=exc):
+            with pytest.raises(ConnectionRefusedError):
+                _UrllibClient().request("GET", "http://host/v1/health")
+
+    def test_url_error_with_timeout_reason_reraises_timeout(self) -> None:
+        inner = TimeoutError("timed out")
+        exc = urllib.error.URLError(reason=inner)
+        with patch("urllib.request.urlopen", side_effect=exc):
+            with pytest.raises(TimeoutError):
+                _UrllibClient().request("GET", "http://host/v1/health")
+
+    def test_url_error_with_non_oserror_reason_raises_oserror(self) -> None:
+        exc = urllib.error.URLError(reason="unknown reason")
+        with patch("urllib.request.urlopen", side_effect=exc):
+            with pytest.raises(OSError):
+                _UrllibClient().request("GET", "http://host/v1/health")
+
+    def test_request_with_headers_passes_them(self) -> None:
+        resp = self._make_response(200, {"ok": True})
+        with patch("urllib.request.urlopen", return_value=resp) as mock_open:
+            _UrllibClient().request(
+                "GET",
+                "http://host/v1/health",
+                headers={"Authorization": "Bearer tok"},
+            )
+        assert mock_open.called
+
+    def test_empty_response_body_returns_empty_dict(self) -> None:
+        resp = MagicMock()
+        resp.status = 200
+        resp.read.return_value = b""
+        resp.__enter__ = lambda s: s
+        resp.__exit__ = MagicMock(return_value=False)
+        with patch("urllib.request.urlopen", return_value=resp):
+            code, body = _UrllibClient().request("GET", "http://host/v1/health")
+        assert code == 200
+        assert body == {}
 
 
 # ---------------------------------------------------------------------------

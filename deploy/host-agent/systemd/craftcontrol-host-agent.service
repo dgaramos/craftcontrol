@@ -1,0 +1,44 @@
+[Unit]
+Description=CraftControl Host Agent
+Documentation=https://github.com/dgaramos/craftcontrol/blob/main/docs/host-agent-contract.md
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=craftcontrol-agent
+Group=craftcontrol-agent
+
+# Restrict access to the Docker socket via group membership in `docker`.
+# The OS user craftcontrol-agent must be added to the docker group:
+#   sudo usermod -aG docker craftcontrol-agent
+
+ExecStart=/usr/bin/python3 /opt/craftcontrol/host-agent/agent.py
+
+# Override these via /etc/craftcontrol/host-agent.env or a drop-in.
+Environment=HOST_AGENT_BIND=0.0.0.0:7890
+Environment=HOST_AGENT_SECRET_FILE=/etc/craftcontrol/host-agent-token
+Environment=HOST_AGENT_COMPOSE_PROJECT=minecraft-bedrock
+Environment=HOST_AGENT_COMPOSE_FILE=/opt/craftcontrol/docker-compose.yml
+Environment=HOST_AGENT_BEDROCK_DATA=/opt/craftcontrol/data/bedrock
+
+EnvironmentFile=-/etc/craftcontrol/host-agent.env
+
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=craftcontrol-host-agent
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+# Allow the agent to read its token file and write Bedrock config.
+# Adjust ReadWritePaths to match HOST_AGENT_BEDROCK_DATA if changed.
+ReadWritePaths=/opt/craftcontrol/data/bedrock
+ReadOnlyPaths=/etc/craftcontrol /opt/craftcontrol/docker-compose.yml
+
+[Install]
+WantedBy=multi-user.target

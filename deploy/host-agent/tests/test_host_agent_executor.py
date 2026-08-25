@@ -17,7 +17,7 @@ if str(_AGENT_DIR) not in sys.path:  # pragma: no cover - test bootstrap
     sys.path.insert(0, str(_AGENT_DIR))
 
 import store as st
-from adapters.docker import DockerComposeRunner
+from adapters.docker import DockerComposeRunner, DockerContainerStatus
 from adapters.filesystem import BedrockFileSystem
 from adapters.raknet import (
     _build_unconnected_ping,
@@ -143,6 +143,37 @@ class TestDockerComposeRunnerRestart:
         )
         with pytest.raises(RestartTimeoutError):
             runner.restart(60)
+
+
+# ---------------------------------------------------------------------------
+# DockerContainerStatus: is_running
+# ---------------------------------------------------------------------------
+
+class TestDockerContainerStatus:
+    def test_running_container_returns_true(self) -> None:
+        mock_run = MagicMock(return_value=MagicMock(returncode=0, stdout="true\n"))
+        checker = DockerContainerStatus(subprocess_run=mock_run)
+        assert checker.is_running("minecraft-server") is True
+
+    def test_stopped_container_returns_false(self) -> None:
+        mock_run = MagicMock(return_value=MagicMock(returncode=0, stdout="false\n"))
+        checker = DockerContainerStatus(subprocess_run=mock_run)
+        assert checker.is_running("minecraft-server") is False
+
+    def test_nonzero_exit_returns_false(self) -> None:
+        mock_run = MagicMock(return_value=MagicMock(returncode=1, stdout=""))
+        checker = DockerContainerStatus(subprocess_run=mock_run)
+        assert checker.is_running("minecraft-server") is False
+
+    def test_timeout_returns_false(self) -> None:
+        mock_run = MagicMock(side_effect=subprocess.TimeoutExpired(["docker"], 10))
+        checker = DockerContainerStatus(subprocess_run=mock_run)
+        assert checker.is_running("minecraft-server") is False
+
+    def test_os_error_returns_false(self) -> None:
+        mock_run = MagicMock(side_effect=OSError("docker not found"))
+        checker = DockerContainerStatus(subprocess_run=mock_run)
+        assert checker.is_running("minecraft-server") is False
 
 
 # ---------------------------------------------------------------------------

@@ -21,18 +21,17 @@ services:
       AUTH_COOKIE_SECURE: "${AUTH_COOKIE_SECURE:-true}"
       TZ: "${TZ:-America/Sao_Paulo}"
       CRAFTCONTROL_VERSION: "${CRAFTCONTROL_BACKEND_VERSION:-0.1.0}"
-      # Host agent adapter (optional). Set HOST_AGENT_URL to enable.
-      # When active, the Docker socket mount below can be removed.
-      # When using host-agent, also add a read-only bind mount for the token:
-      #   - /path/to/host_agent_token:/run/host-agent-token:ro
-      # and set HOST_AGENT_TOKEN_FILE to match the container path.
-      HOST_AGENT_URL: "${HOST_AGENT_URL:-}"
+      # Host agent: the split topology routes privileged host operations through
+      # the craftcontrol-host-agent systemd service (docs/host-agent.md).
+      # The Docker socket is not mounted in this topology.
+      HOST_AGENT_URL: "${HOST_AGENT_URL:-http://host-gateway:7890}"
       HOST_AGENT_TOKEN_FILE: "${HOST_AGENT_TOKEN_FILE:-/run/host-agent-token}"
+    extra_hosts:
+      - "host-gateway:host-gateway"
     expose:
       - "8082"
     volumes:
-      # Remove /var/run/docker.sock when HOST_AGENT_URL is configured.
-      - /var/run/docker.sock:/var/run/docker.sock
+      - /etc/craftcontrol/host-agent-token:/run/host-agent-token:ro
       - ../minecraft-bedrock:/minecraft-project
       - ./data:/data
     security_opt:

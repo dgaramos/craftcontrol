@@ -11,16 +11,12 @@ from __future__ import annotations
 
 import json
 import struct
-import subprocess
-import tempfile
-import threading
 import time
 import uuid
-from http.server import HTTPServer
 from io import BytesIO
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -32,11 +28,9 @@ if str(_AGENT_DIR) not in sys.path:
     sys.path.insert(0, str(_AGENT_DIR))
 
 import agent as ha  # noqa: E402  (import after sys.path manipulation)
-from adapters.docker import DockerComposeRunner
-from adapters.filesystem import BedrockFileSystem
-from adapters.raknet import RakNetHealthProbe
 from operations import _build_updates
 from ports import RestartTimeoutError
+from helpers import make_executor as _make_executor_base, FakeProbe as _FakeProbeBase
 
 
 # ---------------------------------------------------------------------------
@@ -70,30 +64,20 @@ def _make_store() -> ha.OperationStore:
     return ha.OperationStore()
 
 
-class _FakeProbe:
-    """Fake HealthProbe that returns a fixed result without opening sockets."""
-
-    def __init__(self, result: bool = True) -> None:
-        self._result = result
-
-    def wait(self, host: str, port: int, timeout_seconds: int) -> bool:
-        return self._result
+class _FakeProbe(_FakeProbeBase):
+    """Re-exported from conftest for local use in facade tests."""
 
 
 def _make_executor(
     subprocess_run: Any = None,
     probe_result: bool = True,
-    bedrock_data: str = "/tmp/bedrock-test",
+    bedrock_data: str | None = None,
 ) -> ha.OperationExecutor:
-    config = {
-        "compose_project": "minecraft-bedrock",
-        "compose_file": "/opt/craftcontrol/docker-compose.yml",
-        "bedrock_data": bedrock_data,
-    }
-    runner = DockerComposeRunner(config, subprocess_run=subprocess_run)
-    filesystem = BedrockFileSystem(bedrock_data)
-    probe = _FakeProbe(probe_result)
-    return ha.OperationExecutor(runner, filesystem, probe)
+    return _make_executor_base(
+        subprocess_run=subprocess_run,
+        probe_result=probe_result,
+        bedrock_data=bedrock_data,
+    )
 
 
 def _handler_class(token: str = VALID_TOKEN, store: ha.OperationStore | None = None, executor: ha.OperationExecutor | None = None) -> type:
@@ -423,154 +407,7 @@ class TestStatus:
 
 
 # ---------------------------------------------------------------------------
-# Executor: prepare stage (via BedrockFileSystem)
-# ---------------------------------------------------------------------------
-
-class TestExecutorPrepare:
-    def _run_prepare(self, intended_state: dict, data_dir: Path) -> None:
-        fs = BedrockFileSystem(str(data_dir))
-        updates = _build_updates(intended_state)
-        fs.write_server_properties(updates)
-
-    def test_writes_server_properties(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            data_dir = Path(tmp)
-            self._run_prepare({"server_name": "My Server", "max_players": 10}, data_dir)
-            content = (data_dir / "server.properties").read_text()
-            assert "server-name=My Server" in content
-            assert "max-players=10" in content
-
-    def test_empty_intended_state_writes_nothing(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            data_dir = Path(tmp)
-            self._run_prepare({}, data_dir)
-            assert not (data_dir / "server.properties").exists()
-
-    def test_missing_data_dir_raises(self) -> None:
-        fs = BedrockFileSystem("/nonexistent/path/bedrock")
-        with pytest.raises(RuntimeError, match="not found"):
-            fs.write_server_properties({"server-name": "Test"})
-
-
-# ---------------------------------------------------------------------------
-# Executor: restart stage (via DockerComposeRunner)
-# ---------------------------------------------------------------------------
-
-class TestExecutorRestart:
-    _CONFIG = {
-        "compose_project": "minecraft-bedrock",
-        "compose_file": "/opt/craftcontrol/docker-compose.yml",
-        "bedrock_data": "/tmp/bedrock",
-    }
-
-    def _make_runner_with_mock(self, returncode: int = 0, stderr: str = "") -> tuple[DockerComposeRunner, MagicMock]:
-        mock_run = MagicMock(return_value=MagicMock(returncode=returncode, stdout="", stderr=stderr))
-        runner = DockerComposeRunner(self._CONFIG, subprocess_run=mock_run)
-        return runner, mock_run
-
-    def test_successful_restart_returns_ref(self) -> None:
-        runner, mock_run = self._make_runner_with_mock()
-        ref = runner.restart(60)
-        assert "minecraft-bedrock" in ref
-        mock_run.assert_called_once()
-        cmd = mock_run.call_args[0][0]
-        assert "docker" in cmd
-        assert "compose" in cmd
-        assert "restart" in cmd
-
-    def test_non_zero_exit_raises(self) -> None:
-        runner, _ = self._make_runner_with_mock(returncode=1, stderr="compose error")
-        with pytest.raises(RuntimeError, match="compose error"):
-            runner.restart(60)
-
-    def test_timeout_propagates_as_restart_timeout_error(self) -> None:
-        mock_run = MagicMock(side_effect=subprocess.TimeoutExpired(["docker"], 60))
-        runner = DockerComposeRunner(
-            {"compose_project": "mc", "compose_file": "/tmp/dc.yml", "bedrock_data": "/tmp/bd"},
-            subprocess_run=mock_run,
-        )
-        with pytest.raises(RestartTimeoutError):
-            runner.restart(60)
-
-
-# ---------------------------------------------------------------------------
-# Executor: full run integration
-# ---------------------------------------------------------------------------
-
-class TestExecutorRun:
-    def _run_executor(self, subprocess_run: Any, probe_result: bool, data_dir: Path) -> ha.OperationRecord:
-        executor = _make_executor(
-            subprocess_run=subprocess_run,
-            probe_result=probe_result,
-            bedrock_data=str(data_dir),
-        )
-        store = ha.OperationStore()
-        op_id = _op_id()
-        record = store.create(op_id)
-        assert record is not None
-
-        executor.run(record, store, {"server_name": "Test"}, 10, 30)
-
-        return store.get(op_id)  # type: ignore[return-value]
-
-    def test_success_path(self) -> None:
-        mock_run = MagicMock(return_value=MagicMock(returncode=0, stdout="", stderr=""))
-        with tempfile.TemporaryDirectory() as tmp:
-            rec = self._run_executor(mock_run, probe_result=True, data_dir=Path(tmp))
-        assert rec.status == "done"
-        assert rec.outcome == "ok"
-        assert rec.health_reached is True
-        assert rec.failed_stage is None
-        assert rec.error_code is None
-
-    def test_prepare_failure(self) -> None:
-        mock_run = MagicMock(return_value=MagicMock(returncode=0, stdout="", stderr=""))
-        executor = _make_executor(
-            subprocess_run=mock_run,
-            probe_result=False,
-            bedrock_data="/nonexistent/bedrock",
-        )
-        store = ha.OperationStore()
-        op_id = _op_id()
-        record = store.create(op_id)
-        assert record is not None
-
-        executor.run(record, store, {"server_name": "X"}, 10, 30)
-
-        rec = store.get(op_id)
-        assert rec is not None
-        assert rec.outcome == "error"
-        assert rec.failed_stage == "prepare"
-        assert rec.error_code == "preparation_write_failed"
-
-    def test_restart_failure(self) -> None:
-        mock_run = MagicMock(return_value=MagicMock(returncode=1, stdout="", stderr="compose error"))
-        with tempfile.TemporaryDirectory() as tmp:
-            rec = self._run_executor(mock_run, probe_result=False, data_dir=Path(tmp))
-        assert rec.outcome == "error"
-        assert rec.failed_stage == "restart"
-        assert rec.error_code == "restart_command_failed"
-
-    def test_restart_timeout(self) -> None:
-        mock_run = MagicMock(side_effect=subprocess.TimeoutExpired(["docker"], 30))
-        with tempfile.TemporaryDirectory() as tmp:
-            rec = self._run_executor(mock_run, probe_result=False, data_dir=Path(tmp))
-        assert rec.outcome == "error"
-        assert rec.failed_stage == "restart"
-        assert rec.error_code == "restart_timeout"
-
-    def test_health_probe_timeout(self) -> None:
-        mock_run = MagicMock(return_value=MagicMock(returncode=0, stdout="", stderr=""))
-        with tempfile.TemporaryDirectory() as tmp:
-            rec = self._run_executor(mock_run, probe_result=False, data_dir=Path(tmp))
-        assert rec.outcome == "error"
-        assert rec.failed_stage == "health_wait"
-        assert rec.error_code == "health_probe_timeout"
-        assert rec.health_reached is False
-
-
-# ---------------------------------------------------------------------------
-# RakNet probe validation
+# RakNet probe validation — facade re-export checks
 # ---------------------------------------------------------------------------
 
 class TestRakNetProbe:
@@ -822,92 +659,72 @@ class TestIntendedStateValueValidation:
 
 
 # ---------------------------------------------------------------------------
-# Executor: health_wait exception handling
+# agent.py: _load_token and _load_config coverage
 # ---------------------------------------------------------------------------
 
-class TestExecutorRunHealthWaitException:
-    def test_invalid_server_port_causes_health_wait_error(self) -> None:
-        mock_run = MagicMock(return_value=MagicMock(returncode=0, stdout="", stderr=""))
-        with tempfile.TemporaryDirectory() as tmp:
-            executor = _make_executor(
-                subprocess_run=mock_run,
-                probe_result=True,
-                bedrock_data=tmp,
-            )
-            store = ha.OperationStore()
-            op_id = _op_id()
-            record = store.create(op_id)
-            assert record is not None
-            executor.run(record, store, {"server_port": "not-a-number"}, 10, 30)
-        rec = store.get(op_id)
-        assert rec is not None
-        assert rec.outcome == "error"
-        assert rec.failed_stage == "health_wait"
-        assert rec.error_code == "health_wait_error"
-        assert rec.completed_at is not None
+class TestAgentBootstrap:
+    def test_load_token_reads_file(self, tmp_path: Path) -> None:
+        secret = tmp_path / "token"
+        secret.write_text("  my-secret-token  \n")
+        token = ha._load_token(str(secret))
+        assert token == "my-secret-token"
 
+    def test_load_token_raises_on_missing_file(self, tmp_path: Path) -> None:
+        with pytest.raises(RuntimeError, match="Cannot read"):
+            ha._load_token(str(tmp_path / "nonexistent"))
 
-# ---------------------------------------------------------------------------
-# Executor: merge-write server.properties (via BedrockFileSystem)
-# ---------------------------------------------------------------------------
+    def test_load_token_raises_on_empty_file(self, tmp_path: Path) -> None:
+        secret = tmp_path / "token"
+        secret.write_text("   \n")
+        with pytest.raises(RuntimeError, match="empty"):
+            ha._load_token(str(secret))
 
-class TestExecutorPrepareMerge:
-    def _run_prepare(self, intended_state: dict, data_dir: Path) -> None:
-        fs = BedrockFileSystem(str(data_dir))
-        updates = _build_updates(intended_state)
-        fs.write_server_properties(updates)
+    def test_load_config_returns_defaults(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        for var in [
+            "HOST_AGENT_BIND",
+            "HOST_AGENT_SECRET_FILE",
+            "HOST_AGENT_COMPOSE_PROJECT",
+            "HOST_AGENT_COMPOSE_FILE",
+            "HOST_AGENT_BEDROCK_DATA",
+        ]:
+            monkeypatch.delenv(var, raising=False)
+        config = ha._load_config()
+        assert config["bind"] == ha.BIND_DEFAULT
+        assert config["secret_file"] == ha.SECRET_FILE_DEFAULT
+        assert config["compose_project"] == ha.COMPOSE_PROJECT_DEFAULT
+        assert config["compose_file"] == ha.COMPOSE_FILE_DEFAULT
+        assert config["bedrock_data"] == ha.BEDROCK_DATA_DEFAULT
 
-    def test_existing_keys_preserved(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            data_dir = Path(tmp)
-            props = data_dir / "server.properties"
-            props.write_text("level-name=MyWorld\nserver-port=19132\n")
-            self._run_prepare({"server_name": "Updated"}, data_dir)
-            content = props.read_text()
-            assert "level-name=MyWorld" in content
-            assert "server-port=19132" in content
-            assert "server-name=Updated" in content
+    def test_load_config_reads_env_vars(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("HOST_AGENT_BIND", "127.0.0.1:9999")
+        monkeypatch.setenv("HOST_AGENT_COMPOSE_PROJECT", "my-project")
+        config = ha._load_config()
+        assert config["bind"] == "127.0.0.1:9999"
+        assert config["compose_project"] == "my-project"
 
-    def test_existing_key_updated_not_duplicated(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            data_dir = Path(tmp)
-            props = data_dir / "server.properties"
-            props.write_text("server-name=OldName\nmax-players=10\n")
-            self._run_prepare({"server_name": "NewName"}, data_dir)
-            content = props.read_text()
-            assert content.count("server-name=") == 1
-            assert "server-name=NewName" in content
-            assert "max-players=10" in content
+    def test_run_starts_and_stops(self, tmp_path: Path) -> None:
+        """ha.run must build adapters, start the server, and stop on KeyboardInterrupt."""
+        import threading
+        from http.server import HTTPServer
+        from unittest.mock import patch
 
-    def test_boolean_rendered_as_lowercase_string(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            data_dir = Path(tmp)
-            self._run_prepare({"allow_cheats": True}, data_dir)
-            content = (data_dir / "server.properties").read_text()
-            assert "allow-cheats=true" in content
+        secret = tmp_path / "token"
+        secret.write_text("test-token\n")
+        config = {
+            "compose_project": "mc",
+            "compose_file": "/tmp/dc.yml",
+            "bedrock_data": str(tmp_path),
+        }
 
-    def test_comments_preserved(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            data_dir = Path(tmp)
-            props = data_dir / "server.properties"
-            props.write_text("# Generated by Bedrock\nserver-name=Old\n")
-            self._run_prepare({"server_name": "New"}, data_dir)
-            content = props.read_text()
-            assert "# Generated by Bedrock" in content
-            assert "server-name=New" in content
+        results: list[str] = []
 
-    def test_read_oserror_raises_runtime_error(self) -> None:
-        """If the existing server.properties cannot be read, write must abort."""
-        with tempfile.TemporaryDirectory() as tmp:
-            data_dir = Path(tmp)
-            props = data_dir / "server.properties"
-            props.write_text("server-name=Original\n")
+        class _StopAfterStart(HTTPServer):
+            def serve_forever(self, *args: object, **kwargs: object) -> None:
+                results.append("started")
+                raise KeyboardInterrupt
 
-            def _failing_reader(path: Path, **kwargs: object) -> str:
-                raise OSError("permission denied")
+        with patch("agent.HTTPServer", _StopAfterStart):
+            ha.run(bind="127.0.0.1:0", token="tok", config=config)
 
-            fs = BedrockFileSystem(str(data_dir), read_text=_failing_reader)
-            with pytest.raises(RuntimeError, match="data loss"):
-                fs.write_server_properties({"server-name": "Hacked"})
-            # Original file must be untouched
-            assert "server-name=Original" in props.read_text()
+        assert results == ["started"]
+

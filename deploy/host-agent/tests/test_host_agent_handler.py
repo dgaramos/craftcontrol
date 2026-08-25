@@ -16,9 +16,8 @@ if str(_AGENT_DIR) not in sys.path:  # pragma: no cover - test bootstrap
 
 import handler as hd
 import store as st
-from adapters.docker import DockerComposeRunner
-from adapters.filesystem import BedrockFileSystem
 from operations import OperationExecutor
+from helpers import make_executor as _make_executor_base
 
 
 VALID_TOKEN = "test-secret-token-abcdef1234567890"
@@ -32,24 +31,9 @@ def _make_store() -> st.OperationStore:
     return st.OperationStore()
 
 
-class _FakeProbe:
-    """Fake HealthProbe that returns True without opening sockets."""
-
-    def wait(self, host: str, port: int, timeout_seconds: int) -> bool:
-        return True
-
-
 def _make_executor(subprocess_run: Any = None) -> OperationExecutor:
-    config = {
-        "compose_project": "minecraft-bedrock",
-        "compose_file": "/opt/craftcontrol/docker-compose.yml",
-        "bedrock_data": "/tmp/bedrock-test",
-    }
-    # Always stub the UDP health probe so daemon threads never open real sockets.
-    runner = DockerComposeRunner(config, subprocess_run=subprocess_run)
-    filesystem = BedrockFileSystem("/tmp/bedrock-test")
-    probe = _FakeProbe()
-    return OperationExecutor(runner, filesystem, probe)
+    """Build an executor with a per-call temporary directory for isolation."""
+    return _make_executor_base(subprocess_run=subprocess_run)
 
 
 def _handler_class(token: str = VALID_TOKEN, store: st.OperationStore | None = None, executor: OperationExecutor | None = None) -> type:

@@ -43,12 +43,12 @@ from operations import (  # noqa: F401
     _BOOL_FIELDS,
     _FLOAT_FIELDS,
     _INTENDED_STATE_FIELDS,
-    RAKNET_MAGIC,
     BEDROCK_DEFAULT_PORT,
-    PROBE_INTERVAL_SECONDS,
-    PROBE_READ_TIMEOUT_SECONDS,
 )
 from adapters.raknet import (  # noqa: F401
+    RAKNET_MAGIC,
+    PROBE_INTERVAL_SECONDS,
+    PROBE_READ_TIMEOUT_SECONDS,
     _build_unconnected_ping,
     _validate_pong,
     _probe_bedrock,

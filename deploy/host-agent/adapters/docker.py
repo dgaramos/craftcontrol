@@ -4,7 +4,7 @@ from __future__ import annotations
 import logging
 import subprocess
 import time
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
 
 from ports import ContainerRunner, RestartTimeoutError
 
@@ -52,5 +52,6 @@ class DockerComposeRunner:
         return f"{project}_minecraft-server_restart_{ts}"
 
 
-# Satisfy the structural Protocol check at import time.
-_: ContainerRunner = DockerComposeRunner.__new__(DockerComposeRunner)
+if TYPE_CHECKING:
+    # Static check: DockerComposeRunner must satisfy the ContainerRunner Protocol.
+    _: ContainerRunner = DockerComposeRunner.__new__(DockerComposeRunner)

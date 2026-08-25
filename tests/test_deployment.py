@@ -139,7 +139,9 @@ def test_split_images_isolate_privileged_backend_from_frontend() -> None:
     frontend = split.split("  craftcontrol-frontend:", 1)[1]
     backend = split.split("  craftcontrol-backend:", 1)[1].split("  craftcontrol-frontend:", 1)[0]
     assert "apps/backend/Dockerfile" in backend
-    assert "/var/run/docker.sock" in backend
+    # The split topology routes Docker operations through the host agent;
+    # the Docker socket is not mounted in this topology.
+    assert "/var/run/docker.sock" not in backend
     assert "/minecraft-project" in backend
     assert "./data:/data" in backend
     assert "apps/frontend/Dockerfile" in frontend
@@ -147,6 +149,28 @@ def test_split_images_isolate_privileged_backend_from_frontend() -> None:
     assert "/minecraft-project" not in frontend
     assert "./data:/data" not in frontend
     assert "read_only: true" in frontend
+
+
+def test_split_backend_reaches_host_agent_and_omits_docker_socket() -> None:
+    split = (ROOT / "docker-compose.split.yml").read_text()
+    backend = split.split("  craftcontrol-backend:", 1)[1].split("  craftcontrol-frontend:", 1)[0]
+    assert "HOST_AGENT_URL" in backend
+    assert "HOST_AGENT_TOKEN_FILE" in backend
+    assert "host-gateway:host-gateway" in backend
+    assert "/run/host-agent-token:ro" in backend
+    assert "/var/run/docker.sock" not in split.split("  craftcontrol-backend:", 1)[1].split("  craftcontrol-frontend:", 1)[0]
+
+
+def test_host_agent_systemd_unit_is_present_and_well_formed() -> None:
+    unit = (ROOT / "deploy" / "host-agent" / "systemd" / "craftcontrol-host-agent.service").read_text()
+    assert "craftcontrol-agent" in unit
+    assert "ExecStart=" in unit
+    assert "Restart=on-failure" in unit
+    assert "WantedBy=multi-user.target" in unit
+    assert "docker.service" in unit
+    assert "NoNewPrivileges=true" in unit
+    assert "HOST_AGENT_BIND" in unit
+    assert "HOST_AGENT_SECRET_FILE" in unit
 
 
 def test_frontend_proxy_preserves_same_origin_and_sse_streaming() -> None:

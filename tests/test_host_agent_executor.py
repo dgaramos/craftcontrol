@@ -304,12 +304,20 @@ class TestExecutorPrepareMerge:
             assert "server-name=New" in content
 
     def test_read_oserror_raises_runtime_error(self) -> None:
-        from unittest.mock import patch, MagicMock
         with tempfile.TemporaryDirectory() as tmp:
             data_dir = Path(tmp)
             props = data_dir / "server.properties"
             props.write_text("server-name=Original\n")
-            with patch.object(Path, "read_text", side_effect=OSError("permission denied")):
-                with pytest.raises(RuntimeError, match="data loss"):
-                    self._run_prepare({"server_name": "Hacked"}, data_dir)
+
+            def _failing_reader(path: Path, **kwargs: object) -> str:
+                raise OSError("permission denied")
+
+            config = {
+                "compose_project": "mc",
+                "compose_file": "/tmp/docker-compose.yml",
+                "bedrock_data": str(data_dir),
+            }
+            executor = ex.OperationExecutor(config, read_text=_failing_reader)
+            with pytest.raises(RuntimeError, match="data loss"):
+                executor._prepare({"server_name": "Hacked"})
             assert "server-name=Original" in props.read_text()

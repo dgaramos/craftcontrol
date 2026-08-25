@@ -197,9 +197,12 @@ class OperationExecutor:
         self,
         config: dict[str, str],
         subprocess_run: Any = None,
+        read_text: Any = None,
     ) -> None:
         self._config = config
         self._subprocess_run = subprocess_run or subprocess.run
+        # Injected for testing; defaults to Path.read_text behaviour.
+        self._read_text = read_text or (lambda p, **kw: p.read_text(**kw))
 
     def run(self, record: OperationRecord, store: OperationStore, intended_state: dict[str, Any], health_timeout: int, restart_timeout: int) -> None:
         """Execute operation stages. Mutates record via store.update."""
@@ -384,7 +387,7 @@ class OperationExecutor:
         existing_lines: list[str] = []
         if props_file.exists():
             try:
-                raw = props_file.read_text(encoding="utf-8")
+                raw = self._read_text(props_file, encoding="utf-8")
                 existing_lines = raw.splitlines(keepends=True)
             except OSError as exc:
                 raise RuntimeError(

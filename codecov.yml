@@ -11,6 +11,11 @@ coverage:
           - frontend
         target: 75%
         threshold: 2%
+      host-agent:
+        flags:
+          - host-agent
+        target: 85%
+        threshold: 2%
     patch:
       backend:
         flags:
@@ -22,6 +27,11 @@ coverage:
           - frontend
         target: 65%
         threshold: 5%
+      host-agent:
+        flags:
+          - host-agent
+        target: 75%
+        threshold: 5%
 
 flags:
   backend:
@@ -31,6 +41,9 @@ flags:
   frontend:
     paths:
       - apps/frontend/static/js/
+  host-agent:
+    paths:
+      - deploy/host-agent/
 
 comment:
   layout: "reach,diff,flags"

@@ -271,6 +271,7 @@ CraftControl uses Python 3.12, Flask, Gunicorn, SQLite, Docker SDK for Python, N
 ```bash
 bin/check-frontend       # JS syntax, i18n, interaction and visual-contract tests
 bin/check-backend        # Python application and persistence tests
+bin/check-host-agent     # Standalone host-agent tests and coverage report
 bin/check-contracts      # OpenAPI, route surface, Swagger, generated declarations
 bin/check-integration    # Compose builds, split runtime, architecture and deploy safety
 bin/check                # complete local gate

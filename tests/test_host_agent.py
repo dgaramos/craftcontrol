@@ -492,14 +492,17 @@ class TestExecutorRun:
             "compose_file": "/tmp/dc.yml",
             "bedrock_data": str(data_dir),
         }
-        executor = ha.OperationExecutor(config, subprocess_run=subprocess_run)
+        executor = ha.OperationExecutor(
+            config,
+            subprocess_run=subprocess_run,
+            wait_for_health=lambda host, port, timeout: probe_result,
+        )
         store = ha.OperationStore()
         op_id = _op_id()
         record = store.create(op_id)
         assert record is not None
 
-        with patch("executor._wait_for_health", return_value=probe_result):
-            executor.run(record, store, {"server_name": "Test"}, 10, 30)
+        executor.run(record, store, {"server_name": "Test"}, 10, 30)
 
         return store.get(op_id)  # type: ignore[return-value]
 

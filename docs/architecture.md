@@ -103,7 +103,7 @@ flowchart LR
     logs["Bedrock logs"] --> runtime["runtime"]
     docker["Docker events"] --> runtime
     operations["manager operations"] --> runtime
-    runtime --> event["durable event"] --> broker["broker"] --> sse["SSE"]
+    runtime --> broker["broker"] --> sqlite["SQLite durable event store"] --> sse["SSE"]
     runtime --> targeted["targeted reconciliation"]
     timer["safety timer"] --> full["full reconciliation"]
     snapshot["Telemetry Pack snapshot"] --> state["authoritative telemetry state"]

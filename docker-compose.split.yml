@@ -26,7 +26,8 @@ services:
       HOST_AGENT_URL: "${HOST_AGENT_URL:-}"
       HOST_AGENT_TOKEN_FILE: "${HOST_AGENT_TOKEN_FILE:-/run/secrets/host_agent_token}"
     secrets:
-      - host_agent_token
+      - source: host_agent_token
+        target: /run/secrets/host_agent_token
     expose:
       - "8082"
     volumes:
@@ -65,4 +66,7 @@ services:
 
 secrets:
   host_agent_token:
-    file: "${HOST_AGENT_TOKEN_FILE:-/run/secrets/host_agent_token}"
+    # HOST_AGENT_TOKEN_SECRET_FILE is the token file path on the *host*.
+    # HOST_AGENT_TOKEN_FILE (in environment above) is where the backend reads it
+    # inside the container; it defaults to the secret mount target above.
+    file: "${HOST_AGENT_TOKEN_SECRET_FILE:-./secrets/host_agent_token}"

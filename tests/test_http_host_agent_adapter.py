@@ -32,7 +32,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -277,7 +277,7 @@ class TestPostDeliveryRecovery:
 
 class TestExecuteBranchCoverage:
     def test_none_intended_state_defaults_to_empty_dict(self) -> None:
-        """intended_state=None should be replaced with {} without error."""
+        """intended_state=None should be replaced with {} and restart_timeout_seconds defaults to 60."""
         client = _make_client([
             (202, {"operation_id": OP_ID, "status": "accepted"}),
             (200, {"status": "done", "outcome": "ok", "executor_ref": "r",
@@ -287,6 +287,11 @@ class TestExecuteBranchCoverage:
         adapter = _adapter(client)
         # Should not raise even though intended_state is None
         adapter.execute("apply", operation_id=OP_ID, intended_state=None)
+        # Inspect the POST payload: intended_state must be {} and restart_timeout_seconds must be 60
+        post_call = client.request.call_args_list[0]
+        sent_body: dict[str, Any] = json.loads(post_call.kwargs["body"])
+        assert sent_body["intended_state"] == {}
+        assert sent_body["restart_timeout_seconds"] == 60
 
     def test_oserror_during_status_poll_enters_recovery(self) -> None:
         """OSError on GET /v1/status during _poll_until_done enters recovery."""
@@ -351,20 +356,47 @@ class TestExecuteBranchCoverage:
 # _UrllibClient.request()
 # ---------------------------------------------------------------------------
 
-class TestUrllibClient:
-    def _make_response(self, status: int, body: dict[str, Any]) -> MagicMock:
-        raw = json.dumps(body).encode()
-        resp = MagicMock()
-        resp.status = status
-        resp.read.return_value = raw
-        resp.__enter__ = lambda s: s
-        resp.__exit__ = MagicMock(return_value=False)
+def _make_resp_opener(
+    status: int,
+    body: dict[str, Any] | None = None,
+    raw: bytes | None = None,
+) -> tuple[Any, MagicMock]:
+    """Return (opener_callable, request_capture) that yields a fake HTTP response.
+
+    The opener captures the ``urllib.request.Request`` object passed to it so
+    tests can inspect headers without patching the global.
+    """
+    if raw is None:
+        raw = json.dumps(body or {}).encode()
+    resp = MagicMock()
+    resp.status = status
+    resp.read.return_value = raw
+    resp.__enter__ = lambda s: s
+    resp.__exit__ = MagicMock(return_value=False)
+
+    captured: list[Any] = []
+
+    def opener(req: Any, *, timeout: float = 30.0) -> Any:  # noqa: ARG001
+        captured.append(req)
         return resp
 
+    capture = MagicMock()
+    capture.side_effect = opener
+    capture.captured = captured  # type: ignore[attr-defined]
+    return capture, resp
+
+
+def _make_exc_opener(exc: Exception) -> Any:
+    """Return an opener callable that raises *exc*."""
+    def opener(req: Any, *, timeout: float = 30.0) -> Any:  # noqa: ARG001
+        raise exc
+    return opener
+
+
+class TestUrllibClient:
     def test_successful_get_returns_status_and_json(self) -> None:
-        resp = self._make_response(200, {"ok": True})
-        with patch("urllib.request.urlopen", return_value=resp):
-            code, body = _UrllibClient().request("GET", "http://host/v1/health")
+        opener, _ = _make_resp_opener(200, {"ok": True})
+        code, body = _UrllibClient(opener=opener).request("GET", "http://host/v1/health")
         assert code == 200
         assert body == {"ok": True}
 
@@ -377,8 +409,9 @@ class TestUrllibClient:
             hdrs=MagicMock(),  # type: ignore[arg-type]
             fp=io.BytesIO(raw),
         )
-        with patch("urllib.request.urlopen", side_effect=exc):
-            code, body = _UrllibClient().request("GET", "http://host/v1/health")
+        code, body = _UrllibClient(opener=_make_exc_opener(exc)).request(
+            "GET", "http://host/v1/health"
+        )
         assert code == 404
         assert body == {"message": "not found"}
 
@@ -390,49 +423,49 @@ class TestUrllibClient:
             hdrs=MagicMock(),  # type: ignore[arg-type]
             fp=io.BytesIO(b"<html>bad gateway</html>"),
         )
-        with patch("urllib.request.urlopen", side_effect=exc):
-            code, body = _UrllibClient().request("GET", "http://host/v1/health")
+        code, body = _UrllibClient(opener=_make_exc_opener(exc)).request(
+            "GET", "http://host/v1/health"
+        )
         assert code == 502
         assert body == {}
 
     def test_url_error_with_oserror_reason_reraises_reason(self) -> None:
         inner = ConnectionRefusedError(111, "Connection refused")
         exc = urllib.error.URLError(reason=inner)
-        with patch("urllib.request.urlopen", side_effect=exc):
-            with pytest.raises(ConnectionRefusedError):
-                _UrllibClient().request("GET", "http://host/v1/health")
+        with pytest.raises(ConnectionRefusedError):
+            _UrllibClient(opener=_make_exc_opener(exc)).request(
+                "GET", "http://host/v1/health"
+            )
 
     def test_url_error_with_timeout_reason_reraises_timeout(self) -> None:
         inner = TimeoutError("timed out")
         exc = urllib.error.URLError(reason=inner)
-        with patch("urllib.request.urlopen", side_effect=exc):
-            with pytest.raises(TimeoutError):
-                _UrllibClient().request("GET", "http://host/v1/health")
+        with pytest.raises(TimeoutError):
+            _UrllibClient(opener=_make_exc_opener(exc)).request(
+                "GET", "http://host/v1/health"
+            )
 
     def test_url_error_with_non_oserror_reason_raises_oserror(self) -> None:
         exc = urllib.error.URLError(reason="unknown reason")
-        with patch("urllib.request.urlopen", side_effect=exc):
-            with pytest.raises(OSError):
-                _UrllibClient().request("GET", "http://host/v1/health")
+        with pytest.raises(OSError):
+            _UrllibClient(opener=_make_exc_opener(exc)).request(
+                "GET", "http://host/v1/health"
+            )
 
     def test_request_with_headers_passes_them(self) -> None:
-        resp = self._make_response(200, {"ok": True})
-        with patch("urllib.request.urlopen", return_value=resp) as mock_open:
-            _UrllibClient().request(
-                "GET",
-                "http://host/v1/health",
-                headers={"Authorization": "Bearer tok"},
-            )
-        assert mock_open.called
+        opener, _ = _make_resp_opener(200, {"ok": True})
+        _UrllibClient(opener=opener).request(
+            "GET",
+            "http://host/v1/health",
+            headers={"Authorization": "Bearer tok"},
+        )
+        assert opener.called
+        captured_req = opener.captured[0]
+        assert captured_req.get_header("Authorization") == "Bearer tok"
 
     def test_empty_response_body_returns_empty_dict(self) -> None:
-        resp = MagicMock()
-        resp.status = 200
-        resp.read.return_value = b""
-        resp.__enter__ = lambda s: s
-        resp.__exit__ = MagicMock(return_value=False)
-        with patch("urllib.request.urlopen", return_value=resp):
-            code, body = _UrllibClient().request("GET", "http://host/v1/health")
+        opener, _ = _make_resp_opener(200, raw=b"")
+        code, body = _UrllibClient(opener=opener).request("GET", "http://host/v1/health")
         assert code == 200
         assert body == {}
 

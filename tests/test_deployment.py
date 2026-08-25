@@ -154,23 +154,34 @@ def test_split_images_isolate_privileged_backend_from_frontend() -> None:
 def test_split_backend_reaches_host_agent_and_omits_docker_socket() -> None:
     split = (ROOT / "docker-compose.split.yml").read_text()
     backend = split.split("  craftcontrol-backend:", 1)[1].split("  craftcontrol-frontend:", 1)[0]
-    assert "HOST_AGENT_URL" in backend
-    assert "HOST_AGENT_TOKEN_FILE" in backend
+    # Exact URL — must not be configurable via env substitution in this file.
+    assert "HOST_AGENT_URL: http://host-gateway:7890" in backend
+    # Token file must be hard-coded to the volume mount destination with no
+    # env substitution; overriding it via .env would silently break the adapter.
+    assert "HOST_AGENT_TOKEN_FILE: /run/host-agent-token" in backend
+    assert "${HOST_AGENT_TOKEN_FILE" not in backend
+    # extra_hosts mapping must use the special Docker host-gateway value.
     assert "host-gateway:host-gateway" in backend
-    assert "/run/host-agent-token:ro" in backend
-    assert "/var/run/docker.sock" not in split.split("  craftcontrol-backend:", 1)[1].split("  craftcontrol-frontend:", 1)[0]
+    # Volume must bind-mount the token at the path the adapter reads.
+    assert "/etc/craftcontrol/host-agent-token:/run/host-agent-token:ro" in backend
+    assert "/var/run/docker.sock" not in backend
 
 
 def test_host_agent_systemd_unit_is_present_and_well_formed() -> None:
     unit = (ROOT / "deploy" / "host-agent" / "systemd" / "craftcontrol-host-agent.service").read_text()
-    assert "craftcontrol-agent" in unit
-    assert "ExecStart=" in unit
+    assert "User=craftcontrol-agent" in unit
+    assert "Group=craftcontrol-agent" in unit
+    # Full ExecStart path — partial checks would miss wrong interpreter or path.
+    assert "ExecStart=/usr/bin/python3 /opt/craftcontrol/host-agent/agent.py" in unit
     assert "Restart=on-failure" in unit
     assert "WantedBy=multi-user.target" in unit
     assert "docker.service" in unit
     assert "NoNewPrivileges=true" in unit
-    assert "HOST_AGENT_BIND" in unit
-    assert "HOST_AGENT_SECRET_FILE" in unit
+    assert "ProtectSystem=strict" in unit
+    # ReadWritePaths must match HOST_AGENT_BEDROCK_DATA exactly.
+    assert "ReadWritePaths=/opt/minecraft-bedrock" in unit
+    # Secret file path must match the host-side token location.
+    assert "HOST_AGENT_SECRET_FILE=/etc/craftcontrol/host-agent-token" in unit
 
 
 def test_frontend_proxy_preserves_same_origin_and_sse_streaming() -> None:

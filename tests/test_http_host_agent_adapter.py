@@ -10,7 +10,7 @@ Covers:
 - execute("apply"): agent returns 400 bad request
 - execute("apply"): terminal failure outcome (failed_stage, error_code)
 - execute("apply"): agent restart during polling (404 from status)
-- execute(): unsupported action raises KeyError
+- execute(): unsupported action raises RuntimeError
 - execute(): missing operation_id raises ValueError
 - _load_token(): reads file, strips whitespace, raises on missing file
 """
@@ -33,7 +33,7 @@ from minecraft_manager.host_agent import (
 # Test helpers
 # ---------------------------------------------------------------------------
 
-VALID_TOKEN = "test-secret-token-abcdef1234567890"
+VALID_TOKEN = "test-secret-token-abcdef1234567890"  # noqa: S105
 OP_ID = "11111111-1111-1111-1111-111111111111"
 
 
@@ -134,8 +134,8 @@ class TestExecuteSuccess:
 # ---------------------------------------------------------------------------
 
 class TestExecuteValidation:
-    def test_unsupported_action_raises_key_error(self) -> None:
-        with pytest.raises(KeyError):
+    def test_unsupported_action_raises_runtime_error(self) -> None:
+        with pytest.raises(RuntimeError, match="does not support action"):
             _adapter().execute("start")
 
     def test_missing_operation_id_raises_value_error(self) -> None:

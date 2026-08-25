@@ -25,6 +25,8 @@ services:
       # When active, the Docker socket mount below can be removed.
       HOST_AGENT_URL: "${HOST_AGENT_URL:-}"
       HOST_AGENT_TOKEN_FILE: "${HOST_AGENT_TOKEN_FILE:-/run/secrets/host_agent_token}"
+    secrets:
+      - host_agent_token
     expose:
       - "8082"
     volumes:
@@ -60,3 +62,7 @@ services:
       - no-new-privileges:true
     labels:
       io.craftcontrol.release-pair: "${CRAFTCONTROL_RELEASE_PAIR:-frontend-0.3.6_backend-0.1.0}"
+
+secrets:
+  host_agent_token:
+    file: "${HOST_AGENT_TOKEN_FILE:-/run/secrets/host_agent_token}"

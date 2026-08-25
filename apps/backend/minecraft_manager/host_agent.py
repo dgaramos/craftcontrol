@@ -80,6 +80,15 @@ class _UrllibClient:
             except json.JSONDecodeError:
                 body_dict = {}
             return exc.code, body_dict
+        except urllib.error.URLError as exc:
+            # Unwrap URLError to preserve the caller's exception classification:
+            # - pre-delivery connect failure (ConnectionRefusedError, TimeoutError)
+            # - read-phase timeout (TimeoutError raised after TCP handshake)
+            # Re-raise the underlying reason when it is an OSError so that
+            # execute() can distinguish connection-refused from timeouts.
+            if isinstance(exc.reason, OSError):
+                raise exc.reason from exc
+            raise OSError(str(exc)) from exc
 
 
 def _load_token(token_file: str) -> str:
@@ -117,11 +126,11 @@ class HostAgentContainerOperations:
         base_url: str,
         token: str,
         *,
-        http_client: _HttpClient | None = None,
+        http_client: _HttpClient,
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._token = token
-        self._client: _HttpClient = http_client if http_client is not None else _UrllibClient()
+        self._client: _HttpClient = http_client
 
     # ------------------------------------------------------------------
     # ContainerOperations interface
@@ -136,7 +145,7 @@ class HostAgentContainerOperations:
         """
         url = f"{self._base_url}/v1/health"
         try:
-            code, body = self._client.request("GET", url, timeout=10.0)
+            code, _body = self._client.request("GET", url, timeout=10.0)
         except OSError:
             return {"online": False, "state": "stopped", "container": "host-agent"}
         if code == 200:
@@ -150,7 +159,7 @@ class HostAgentContainerOperations:
         operation_id: str | None = None,
         intended_state: dict[str, Any] | None = None,
         health_timeout_seconds: int = 120,
-        restart_timeout_seconds: int = 60,
+        restart_timeout_seconds: int = 120,
     ) -> None:
         """Execute a server operation via the host agent.
 
@@ -162,7 +171,10 @@ class HostAgentContainerOperations:
         records the RESTART stage as failed with the exception message.
         """
         if action not in {"apply", "restart"}:
-            raise KeyError(action)
+            raise RuntimeError(
+                f"HostAgentContainerOperations does not support action {action!r}; "
+                "only 'apply' and 'restart' are implemented"
+            )
 
         if not operation_id:
             raise ValueError("operation_id is required for HostAgentContainerOperations.execute")

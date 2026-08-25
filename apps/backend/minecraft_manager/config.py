@@ -7,6 +7,7 @@ import re
 
 
 COMPOSE_PROJECT_NAME = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
+HOST_AGENT_URL_PATTERN = re.compile(r"^https?://[^\s/]+(/.*)?$")
 
 
 @dataclass(frozen=True)
@@ -22,13 +23,16 @@ class Settings:
     auth_mode: str = "local"
     auth_cookie_secure: bool = True
     host_agent_url: str = ""
-    host_agent_token_file: str = "/run/secrets/host_agent_token"
+    host_agent_token_file: str = "/run/secrets/host_agent_token"  # noqa: S105
 
     @classmethod
     def from_env(cls) -> "Settings":
         compose_project = os.getenv("MINECRAFT_COMPOSE_PROJECT", "minecraft-bedrock")
         if not COMPOSE_PROJECT_NAME.fullmatch(compose_project):
             raise ValueError("MINECRAFT_COMPOSE_PROJECT must be a valid Docker Compose project name")
+        host_agent_url = os.getenv("HOST_AGENT_URL", "")
+        if host_agent_url and not HOST_AGENT_URL_PATTERN.fullmatch(host_agent_url):
+            raise ValueError("HOST_AGENT_URL must be an http:// or https:// URL")
         return cls(
             container=os.getenv("MINECRAFT_CONTAINER", "minecraft-bedrock"),
             project=Path(os.getenv("MINECRAFT_PROJECT", "/minecraft-project")),
@@ -40,7 +44,7 @@ class Settings:
             backup_root=Path(os.getenv("BACKUP_ROOT", "/data/backups/coordinated")),
             auth_mode=os.getenv("AUTH_MODE", "local").lower(),
             auth_cookie_secure=os.getenv("AUTH_COOKIE_SECURE", "true").lower() == "true",
-            host_agent_url=os.getenv("HOST_AGENT_URL", ""),
+            host_agent_url=host_agent_url,
             host_agent_token_file=os.getenv("HOST_AGENT_TOKEN_FILE", "/run/secrets/host_agent_token"),
         )
 

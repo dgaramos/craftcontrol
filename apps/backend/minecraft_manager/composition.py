@@ -9,7 +9,7 @@ from .config import Settings
 from .docker_ops import DockerOperations
 from .events import EventBroker
 from .files import ServerFiles
-from .host_agent import HostAgentContainerOperations, _load_token
+from .host_agent import HostAgentContainerOperations, _UrllibClient, _load_token
 from .ports import ContainerOperations, RuntimeSupervisor, ServerConsole
 from .repository import StateRepository
 from .runtime import EventRuntime
@@ -43,7 +43,7 @@ def compose_manager(
     if docker is None:
         if settings.host_agent_url:
             token = _load_token(settings.host_agent_token_file)
-            docker = HostAgentContainerOperations(settings.host_agent_url, token)
+            docker = HostAgentContainerOperations(settings.host_agent_url, token, http_client=_UrllibClient())
         else:
             docker = DockerOperations(settings.container, settings.project, compose_project=settings.compose_project)
     broker = EventBroker(repository)

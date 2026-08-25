@@ -141,10 +141,12 @@ class HostAgentContainerOperations:
         token: str,
         *,
         http_client: _HttpClient,
+        retry_interval: float = _POST_DELIVERY_RETRY_INTERVAL_SECONDS,
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._token = token
         self._client: _HttpClient = http_client
+        self._retry_interval = retry_interval
 
     # ------------------------------------------------------------------
     # ContainerOperations interface
@@ -362,7 +364,7 @@ class HostAgentContainerOperations:
         last_error: str = "unknown"
         for attempt in range(_POST_DELIVERY_RETRY_COUNT):
             if attempt > 0:
-                time.sleep(_POST_DELIVERY_RETRY_INTERVAL_SECONDS)
+                time.sleep(self._retry_interval)
             try:
                 code, body = self._client.request(
                     "GET", status_url, headers=headers, timeout=10.0

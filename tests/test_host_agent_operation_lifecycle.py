@@ -16,11 +16,10 @@ import threading
 import time
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
-import minecraft_manager.host_agent as _host_agent_module
 from minecraft_manager.host_agent import HostAgentContainerOperations
 from minecraft_manager.migrations import run_migrations
 from minecraft_manager.operations.lifecycle import OperationStage, OperationState
@@ -55,12 +54,21 @@ def _make_http_client(responses: list[tuple[int, dict[str, Any]] | Exception]) -
     return mock
 
 
-def _make_adapter(client: MagicMock) -> HostAgentContainerOperations:
-    """Wrap a fake _HttpClient in a HostAgentContainerOperations with test credentials."""
+def _make_adapter(
+    client: MagicMock,
+    *,
+    retry_interval: float = 0.0,
+) -> HostAgentContainerOperations:
+    """Wrap a fake _HttpClient in a HostAgentContainerOperations with test credentials.
+
+    retry_interval defaults to 0 so tests run without real delays; production
+    composition uses the module-level default via the constructor default.
+    """
     return HostAgentContainerOperations(
         "http://host-gateway:7890",
         VALID_TOKEN,
         http_client=client,
+        retry_interval=retry_interval,
     )
 
 
@@ -195,8 +203,9 @@ class TestAgentFiveXxResponse:
     """AC2: Given the agent returns a 5xx response, the error evidence is recorded
     without exposing host internals.
 
-    The adapter's post-delivery recovery polls have a 5 s delay between attempts.
-    All tests in this class patch that delay to 0 so the test suite runs fast.
+    The adapter's post-delivery recovery polls have a configurable delay between
+    attempts. All tests in this class construct the adapter with retry_interval=0
+    (the _make_adapter default) so the test suite runs fast.
     """
 
     def _make_5xx_client_that_exhausts_recovery(self) -> MagicMock:
@@ -248,9 +257,8 @@ class TestAgentFiveXxResponse:
         adapter = _make_adapter(client)
         service = _make_service(tmp_path, adapter)
 
-        with patch.object(_host_agent_module, "_POST_DELIVERY_RETRY_INTERVAL_SECONDS", 0):
-            op = service.apply_restart_required({"MAX_PLAYERS": "5"}, lambda: None)
-            _wait_for_terminal(service, op.operation_id)
+        op = service.apply_restart_required({"MAX_PLAYERS": "5"}, lambda: None)
+        _wait_for_terminal(service, op.operation_id)
 
         refreshed = service.get_operation(op.operation_id)
         assert refreshed is not None
@@ -262,9 +270,8 @@ class TestAgentFiveXxResponse:
         adapter = _make_adapter(client)
         service = _make_service(tmp_path, adapter)
 
-        with patch.object(_host_agent_module, "_POST_DELIVERY_RETRY_INTERVAL_SECONDS", 0):
-            op = service.apply_restart_required({"MAX_PLAYERS": "5"}, lambda: None)
-            _wait_for_terminal(service, op.operation_id)
+        op = service.apply_restart_required({"MAX_PLAYERS": "5"}, lambda: None)
+        _wait_for_terminal(service, op.operation_id)
 
         refreshed = service.get_operation(op.operation_id)
         assert refreshed is not None
@@ -326,9 +333,8 @@ class TestAgentFiveXxResponse:
             health_timeout=5,
         )
 
-        with patch.object(_host_agent_module, "_POST_DELIVERY_RETRY_INTERVAL_SECONDS", 0):
-            op = service.apply_restart_required({"MAX_PLAYERS": "5"}, lambda: None)
-            _wait_for_terminal(service, op.operation_id)
+        op = service.apply_restart_required({"MAX_PLAYERS": "5"}, lambda: None)
+        _wait_for_terminal(service, op.operation_id)
 
         refreshed = service.get_operation(op.operation_id)
         assert refreshed is not None

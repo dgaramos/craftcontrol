@@ -29,7 +29,7 @@ import time
 import uuid
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 from urllib.parse import urlparse
 
 VERSION = "0.1.0"
@@ -65,6 +65,8 @@ PROBE_READ_TIMEOUT_SECONDS = 2
 
 # Results are retained at least this long after completion (seconds)
 RESULT_RETENTION_SECONDS = 600
+
+MAX_BODY_BYTES = 64 * 1024
 
 
 def _load_token(path: str) -> str:
@@ -128,9 +130,10 @@ class OperationRecord:
 
 
 class OperationStore:
-    def __init__(self) -> None:
+    def __init__(self, time_func: Callable[[], float] = time.monotonic) -> None:
         self._lock = threading.Lock()
         self._records: dict[str, OperationRecord] = {}
+        self._time_func = time_func
 
     def get(self, operation_id: str) -> OperationRecord | None:
         with self._lock:
@@ -153,15 +156,9 @@ class OperationStore:
             for k, v in kwargs.items():
                 setattr(rec, k, v)
 
-    def evict_expired(self, time_func: Any = None) -> None:
-        """Remove completed records older than RESULT_RETENTION_SECONDS.
-
-        Args:
-            time_func: Callable returning the current monotonic time (seconds).
-                       Defaults to ``time.monotonic``. Inject a controlled
-                       clock in tests to avoid timing-dependent failures.
-        """
-        now = (time_func or time.monotonic)()
+    def evict_expired(self) -> None:
+        """Remove completed records older than RESULT_RETENTION_SECONDS."""
+        now = self._time_func()
         cutoff = now - RESULT_RETENTION_SECONDS
         with self._lock:
             expired = [
@@ -228,6 +225,43 @@ def _wait_for_health(host: str, port: int, timeout_seconds: int) -> bool:
 # Executor
 # ---------------------------------------------------------------------------
 
+_ENUM_ALLOWED: dict[str, frozenset[str]] = {
+    "difficulty": frozenset({"peaceful", "easy", "normal", "hard"}),
+    "gamemode": frozenset({"survival", "creative", "adventure"}),
+    "default_player_permission_level": frozenset({"visitor", "member", "operator"}),
+    "chat_restriction": frozenset({"None", "Dropped", "Disabled"}),
+    "level_type": frozenset({"DEFAULT", "FLAT", "LEGACY"}),
+    "server_authoritative_movement": frozenset({
+        "client-auth",
+        "client-auth-with-rewind",
+        "server-auth",
+        "server-auth-with-rewind",
+    }),
+}
+
+_INT_FIELDS = frozenset({
+    "max_players", "server_port", "server_portv6", "view_distance",
+    "tick_distance", "player_idle_timeout", "max_threads",
+    "compression_threshold", "player_movement_score_threshold",
+    "player_movement_duration_threshold_in_ms",
+})
+
+_BOOL_FIELDS = frozenset({
+    "online_mode", "white_list", "allow_list", "allow_cheats",
+    "enable_lan_visibility", "texturepack_required",
+    "content_log_file_enabled", "correct_player_movement",
+    "server_authoritative_block_breaking",
+    "disable_player_interaction",
+    "client_side_chunk_generation_enabled", "block_network_ids_are_hashes",
+    "disable_persona", "disable_custom_skins",
+})
+
+_FLOAT_FIELDS = frozenset({
+    "player_movement_action_direction_threshold",
+    "player_movement_distance_threshold",
+    "server_build_radius_ratio",
+})
+
 _INTENDED_STATE_FIELDS = frozenset({
     "server_name",
     "difficulty",
@@ -266,6 +300,37 @@ _INTENDED_STATE_FIELDS = frozenset({
     "disable_custom_skins",
     "server_build_radius_ratio",
 })
+
+
+def _validate_intended_state_values(intended_state: dict[str, Any]) -> str | None:
+    """Validate intended_state field values. Returns an error message or None."""
+    for field, value in intended_state.items():
+        if field in _ENUM_ALLOWED:
+            if str(value) not in _ENUM_ALLOWED[field]:
+                allowed = ", ".join(sorted(_ENUM_ALLOWED[field]))
+                return f"'{field}' must be one of: {allowed}"
+        elif field in _INT_FIELDS:
+            if not isinstance(value, int) or isinstance(value, bool):
+                return f"'{field}' must be an integer"
+        elif field in _BOOL_FIELDS:
+            if not isinstance(value, bool):
+                return f"'{field}' must be a boolean"
+        elif field in _FLOAT_FIELDS:
+            if not isinstance(value, (int, float)) or isinstance(value, bool):
+                return f"'{field}' must be a number"
+        else:
+            # Text field: reject control characters that break the properties format
+            str_val = str(value)
+            if "\n" in str_val or "\r" in str_val:
+                return f"'{field}' must not contain newline characters"
+    return None
+
+
+def _render_field_value(field: str, value: Any) -> str:
+    """Render an intended_state value to a server.properties-compatible string."""
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    return str(value)
 
 
 class OperationExecutor:
@@ -342,11 +407,28 @@ class OperationExecutor:
 
         # Stage: health_wait
         store.update(operation_id, current_stage="health_wait")
-        port = int(intended_state.get("server_port", BEDROCK_DEFAULT_PORT))
-        health_reached = _wait_for_health("127.0.0.1", port, health_timeout)
+        try:
+            port = int(intended_state.get("server_port", BEDROCK_DEFAULT_PORT))
+            health_reached = _wait_for_health("127.0.0.1", port, health_timeout)
+        except Exception as exc:
+            logger.exception("health_wait failed for %s", operation_id)
+            store.update(
+                operation_id,
+                status="done",
+                current_stage=None,
+                outcome="error",
+                executor_ref=executor_ref,
+                health_reached=False,
+                failed_stage="health_wait",
+                detail=str(exc),
+                error_code="health_wait_error",
+                exception_type=type(exc).__name__,
+                completed_at=time.monotonic(),
+            )
+            return
 
         if health_reached:
-            elapsed_msg = f"Server reached healthy state"
+            elapsed_msg = "Server reached healthy state"
             store.update(
                 operation_id,
                 status="done",
@@ -378,12 +460,15 @@ class OperationExecutor:
             logger.error("operation %s health probe timed out after %ss", operation_id, health_timeout)
 
     def _prepare(self, intended_state: dict[str, Any]) -> None:
-        """Write server.properties to the Bedrock data directory."""
+        """Merge-write server.properties in the Bedrock data directory.
+
+        Reads the existing file (if present), updates only the keys supplied in
+        ``intended_state``, and preserves all other lines (comments, blank lines,
+        unknown keys) in their original order.
+        """
         data_dir = Path(self._config["bedrock_data"])
         props_file = data_dir / "server.properties"
 
-        # Build key=value lines for known fields
-        lines: list[str] = []
         field_map = {
             "server_name": "server-name",
             "difficulty": "difficulty",
@@ -422,25 +507,55 @@ class OperationExecutor:
             "disable_custom_skins": "disable-custom-skins",
             "server_build_radius_ratio": "server-build-radius-ratio",
         }
+
+        # Build the validated update map (prop_key → rendered value)
+        updates: dict[str, str] = {}
         for field, prop_key in field_map.items():
             if field in intended_state:
-                lines.append(f"{prop_key}={intended_state[field]}\n")
+                updates[prop_key] = _render_field_value(field, intended_state[field])
 
-        if not lines:
+        if not updates:
             logger.info("No configuration fields to write in prepare stage")
             return
 
         if not data_dir.is_dir():
             raise RuntimeError(f"Bedrock data directory not found: {data_dir}")
 
+        # Read existing file to preserve unknown keys and comments
+        existing_lines: list[str] = []
+        if props_file.exists():
+            try:
+                raw = props_file.read_text(encoding="utf-8")
+                existing_lines = raw.splitlines(keepends=True)
+            except OSError:
+                existing_lines = []
+
+        # Merge: replace lines whose key appears in updates; collect written keys
+        merged: list[str] = []
+        written: set[str] = set()
+        for line in existing_lines:
+            stripped = line.strip()
+            if stripped and not stripped.startswith("#") and "=" in stripped:
+                k = stripped.split("=", 1)[0].strip()
+                if k in updates:
+                    merged.append(f"{k}={updates[k]}\n")
+                    written.add(k)
+                    continue
+            merged.append(line if line.endswith("\n") else line + "\n" if line else line)
+
+        # Append keys not found in the existing file
+        for k, v in updates.items():
+            if k not in written:
+                merged.append(f"{k}={v}\n")
+
         tmp_file = props_file.with_suffix(".tmp")
         try:
-            tmp_file.write_text("".join(lines))
+            tmp_file.write_text("".join(merged), encoding="utf-8")
             tmp_file.replace(props_file)
         except OSError as exc:
             raise RuntimeError(f"Failed to write server.properties: {exc}") from exc
 
-        logger.info("Wrote %d properties to %s", len(lines), props_file)
+        logger.info("Wrote/updated %d properties in %s", len(updates), props_file)
 
     def _restart(self, timeout: int) -> str:
         """Run docker compose restart and return an executor_ref string."""
@@ -505,14 +620,25 @@ class AgentHandler(BaseHTTPRequestHandler):
         return True
 
     def _read_json_body(self) -> dict[str, Any] | None:
-        length = int(self.headers.get("Content-Length", 0))
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+        except ValueError:
+            self._send_json(400, {"error": "bad_request", "message": "Invalid Content-Length"})
+            return None
+        if length < 0 or length > MAX_BODY_BYTES:
+            self._send_json(400, {"error": "bad_request", "message": "Request body too large or invalid"})
+            return None
         if length == 0:
             return {}
         try:
-            return json.loads(self.rfile.read(length))
+            body = json.loads(self.rfile.read(length))
         except json.JSONDecodeError as exc:
             self._send_json(400, {"error": "bad_request", "message": f"Invalid JSON: {exc}"})
             return None
+        if not isinstance(body, dict):
+            self._send_json(400, {"error": "bad_request", "message": "Request body must be a JSON object"})
+            return None
+        return body
 
     def do_GET(self) -> None:  # noqa: N802
         path = self.path.split("?")[0]
@@ -580,6 +706,12 @@ class AgentHandler(BaseHTTPRequestHandler):
                 "error": "bad_request",
                 "message": f"Unrecognised fields in intended_state: {', '.join(sorted(unknown))}",
             })
+            return
+
+        # Validate field values (type, domain, and injection safety)
+        value_error = _validate_intended_state_values(intended_state)
+        if value_error is not None:
+            self._send_json(400, {"error": "bad_request", "message": value_error})
             return
 
         # Validate optional timeouts

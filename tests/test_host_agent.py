@@ -619,33 +619,33 @@ class TestOperationStoreEviction:
         assert store.create(op_id) is None
 
     def test_evict_expired_removes_old_completed(self) -> None:
-        store = ha.OperationStore()
-        op_id = _op_id()
-        store.create(op_id)
         # Completed at t=1000; clock is now at t=1000+RETENTION+1 → expired.
         completed_at = 1000.0
         now = completed_at + ha.RESULT_RETENTION_SECONDS + 1
+        store = ha.OperationStore(time_func=lambda: now)
+        op_id = _op_id()
+        store.create(op_id)
         store.update(op_id, status="done", completed_at=completed_at)
-        store.evict_expired(time_func=lambda: now)
+        store.evict_expired()
         assert store.get(op_id) is None
 
     def test_evict_does_not_remove_recent_completed(self) -> None:
-        store = ha.OperationStore()
-        op_id = _op_id()
-        store.create(op_id)
         # Completed just now; clock has not advanced past the retention window.
         completed_at = 1000.0
         now = completed_at + 1  # only 1 second later — well within retention
+        store = ha.OperationStore(time_func=lambda: now)
+        op_id = _op_id()
+        store.create(op_id)
         store.update(op_id, status="done", completed_at=completed_at)
-        store.evict_expired(time_func=lambda: now)
+        store.evict_expired()
         assert store.get(op_id) is not None
 
     def test_evict_does_not_remove_running(self) -> None:
-        store = ha.OperationStore()
+        store = ha.OperationStore(time_func=lambda: 999999.0)
         op_id = _op_id()
         store.create(op_id)
         # Running records have completed_at=None; eviction must ignore them.
-        store.evict_expired(time_func=lambda: 999999.0)
+        store.evict_expired()
         assert store.get(op_id) is not None
 
 
@@ -661,3 +661,216 @@ class TestUnknownPaths:
     def test_unknown_post_returns_404(self) -> None:
         status, body = _call_handler("POST", "/v1/unknown", body={})
         assert status == 404
+
+
+# ---------------------------------------------------------------------------
+# _read_json_body hardening
+# ---------------------------------------------------------------------------
+
+def _post_raw(raw_body: bytes, content_length_override: str | None = None) -> tuple[int, dict[str, Any]]:
+    """POST /v1/execute with a raw byte body, optionally overriding Content-Length."""
+    headers: dict[str, str] = {"Authorization": f"Bearer {VALID_TOKEN}"}
+    if content_length_override is not None:
+        headers["Content-Length"] = content_length_override
+    else:
+        headers["Content-Length"] = str(len(raw_body))
+
+    hdrs_text = "".join(f"{k}: {v}\r\n" for k, v in headers.items())
+    raw_request = f"POST /v1/execute HTTP/1.1\r\nHost: localhost\r\n{hdrs_text}\r\n".encode() + raw_body
+    from io import BytesIO
+    request_file = BytesIO(raw_request)
+
+    class RawFakeRequest:
+        def makefile(self, mode: str) -> Any:
+            return request_file
+
+    response_buf = BytesIO()
+
+    class CapturingSocket:
+        def makefile(self, mode: str, bufsize: int = -1) -> Any:
+            if "w" in mode:
+                return response_buf
+            return request_file
+
+        def sendall(self, data: bytes) -> None:
+            response_buf.write(data)
+
+        def settimeout(self, timeout: Any) -> None:
+            pass
+
+        def setsockopt(self, *args: Any) -> None:
+            pass
+
+        def getsockname(self) -> tuple:
+            return ("127.0.0.1", 7890)
+
+        def getpeername(self) -> tuple:
+            return ("127.0.0.1", 55000)
+
+    from unittest.mock import MagicMock
+    HandlerClass = _handler_class()
+    handler = HandlerClass.__new__(HandlerClass)
+    handler.request = CapturingSocket()
+    handler.client_address = ("127.0.0.1", 55000)
+    handler.server = MagicMock()
+    handler.setup()
+    handler.handle()
+
+    response_buf.seek(0)
+    raw_response = response_buf.read().decode()
+    lines = raw_response.split("\r\n")
+    status_code = int(lines[0].split(" ")[1])
+    body_start = raw_response.find("\r\n\r\n")
+    json_body: dict[str, Any] = {}
+    if body_start != -1:
+        try:
+            json_body = json.loads(raw_response[body_start + 4:])
+        except json.JSONDecodeError:
+            pass
+    return status_code, json_body
+
+
+class TestReadJsonBodyHardening:
+    def test_invalid_content_length_returns_400(self) -> None:
+        status, body = _post_raw(b'{"operation_id":"x"}', content_length_override="abc")
+        assert status == 400
+        assert "Content-Length" in body.get("message", "")
+
+    def test_negative_content_length_returns_400(self) -> None:
+        status, body = _post_raw(b'{"operation_id":"x"}', content_length_override="-1")
+        assert status == 400
+
+    def test_body_too_large_returns_400(self) -> None:
+        oversized = str(ha.MAX_BODY_BYTES + 1)
+        status, body = _post_raw(b'{"operation_id":"x"}', content_length_override=oversized)
+        assert status == 400
+
+    def test_non_dict_json_body_returns_400(self) -> None:
+        status, body = _post_raw(b'["not", "an", "object"]')
+        assert status == 400
+        assert "object" in body.get("message", "").lower()
+
+
+# ---------------------------------------------------------------------------
+# intended_state value validation
+# ---------------------------------------------------------------------------
+
+class TestIntendedStateValueValidation:
+    def _execute(self, intended_state: dict) -> tuple[int, dict]:
+        return _call_handler(
+            "POST", "/v1/execute",
+            body={"operation_id": _op_id(), "intended_state": intended_state},
+        )
+
+    def test_newline_in_server_name_returns_400(self) -> None:
+        status, body = self._execute({"server_name": "evil\nallow-cheats=true"})
+        assert status == 400
+        assert "newline" in body.get("message", "").lower()
+
+    def test_invalid_difficulty_enum_returns_400(self) -> None:
+        status, body = self._execute({"difficulty": "godmode"})
+        assert status == 400
+        assert "difficulty" in body.get("message", "")
+
+    def test_valid_difficulty_accepted(self) -> None:
+        # Validation happens before the thread starts; 202 means the value passed.
+        executor = _make_executor(subprocess_run=MagicMock(return_value=MagicMock(returncode=0, stdout="", stderr="")))
+        store = _make_store()
+        status, body = _call_handler(
+            "POST", "/v1/execute",
+            body={"operation_id": _op_id(), "intended_state": {"difficulty": "hard"}},
+            store=store,
+            executor=executor,
+        )
+        assert status == 202
+
+    def test_non_bool_for_bool_field_returns_400(self) -> None:
+        status, body = self._execute({"online_mode": "yes"})
+        assert status == 400
+        assert "boolean" in body.get("message", "").lower()
+
+    def test_non_int_for_int_field_returns_400(self) -> None:
+        status, body = self._execute({"max_players": "ten"})
+        assert status == 400
+        assert "integer" in body.get("message", "").lower()
+
+
+# ---------------------------------------------------------------------------
+# Executor: health_wait exception handling
+# ---------------------------------------------------------------------------
+
+class TestExecutorRunHealthWaitException:
+    def test_invalid_server_port_causes_health_wait_error(self) -> None:
+        mock_run = MagicMock(return_value=MagicMock(returncode=0, stdout="", stderr=""))
+        with tempfile.TemporaryDirectory() as tmp:
+            config = {
+                "compose_project": "mc",
+                "compose_file": "/tmp/dc.yml",
+                "bedrock_data": tmp,
+            }
+            executor = ha.OperationExecutor(config, subprocess_run=mock_run)
+            store = ha.OperationStore()
+            op_id = _op_id()
+            record = store.create(op_id)
+            assert record is not None
+            executor.run(record, store, {"server_port": "not-a-number"}, 10, 30)
+        rec = store.get(op_id)
+        assert rec is not None
+        assert rec.outcome == "error"
+        assert rec.failed_stage == "health_wait"
+        assert rec.error_code == "health_wait_error"
+        assert rec.completed_at is not None
+
+
+# ---------------------------------------------------------------------------
+# Executor: merge-write server.properties
+# ---------------------------------------------------------------------------
+
+class TestExecutorPrepareMerge:
+    def _run_prepare(self, intended_state: dict, data_dir: Path) -> None:
+        config = {
+            "compose_project": "mc",
+            "compose_file": "/tmp/docker-compose.yml",
+            "bedrock_data": str(data_dir),
+        }
+        executor = ha.OperationExecutor(config)
+        executor._prepare(intended_state)
+
+    def test_existing_keys_preserved(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            data_dir = Path(tmp)
+            props = data_dir / "server.properties"
+            props.write_text("level-name=MyWorld\nserver-port=19132\n")
+            self._run_prepare({"server_name": "Updated"}, data_dir)
+            content = props.read_text()
+            assert "level-name=MyWorld" in content
+            assert "server-port=19132" in content
+            assert "server-name=Updated" in content
+
+    def test_existing_key_updated_not_duplicated(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            data_dir = Path(tmp)
+            props = data_dir / "server.properties"
+            props.write_text("server-name=OldName\nmax-players=10\n")
+            self._run_prepare({"server_name": "NewName"}, data_dir)
+            content = props.read_text()
+            assert content.count("server-name=") == 1
+            assert "server-name=NewName" in content
+            assert "max-players=10" in content
+
+    def test_boolean_rendered_as_lowercase_string(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            data_dir = Path(tmp)
+            self._run_prepare({"allow_cheats": True}, data_dir)
+            content = (data_dir / "server.properties").read_text()
+            assert "allow-cheats=true" in content
+
+    def test_comments_preserved(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            data_dir = Path(tmp)
+            props = data_dir / "server.properties"
+            props.write_text("# Generated by Bedrock\nserver-name=Old\n")
+            self._run_prepare({"server_name": "New"}, data_dir)
+            content = props.read_text()
+            assert "# Generated by Bedrock" in content
+            assert "server-name=New" in content

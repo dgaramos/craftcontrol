@@ -85,9 +85,8 @@ use credenciais pessoais para completar Project, milestone, labels ou assignees.
 
 Crie o PR com `gh pr create`, mas não passe metadata de reviewer nesse comando.
 Depois, dispare `publish-cody-pr-metadata.yml` (ou o publisher Claudio DR
-equivalente) com os valores herdados da issue; o workflow do App aplica e
-verifica labels, assignees, milestone, Project e status. Nunca use `gh pr edit`
-para esse fim, pois ele atribui a mutação à conta local.
+equivalente) para labels, assignees e milestone. Project pessoal exige fallback
+pessoal explicitamente autorizado; registre o login e verifique o status.
 
 ```bash
 gh pr create \

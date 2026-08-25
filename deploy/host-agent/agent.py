@@ -66,6 +66,7 @@ from handler import (  # noqa: F401
     RESTART_TIMEOUT_MAX,
     RESTART_TIMEOUT_DEFAULT,
 )
+from adapters.docker import DockerContainerStatus  # noqa: F401
 
 logging.basicConfig(
     level=logging.INFO,
@@ -110,7 +111,7 @@ def _load_config() -> dict[str, str]:
 # ---------------------------------------------------------------------------
 
 def run(*, bind: str, token: str, config: dict[str, str], subprocess_run: Any = None) -> None:
-    from adapters.docker import DockerComposeRunner
+    from adapters.docker import DockerComposeRunner, DockerContainerStatus
     from adapters.filesystem import BedrockFileSystem
     from adapters.raknet import RakNetHealthProbe
 
@@ -123,7 +124,9 @@ def run(*, bind: str, token: str, config: dict[str, str], subprocess_run: Any = 
     filesystem = BedrockFileSystem(config["bedrock_data"])
     probe = RakNetHealthProbe()
     executor = OperationExecutor(runner, filesystem, probe)
-    handler_class = build_handler_class(token, store, executor)
+    status_checker = DockerContainerStatus(subprocess_run=subprocess_run)
+    bedrock_container = config.get("bedrock_container", "minecraft-server")
+    handler_class = build_handler_class(token, store, executor, status_checker, bedrock_container)
 
     server = HTTPServer((host, port), handler_class)
     logger.info("Host agent v%s listening on %s:%d", VERSION, host, port)

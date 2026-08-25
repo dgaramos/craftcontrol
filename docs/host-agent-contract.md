@@ -321,6 +321,32 @@ watchdog and by the backend's startup check.
 
 ---
 
+### `GET /v1/bedrock/status`
+
+Reports whether the Bedrock server container is currently running. This is
+distinct from agent process liveness — the agent may be healthy while the
+Bedrock container is stopped or restarting.
+
+**Authentication:** Bearer token required (same as all other authenticated
+endpoints).
+
+Returns `200 OK` with:
+
+```json
+{"bedrock_running": true}
+```
+
+or, when the container is stopped or unreachable:
+
+```json
+{"bedrock_running": false}
+```
+
+The backend uses this endpoint in `HostAgentContainerOperations.status()` to
+determine real Bedrock availability rather than agent liveness.
+
+---
+
 ## Error codes
 
 The following machine-readable `error_code` values are defined for the

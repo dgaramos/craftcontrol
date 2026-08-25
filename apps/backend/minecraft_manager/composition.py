@@ -43,7 +43,12 @@ def compose_manager(
     if docker is None:
         if settings.host_agent_url:
             token = _load_token(settings.host_agent_token_file)
-            docker = HostAgentContainerOperations(settings.host_agent_url, token, http_client=_UrllibClient())
+            docker = HostAgentContainerOperations(
+                settings.host_agent_url,
+                token,
+                http_client=_UrllibClient(),
+                server_name=settings.container,
+            )
         else:
             docker = DockerOperations(settings.container, settings.project, compose_project=settings.compose_project)
     broker = EventBroker(repository)

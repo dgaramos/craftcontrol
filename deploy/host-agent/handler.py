@@ -13,6 +13,7 @@ from operations import (
     _INTENDED_STATE_FIELDS,
     _validate_intended_state_values,
 )
+from ports import ContainerStatusChecker
 from store import OperationStore
 
 logger = logging.getLogger("host-agent")
@@ -36,6 +37,8 @@ class AgentHandler(BaseHTTPRequestHandler):
     token: str = ""
     store: OperationStore
     executor: OperationExecutor
+    status_checker: ContainerStatusChecker
+    bedrock_container_name: str = "minecraft-server"
 
     def log_message(self, format: str, *args: Any) -> None:  # noqa: A002
         logger.info(format, *args)
@@ -88,6 +91,10 @@ class AgentHandler(BaseHTTPRequestHandler):
 
         if path == "/v1/health":
             self._handle_health()
+        elif path == "/v1/bedrock/status":
+            if not self._require_auth():
+                return
+            self._handle_bedrock_status()
         elif path.startswith("/v1/status/"):
             if not self._require_auth():
                 return
@@ -111,6 +118,10 @@ class AgentHandler(BaseHTTPRequestHandler):
 
     def _handle_health(self) -> None:
         self._send_json(200, {"status": "ok", "version": VERSION})
+
+    def _handle_bedrock_status(self) -> None:
+        running = self.status_checker.is_running(self.bedrock_container_name)
+        self._send_json(200, {"bedrock_running": running})
 
     def _handle_status(self, operation_id: str) -> None:
         # Evict expired records opportunistically
@@ -212,7 +223,13 @@ class AgentHandler(BaseHTTPRequestHandler):
         self._send_json(202, {"operation_id": operation_id, "status": "accepted"})
 
 
-def build_handler_class(token: str, store: OperationStore, executor: OperationExecutor) -> type:
+def build_handler_class(
+    token: str,
+    store: OperationStore,
+    executor: OperationExecutor,
+    status_checker: ContainerStatusChecker,
+    bedrock_container_name: str = "minecraft-server",
+) -> type:
     """Return an AgentHandler subclass with dependencies injected as class attributes."""
 
     class BoundHandler(AgentHandler):
@@ -221,4 +238,6 @@ def build_handler_class(token: str, store: OperationStore, executor: OperationEx
     BoundHandler.token = token
     BoundHandler.store = store  # type: ignore[assignment]
     BoundHandler.executor = executor  # type: ignore[assignment]
+    BoundHandler.status_checker = status_checker  # type: ignore[assignment]
+    BoundHandler.bedrock_container_name = bedrock_container_name
     return BoundHandler

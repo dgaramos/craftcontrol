@@ -6,7 +6,7 @@ import subprocess
 import time
 from typing import TYPE_CHECKING, Any, Callable
 
-from ports import ContainerRunner, RestartTimeoutError
+from ports import ContainerRunner, ContainerStatusChecker, RestartTimeoutError
 
 logger = logging.getLogger("host-agent")
 
@@ -52,6 +52,29 @@ class DockerComposeRunner:
         return f"{project}_minecraft-server_restart_{ts}"
 
 
+class DockerContainerStatus:
+    """ContainerStatusChecker adapter: checks Bedrock container state via ``docker inspect``."""
+
+    def __init__(self, subprocess_run: Callable[..., Any] | None = None) -> None:
+        self._subprocess_run = subprocess_run or subprocess.run
+
+    def is_running(self, container_name: str) -> bool:
+        """Return True if the named container exists and is in running state."""
+        cmd = ["docker", "inspect", "--format", "{{.State.Running}}", container_name]
+        try:
+            result = self._subprocess_run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False,
+            )
+        except (subprocess.TimeoutExpired, OSError):
+            return False
+        return result.returncode == 0 and result.stdout.strip().lower() == "true"
+
+
 if TYPE_CHECKING:
-    # Static check: DockerComposeRunner must satisfy the ContainerRunner Protocol.
-    _: ContainerRunner = DockerComposeRunner.__new__(DockerComposeRunner)
+    # Static checks: adapters must satisfy their respective protocols.
+    _r: ContainerRunner = DockerComposeRunner.__new__(DockerComposeRunner)
+    _s: ContainerStatusChecker = DockerContainerStatus.__new__(DockerContainerStatus)

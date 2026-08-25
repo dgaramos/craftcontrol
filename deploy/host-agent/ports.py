@@ -32,3 +32,10 @@ class HealthProbe(Protocol):
 
     def wait(self, host: str, port: int, timeout_seconds: int) -> bool:
         ...
+
+
+class ContainerStatusChecker(Protocol):
+    """Check whether the Bedrock container is currently running."""
+
+    def is_running(self, container_name: str) -> bool:
+        ...

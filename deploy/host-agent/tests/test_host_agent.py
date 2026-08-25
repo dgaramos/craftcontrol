@@ -80,10 +80,16 @@ def _make_executor(
     )
 
 
+def _make_status_checker(running: bool = True) -> Any:
+    mock = MagicMock()
+    mock.is_running.return_value = running
+    return mock
+
+
 def _handler_class(token: str = VALID_TOKEN, store: ha.OperationStore | None = None, executor: ha.OperationExecutor | None = None) -> type:
     store = store or _make_store()
     executor = executor or _make_executor()
-    return ha.build_handler_class(token, store, executor)
+    return ha.build_handler_class(token, store, executor, _make_status_checker())
 
 
 # Minimal fake HTTP transport for unit-testing the handler without a real socket.

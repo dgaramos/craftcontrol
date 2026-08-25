@@ -244,9 +244,9 @@ class TestAgentFiveXxResponse:
             f"terminal_error exposes host internals: {error!r}"
         )
 
-        # Check stage error messages as well.
+        # Check stage error messages and evidence as well.
         for stage in refreshed.stages:
-            for value in (stage.error or "", str(stage.result or {})):
+            for value in (stage.error or "", str(stage.result or {}), str(stage.evidence or {})):
                 assert not _contains_host_internal(value), (
                     f"Stage {stage.stage} evidence exposes host internals: {value!r}"
                 )

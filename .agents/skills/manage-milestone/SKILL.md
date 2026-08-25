@@ -5,7 +5,9 @@ description: Gerencia milestones do CraftControl — lista progresso, atribui is
 
 # manage-milestone
 
-Gerencia milestones do repositório CraftControl via `gh api` e `gh issue`.
+Gerencia milestones do repositório CraftControl. Use `gh api` e `gh issue`
+somente para consulta; mutações de metadata de artefatos atribuídos a reviewer
+passam pelo publisher GitHub App configurado, nunca pela conta pessoal local.
 
 ## Milestones disponíveis
 

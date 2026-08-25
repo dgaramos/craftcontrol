@@ -5,7 +5,11 @@ description: Gerencia GitHub Project boards do CraftControl — lista projetos, 
 
 # manage-project
 
-Gerencia os GitHub Project boards do CraftControl via `gh project`.
+Gerencia os GitHub Project boards do CraftControl. Use `gh project` somente
+para consulta. Mutar Project, labels, milestone ou assignee de um artefato de
+reviewer deve passar pelo publisher GitHub App configurado e ser verificado com
+a identidade correspondente; não use a conta pessoal autenticada como fallback
+implícito.
 
 ## Projetos disponíveis
 

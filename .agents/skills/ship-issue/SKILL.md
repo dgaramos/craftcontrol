@@ -71,18 +71,19 @@ gh issue view <número> \
   --json title,assignees,labels,milestone,projectItems,body
 ```
 
-Se a issue não tiver os quatro campos, corrija-a de acordo com a skill
-`$manage-project`/`$manage-milestone` antes de abrir o PR; não crie um PR
-incompleto. Se o token não tiver o escopo `project`, execute `gh auth refresh
--s project` e pare somente se essa autorização não puder ser concedida.
+Se a issue não tiver os quatro campos, não crie um PR incompleto. Corrija a
+configuração ou use o publisher do App adequado; não faça `gh auth refresh` nem
+use credenciais pessoais para completar Project, milestone, labels ou assignees.
 
 ### 4. Abrir PR
 
 **Título obrigatório:** `type(scope): descrição (#número-da-issue)`.
 
-Passe cada label, assignee e Project recebido da issue. Use `--project` para
-cada Project (não apenas para adicionar a issue ao board); o PR deve aparecer
-no mesmo board. Exemplo para uma issue com dois labels:
+Crie o PR com `gh pr create`, mas não passe metadata de reviewer nesse comando.
+Depois, dispare `publish-cody-pr-metadata.yml` (ou o publisher Claudio DR
+equivalente) com os valores herdados da issue; o workflow do App aplica e
+verifica labels, assignees, milestone, Project e status. Nunca use `gh pr edit`
+para esse fim, pois ele atribui a mutação à conta local.
 
 ```bash
 gh pr create \
@@ -109,11 +110,7 @@ gh pr create \
 Closes #<número>
 EOF
 )" \
-  --assignee "<assignee da issue>" \
-  --milestone "<milestone da issue>" \
-  --label "<primeiro label da issue>" \
-  --label "<segundo label da issue, se houver>" \
-  --project "<Project da issue>"
+  --base main --head <branch>
 ```
 
 Não use o exemplo literalmente: gere os valores reais a partir da issue e
@@ -132,11 +129,14 @@ gh pr view <url-do-pr> \
          milestone: .milestone.title, projects: [.projectItems[].title]}'
 ```
 
-Se algum item estiver ausente, corrija antes de reportar a entrega:
+Se algum item estiver ausente, corrija pelo workflow do App antes de reportar a entrega:
 
 ```bash
-gh pr edit <url-do-pr> --add-assignee "<login>" --add-label "<label>" \
-  --milestone "<milestone>" --add-project "<Project>"
+gh workflow run publish-cody-pr-metadata.yml --ref main \
+  -f "pr_number=<número>" -f "base_branch=main" \
+  -f 'labels_json=["<label>"]' -f 'assignees_json=["<assignee>"]' \
+  -f "milestone_number=<número>" -f "project_owner=dgaramos" \
+  -f "project_number=<número>" -f "project_status=<status>"
 ```
 
 Metadados obrigatórios:

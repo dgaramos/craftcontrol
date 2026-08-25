@@ -252,7 +252,7 @@ class TestAgentFiveXxResponse:
         return mock
 
     def test_5xx_produces_failed_operation(self, tmp_path: Path) -> None:
-        """5xx from POST /v1/execute that exhausts recovery → FAILED."""
+        """5xx from POST /v1/execute that exhausts recovery → FAILED at the RESTART stage."""
         client = self._make_5xx_client_that_exhausts_recovery()
         adapter = _make_adapter(client)
         service = _make_service(tmp_path, adapter)
@@ -263,6 +263,13 @@ class TestAgentFiveXxResponse:
         refreshed = service.get_operation(op.operation_id)
         assert refreshed is not None
         assert refreshed.state == OperationState.FAILED
+
+        failed = refreshed.failed_stage
+        assert failed is not None, "Expected a failed stage to be recorded"
+        assert failed.stage == OperationStage.RESTART, (
+            f"Expected RESTART to be the failed stage, got {failed.stage}"
+        )
+        assert failed.error, "Expected a non-empty error on the failed RESTART stage"
 
     def test_5xx_error_contains_no_host_internals(self, tmp_path: Path) -> None:
         """terminal_error and stage evidence from a 5xx failure expose no host internals."""

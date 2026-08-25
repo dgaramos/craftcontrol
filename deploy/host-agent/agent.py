@@ -25,7 +25,7 @@ from typing import Any
 
 # ---------------------------------------------------------------------------
 # Re-exports — keep every public name accessible as ``agent.<name>`` so that
-# existing callers and tests that do ``import agent as ha`` continue to work.
+# callers that do ``import agent as ha`` continue to work.
 # ---------------------------------------------------------------------------
 
 from store import (  # noqa: F401
@@ -33,12 +33,8 @@ from store import (  # noqa: F401
     OperationStore,
     RESULT_RETENTION_SECONDS,
 )
-from executor import (  # noqa: F401
+from operations import (  # noqa: F401
     OperationExecutor,
-    _build_unconnected_ping,
-    _validate_pong,
-    _probe_bedrock,
-    _wait_for_health,
     _validate_intended_state_values,
     _render_field_value,
     _ENUM_ALLOWED,
@@ -51,6 +47,12 @@ from executor import (  # noqa: F401
     BEDROCK_DEFAULT_PORT,
     PROBE_INTERVAL_SECONDS,
     PROBE_READ_TIMEOUT_SECONDS,
+)
+from adapters.raknet import (  # noqa: F401
+    _build_unconnected_ping,
+    _validate_pong,
+    _probe_bedrock,
+    _wait_for_health,
 )
 from handler import (  # noqa: F401
     AgentHandler,
@@ -108,12 +110,19 @@ def _load_config() -> dict[str, str]:
 # ---------------------------------------------------------------------------
 
 def run(*, bind: str, token: str, config: dict[str, str], subprocess_run: Any = None) -> None:
+    from adapters.docker import DockerComposeRunner
+    from adapters.filesystem import BedrockFileSystem
+    from adapters.raknet import RakNetHealthProbe
+
     host, _, port_str = bind.rpartition(":")
     host = host or "0.0.0.0"
     port = int(port_str)
 
     store = OperationStore()
-    executor = OperationExecutor(config, subprocess_run=subprocess_run)
+    runner = DockerComposeRunner(config, subprocess_run=subprocess_run)
+    filesystem = BedrockFileSystem(config["bedrock_data"])
+    probe = RakNetHealthProbe()
+    executor = OperationExecutor(runner, filesystem, probe)
     handler_class = build_handler_class(token, store, executor)
 
     server = HTTPServer((host, port), handler_class)

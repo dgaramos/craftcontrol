@@ -32,6 +32,11 @@ if str(_AGENT_DIR) not in sys.path:
     sys.path.insert(0, str(_AGENT_DIR))
 
 import agent as ha  # noqa: E402  (import after sys.path manipulation)
+from adapters.docker import DockerComposeRunner
+from adapters.filesystem import BedrockFileSystem
+from adapters.raknet import RakNetHealthProbe
+from operations import _build_updates
+from ports import RestartTimeoutError
 
 
 # ---------------------------------------------------------------------------
@@ -65,13 +70,30 @@ def _make_store() -> ha.OperationStore:
     return ha.OperationStore()
 
 
-def _make_executor(subprocess_run: Any = None) -> ha.OperationExecutor:
+class _FakeProbe:
+    """Fake HealthProbe that returns a fixed result without opening sockets."""
+
+    def __init__(self, result: bool = True) -> None:
+        self._result = result
+
+    def wait(self, host: str, port: int, timeout_seconds: int) -> bool:
+        return self._result
+
+
+def _make_executor(
+    subprocess_run: Any = None,
+    probe_result: bool = True,
+    bedrock_data: str = "/tmp/bedrock-test",
+) -> ha.OperationExecutor:
     config = {
         "compose_project": "minecraft-bedrock",
         "compose_file": "/opt/craftcontrol/docker-compose.yml",
-        "bedrock_data": "/tmp/bedrock-test",
+        "bedrock_data": bedrock_data,
     }
-    return ha.OperationExecutor(config, subprocess_run=subprocess_run)
+    runner = DockerComposeRunner(config, subprocess_run=subprocess_run)
+    filesystem = BedrockFileSystem(bedrock_data)
+    probe = _FakeProbe(probe_result)
+    return ha.OperationExecutor(runner, filesystem, probe)
 
 
 def _handler_class(token: str = VALID_TOKEN, store: ha.OperationStore | None = None, executor: ha.OperationExecutor | None = None) -> type:
@@ -401,18 +423,14 @@ class TestStatus:
 
 
 # ---------------------------------------------------------------------------
-# Executor: prepare stage
+# Executor: prepare stage (via BedrockFileSystem)
 # ---------------------------------------------------------------------------
 
 class TestExecutorPrepare:
     def _run_prepare(self, intended_state: dict, data_dir: Path) -> None:
-        config = {
-            "compose_project": "mc",
-            "compose_file": "/tmp/docker-compose.yml",
-            "bedrock_data": str(data_dir),
-        }
-        executor = ha.OperationExecutor(config)
-        executor._prepare(intended_state)
+        fs = BedrockFileSystem(str(data_dir))
+        updates = _build_updates(intended_state)
+        fs.write_server_properties(updates)
 
     def test_writes_server_properties(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -429,34 +447,30 @@ class TestExecutorPrepare:
             assert not (data_dir / "server.properties").exists()
 
     def test_missing_data_dir_raises(self) -> None:
-        config = {
-            "compose_project": "mc",
-            "compose_file": "/tmp/dc.yml",
-            "bedrock_data": "/nonexistent/path/bedrock",
-        }
-        executor = ha.OperationExecutor(config)
+        fs = BedrockFileSystem("/nonexistent/path/bedrock")
         with pytest.raises(RuntimeError, match="not found"):
-            executor._prepare({"server_name": "Test"})
+            fs.write_server_properties({"server-name": "Test"})
 
 
 # ---------------------------------------------------------------------------
-# Executor: restart stage
+# Executor: restart stage (via DockerComposeRunner)
 # ---------------------------------------------------------------------------
 
 class TestExecutorRestart:
-    def _make_executor_with_mock(self, returncode: int = 0, stderr: str = "") -> tuple[ha.OperationExecutor, MagicMock]:
+    _CONFIG = {
+        "compose_project": "minecraft-bedrock",
+        "compose_file": "/opt/craftcontrol/docker-compose.yml",
+        "bedrock_data": "/tmp/bedrock",
+    }
+
+    def _make_runner_with_mock(self, returncode: int = 0, stderr: str = "") -> tuple[DockerComposeRunner, MagicMock]:
         mock_run = MagicMock(return_value=MagicMock(returncode=returncode, stdout="", stderr=stderr))
-        config = {
-            "compose_project": "minecraft-bedrock",
-            "compose_file": "/opt/craftcontrol/docker-compose.yml",
-            "bedrock_data": "/tmp/bedrock",
-        }
-        executor = ha.OperationExecutor(config, subprocess_run=mock_run)
-        return executor, mock_run
+        runner = DockerComposeRunner(self._CONFIG, subprocess_run=mock_run)
+        return runner, mock_run
 
     def test_successful_restart_returns_ref(self) -> None:
-        executor, mock_run = self._make_executor_with_mock()
-        ref = executor._restart(60)
+        runner, mock_run = self._make_runner_with_mock()
+        ref = runner.restart(60)
         assert "minecraft-bedrock" in ref
         mock_run.assert_called_once()
         cmd = mock_run.call_args[0][0]
@@ -465,20 +479,18 @@ class TestExecutorRestart:
         assert "restart" in cmd
 
     def test_non_zero_exit_raises(self) -> None:
-        executor, _ = self._make_executor_with_mock(returncode=1, stderr="compose error")
+        runner, _ = self._make_runner_with_mock(returncode=1, stderr="compose error")
         with pytest.raises(RuntimeError, match="compose error"):
-            executor._restart(60)
+            runner.restart(60)
 
-    def test_timeout_propagates(self) -> None:
+    def test_timeout_propagates_as_restart_timeout_error(self) -> None:
         mock_run = MagicMock(side_effect=subprocess.TimeoutExpired(["docker"], 60))
-        config = {
-            "compose_project": "mc",
-            "compose_file": "/tmp/dc.yml",
-            "bedrock_data": "/tmp/bd",
-        }
-        executor = ha.OperationExecutor(config, subprocess_run=mock_run)
-        with pytest.raises(subprocess.TimeoutExpired):
-            executor._restart(60)
+        runner = DockerComposeRunner(
+            {"compose_project": "mc", "compose_file": "/tmp/dc.yml", "bedrock_data": "/tmp/bd"},
+            subprocess_run=mock_run,
+        )
+        with pytest.raises(RestartTimeoutError):
+            runner.restart(60)
 
 
 # ---------------------------------------------------------------------------
@@ -487,15 +499,10 @@ class TestExecutorRestart:
 
 class TestExecutorRun:
     def _run_executor(self, subprocess_run: Any, probe_result: bool, data_dir: Path) -> ha.OperationRecord:
-        config = {
-            "compose_project": "mc",
-            "compose_file": "/tmp/dc.yml",
-            "bedrock_data": str(data_dir),
-        }
-        executor = ha.OperationExecutor(
-            config,
+        executor = _make_executor(
             subprocess_run=subprocess_run,
-            wait_for_health=lambda host, port, timeout: probe_result,
+            probe_result=probe_result,
+            bedrock_data=str(data_dir),
         )
         store = ha.OperationStore()
         op_id = _op_id()
@@ -518,13 +525,11 @@ class TestExecutorRun:
 
     def test_prepare_failure(self) -> None:
         mock_run = MagicMock(return_value=MagicMock(returncode=0, stdout="", stderr=""))
-        # Use a non-existent bedrock data dir to trigger prepare failure
-        config = {
-            "compose_project": "mc",
-            "compose_file": "/tmp/dc.yml",
-            "bedrock_data": "/nonexistent/bedrock",
-        }
-        executor = ha.OperationExecutor(config, subprocess_run=mock_run)
+        executor = _make_executor(
+            subprocess_run=mock_run,
+            probe_result=False,
+            bedrock_data="/nonexistent/bedrock",
+        )
         store = ha.OperationStore()
         op_id = _op_id()
         record = store.create(op_id)
@@ -824,12 +829,11 @@ class TestExecutorRunHealthWaitException:
     def test_invalid_server_port_causes_health_wait_error(self) -> None:
         mock_run = MagicMock(return_value=MagicMock(returncode=0, stdout="", stderr=""))
         with tempfile.TemporaryDirectory() as tmp:
-            config = {
-                "compose_project": "mc",
-                "compose_file": "/tmp/dc.yml",
-                "bedrock_data": tmp,
-            }
-            executor = ha.OperationExecutor(config, subprocess_run=mock_run)
+            executor = _make_executor(
+                subprocess_run=mock_run,
+                probe_result=True,
+                bedrock_data=tmp,
+            )
             store = ha.OperationStore()
             op_id = _op_id()
             record = store.create(op_id)
@@ -844,18 +848,14 @@ class TestExecutorRunHealthWaitException:
 
 
 # ---------------------------------------------------------------------------
-# Executor: merge-write server.properties
+# Executor: merge-write server.properties (via BedrockFileSystem)
 # ---------------------------------------------------------------------------
 
 class TestExecutorPrepareMerge:
     def _run_prepare(self, intended_state: dict, data_dir: Path) -> None:
-        config = {
-            "compose_project": "mc",
-            "compose_file": "/tmp/docker-compose.yml",
-            "bedrock_data": str(data_dir),
-        }
-        executor = ha.OperationExecutor(config)
-        executor._prepare(intended_state)
+        fs = BedrockFileSystem(str(data_dir))
+        updates = _build_updates(intended_state)
+        fs.write_server_properties(updates)
 
     def test_existing_keys_preserved(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -897,14 +897,17 @@ class TestExecutorPrepareMerge:
             assert "server-name=New" in content
 
     def test_read_oserror_raises_runtime_error(self) -> None:
-        """If the existing server.properties cannot be read, _prepare must abort."""
-        from unittest.mock import patch, MagicMock
+        """If the existing server.properties cannot be read, write must abort."""
         with tempfile.TemporaryDirectory() as tmp:
             data_dir = Path(tmp)
             props = data_dir / "server.properties"
             props.write_text("server-name=Original\n")
-            with patch.object(Path, "read_text", side_effect=OSError("permission denied")):
-                with pytest.raises(RuntimeError, match="data loss"):
-                    self._run_prepare({"server_name": "Hacked"}, data_dir)
+
+            def _failing_reader(path: Path, **kwargs: object) -> str:
+                raise OSError("permission denied")
+
+            fs = BedrockFileSystem(str(data_dir), read_text=_failing_reader)
+            with pytest.raises(RuntimeError, match="data loss"):
+                fs.write_server_properties({"server-name": "Hacked"})
             # Original file must be untouched
             assert "server-name=Original" in props.read_text()

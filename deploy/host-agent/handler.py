@@ -8,7 +8,7 @@ import threading
 from http.server import BaseHTTPRequestHandler
 from typing import Any
 
-from executor import (
+from operations import (
     OperationExecutor,
     _INTENDED_STATE_FIELDS,
     _validate_intended_state_values,

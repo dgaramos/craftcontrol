@@ -15,8 +15,10 @@ if str(_AGENT_DIR) not in sys.path:  # pragma: no cover - test bootstrap
     sys.path.insert(0, str(_AGENT_DIR))
 
 import handler as hd
-import executor as ex
 import store as st
+from adapters.docker import DockerComposeRunner
+from adapters.filesystem import BedrockFileSystem
+from operations import OperationExecutor
 
 
 VALID_TOKEN = "test-secret-token-abcdef1234567890"
@@ -30,21 +32,27 @@ def _make_store() -> st.OperationStore:
     return st.OperationStore()
 
 
-def _make_executor(subprocess_run: Any = None) -> ex.OperationExecutor:
+class _FakeProbe:
+    """Fake HealthProbe that returns True without opening sockets."""
+
+    def wait(self, host: str, port: int, timeout_seconds: int) -> bool:
+        return True
+
+
+def _make_executor(subprocess_run: Any = None) -> OperationExecutor:
     config = {
         "compose_project": "minecraft-bedrock",
         "compose_file": "/opt/craftcontrol/docker-compose.yml",
         "bedrock_data": "/tmp/bedrock-test",
     }
     # Always stub the UDP health probe so daemon threads never open real sockets.
-    return ex.OperationExecutor(
-        config,
-        subprocess_run=subprocess_run,
-        wait_for_health=lambda host, port, timeout: True,
-    )
+    runner = DockerComposeRunner(config, subprocess_run=subprocess_run)
+    filesystem = BedrockFileSystem("/tmp/bedrock-test")
+    probe = _FakeProbe()
+    return OperationExecutor(runner, filesystem, probe)
 
 
-def _handler_class(token: str = VALID_TOKEN, store: st.OperationStore | None = None, executor: ex.OperationExecutor | None = None) -> type:
+def _handler_class(token: str = VALID_TOKEN, store: st.OperationStore | None = None, executor: OperationExecutor | None = None) -> type:
     store = store or _make_store()
     executor = executor or _make_executor()
     return hd.build_handler_class(token, store, executor)
@@ -69,7 +77,7 @@ def _call_handler(
     body: dict | None = None,
     token: str | None = VALID_TOKEN,
     store: st.OperationStore | None = None,
-    executor: ex.OperationExecutor | None = None,
+    executor: OperationExecutor | None = None,
     extra_headers: dict[str, str] | None = None,
 ) -> tuple[int, dict[str, Any]]:
     raw_body = json.dumps(body).encode() if body is not None else b""

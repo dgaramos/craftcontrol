@@ -25,11 +25,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 # The agent lives in deploy/host-agent/agent.py — import it directly.
-import sys, os
+import sys
 
-_AGENT_DIR = os.path.join(os.path.dirname(__file__), "..", "deploy", "host-agent")
-if _AGENT_DIR not in sys.path:
-    sys.path.insert(0, os.path.abspath(_AGENT_DIR))
+_AGENT_DIR = Path(__file__).resolve().parents[1]
+if str(_AGENT_DIR) not in sys.path:
+    sys.path.insert(0, str(_AGENT_DIR))
 
 import agent as ha  # noqa: E402  (import after sys.path manipulation)
 

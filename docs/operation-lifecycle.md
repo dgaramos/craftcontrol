@@ -75,14 +75,15 @@ initiated explicitly by the operator.
 
 ## Transitions
 
-```text
-PENDING
-  ├─► CANCELLED    (explicit cancel before first stage begins)
-  └─► IN_PROGRESS  (first stage begins)
-        ├─► FAILED       (any stage errors)
-        ├─► CANCELLED    (explicit cancel before RESTART)
-        ├─► DIVERGENT    (VERIFICATION: state mismatch)
-        └─► APPLIED      (CONFIRMATION: state matches)
+```mermaid
+stateDiagram-v2
+    [*] --> PENDING
+    PENDING --> CANCELLED: explicit cancel before first stage begins
+    PENDING --> IN_PROGRESS: first stage begins
+    IN_PROGRESS --> FAILED: any stage errors
+    IN_PROGRESS --> CANCELLED: explicit cancel before RESTART
+    IN_PROGRESS --> DIVERGENT: VERIFICATION state mismatch
+    IN_PROGRESS --> APPLIED: CONFIRMATION state matches
 ```
 
 `APPLIED`, `FAILED`, `DIVERGENT`, and `CANCELLED` are terminal. No transition

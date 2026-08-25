@@ -22,17 +22,13 @@ The pack does not collect chat, inventory contents, coordinates in log events, I
 
 ## Architecture
 
-```text
-Stable Bedrock world events
-          |
-          v
-Behavior pack adapters
-          |
-          +--> in-memory aggregates --> metadata + per-player world properties
-          |
-          +--> [BEDROCK_TELEMETRY] JSON --> BDS log --> external consumer
-                                                     |
-/scriptevent bedrock_telemetry:sync full ------------+--> snapshot reconciliation
+```mermaid
+flowchart TD
+    events["Stable Bedrock world events"] --> adapters["Behavior pack adapters"]
+    adapters --> aggregates["in-memory aggregates"] --> properties["metadata + per-player world properties"]
+    adapters --> telemetry["[BEDROCK_TELEMETRY] JSON"] --> log["BDS log"] --> consumer["external consumer"]
+    sync["/scriptevent bedrock_telemetry:sync full"] --> reconciliation["snapshot reconciliation"]
+    consumer --> reconciliation
 ```
 
 The behavior pack is not another Docker service. Its source is maintained independently, but the built pack executes inside the Bedrock process after it is attached to a world.
@@ -55,22 +51,23 @@ See [docs/protocol.md](docs/protocol.md) for the wire contract.
 
 ## Repository structure
 
-```text
-behavior_pack/
-├── manifest.json
-└── scripts/
-    ├── main.js       # Stable Bedrock event subscriptions
-    ├── migrations.js # Validated persisted-state migration pipeline
-    ├── model.js      # Pure statistics model and bounded counters
-    ├── store.js      # World dynamic-property persistence
-    └── transport.js  # Structured log protocol and snapshots
-scripts/
-├── install.mjs       # Validated installation and world association
-├── install.sh        # Operator-friendly wrapper
-└── package.sh        # .mcpack builder
-tests/
-├── model.test.js     # Pure Node.js unit tests
-└── runtime.test.js   # Simulated Bedrock Script API integration flow
+```mermaid
+flowchart TD
+    repo["Telemetry Pack repository"] --> pack["behavior_pack/"]
+    pack --> manifest["manifest.json"]
+    pack --> packScripts["scripts/"]
+    packScripts --> main["main.js — Stable Bedrock event subscriptions"]
+    packScripts --> migrations["migrations.js — validated persisted-state migration pipeline"]
+    packScripts --> model["model.js — pure statistics model and bounded counters"]
+    packScripts --> store["store.js — world dynamic-property persistence"]
+    packScripts --> transport["transport.js — structured log protocol and snapshots"]
+    repo --> scripts["scripts/"]
+    scripts --> installMjs["install.mjs — validated installation and world association"]
+    scripts --> installSh["install.sh — operator-friendly wrapper"]
+    scripts --> packageSh["package.sh — .mcpack builder"]
+    repo --> tests["tests/"]
+    tests --> modelTest["model.test.js — pure Node.js unit tests"]
+    tests --> runtimeTest["runtime.test.js — simulated Bedrock Script API integration flow"]
 ```
 
 ## Requirements

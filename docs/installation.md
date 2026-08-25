@@ -34,10 +34,10 @@ Keep the CraftControl checkout and the Bedrock Compose project as sibling
 directories, unless you deliberately configure another project mount. The
 default production layout is:
 
-```text
-/mnt/storage/docker/
-├── minecraft-bedrock/
-└── craftcontrol/
+```mermaid
+flowchart TD
+    docker["/mnt/storage/docker/"] --> bedrock["minecraft-bedrock/"]
+    docker --> craftcontrol["craftcontrol/"]
 ```
 
 The backend accesses the Bedrock project, world data, the manager SQLite

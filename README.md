@@ -56,25 +56,12 @@ Navigation is encoded in the URL, so refreshing a browser preserves the active a
 
 CraftControl is a monorepo with two independently deployable services, not a set of microservices. The backend remains a modular monolith.
 
-```text
-Phone, tablet, or desktop
-          |
-          | HTTP :8082 — trusted LAN / external TLS proxy
-          v
-┌────────────────────────────────────────────┐
-│ Frontend · Nginx · static and read-only    │
-│ Browser UI · same-origin /api + SSE proxy  │
-└────────────────────┬───────────────────────┘
-                     │ private Compose network
-┌────────────────────▼───────────────────────┐
-│ Backend · Flask modular monolith           │
-│ HTTP → use cases → ports/adapters → SQLite │
-└───────────────┬────────────────────────────┘
-                │ Docker, files, console, logs
-                v
-      Minecraft Bedrock Dedicated Server
-                │
-                └─ optional CraftControl Telemetry Pack
+```mermaid
+flowchart TD
+    client["Phone, tablet, or desktop"] -->|"HTTP :8082 — trusted LAN / external TLS proxy"| frontend["Frontend · Nginx · static and read-only<br/>Browser UI · same-origin /api + SSE proxy"]
+    frontend -->|"private Compose network"| backend["Backend · Flask modular monolith<br/>HTTP → use cases → ports/adapters → SQLite"]
+    backend -->|"Docker, files, console, logs"| bedrock["Minecraft Bedrock Dedicated Server"]
+    bedrock -. "optional" .-> telemetry["CraftControl Telemetry Pack"]
 ```
 
 The frontend owns the public origin. Nginx serves static assets and proxies `/api/*`, including unbuffered Server-Sent Events, to the private backend. The frontend has no persistent or privileged mounts. Only the backend can access SQLite, Bedrock files, coordinated backups, or Docker operations.
@@ -83,19 +70,19 @@ The backend intentionally runs one Gunicorn worker with multiple threads. Its ev
 
 ### Repository ownership
 
-```text
-apps/
-├── frontend/                 Nginx image, HTML, CSS, and native ES modules
-└── backend/                  Flask image, composition root, and Python application
-packages/contracts/           Canonical OpenAPI 3.1 contract and generated types
-packs/telemetry/              Embedded Behavior Pack and lifecycle assets
-bin/                          Quality, deployment, cutover, backup, and recovery commands
-docs/                         Architecture, security, telemetry, and operations guides
-minecraft_manager/            Temporary backend compatibility overlay
-app.py, wsgi.py               Temporary root entry-point overlays
-docker-compose.split.yml      Active split production topology
-docker-compose.yml            Combined compatibility/recovery topology
-versions.env                  Tested frontend/backend release pair
+```mermaid
+flowchart TD
+    repo["CraftControl repository"] --> apps["apps/"]
+    apps --> frontend["frontend/ — Nginx image, HTML, CSS, and native ES modules"]
+    apps --> backend["backend/ — Flask image, composition root, and Python application"]
+    repo --> contracts["packages/contracts/ — canonical OpenAPI 3.1 contract and generated types"]
+    repo --> telemetry["packs/telemetry/ — embedded Behavior Pack and lifecycle assets"]
+    repo --> bin["bin/ — quality, deployment, cutover, backup, and recovery commands"]
+    repo --> docs["docs/ — architecture, security, telemetry, and operations guides"]
+    repo --> overlay["minecraft_manager/, app.py, wsgi.py — temporary backend compatibility overlays"]
+    repo --> split["docker-compose.split.yml — active split production topology"]
+    repo --> combined["docker-compose.yml — combined compatibility/recovery topology"]
+    repo --> versions["versions.env — tested frontend/backend release pair"]
 ```
 
 Root Python links and the combined image are compatibility overlays. They preserve existing tooling and emergency rollback while migration continues; new application code belongs under `apps/`.
@@ -104,32 +91,32 @@ Root Python links and the combined image are compatibility overlays. They preser
 
 The frontend uses browser-native ES modules with no bundler or build-time framework.
 
-```text
-apps/frontend/static/
-├── app.js                    Minimal bootstrap
-└── js/
-    ├── composition.js        Dependency assembly and application startup
-    ├── core/                 State, DOM, routing, navigation, and invalidation
-    ├── components/           Shared feedback and time presentation
-    ├── features/             Auth, settings, world, rules, server, players, analytics
-    └── i18n/                 PT, EN, ES catalogs and localized game terminology
+```mermaid
+flowchart TD
+    static["apps/frontend/static/"] --> app["app.js — minimal bootstrap"]
+    static --> js["js/"]
+    js --> composition["composition.js — dependency assembly and application startup"]
+    js --> core["core/ — state, DOM, routing, navigation, and invalidation"]
+    js --> components["components/ — shared feedback and time presentation"]
+    js --> features["features/ — auth, settings, world, rules, server, players, analytics"]
+    js --> i18n["i18n/ — PT, EN, ES catalogs and localized game terminology"]
 ```
 
 `app.js` starts the composition root. Feature modules own their markup, bindings, and local state; core modules do not import features. Shared dependencies are explicit, and the interaction gate executes navigation, authentication, player sessions, individual telemetry, analytics, responsive behavior, SSE invalidation, and localization paths.
 
 ### Backend layers
 
-```text
-apps/backend/minecraft_manager/
-├── composition.py            Manual production dependency injection
-├── http/                     HTTP mapping grouped by domain
-├── players/                  Player application use cases
-├── auth/                     Accounts, sessions, roles, CSRF, and audit
-├── operations/               Backup, restore, and operational workflows
-├── services.py               Compatibility orchestration facade
-├── repository.py             SQLite persistence compatibility facade
-├── runtime.py                Log, Docker-event, and reconciliation supervisors
-└── ports.py                  Structural external-boundary contracts
+```mermaid
+flowchart TD
+    manager["apps/backend/minecraft_manager/"] --> composition["composition.py — manual production dependency injection"]
+    manager --> http["http/ — HTTP mapping grouped by domain"]
+    manager --> players["players/ — player application use cases"]
+    manager --> auth["auth/ — accounts, sessions, roles, CSRF, and audit"]
+    manager --> operations["operations/ — backup, restore, and operational workflows"]
+    manager --> services["services.py — compatibility orchestration facade"]
+    manager --> repository["repository.py — SQLite persistence compatibility facade"]
+    manager --> runtime["runtime.py — log, Docker-event, and reconciliation supervisors"]
+    manager --> ports["ports.py — structural external-boundary contracts"]
 ```
 
 Routes translate HTTP requests and responses. Use cases coordinate behavior. Repositories own persistence. Adapters isolate Docker, Bedrock console, files, and Telemetry Pack installation. Production dependencies are assembled manually; there is no service locator or dependency-injection framework.
@@ -155,11 +142,13 @@ Swagger attaches the session-bound CSRF token to unsafe “Try it out” request
 
 CraftControl follows Bedrock logs and Docker lifecycle events, commits durable evidence to SQLite, publishes changes through SSE, performs targeted refreshes, and runs a full safety reconciliation every 15 minutes by default.
 
-```text
-Bedrock logs ───────┐
-Docker events ──────┼─> event broker ─> SQLite ─> SSE ─> browser
-Manager operations ─┘        │
-                             └─> targeted reconciliation
+```mermaid
+flowchart LR
+    logs["Bedrock logs"] --> broker["event broker"]
+    docker["Docker events"] --> broker
+    operations["Manager operations"] --> broker
+    broker --> sqlite["SQLite"] --> sse["SSE"] --> browser["browser"]
+    broker --> reconciliation["targeted reconciliation"]
 ```
 
 Cached values retain observation and change timestamps. Stale information remains visible and marked instead of being replaced by false empty data.

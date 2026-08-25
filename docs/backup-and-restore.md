@@ -10,12 +10,12 @@ When Bedrock is running, `backup create` issues `save hold`, waits until `save q
 
 Every set contains:
 
-```text
-<backup-id>/
-├── manifest.json
-├── manager.db
-├── world.tar.gz
-└── configuration.tar.gz
+```mermaid
+flowchart TD
+    backup["&lt;backup-id&gt;/"] --> manifest["manifest.json"]
+    backup --> database["manager.db"]
+    backup --> world["world.tar.gz"]
+    backup --> configuration["configuration.tar.gz"]
 ```
 
 The manifest records the format version, UTC creation time, world, SQLite schema version, byte sizes, and SHA-256 checksums. `configuration.tar.gz` includes available `.env`, Compose, Bedrock properties, permissions, allowlist, and behavior-pack files. Configuration is not restored automatically because replacing `.env` silently could change ports, mounts, secrets, or the selected world.

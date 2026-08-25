@@ -4,26 +4,12 @@ CraftControl has a modular-monolith backend for operating one Minecraft Bedrock 
 
 ## Current system context
 
-```text
-Phone / tablet / desktop
-          |
-          | HTTP + Server-Sent Events
-          v
-┌────────────────────────────────────────────┐
-│ Frontend: Nginx + static browser app       │
-│ public origin; /api and SSE reverse proxy  │
-└────────────────────┬───────────────────────┘
-                     │ private network
-┌────────────────────▼───────────────────────┐
-│ Backend: Flask modular monolith            │
-│ routes -> use cases -> ports -> adapters   │
-│ runtime -> SQLite / Docker / files / SSE   │
-└────────────────────┬───────────────────────┘
-                     |
-                     v
-        Minecraft Bedrock Dedicated Server
-                     |
-                     `-> optional Telemetry Pack
+```mermaid
+flowchart TD
+    client["Phone / tablet / desktop"] -->|"HTTP + Server-Sent Events"| frontend["Frontend: Nginx + static browser app<br/>public origin; /api and SSE reverse proxy"]
+    frontend -->|"private network"| backend["Backend: Flask modular monolith<br/>routes → use cases → ports → adapters<br/>runtime → SQLite / Docker / files / SSE"]
+    backend --> bedrock["Minecraft Bedrock Dedicated Server"]
+    bedrock -. "optional" .-> telemetry["Telemetry Pack"]
 ```
 
 The manager remains operational without the Telemetry Pack, exporter, Prometheus, Grafana, or Loki. SQLite stores durable manager state; the Minecraft world remains owned by the Bedrock deployment.
@@ -38,15 +24,15 @@ CraftControl is not a strict textbook Clean Architecture implementation. It appl
 
 ## Target modules
 
-```text
-apps/backend/minecraft_manager/
-├── core/          configuration, database, events, validation
-├── server/        settings, gamerules, world and lifecycle use cases
-├── players/       profiles, sessions, history and permissions
-├── telemetry/     protocol, reconciliation, persistence and installation
-├── operations/    backup, restore and operational diagnostics
-├── runtime/       log ingestion, Docker events and safety reconciliation
-└── http/          HTTP mapping grouped by domain
+```mermaid
+flowchart TD
+    manager["apps/backend/minecraft_manager/"] --> core["core/ — configuration, database, events, validation"]
+    manager --> server["server/ — settings, gamerules, world and lifecycle use cases"]
+    manager --> players["players/ — profiles, sessions, history and permissions"]
+    manager --> telemetry["telemetry/ — protocol, reconciliation, persistence and installation"]
+    manager --> operations["operations/ — backup, restore and operational diagnostics"]
+    manager --> runtime["runtime/ — log ingestion, Docker events and safety reconciliation"]
+    manager --> http["http/ — HTTP mapping grouped by domain"]
 ```
 
 Migration to this shape is incremental. `apps/frontend/` and `apps/backend/`
@@ -64,18 +50,12 @@ compatibility pair.
 
 ## Dependency direction
 
-```text
-HTTP routes
-    |
-    v
-application services / use cases
-    |
-    +------> repository ports
-    |
-    `------> infrastructure ports
-                 |
-                 v
-         concrete adapters
+```mermaid
+flowchart TD
+    routes["HTTP routes"] --> services["application services / use cases"]
+    services --> repositories["repository ports"]
+    services --> infrastructure["infrastructure ports"]
+    infrastructure --> adapters["concrete adapters"]
 ```
 
 Rules:
@@ -99,18 +79,17 @@ migration guard until the two deployment units are complete.
 
 Dependency injection uses constructor parameters and a manual **composition root**. Python `typing.Protocol` defines only meaningful ports: external infrastructure, persistence contracts, and event publication. Concrete services do not receive redundant `IService` interfaces solely for symmetry.
 
-```text
-create_app()
-    |
-    `-> composition root
-          ├── Settings
-          ├── SQLite repositories
-          ├── Bedrock console adapter
-          ├── Docker operations adapter
-          ├── filesystem adapter
-          ├── event broker
-          ├── application services
-          └── runtime supervisors
+```mermaid
+flowchart TD
+    app["create_app()"] --> root["composition root"]
+    root --> settings["Settings"]
+    root --> repositories["SQLite repositories"]
+    root --> bedrock["Bedrock console adapter"]
+    root --> docker["Docker operations adapter"]
+    root --> filesystem["filesystem adapter"]
+    root --> broker["event broker"]
+    root --> services["application services"]
+    root --> runtime["runtime supervisors"]
 ```
 
 Production composition uses concrete adapters. Tests may inject in-memory repositories, fake clocks, fake consoles, or fake container operations without Docker or a running Bedrock server.
@@ -119,14 +98,15 @@ No dependency-injection framework or service locator is used. Dependencies must 
 
 ## Event and consistency model
 
-```text
-Bedrock logs --------┐
-Docker events -------+--> runtime --> durable event --> broker --> SSE
-manager operations --┘       |
-                              `--> targeted reconciliation
-
-safety timer --------------------> full reconciliation
-Telemetry Pack snapshot ---------> authoritative telemetry state
+```mermaid
+flowchart LR
+    logs["Bedrock logs"] --> runtime["runtime"]
+    docker["Docker events"] --> runtime
+    operations["manager operations"] --> runtime
+    runtime --> event["durable event"] --> broker["broker"] --> sse["SSE"]
+    runtime --> targeted["targeted reconciliation"]
+    timer["safety timer"] --> full["full reconciliation"]
+    snapshot["Telemetry Pack snapshot"] --> state["authoritative telemetry state"]
 ```
 
 Cached values keep observation and change timestamps. Missing signals cause stale or degraded state, not invented zero values. Full reconciliation runs after manager startup, relevant stream recovery, manual refresh, and the configured safety interval.

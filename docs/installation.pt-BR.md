@@ -26,10 +26,10 @@ O CraftControl continua útil sem o Telemetry Pack opcional, Prometheus, Grafana
 
 Mantenha o checkout do CraftControl e o projeto Compose do Bedrock como diretórios irmãos, a menos que configure deliberadamente outra montagem:
 
-```text
-/mnt/storage/docker/
-├── minecraft-bedrock/
-└── craftcontrol/
+```mermaid
+flowchart TD
+    docker["/mnt/storage/docker/"] --> bedrock["minecraft-bedrock/"]
+    docker --> craftcontrol["craftcontrol/"]
 ```
 
 O backend acessa o projeto Bedrock, dados do mundo, banco SQLite do gerenciador e backups coordenados. O frontend não recebe montagens privilegiadas ou persistentes.

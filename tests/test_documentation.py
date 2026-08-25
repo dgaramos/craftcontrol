@@ -1,9 +1,25 @@
+from __future__ import annotations
+
+import re
 from pathlib import Path
 
 import pytest
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+DOCUMENTATION_DIAGRAMS = {
+    "README.md": 5,
+    "README.pt-BR.md": 5,
+    "docs/architecture.md": 5,
+    "docs/automated-deployment.md": 1,
+    "docs/backup-and-restore.md": 1,
+    "docs/development-setup.md": 1,
+    "docs/installation.md": 1,
+    "docs/installation.pt-BR.md": 1,
+    "docs/operation-lifecycle.md": 1,
+    "packs/telemetry/README.md": 2,
+}
 
 
 @pytest.fixture(scope="module")
@@ -68,3 +84,25 @@ def test_local_reviewer_profile_is_shared_by_codex_and_claude() -> None:
         ROOT / "CLAUDE.md",
     ):
         assert ".agent-review/craftcontrol/PROFILE.md" in entry_point.read_text()
+
+
+def test_documentation_diagrams_use_mermaid_fences() -> None:
+    for relative_path, expected_count in DOCUMENTATION_DIAGRAMS.items():
+        document = (ROOT / relative_path).read_text()
+        diagrams = re.findall(r"```mermaid\n(.*?)\n```", document, flags=re.DOTALL)
+
+        assert len(diagrams) == expected_count, relative_path
+        assert all(
+            diagram.startswith(("flowchart ", "stateDiagram-v2", "sequenceDiagram", "classDiagram", "erDiagram", "journey", "gantt"))
+            for diagram in diagrams
+        ), relative_path
+
+
+def test_documentation_has_no_legacy_text_diagrams() -> None:
+    legacy_markers = ("┌", "┐", "└", "┘", "├", "┤", "─►")
+
+    for relative_path in DOCUMENTATION_DIAGRAMS:
+        document = (ROOT / relative_path).read_text()
+        text_fences = re.findall(r"```text\n(.*?)\n```", document, flags=re.DOTALL)
+
+        assert not any(marker in fence for fence in text_fences for marker in legacy_markers), relative_path

@@ -56,25 +56,12 @@ A navegação é codificada na URL; recarregar o navegador preserva a área ativ
 
 O CraftControl é um monorepo com dois serviços implantáveis de modo independente, não um conjunto de microsserviços. O backend continua sendo um monólito modular.
 
-```text
-Celular, tablet ou desktop
-          |
-          | HTTP :8082 — LAN confiável / proxy TLS externo
-          v
-┌────────────────────────────────────────────┐
-│ Frontend · Nginx · estático e somente leitura│
-│ UI do navegador · /api mesma origem + proxy SSE │
-└────────────────────┬───────────────────────┘
-                     │ rede Compose privada
-┌────────────────────▼───────────────────────┐
-│ Backend · monólito modular Flask           │
-│ HTTP → casos de uso → portas/adapters → SQLite │
-└───────────────┬────────────────────────────┘
-                │ Docker, arquivos, console, logs
-                v
-      Servidor dedicado Minecraft Bedrock
-                │
-                └─ CraftControl Telemetry Pack opcional
+```mermaid
+flowchart TD
+    client["Celular, tablet ou desktop"] -->|"HTTP :8082 — LAN confiável / proxy TLS externo"| frontend["Frontend · Nginx · estático e somente leitura<br/>UI do navegador · /api mesma origem + proxy SSE"]
+    frontend -->|"rede Compose privada"| backend["Backend · monólito modular Flask<br/>HTTP → casos de uso → portas/adapters → SQLite"]
+    backend -->|"Docker, arquivos, console, logs"| bedrock["Servidor dedicado Minecraft Bedrock"]
+    bedrock -. "opcional" .-> telemetry["CraftControl Telemetry Pack"]
 ```
 
 O frontend é dono da origem pública. O Nginx serve ativos estáticos e encaminha `/api/*`, inclusive Server-Sent Events sem buffer, para o backend privado. O frontend não possui montagens persistentes ou privilegiadas. Somente o backend acessa SQLite, arquivos Bedrock, backups coordenados ou operações Docker.
@@ -83,19 +70,19 @@ O backend roda intencionalmente com um worker Gunicorn e várias threads. Seu br
 
 ### Propriedade do repositório
 
-```text
-apps/
-├── frontend/                 Imagem Nginx, HTML, CSS e módulos ES nativos
-└── backend/                  Imagem Flask, composition root e aplicação Python
-packages/contracts/           Contrato OpenAPI 3.1 canônico e tipos gerados
-packs/telemetry/              Behavior Pack embutido e ativos de ciclo de vida
-bin/                          Comandos de qualidade, implantação, cutover, backup e recuperação
-docs/                         Guias de arquitetura, segurança, telemetria e operações
-minecraft_manager/            Overlay temporário de compatibilidade do backend
-app.py, wsgi.py               Overlays temporários dos pontos de entrada raiz
-docker-compose.split.yml      Topologia de produção dividida ativa
-docker-compose.yml            Topologia combinada de compatibilidade/recuperação
-versions.env                  Par frontend/backend testado
+```mermaid
+flowchart TD
+    repo["Repositório CraftControl"] --> apps["apps/"]
+    apps --> frontend["frontend/ — imagem Nginx, HTML, CSS e módulos ES nativos"]
+    apps --> backend["backend/ — imagem Flask, composition root e aplicação Python"]
+    repo --> contracts["packages/contracts/ — contrato OpenAPI 3.1 canônico e tipos gerados"]
+    repo --> telemetry["packs/telemetry/ — Behavior Pack embutido e ativos de ciclo de vida"]
+    repo --> bin["bin/ — comandos de qualidade, implantação, cutover, backup e recuperação"]
+    repo --> docs["docs/ — guias de arquitetura, segurança, telemetria e operações"]
+    repo --> overlay["minecraft_manager/, app.py, wsgi.py — overlays temporários de compatibilidade do backend"]
+    repo --> split["docker-compose.split.yml — topologia de produção dividida ativa"]
+    repo --> combined["docker-compose.yml — topologia combinada de compatibilidade/recuperação"]
+    repo --> versions["versions.env — par frontend/backend testado"]
 ```
 
 Os links Python da raiz e a imagem combinada são overlays de compatibilidade. Eles preservam ferramentas existentes e rollback de emergência enquanto a migração continua; código novo pertence a `apps/`.
@@ -104,32 +91,32 @@ Os links Python da raiz e a imagem combinada são overlays de compatibilidade. E
 
 O frontend usa módulos ES nativos do navegador, sem bundler ou framework em tempo de build.
 
-```text
-apps/frontend/static/
-├── app.js                    Bootstrap mínimo
-└── js/
-    ├── composition.js        Montagem de dependências e início da aplicação
-    ├── core/                 Estado, DOM, rotas, navegação e invalidação
-    ├── components/           Feedback compartilhado e apresentação de tempo
-    ├── features/             Auth, configurações, mundo, regras, servidor, jogadores, análises
-    └── i18n/                 Catálogos PT, EN, ES e terminologia localizada do jogo
+```mermaid
+flowchart TD
+    static["apps/frontend/static/"] --> app["app.js — bootstrap mínimo"]
+    static --> js["js/"]
+    js --> composition["composition.js — montagem de dependências e início da aplicação"]
+    js --> core["core/ — estado, DOM, rotas, navegação e invalidação"]
+    js --> components["components/ — feedback compartilhado e apresentação de tempo"]
+    js --> features["features/ — auth, configurações, mundo, regras, servidor, jogadores, análises"]
+    js --> i18n["i18n/ — catálogos PT, EN, ES e terminologia localizada do jogo"]
 ```
 
 `app.js` inicia o composition root. As features possuem markup, bindings e estado local; o core não importa features. Dependências compartilhadas são explícitas, e o portão de interação executa navegação, autenticação, sessões, telemetria individual, análises, responsividade, invalidação SSE e localização.
 
 ### Camadas do backend
 
-```text
-apps/backend/minecraft_manager/
-├── composition.py            Injeção manual de dependências de produção
-├── http/                     Mapeamento HTTP por domínio
-├── players/                  Casos de uso de jogadores
-├── auth/                     Contas, sessões, papéis, CSRF e auditoria
-├── operations/               Fluxos de backup e restauração
-├── services.py               Fachada de orquestração de compatibilidade
-├── repository.py             Fachada SQLite de compatibilidade
-├── runtime.py                Supervisores de logs, Docker e reconciliação
-└── ports.py                  Contratos estruturais de fronteiras externas
+```mermaid
+flowchart TD
+    manager["apps/backend/minecraft_manager/"] --> composition["composition.py — injeção manual de dependências de produção"]
+    manager --> http["http/ — mapeamento HTTP por domínio"]
+    manager --> players["players/ — casos de uso de jogadores"]
+    manager --> auth["auth/ — contas, sessões, papéis, CSRF e auditoria"]
+    manager --> operations["operations/ — fluxos de backup e restauração"]
+    manager --> services["services.py — fachada de orquestração de compatibilidade"]
+    manager --> repository["repository.py — fachada SQLite de compatibilidade"]
+    manager --> runtime["runtime.py — supervisores de logs, Docker e reconciliação"]
+    manager --> ports["ports.py — contratos estruturais de fronteiras externas"]
 ```
 
 Rotas traduzem HTTP; casos de uso coordenam comportamento; repositórios possuem a persistência. Adapters isolam Docker, console Bedrock, arquivos e instalação do Telemetry Pack. Dependências são montadas manualmente; não há service locator nem framework de DI.
@@ -155,11 +142,13 @@ O Swagger anexa o token CSRF vinculado à sessão a requisições inseguras de �
 
 O CraftControl acompanha logs do Bedrock e eventos de ciclo de vida do Docker, confirma evidências duráveis no SQLite, publica mudanças por SSE, faz atualizações direcionadas e executa uma reconciliação de segurança completa a cada 15 minutos por padrão.
 
-```text
-Logs Bedrock ───────┐
-Eventos Docker ────┼─> broker de eventos ─> SQLite ─> SSE ─> navegador
-Operações manager ─┘        │
-                             └─> reconciliação direcionada
+```mermaid
+flowchart LR
+    logs["Logs Bedrock"] --> broker["broker de eventos"]
+    docker["Eventos Docker"] --> broker
+    operations["Operações manager"] --> broker
+    broker --> sqlite["SQLite"] --> sse["SSE"] --> browser["navegador"]
+    broker --> reconciliation["reconciliação direcionada"]
 ```
 
 Valores em cache mantêm timestamps de observação e mudança. Informações obsoletas permanecem visíveis e marcadas em vez de serem substituídas por valores vazios falsos.

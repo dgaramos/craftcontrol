@@ -20,13 +20,7 @@ logger = logging.getLogger("host-agent")
 # Field validation tables (pure Python — no I/O)
 # ---------------------------------------------------------------------------
 
-RAKNET_MAGIC = bytes([
-    0x00, 0xFF, 0xFF, 0x00, 0xFE, 0xFE, 0xFE, 0xFE,
-    0xFD, 0xFD, 0xFD, 0xFD, 0x12, 0x34, 0x56, 0x78,
-])
 BEDROCK_DEFAULT_PORT = 19132
-PROBE_INTERVAL_SECONDS = 5
-PROBE_READ_TIMEOUT_SECONDS = 2
 
 _ENUM_ALLOWED: dict[str, frozenset[str]] = {
     "difficulty": frozenset({"peaceful", "easy", "normal", "hard"}),

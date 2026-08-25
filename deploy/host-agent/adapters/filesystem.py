@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
 
 from ports import FileSystem
 
@@ -85,5 +85,6 @@ class BedrockFileSystem:
         logger.info("Wrote/updated %d properties in %s", len(updates), props_file)
 
 
-# Satisfy the structural Protocol check at import time.
-_: FileSystem = BedrockFileSystem.__new__(BedrockFileSystem)
+if TYPE_CHECKING:
+    # Static check: BedrockFileSystem must satisfy the FileSystem Protocol.
+    _: FileSystem = BedrockFileSystem.__new__(BedrockFileSystem)

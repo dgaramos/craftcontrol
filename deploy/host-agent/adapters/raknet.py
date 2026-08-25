@@ -5,6 +5,7 @@ import socket
 import struct
 import time
 import uuid
+from typing import TYPE_CHECKING
 
 from ports import HealthProbe
 
@@ -72,5 +73,6 @@ class RakNetHealthProbe:
         return _wait_for_health(host, port, timeout_seconds)
 
 
-# Satisfy the structural Protocol check at import time.
-_: HealthProbe = RakNetHealthProbe()
+if TYPE_CHECKING:
+    # Static check: RakNetHealthProbe must satisfy the HealthProbe Protocol.
+    _: HealthProbe = RakNetHealthProbe()

@@ -327,7 +327,12 @@ class ServerOperationService:
             # Stage: RESTART — recreate the container
             self._begin(operation, OperationStage.RESTART)
             try:
-                self._docker.execute("apply")
+                self._docker.execute(
+                    "apply",
+                    operation_id=operation.operation_id,
+                    intended_state=operation.requested_changes,
+                    health_timeout_seconds=self._health_timeout,
+                )
             except Exception as exc:
                 obs = self._observe_container()
                 operation.update_observation(obs)

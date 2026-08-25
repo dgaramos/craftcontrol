@@ -31,7 +31,15 @@ class DockerOperations:
         state = result.stdout.strip() if result.returncode == 0 else "stopped"
         return {"container": self.container, "state": state, "online": state == "running"}
 
-    def execute(self, action: str) -> None:
+    def execute(
+        self,
+        action: str,
+        *,
+        operation_id: str | None = None,
+        intended_state: dict | None = None,
+        health_timeout_seconds: int = 120,
+        restart_timeout_seconds: int = 60,
+    ) -> None:
         if action == "start":
             result = self._run("compose", "--project-name", self.compose_project, "--project-directory", str(self.project), "up", "-d", "minecraft-bedrock", timeout=120)
         elif action == "apply":

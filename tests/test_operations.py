@@ -569,7 +569,7 @@ class TestServerOperationService:
         # Make docker.execute block so the first operation stays running
         barrier = threading.Event()
 
-        def slow_execute(action):
+        def slow_execute(action, **kwargs):
             barrier.wait(timeout=5)
 
         docker.execute.side_effect = slow_execute

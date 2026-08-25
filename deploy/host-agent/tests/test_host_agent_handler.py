@@ -20,6 +20,13 @@ from operations import OperationExecutor
 from helpers import make_executor as _make_executor_base
 
 
+def _make_status_checker(running: bool = True) -> Any:
+    """Return a mock ContainerStatusChecker."""
+    mock = MagicMock()
+    mock.is_running.return_value = running
+    return mock
+
+
 VALID_TOKEN = "test-secret-token-abcdef1234567890"
 
 
@@ -36,10 +43,17 @@ def _make_executor(subprocess_run: Any = None) -> OperationExecutor:
     return _make_executor_base(subprocess_run=subprocess_run)
 
 
-def _handler_class(token: str = VALID_TOKEN, store: st.OperationStore | None = None, executor: OperationExecutor | None = None) -> type:
+def _handler_class(
+    token: str = VALID_TOKEN,
+    store: st.OperationStore | None = None,
+    executor: OperationExecutor | None = None,
+    status_checker: Any = None,
+    bedrock_container_name: str = "minecraft-server",
+) -> type:
     store = store or _make_store()
     executor = executor or _make_executor()
-    return hd.build_handler_class(token, store, executor)
+    checker = status_checker if status_checker is not None else _make_status_checker()
+    return hd.build_handler_class(token, store, executor, checker, bedrock_container_name)
 
 
 class FakeRequest:
@@ -63,6 +77,8 @@ def _call_handler(
     store: st.OperationStore | None = None,
     executor: OperationExecutor | None = None,
     extra_headers: dict[str, str] | None = None,
+    status_checker: Any = None,
+    bedrock_container_name: str = "minecraft-server",
 ) -> tuple[int, dict[str, Any]]:
     raw_body = json.dumps(body).encode() if body is not None else b""
     headers: dict[str, str] = {}
@@ -74,7 +90,12 @@ def _call_handler(
     request = FakeRequest(method, path, raw_body, headers)
     response_buf = BytesIO()
 
-    HandlerClass = _handler_class(store=store, executor=executor)
+    HandlerClass = _handler_class(
+        store=store,
+        executor=executor,
+        status_checker=status_checker,
+        bedrock_container_name=bedrock_container_name,
+    )
 
     class CapturingSocket:
         def makefile(self, mode: str, bufsize: int = -1) -> Any:
@@ -193,6 +214,38 @@ class TestHealthEndpoint:
     def test_health_ignores_auth_header(self) -> None:
         status, body = _call_handler("GET", "/v1/health", token="wrong-token")
         assert status == 200
+
+
+# ---------------------------------------------------------------------------
+# GET /v1/bedrock/status
+# ---------------------------------------------------------------------------
+
+class TestBedrockStatusEndpoint:
+    def test_bedrock_running_true(self) -> None:
+        checker = _make_status_checker(running=True)
+        status, body = _call_handler("GET", "/v1/bedrock/status", status_checker=checker)
+        assert status == 200
+        assert body["bedrock_running"] is True
+
+    def test_bedrock_running_false(self) -> None:
+        checker = _make_status_checker(running=False)
+        status, body = _call_handler("GET", "/v1/bedrock/status", status_checker=checker)
+        assert status == 200
+        assert body["bedrock_running"] is False
+
+    def test_requires_auth(self) -> None:
+        status, body = _call_handler("GET", "/v1/bedrock/status", token=None)
+        assert status == 401
+        assert body["error"] == "unauthorized"
+
+    def test_wrong_token_returns_401(self) -> None:
+        status, _ = _call_handler("GET", "/v1/bedrock/status", token="wrong-token")
+        assert status == 401
+
+    def test_passes_container_name_to_checker(self) -> None:
+        checker = _make_status_checker(running=True)
+        _call_handler("GET", "/v1/bedrock/status", status_checker=checker, bedrock_container_name="my-bedrock")
+        checker.is_running.assert_called_once_with("my-bedrock")
 
 
 # ---------------------------------------------------------------------------

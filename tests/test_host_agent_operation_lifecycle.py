@@ -216,7 +216,7 @@ class TestAgentFiveXxResponse:
           2. GET /v1/status  (poll 1)      → 500  (recovery attempt 1 fails)
           3. GET /v1/status  (poll 2)      → 500  (recovery attempt 2 fails)
           4. GET /v1/status  (poll 3)      → 500  (recovery exhausted; RESTART fails)
-          5. GET /v1/health  (status() via _observe_container after RESTART failure) → 503
+          5. GET /v1/bedrock/status  (status() via _observe_container after RESTART failure) → 200 bedrock_running=false
 
         Each call is validated against the expected method and URL. Any call
         beyond position 5 raises AssertionError so unexpected extra requests
@@ -237,7 +237,7 @@ class TestAgentFiveXxResponse:
             ("GET",  f"{base}/v1/status",   (500, _internal_body)),
             ("GET",  f"{base}/v1/status",   (500, _internal_body)),
             ("GET",  f"{base}/v1/status",   (500, _internal_body)),
-            ("GET",  f"{base}/v1/health",   (503, {})),
+            ("GET",  f"{base}/v1/bedrock/status", (200, {"bedrock_running": False})),
         ]
         iterator = iter(scripted)
 
@@ -324,8 +324,8 @@ class TestAgentFiveXxResponse:
         HTTP call sequence inside the adapter and service:
           1. POST /v1/execute → 500      (post-delivery ambiguous → _poll_with_recovery)
           2. GET /v1/status  → 200 done ok  (recovery succeeds → execute() returns normally)
-          3. GET /v1/health  → 200       (service HEALTH_WAIT: status() → online=True)
-          4. GET /v1/health  → 200       (_verify_configuration calls _observe_container again)
+          3. GET /v1/bedrock/status  → 200 bedrock_running=true  (service HEALTH_WAIT: status() → online=True)
+          4. GET /v1/bedrock/status  → 200 bedrock_running=true  (_verify_configuration calls _observe_container again)
         """
         ok_response: tuple[int, dict[str, Any]] = (
             200,
@@ -340,12 +340,12 @@ class TestAgentFiveXxResponse:
                 "exception_type": None,
             },
         )
-        health_ok: tuple[int, dict[str, Any]] = (200, {"status": "ok", "version": "0.1.0"})
+        bedrock_ok: tuple[int, dict[str, Any]] = (200, {"bedrock_running": True})
         responses: list[tuple[int, dict[str, Any]] | Exception] = [
             (500, {"error": "transient"}),  # POST /v1/execute
             ok_response,                     # recovery poll
-            health_ok,                       # HEALTH_WAIT: status() → online=True
-            health_ok,                       # VERIFY: _observe_container in _verify_configuration
+            bedrock_ok,                      # HEALTH_WAIT: status() → online=True
+            bedrock_ok,                      # VERIFY: _observe_container in _verify_configuration
         ]
         client = _make_http_client(responses)
         configuration = MagicMock()
@@ -401,7 +401,7 @@ class TestReconciliationAfterAgentUnavailability:
         # Phase 2: agent recovers; reconciliation re-observes.
         # status() is now called successfully → online=True.
         client.request.side_effect = None
-        client.request.return_value = (200, {"status": "ok", "version": "0.1.0"})
+        client.request.return_value = (200, {"bedrock_running": True})
 
         reconciled = service.request_reconciliation(op.operation_id)
         assert reconciled is not None
@@ -453,7 +453,7 @@ class TestReconciliationAfterAgentUnavailability:
 
         # Agent recovers.
         client.request.side_effect = None
-        client.request.return_value = (200, {"status": "ok", "version": "0.1.0"})
+        client.request.return_value = (200, {"bedrock_running": True})
 
         reconciled = service.request_reconciliation(op.operation_id)
         assert reconciled is not None
@@ -475,7 +475,7 @@ class TestReconciliationAfterAgentUnavailability:
 
         # Agent recovers.
         client.request.side_effect = None
-        client.request.return_value = (200, {"status": "ok", "version": "0.1.0"})
+        client.request.return_value = (200, {"bedrock_running": True})
 
         reconciled = service.request_reconciliation(op.operation_id)
         assert reconciled is not None

@@ -1,7 +1,7 @@
 """Tests for HostAgentContainerOperations (host_agent.py).
 
 Covers:
-- status(): maps 200 → online=True, transport error → online=False
+- status(): maps bedrock_running=true → online=True, agent-alive-but-bedrock-stopped → online=False, transport error → online=False
 - execute("apply"): successful round-trip through POST /v1/execute + poll
 - execute("apply"): pre-delivery failure (connection refused, timeout)
 - execute("apply"): post-delivery ambiguous failure, recovery polling
@@ -82,13 +82,21 @@ def _execute(adapter: HostAgentContainerOperations, op_id: str = OP_ID, **kwargs
 # ---------------------------------------------------------------------------
 
 class TestStatus:
-    def test_health_200_returns_online(self) -> None:
-        client = _make_client([(200, {"status": "ok", "version": "0.1.0"})])
+    def test_bedrock_running_true_returns_online(self) -> None:
+        """bedrock_running=true in /v1/bedrock/status body → online."""
+        client = _make_client([(200, {"bedrock_running": True})])
         result = _adapter(client).status()
         assert result["online"] is True
         assert result["state"] == "running"
 
-    def test_health_non_200_returns_offline(self) -> None:
+    def test_bedrock_running_false_returns_offline(self) -> None:
+        """Agent alive but bedrock_running=false → offline (the key fix for #299/#296)."""
+        client = _make_client([(200, {"bedrock_running": False})])
+        result = _adapter(client).status()
+        assert result["online"] is False
+        assert result["state"] == "stopped"
+
+    def test_non_200_returns_offline(self) -> None:
         client = _make_client([(503, {})])
         result = _adapter(client).status()
         assert result["online"] is False
@@ -100,6 +108,32 @@ class TestStatus:
         result = _adapter(client).status()
         assert result["online"] is False
         assert result["state"] == "stopped"
+
+    def test_status_uses_server_name_in_container_field(self) -> None:
+        """container field reflects the configured server_name, not 'host-agent'."""
+        client = _make_client([(200, {"bedrock_running": True})])
+        adapter = HostAgentContainerOperations(
+            "http://host-gateway:7890",
+            VALID_TOKEN,
+            http_client=client,
+            server_name="my-bedrock",
+        )
+        result = adapter.status()
+        assert result["container"] == "my-bedrock"
+
+    def test_status_sends_bearer_token(self) -> None:
+        """status() authenticates with the agent token."""
+        client = _make_client([(200, {"bedrock_running": True})])
+        _adapter(client).status()
+        _, kwargs = client.request.call_args
+        assert kwargs["headers"]["Authorization"] == f"Bearer {VALID_TOKEN}"
+
+    def test_status_queries_bedrock_status_endpoint(self) -> None:
+        """status() must call /v1/bedrock/status, not /v1/health."""
+        client = _make_client([(200, {"bedrock_running": True})])
+        _adapter(client).status()
+        args, _ = client.request.call_args
+        assert args[1].endswith("/v1/bedrock/status")
 
 
 # ---------------------------------------------------------------------------

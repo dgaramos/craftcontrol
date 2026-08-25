@@ -142,6 +142,7 @@ class HostAgentContainerOperations:
         token: str,
         *,
         http_client: _HttpClient,
+        server_name: str = "minecraft-server",
         retry_interval: float = _POST_DELIVERY_RETRY_INTERVAL_SECONDS,
     ) -> None:
         if not math.isfinite(retry_interval) or retry_interval < 0:
@@ -151,6 +152,7 @@ class HostAgentContainerOperations:
         self._base_url = base_url.rstrip("/")
         self._token = token
         self._client: _HttpClient = http_client
+        self._server_name = server_name
         self._retry_interval = retry_interval
 
     # ------------------------------------------------------------------
@@ -158,20 +160,22 @@ class HostAgentContainerOperations:
     # ------------------------------------------------------------------
 
     def status(self) -> dict[str, Any]:
-        """Return container-style status by probing the agent's health endpoint.
+        """Return container-style status by querying the agent's Bedrock status endpoint.
 
-        A successful GET /v1/health response is mapped to an "online" / "running"
-        state.  Any transport failure or non-200 response is mapped to "stopped"
-        without raising.
+        GET /v1/bedrock/status reports whether the Bedrock server container is
+        running, which is distinct from agent process liveness (GET /v1/health).
+        Any transport failure, non-200 response, or ``bedrock_running: false``
+        body is mapped to "stopped" without raising.
         """
-        url = f"{self._base_url}/v1/health"
+        url = f"{self._base_url}/v1/bedrock/status"
+        headers = {"Authorization": f"Bearer {self._token}"}
         try:
-            code, _body = self._client.request("GET", url, timeout=10.0)
+            code, body = self._client.request("GET", url, headers=headers, timeout=10.0)
         except OSError:
-            return {"online": False, "state": "stopped", "container": "host-agent"}
-        if code == 200:
-            return {"online": True, "state": "running", "container": "host-agent"}
-        return {"online": False, "state": "stopped", "container": "host-agent"}
+            return {"online": False, "state": "stopped", "container": self._server_name}
+        if code == 200 and body.get("bedrock_running") is True:
+            return {"online": True, "state": "running", "container": self._server_name}
+        return {"online": False, "state": "stopped", "container": self._server_name}
 
     def execute(
         self,

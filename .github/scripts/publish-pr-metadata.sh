@@ -8,10 +8,11 @@ set -euo pipefail
 : "${PR_NUMBER:?PR_NUMBER is required}"
 : "${BASE_BRANCH:?BASE_BRANCH is required}"
 : "${EXPECTED_AUTHOR:?EXPECTED_AUTHOR is required}"
+: "${PUBLISHER_APP_SLUG:?PUBLISHER_APP_SLUG is required}"
 
-actual_author="$(gh api user --jq .login)"
-[[ "$actual_author" == "$EXPECTED_AUTHOR" ]] || {
-  echo "unexpected metadata publisher: $actual_author (expected $EXPECTED_AUTHOR)" >&2
+expected_app_slug="${EXPECTED_AUTHOR%\[bot\]}"
+[[ "$PUBLISHER_APP_SLUG" == "$expected_app_slug" ]] || {
+  echo "unexpected metadata publisher: $PUBLISHER_APP_SLUG (expected $expected_app_slug)" >&2
   exit 1
 }
 

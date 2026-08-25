@@ -66,6 +66,7 @@ jobs:
           PROJECT_NUMBER: ${{ inputs.project_number }}
           PROJECT_STATUS: ${{ inputs.project_status }}
           EXPECTED_AUTHOR: claudio-dr[bot]
+          PUBLISHER_APP_SLUG: ${{ steps.claudio-token.outputs.app-slug }}
         run: |
           set -euo pipefail
           [[ -n "$TITLE" ]] || { echo "title is required" >&2; exit 1; }
@@ -85,7 +86,7 @@ jobs:
           gh api --method POST "repos/${GITHUB_REPOSITORY}/issues" --input issue.json > created-issue.json
           actual_author="$(jq -r '.user.login' created-issue.json)"
           [[ "$actual_author" == "$EXPECTED_AUTHOR" ]] || { echo "unexpected issue author: $actual_author" >&2; exit 1; }
-          [[ "$(gh api user --jq .login)" == "$EXPECTED_AUTHOR" ]] || { echo "unexpected issue publisher" >&2; exit 1; }
+          [[ "$PUBLISHER_APP_SLUG" == "${EXPECTED_AUTHOR%\[bot\]}" ]] || { echo "unexpected issue publisher" >&2; exit 1; }
           issue_number="$(jq -r .number created-issue.json)"
           project_json="$(gh project view "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --format json)"
           project_id="$(jq -er .id <<<"$project_json")"

@@ -262,8 +262,8 @@ class TestPostDeliveryRecovery:
         with pytest.raises(RuntimeError, match="agent may have restarted"):
             _execute(_adapter(client))
 
-    def test_post_delivery_transport_error_then_exhausted_recovery(self) -> None:
-        """Transport error on POST → all recovery polls fail → ambiguous error."""
+    def test_pre_delivery_transport_error_raises_runtime_error(self) -> None:
+        """OSError on POST (pre-delivery) → RuntimeError with 'transport error'; no recovery poll."""
         client = MagicMock()
         # POST raises OSError (generic — treated as pre-delivery / safe)
         client.request.side_effect = OSError("broken pipe")

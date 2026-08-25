@@ -3,6 +3,12 @@ from __future__ import annotations
 
 import time
 import uuid
+from pathlib import Path
+import sys
+
+_AGENT_DIR = Path(__file__).resolve().parents[1]
+if str(_AGENT_DIR) not in sys.path:  # pragma: no cover - test bootstrap
+    sys.path.insert(0, str(_AGENT_DIR))
 
 import store as st
 

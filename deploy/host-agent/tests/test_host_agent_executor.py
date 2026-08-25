@@ -10,6 +10,11 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+import sys
+
+_AGENT_DIR = Path(__file__).resolve().parents[1]
+if str(_AGENT_DIR) not in sys.path:  # pragma: no cover - test bootstrap
+    sys.path.insert(0, str(_AGENT_DIR))
 
 import executor as ex
 import store as st

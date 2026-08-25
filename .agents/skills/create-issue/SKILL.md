@@ -137,8 +137,8 @@ gh workflow list
 gh issue view <número> --json number,title,author,labels,milestone,projectItems,assignees
 ```
 
-Verifique: autor do App esperado e todos os 4 metadados presentes (Project,
-Milestone, Label, Assignee). Verifique também o status do item no Project.
+Verifique autor do App, Label, Milestone e Assignee. Para Project pessoal,
+obtenha autorização explícita antes do fallback e registre o login e status.
 
 ## Regras
 

@@ -387,7 +387,7 @@ class HostAgentContainerOperations:
             if code == 200 and body.get("status") == "running":
                 # Still running; signal the caller to resume its own polling loop.
                 return True
-            last_error = f"HTTP {code}: {body}"
+            last_error = f"HTTP {code}"
 
         raise RuntimeError(
             f"host agent result is ambiguous for operation {operation_id!r}: "

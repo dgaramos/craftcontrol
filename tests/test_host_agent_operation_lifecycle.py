@@ -223,11 +223,20 @@ class TestAgentFiveXxResponse:
         surface as an explicit test failure rather than a silent fallback.
         """
         base = "http://host-gateway:7890"
+        # Embed host-internal values in every 5xx body so the negative assertions
+        # in test_5xx_error_contains_no_host_internals actually exercise scrubbing.
+        _internal_body: dict[str, Any] = {
+            "error": "internal_server_error",
+            "host": "host-gateway",
+            "port": "7890",
+            "path": "/run/secrets",
+            "token": VALID_TOKEN,
+        }
         scripted: list[tuple[str, str, tuple[int, dict[str, Any]] | Exception]] = [
-            ("POST", f"{base}/v1/execute",  (500, {"error": "internal_server_error"})),
-            ("GET",  f"{base}/v1/status",   (500, {"error": "internal_server_error"})),
-            ("GET",  f"{base}/v1/status",   (500, {"error": "internal_server_error"})),
-            ("GET",  f"{base}/v1/status",   (500, {"error": "internal_server_error"})),
+            ("POST", f"{base}/v1/execute",  (500, _internal_body)),
+            ("GET",  f"{base}/v1/status",   (500, _internal_body)),
+            ("GET",  f"{base}/v1/status",   (500, _internal_body)),
+            ("GET",  f"{base}/v1/status",   (500, _internal_body)),
             ("GET",  f"{base}/v1/health",   (503, {})),
         ]
         iterator = iter(scripted)

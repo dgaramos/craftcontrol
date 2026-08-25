@@ -66,6 +66,10 @@ o template `.github/pull_request_template.md` e preserve todas as seções.
 Capture os metadados da issue e use os mesmos no PR. Labels, milestone,
 assignees e Projects não são opcionais:
 
+CraftControl currently supports exactly one personal Project per issue and PR.
+Stop if the linked issue has zero or more than one Project; do not silently
+drop metadata.
+
 ```bash
 gh issue view <número> \
   --json title,assignees,labels,milestone,projectItems,body

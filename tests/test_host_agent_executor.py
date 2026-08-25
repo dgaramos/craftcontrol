@@ -10,15 +10,9 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
-import sys
-import os
 
-_AGENT_DIR = os.path.join(os.path.dirname(__file__), "..", "deploy", "host-agent")
-if _AGENT_DIR not in sys.path:
-    sys.path.insert(0, os.path.abspath(_AGENT_DIR))
-
-import executor as ex  # noqa: E402
-import store as st  # noqa: E402
+import executor as ex
+import store as st
 
 
 _RAKNET_MAGIC = bytes([0x00, 0xFF, 0xFF, 0x00, 0xFE, 0xFE, 0xFE, 0xFE,

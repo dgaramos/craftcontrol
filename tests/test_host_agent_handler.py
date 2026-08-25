@@ -8,16 +8,9 @@ from io import BytesIO
 from typing import Any
 from unittest.mock import MagicMock
 
-import sys
-import os
-
-_AGENT_DIR = os.path.join(os.path.dirname(__file__), "..", "deploy", "host-agent")
-if _AGENT_DIR not in sys.path:
-    sys.path.insert(0, os.path.abspath(_AGENT_DIR))
-
-import handler as hd  # noqa: E402
-import executor as ex  # noqa: E402
-import store as st  # noqa: E402
+import handler as hd
+import executor as ex
+import store as st
 
 
 VALID_TOKEN = "test-secret-token-abcdef1234567890"

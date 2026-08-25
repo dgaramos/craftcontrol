@@ -4,14 +4,7 @@ from __future__ import annotations
 import time
 import uuid
 
-import sys
-import os
-
-_AGENT_DIR = os.path.join(os.path.dirname(__file__), "..", "deploy", "host-agent")
-if _AGENT_DIR not in sys.path:
-    sys.path.insert(0, os.path.abspath(_AGENT_DIR))
-
-import store as st  # noqa: E402
+import store as st
 
 
 def _op_id() -> str:

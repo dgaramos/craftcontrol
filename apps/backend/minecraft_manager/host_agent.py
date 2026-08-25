@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import time
 import urllib.error
 import urllib.request
@@ -143,6 +144,10 @@ class HostAgentContainerOperations:
         http_client: _HttpClient,
         retry_interval: float = _POST_DELIVERY_RETRY_INTERVAL_SECONDS,
     ) -> None:
+        if not math.isfinite(retry_interval) or retry_interval < 0:
+            raise ValueError(
+                f"retry_interval must be a non-negative finite number, got {retry_interval!r}"
+            )
         self._base_url = base_url.rstrip("/")
         self._token = token
         self._client: _HttpClient = http_client

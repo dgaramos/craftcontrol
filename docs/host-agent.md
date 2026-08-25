@@ -199,15 +199,19 @@ startup. The backend reaches the agent through that address on port 7890.
 
 ## Token rotation
 
-Rotation requires no code change:
+Rotation is a coordinated maintenance window — plan for a brief 401 outage
+between steps 3 and 4 while the host agent carries the new token but the
+backend container still holds the old one. No requests will succeed during
+that interval.
 
 1. Generate a new token and write it to `/etc/craftcontrol/host-agent-token`.
-2. Update the backend secret source (bind mount or Docker secret).
+2. Update the backend secret source (bind mount or Docker secret) so the new
+   token file is ready before the backend restarts.
 3. Restart the host agent: `sudo systemctl restart craftcontrol-host-agent`.
-4. Restart the CraftControl backend: `bin/deploy-craftcontrol`.
-
-There is no overlap window: the agent rejects the old token immediately after
-restarting.
+   The agent now accepts only the new token. All backend requests return 401
+   until step 4 completes.
+4. Restart the CraftControl backend: `bin/deploy-craftcontrol`. The backend
+   reads the new token from the volume and resumes authenticated requests.
 
 ---
 

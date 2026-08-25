@@ -56,8 +56,11 @@ def _probe_bedrock(host: str, port: int, timeout: float) -> bool:
 def _wait_for_health(host: str, port: int, timeout_seconds: int) -> bool:
     """Poll the Bedrock health probe. Returns True if healthy within timeout."""
     deadline = time.monotonic() + timeout_seconds
-    while time.monotonic() < deadline:
-        if _probe_bedrock(host, port, PROBE_READ_TIMEOUT_SECONDS):
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            break
+        if _probe_bedrock(host, port, min(PROBE_READ_TIMEOUT_SECONDS, remaining)):
             return True
         remaining = deadline - time.monotonic()
         if remaining <= 0:

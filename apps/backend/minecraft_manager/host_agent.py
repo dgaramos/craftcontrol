@@ -274,9 +274,13 @@ class HostAgentContainerOperations:
         """Poll GET /v1/status/{operation_id} until a terminal result is returned.
 
         *deadline* is an absolute ``time.monotonic()`` timestamp.  The method
-        raises ``RuntimeError`` once the deadline is exceeded so that the
-        ``_poll_until_done`` / ``_poll_with_recovery`` mutual-recursion cycle
-        cannot run past the global ceiling set in ``_GLOBAL_POLL_DEADLINE_SECONDS``.
+        raises ``RuntimeError`` once the deadline is exceeded, bounding the
+        polling cycle to the global ceiling set in ``_GLOBAL_POLL_DEADLINE_SECONDS``.
+
+        When a transport error or unexpected status code is encountered, this
+        method calls ``_poll_with_recovery`` and resumes its own loop if the
+        operation is still running — there is no mutual recursion between the
+        two helpers.
 
         Raises ``RuntimeError`` on failure outcomes or transport errors.
         """
@@ -297,7 +301,10 @@ class HostAgentContainerOperations:
                     "host_agent status transport error operation_id=%s: %s — entering recovery",
                     operation_id, exc,
                 )
-                self._poll_with_recovery(operation_id, headers, deadline)
+                still_running = self._poll_with_recovery(operation_id, headers, deadline)
+                if still_running:
+                    time.sleep(_POLL_INTERVAL_SECONDS)
+                    continue
                 return
 
             if code == 200:
@@ -319,7 +326,10 @@ class HostAgentContainerOperations:
                 "host_agent status returned unexpected %d operation_id=%s — entering recovery",
                 code, operation_id,
             )
-            self._poll_with_recovery(operation_id, headers, deadline)
+            still_running = self._poll_with_recovery(operation_id, headers, deadline)
+            if still_running:
+                time.sleep(_POLL_INTERVAL_SECONDS)
+                continue
             return
 
         raise RuntimeError(
@@ -329,11 +339,16 @@ class HostAgentContainerOperations:
 
     def _poll_with_recovery(
         self, operation_id: str, headers: dict[str, str], deadline: float
-    ) -> None:
+    ) -> bool:
         """Retry GET /v1/status up to three times after a post-delivery failure.
 
-        *deadline* is forwarded to ``_poll_until_done`` if the operation is found
-        still running, bounding the combined cycle to ``_GLOBAL_POLL_DEADLINE_SECONDS``.
+        Returns ``True`` if the operation is still running so that the caller
+        (``_poll_until_done``) can resume its own loop.  Returns ``False`` after
+        handling a terminal result via ``_handle_terminal_result``.  Raises
+        ``RuntimeError`` when the outcome is ambiguous.
+
+        This method never calls ``_poll_until_done`` — the polling loop always
+        lives in the caller, eliminating mutual recursion.
 
         Per the host-agent contract, a ``404`` or repeated transport errors mean
         the outcome is ambiguous and explicit operator confirmation is required.
@@ -361,11 +376,10 @@ class HostAgentContainerOperations:
                 continue
             if code == 200 and body.get("status") == "done":
                 self._handle_terminal_result(operation_id, body)
-                return
+                return False
             if code == 200 and body.get("status") == "running":
-                # Still running; back to normal polling with the shared deadline.
-                self._poll_until_done(operation_id, headers, deadline)
-                return
+                # Still running; signal the caller to resume its own polling loop.
+                return True
             last_error = f"HTTP {code}: {body}"
 
         raise RuntimeError(

@@ -337,6 +337,29 @@ class TestExecuteBranchCoverage:
         ])
         _execute(_adapter(client))  # must not raise
 
+    def test_recovery_running_then_500_then_done_no_recursion(self) -> None:
+        """Alternating 500/running does not recurse: polling loop resumes after each recovery."""
+        # Sequence: POST 202 → poll 500 (→ recovery: running) → poll 500 (→ recovery: running)
+        # → poll done ok.  Previously this would cause mutual recursion; now the
+        # outer loop in _poll_until_done simply continues after _poll_with_recovery
+        # returns True.
+        client = _make_client([
+            (202, {"operation_id": OP_ID, "status": "accepted"}),
+            # First poll: unexpected 500 → recovery
+            (500, {"error": "transient"}),
+            # Recovery attempt 1: still running → caller resumes loop
+            (200, {"status": "running"}),
+            # Second poll: another 500 → recovery
+            (500, {"error": "transient"}),
+            # Recovery attempt 1: still running → caller resumes loop again
+            (200, {"status": "running"}),
+            # Third poll: terminal ok
+            (200, {"status": "done", "outcome": "ok", "executor_ref": "r",
+                   "health_reached": True, "failed_stage": None,
+                   "detail": "ok", "error_code": None, "exception_type": None}),
+        ])
+        _execute(_adapter(client))  # must not raise and must not RecursionError
+
     def test_recovery_oserror_all_attempts_exhausted(self) -> None:
         """All _poll_with_recovery attempts fail with OSError -> ambiguous error."""
         client = MagicMock()

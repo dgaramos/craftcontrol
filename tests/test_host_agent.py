@@ -1,14 +1,11 @@
-"""Tests for the CraftControl host agent.
+"""Tests for the CraftControl host agent — bootstrap and facade layer.
 
-Covers:
-- Authentication (valid token, missing token, wrong token)
-- POST /v1/execute: validation, conflict, idempotent replay, accepted response
-- GET /v1/status/{operation_id}: running, done (ok), done (error), not found
-- GET /v1/health: unauthenticated, returns version
-- Executor stages: prepare (writes server.properties), restart (docker compose),
-  health_wait (UDP probe)
-- Error paths: prepare failure, restart failure, restart timeout, health timeout
-- RakNet probe validation
+Verifies that the ``agent`` module re-exports every public name consumed by
+callers that do ``import agent as ha``.  Focused behavioural tests live in:
+
+- ``test_host_agent_store.py``     — OperationRecord / OperationStore
+- ``test_host_agent_executor.py``  — OperationExecutor and RakNet probe
+- ``test_host_agent_handler.py``   — AgentHandler and HTTP routing
 """
 from __future__ import annotations
 
@@ -501,7 +498,7 @@ class TestExecutorRun:
         record = store.create(op_id)
         assert record is not None
 
-        with patch("agent._wait_for_health", return_value=probe_result):
+        with patch("executor._wait_for_health", return_value=probe_result):
             executor.run(record, store, {"server_name": "Test"}, 10, 30)
 
         return store.get(op_id)  # type: ignore[return-value]

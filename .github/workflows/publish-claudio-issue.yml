@@ -53,6 +53,7 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
           permission-issues: write
+          permission-projects: write
 
       - name: Create and verify issue
         env:

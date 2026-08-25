@@ -1,9 +1,20 @@
 """Shared pytest fixtures for the craftcontrol backend test suite."""
 from __future__ import annotations
 
+import os
+import sys
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock
+
+# ---------------------------------------------------------------------------
+# host-agent path bootstrap (shared by test_host_agent_* modules)
+# ---------------------------------------------------------------------------
+_HOST_AGENT_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "deploy", "host-agent")
+)
+if _HOST_AGENT_DIR not in sys.path:
+    sys.path.insert(0, _HOST_AGENT_DIR)
 
 import pytest
 from flask import Flask

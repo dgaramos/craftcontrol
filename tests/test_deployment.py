@@ -213,6 +213,27 @@ def test_reviewer_publishers_support_thread_replies_without_creating_a_review() 
     assert "PUBLISHER_APP_SLUG" in publisher
 
 
+def test_app_publishers_require_and_verify_personal_project_metadata() -> None:
+    for reviewer in ("cody", "claudio"):
+        issue_workflow = (
+            ROOT / ".github" / "workflows" / f"publish-{reviewer}-issue.yml"
+        ).read_text()
+        metadata_workflow = (
+            ROOT / ".github" / "workflows" / f"publish-{reviewer}-pr-metadata.yml"
+        ).read_text()
+
+        for field in ("project_owner", "project_number", "project_status"):
+            assert f"{field}:" in issue_workflow
+            assert f"{field}:" in metadata_workflow
+        assert "complete project metadata is required" in issue_workflow
+        assert f"{reviewer}-dr[bot]" in issue_workflow
+        assert "unexpected issue publisher" in issue_workflow
+        assert "gh project item-add" in issue_workflow
+        assert "gh project item-edit" in issue_workflow
+        assert "permission-organization-projects" not in issue_workflow
+        assert "permission-organization-projects" not in metadata_workflow
+
+
 def test_reviewer_publisher_rejects_unexpected_app_before_mutation(tmp_path: Path) -> None:
     fake_gh = tmp_path / "gh"
     fake_gh.write_text('#!/usr/bin/env bash\necho unexpected-gh-call >&2; exit 99\n')

@@ -117,9 +117,11 @@ review manifests `inline_comments_json`, `replies_json`, and
 
 ### Create issue
 
-Dispatch `publish-cody-issue.yml` or `publish-claudio-issue.yml` with required
-`title` and `body`; `labels`, `assignees`, and `milestone_number` are optional.
-Do not supply review-only fields to this mode.
+Dispatch `publish-cody-issue.yml` or `publish-claudio-issue.yml` with `title`,
+`body`, labels, assignees, `milestone_number`, `project_owner`,
+`project_number`, and `project_status`. The publisher must apply and verify all
+four required metadata fields and the selected Project status under the matching
+App identity. Do not supply review-only fields to this mode.
 
 ### Apply PR metadata
 
@@ -131,9 +133,9 @@ and the three project fields `project_owner`, `project_number`, `project_status`
 
 The workflow authenticates as the matching App, verifies the publishing identity,
 applies all supplied metadata, and then re-reads the PR to confirm every field.
-A missing permission or a verification mismatch fails the workflow; there is no
-fallback to the personal account. If Projects write permission is not available
-for the App installation, supply no project fields — the failure is explicit.
+A missing permission or a verification mismatch fails the workflow before any
+personal-account fallback. Project metadata is required by CraftControl, so an
+App without Projects write permission is a blocking configuration failure.
 
 | Reviewer | Mode | Availability |
 | --- | --- | --- |

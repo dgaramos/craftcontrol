@@ -93,12 +93,17 @@ Estrutura obrigatória:
 
 Critérios de aceite no formato Given/When/Then — verificáveis objetivamente. Não use "melhorar" ou "refatorar" sem critério concreto.
 
-### 5. Criar via CLI
+### 5. Criar pelo publisher do App
+
+Para Cody DR, dispare `publish-cody-issue.yml`; para Claudio DR, dispare
+`publish-claudio-issue.yml`. Nunca use `gh issue create` ou `gh project` para
+publicar metadados atribuídos ao reviewer: esses comandos usam a identidade
+local autenticada.
 
 ```bash
-gh issue create \
-  --title "type(scope): descrição imperativa" \
-  --body "$(cat <<'EOF'
+gh workflow run publish-cody-issue.yml --ref main \
+  -f "title=type(scope): imperative description" \
+  -f "body=$(cat <<'EOF'
 ## Contexto
 ...
 
@@ -113,24 +118,27 @@ gh issue create \
 - [ ] Quality gate passa
 EOF
 )" \
-  --assignee dgaramos \
-  --label "<label>" \
-  --milestone "<nome-do-milestone>" \
-  --project "<nome-do-project>"
+  -f "labels=<label>" \
+  -f "assignees=dgaramos" \
+  -f "milestone_number=<número>" \
+  -f "project_owner=dgaramos" \
+  -f "project_number=<número>" \
+  -f "project_status=<status>"
+```
 
-# Validar autenticação e acesso ao Project antes de criar a issue:
+# Validar autenticação e disponibilidade do publisher antes de criar a issue:
 gh auth status
-# Interromper se a autenticação ou o acesso ao Project falhar:
-gh project list --owner dgaramos >/dev/null
+gh workflow list
 ```
 
 ### 6. Confirmar
 
 ```bash
-gh issue view <número> --json number,title,labels,milestone,projectItems,assignees
+gh issue view <número> --json number,title,author,labels,milestone,projectItems,assignees
 ```
 
-Verifique: todos os 4 metadados presentes (Project, Milestone, Label, Assignee).
+Verifique: autor do App esperado e todos os 4 metadados presentes (Project,
+Milestone, Label, Assignee). Verifique também o status do item no Project.
 
 ## Regras
 

@@ -56,6 +56,7 @@ def _make_http_client(responses: list[tuple[int, dict[str, Any]] | Exception]) -
 
 
 def _make_adapter(client: MagicMock) -> HostAgentContainerOperations:
+    """Wrap a fake _HttpClient in a HostAgentContainerOperations with test credentials."""
     return HostAgentContainerOperations(
         "http://host-gateway:7890",
         VALID_TOKEN,
@@ -64,6 +65,7 @@ def _make_adapter(client: MagicMock) -> HostAgentContainerOperations:
 
 
 def _make_db(tmp_path: Path) -> Path:
+    """Create and migrate an SQLite database in *tmp_path* and return its path."""
     db = tmp_path / "state.db"
     with sqlite3.connect(db) as conn:
         run_migrations(conn)
@@ -75,6 +77,7 @@ def _make_service(
     adapter: HostAgentContainerOperations,
     configuration: MagicMock | None = None,
 ) -> ServerOperationService:
+    """Wire adapter and a fresh SQLite repository into a ServerOperationService."""
     broker = MagicMock()
     if configuration is None:
         configuration = MagicMock()
@@ -95,6 +98,7 @@ def _wait_for_terminal(
     operation_id: str,
     timeout: float = 10.0,
 ) -> None:
+    """Poll until *operation_id* reaches a terminal state or *timeout* seconds elapse."""
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         op = service.get_operation(operation_id)

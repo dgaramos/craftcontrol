@@ -132,6 +132,17 @@ sudo apt-get install -y iptables-persistent
 sudo netfilter-persistent save
 ```
 
+Find the subnet for the Compose project network (not the global Docker bridge):
+
+```bash
+# The split Compose stack creates a network named 'craftcontrol_default'.
+# Inspect it to confirm the actual subnet used by backend containers:
+docker network inspect craftcontrol_default \
+  --format '{{range .IPAM.Config}}{{.Subnet}}{{end}}'
+```
+
+Use the printed subnet in the rules above instead of `172.17.0.0/16`.
+
 ---
 
 ## Step 5 — Install the systemd unit
@@ -231,16 +242,28 @@ From the Docker host:
 
 ```bash
 curl -s http://127.0.0.1:7890/v1/health
+# Expected: {"status": "ok", "version": "0.1.0"}
 ```
 
-From inside the backend container:
+From inside the backend container (validates backend-to-host-agent path through
+the `craftcontrol_default` network and `host-gateway`):
 
 ```bash
 docker exec craftcontrol-backend \
-  python3 -c "import urllib.request; print(urllib.request.urlopen('http://host-gateway:7890/v1/health').read())"
+  curl -sf http://host-gateway:7890/v1/health
+# Expected: {"status": "ok", "version": "0.1.0"}
 ```
 
-Both should return `{"status": "ok", "version": "0.1.0"}`.
+Confirm the backend container is on the Compose project network, not the global
+Docker bridge:
+
+```bash
+docker inspect craftcontrol-backend \
+  --format '{{range $k, $v := .NetworkSettings.Networks}}{{$k}}{{end}}'
+# Expected: craftcontrol_default
+```
+
+All three checks must pass before considering the deployment healthy.
 
 ---
 

@@ -30,7 +30,12 @@ def _make_executor(subprocess_run: Any = None) -> ex.OperationExecutor:
         "compose_file": "/opt/craftcontrol/docker-compose.yml",
         "bedrock_data": "/tmp/bedrock-test",
     }
-    return ex.OperationExecutor(config, subprocess_run=subprocess_run)
+    # Always stub the UDP health probe so daemon threads never open real sockets.
+    return ex.OperationExecutor(
+        config,
+        subprocess_run=subprocess_run,
+        wait_for_health=lambda host, port, timeout: True,
+    )
 
 
 def _handler_class(token: str = VALID_TOKEN, store: st.OperationStore | None = None, executor: ex.OperationExecutor | None = None) -> type:

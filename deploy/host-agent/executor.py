@@ -198,11 +198,14 @@ class OperationExecutor:
         config: dict[str, str],
         subprocess_run: Any = None,
         read_text: Any = None,
+        wait_for_health: Any = None,
     ) -> None:
         self._config = config
         self._subprocess_run = subprocess_run or subprocess.run
         # Injected for testing; defaults to Path.read_text behaviour.
         self._read_text = read_text or (lambda p, **kw: p.read_text(**kw))
+        # Injected for testing; defaults to the module-level UDP probe.
+        self._wait_for_health = wait_for_health or _wait_for_health
 
     def run(self, record: OperationRecord, store: OperationStore, intended_state: dict[str, Any], health_timeout: int, restart_timeout: int) -> None:
         """Execute operation stages. Mutates record via store.update."""
@@ -271,7 +274,7 @@ class OperationExecutor:
         store.update(operation_id, current_stage="health_wait")
         try:
             port = int(intended_state.get("server_port", BEDROCK_DEFAULT_PORT))
-            health_reached = _wait_for_health("127.0.0.1", port, health_timeout)
+            health_reached = self._wait_for_health("127.0.0.1", port, health_timeout)
         except Exception as exc:
             logger.exception("health_wait failed for %s", operation_id)
             store.update(

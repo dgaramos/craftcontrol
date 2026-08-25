@@ -209,29 +209,34 @@ class TestAgentFiveXxResponse:
           4. GET /v1/status  (poll 3)      → 500  (recovery exhausted; RESTART fails)
           5. GET /v1/health  (status() via _observe_container after RESTART failure) → 503
 
-        Any extra call beyond position 5 returns (503, {}) instead of raising
-        StopIteration, so a spurious extra request surfaces as a deterministic
-        assertion failure rather than a confusing iterator error.
+        Each call is validated against the expected method and URL. Any call
+        beyond position 5 raises AssertionError so unexpected extra requests
+        surface as an explicit test failure rather than a silent fallback.
         """
-        scripted: list[tuple[int, dict[str, Any]] | Exception] = [
-            # POST /v1/execute → 500
-            (500, {"error": "internal_server_error"}),
-            # Recovery poll 1 → 500
-            (500, {"error": "internal_server_error"}),
-            # Recovery poll 2 → 500
-            (500, {"error": "internal_server_error"}),
-            # Recovery poll 3 → 500
-            (500, {"error": "internal_server_error"}),
-            # GET /v1/health (status() via _observe_container after RESTART failure) → agent offline
-            (503, {}),
+        base = "http://host-gateway:7890"
+        scripted: list[tuple[str, str, tuple[int, dict[str, Any]] | Exception]] = [
+            ("POST", f"{base}/v1/execute",  (500, {"error": "internal_server_error"})),
+            ("GET",  f"{base}/v1/status",   (500, {"error": "internal_server_error"})),
+            ("GET",  f"{base}/v1/status",   (500, {"error": "internal_server_error"})),
+            ("GET",  f"{base}/v1/status",   (500, {"error": "internal_server_error"})),
+            ("GET",  f"{base}/v1/health",   (503, {})),
         ]
         iterator = iter(scripted)
 
-        def _side_effect(*_args: object, **_kwargs: object) -> tuple[int, dict[str, Any]]:
-            entry = next(iterator, (503, {}))
-            if isinstance(entry, Exception):
-                raise entry
-            return entry
+        def _side_effect(method: str, url: str, **_kwargs: object) -> tuple[int, dict[str, Any]]:
+            try:
+                exp_method, exp_url_prefix, response = next(iterator)
+            except StopIteration:
+                raise AssertionError(
+                    f"Unexpected extra call: {method} {url}"
+                ) from None
+            assert method == exp_method, f"Expected {exp_method}, got {method} ({url})"
+            assert url.startswith(exp_url_prefix), (
+                f"Expected URL starting with {exp_url_prefix!r}, got {url!r}"
+            )
+            if isinstance(response, Exception):
+                raise response
+            return response
 
         mock = MagicMock()
         mock.request.side_effect = _side_effect

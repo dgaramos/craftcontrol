@@ -246,6 +246,8 @@ _INT_FIELDS = frozenset({
     "player_movement_duration_threshold_in_ms",
 })
 
+_PORT_FIELDS = frozenset({"server_port", "server_portv6"})
+
 _BOOL_FIELDS = frozenset({
     "online_mode", "white_list", "allow_list", "allow_cheats",
     "enable_lan_visibility", "texturepack_required",
@@ -312,6 +314,8 @@ def _validate_intended_state_values(intended_state: dict[str, Any]) -> str | Non
         elif field in _INT_FIELDS:
             if not isinstance(value, int) or isinstance(value, bool):
                 return f"'{field}' must be an integer"
+            if field in _PORT_FIELDS and not (1 <= value <= 65535):
+                return f"'{field}' must be between 1 and 65535"
         elif field in _BOOL_FIELDS:
             if not isinstance(value, bool):
                 return f"'{field}' must be a boolean"
@@ -527,8 +531,10 @@ class OperationExecutor:
             try:
                 raw = props_file.read_text(encoding="utf-8")
                 existing_lines = raw.splitlines(keepends=True)
-            except OSError:
-                existing_lines = []
+            except OSError as exc:
+                raise RuntimeError(
+                    f"Cannot read existing server.properties; aborting to avoid data loss: {exc}"
+                ) from exc
 
         # Merge: replace lines whose key appears in updates; collect written keys
         merged: list[str] = []

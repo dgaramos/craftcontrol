@@ -144,8 +144,10 @@ class HostAgentContainerOperations:
     """``ContainerOperations`` implementation that delegates to the host agent.
 
     This adapter satisfies the ``ContainerOperations`` port structurally and
-    can replace ``DockerOperations`` in the composition root.  The backend
-    container does not require a Docker socket mount when this adapter is active.
+    replaces ``DockerOperations`` for lifecycle operations (PREPARATION, RESTART,
+    HEALTH_WAIT) in the composition root.  A Docker socket mount is still required
+    in all topologies because ``BedrockClient`` uses the Docker SDK directly for
+    console operations and log streaming — those are not delegated to the agent.
 
     Authentication uses a shared secret read once at construction time.  No
     token value is written to logs, error messages, or API responses.

@@ -373,10 +373,6 @@ def test_reviewer_publisher_rejects_thread_after_all_pages(tmp_path: Path) -> No
 
 
 def test_reviewer_skills_dispatch_thread_replies_through_their_apps() -> None:
-    cody = (ROOT / ".agents" / "skills" / "review-pr" / "SKILL.md").read_text()
-    assert "cody-dr:review-pr" in cody
-    assert ".agent-review/craftcontrol/PROFILE.md" in cody
-
     profile = (ROOT / ".agent-review" / "craftcontrol" / "PROFILE.md").read_text()
     for manifest in ("replies_json", "resolve_thread_ids_json", "inline_comments_json"):
         assert manifest in profile
@@ -389,10 +385,8 @@ def test_reviewer_skills_dispatch_thread_replies_through_their_apps() -> None:
 
 
 def test_profile_declares_reviewer_app_first_with_explicit_personal_fallback() -> None:
-    skill = (ROOT / ".agents" / "skills" / "handle-pr-findings" / "SKILL.md").read_text()
     profile = (ROOT / ".agent-review" / "craftcontrol" / "PROFILE.md").read_text()
 
-    assert "cody-dr:handle-pr-findings" in skill
     assert "Cody DR | reply | available" in profile
     assert "Cody DR | resolve-thread | available" in profile
     assert "personal GitHub account is permitted" in profile
@@ -437,22 +431,15 @@ def test_claude_workflow_entry_points_are_matching_thin_plugin_wrappers() -> Non
         assert ".agent-review/craftcontrol/PROFILE.md" in text
 
 
-def test_cody_workflow_entry_points_are_matching_thin_plugin_wrappers() -> None:
-    expected_skills = {
-        "create-issue": "author-issue",
-        "execute-issue": "execute-issue",
-        "handle-pr-findings": "handle-pr-findings",
-        "implement": "implement-issue",
-        "review-pr": "review-pr",
-        "ship-issue": "ship-change",
-        "start-issue": "start-issue",
+def test_codex_does_not_shadow_global_cody_lifecycle_skills() -> None:
+    lifecycle_entries = {
+        "create-issue",
+        "execute-issue",
+        "handle-pr-findings",
+        "implement",
+        "review-pr",
+        "ship-issue",
+        "start-issue",
     }
-
-    for entry_point, skill in expected_skills.items():
-        path = ROOT / ".agents" / "skills" / entry_point / "SKILL.md"
-        text = path.read_text()
-        assert len(text.splitlines()) <= 10
-        assert f"name: {entry_point}" in text
-        assert f"cody-dr:{skill}" in text
-        assert "You are Cody DR." in text
-        assert ".agent-review/craftcontrol/PROFILE.md" in text
+    local_entries = {path.parent.name for path in (ROOT / ".agents" / "skills").glob("*/SKILL.md")}
+    assert lifecycle_entries.isdisjoint(local_entries)

@@ -71,8 +71,8 @@ checks and review findings are resolved. Do not merge directly to `main`.
 
 ## I use Codex. Are there skills that help me follow project conventions?
 
-Yes. CraftControl provides Codex lifecycle wrappers under `.agents/skills/`.
-They delegate to the installed `cody-dr` portable workflows and load
+Yes. Install the global `cody-dr` portable workflow plugin. CraftControl does
+not duplicate its lifecycle skills under `.agents/skills/`; the plugin loads
 `.agent-review/craftcontrol/PROFILE.md`. Issue authoring remains draft-first,
 findings handling requires an explicit decision before each fix or publication,
 and the Cody App publishes review content only as `COMMENT`.

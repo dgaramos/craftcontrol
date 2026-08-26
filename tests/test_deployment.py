@@ -377,11 +377,9 @@ def test_reviewer_skills_dispatch_thread_replies_through_their_apps() -> None:
     for manifest in ("replies_json", "resolve_thread_ids_json", "inline_comments_json"):
         assert manifest in profile
 
-    wrapper = (ROOT / ".claude" / "agents" / "review-pr.md").read_text()
     duplicate = (ROOT / ".claude" / "agents" / "review-pr" / "SKILL.md").read_text()
-    assert wrapper == duplicate
-    assert "claudio-dr:review-pr" in wrapper
-    assert ".agent-review/craftcontrol/PROFILE.md" in wrapper
+    assert "claudio-dr:review-pr" in duplicate
+    assert ".agent-review/craftcontrol/PROFILE.md" in duplicate
 
 
 def test_profile_declares_reviewer_app_first_with_explicit_personal_fallback() -> None:
@@ -397,38 +395,17 @@ def test_profile_declares_reviewer_app_first_with_explicit_personal_fallback() -
     assert "publish-claudio-review.yml" in profile
 
 
-def test_claude_workflow_entry_points_are_matching_thin_plugin_wrappers() -> None:
-    expected_skills = {
-        "create-issue": "author-issue",
-        "execute-issue": "execute-issue",
-        "handle-pr-findings": "handle-pr-findings",
-        "implement": "implement-issue",
-        "review-pr": "review-pr",
-        "ship-issue": "ship-change",
-        "start-issue": "start-issue",
-    }
+def test_no_claudio_dr_wrapper_md_files_exist_in_agents_directory() -> None:
     agents_directory = ROOT / ".claude" / "agents"
-    agents = {}
     for agent in agents_directory.glob("*.md"):
         text = agent.read_text()
+        if "---" not in text:
+            continue
         frontmatter = text.split("---", maxsplit=2)[1].strip().splitlines()
         declared_skills = [line.strip()[2:] for line in frontmatter if line.startswith("  - ")]
-        if any(skill.startswith("claudio-dr:") for skill in declared_skills):
-            agents[agent.stem] = agent
-    assert agents.keys() == expected_skills.keys()
-
-    for entry_point, agent in agents.items():
-        skill = expected_skills[entry_point]
-        duplicate = ROOT / ".claude" / "agents" / entry_point / "SKILL.md"
-        assert agent.read_text() == duplicate.read_text()
-        text = agent.read_text()
-        assert len(text.splitlines()) <= 10
-        frontmatter = text.split("---", maxsplit=2)[1].strip().splitlines()
-        assert f"name: {entry_point}" in frontmatter
-        assert "skills:" in frontmatter
-        assert [line.strip()[2:] for line in frontmatter if line.startswith("  - ")] == [f"claudio-dr:{skill}"]
-        assert "You are Claudio DR." in text
-        assert ".agent-review/craftcontrol/PROFILE.md" in text
+        assert not any(skill.startswith("claudio-dr:") for skill in declared_skills), (
+            f"{agent.name} is a claudio-dr wrapper .md file that should have been removed"
+        )
 
 
 def test_codex_does_not_shadow_global_cody_lifecycle_skills() -> None:

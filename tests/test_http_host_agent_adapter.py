@@ -38,6 +38,7 @@ import pytest
 
 from minecraft_manager.host_agent import (
     HostAgentContainerOperations,
+    ReadTimeoutError,
     _UrllibClient,
     _load_token,
 )
@@ -58,11 +59,15 @@ def _make_client(responses: list[tuple[int, dict[str, Any]]]) -> MagicMock:
     return mock
 
 
-def _adapter(client: MagicMock | None = None) -> HostAgentContainerOperations:
+def _adapter(
+    client: MagicMock | None = None,
+    retry_interval: float = 0.0,
+) -> HostAgentContainerOperations:
     return HostAgentContainerOperations(
         "http://host-gateway:7890",
         VALID_TOKEN,
         http_client=client or MagicMock(),
+        retry_interval=retry_interval,
     )
 
 
@@ -212,6 +217,59 @@ class TestPreDeliveryFailure:
         client = MagicMock()
         client.request.side_effect = OSError("network unreachable")
         with pytest.raises(RuntimeError, match="transport error"):
+            _execute(_adapter(client))
+
+
+# ---------------------------------------------------------------------------
+# execute(): read-phase timeout routes to recovery polling
+# ---------------------------------------------------------------------------
+
+class TestReadPhaseTimeout:
+    """A ReadTimeoutError on POST /v1/execute triggers _poll_with_recovery."""
+
+    def test_read_timeout_on_post_triggers_recovery_poll_done(self) -> None:
+        """ReadTimeoutError on POST → recovery poll returns done/ok → no error raised."""
+        client = MagicMock()
+        # POST raises ReadTimeoutError; subsequent recovery status poll returns done/ok.
+        client.request.side_effect = [
+            ReadTimeoutError("read body timed out"),
+            (200, {"status": "done", "outcome": "ok", "executor_ref": "r1"}),
+        ]
+        # Should not raise — recovery poll resolves successfully.
+        _execute(_adapter(client))
+
+    def test_read_timeout_on_post_does_not_raise_pre_delivery_error(self) -> None:
+        """ReadTimeoutError on POST must not surface as a pre-delivery connect-timeout error."""
+        client = MagicMock()
+        client.request.side_effect = [
+            ReadTimeoutError("read body timed out"),
+            (200, {"status": "done", "outcome": "ok", "executor_ref": "r2"}),
+        ]
+        # Must not raise RuntimeError("connection timed out").
+        _execute(_adapter(client))
+
+    def test_read_timeout_on_post_triggers_recovery_poll_failure(self) -> None:
+        """ReadTimeoutError on POST → recovery exhausted → RuntimeError with ambiguous message."""
+        client = MagicMock()
+        client.request.side_effect = [
+            ReadTimeoutError("read body timed out"),
+            OSError("conn reset"),
+            OSError("conn reset"),
+            OSError("conn reset"),
+        ]
+        with pytest.raises(RuntimeError, match="ambiguous"):
+            _execute(_adapter(client, retry_interval=0.0))
+
+    def test_read_timeout_is_subclass_of_timeout_error(self) -> None:
+        """ReadTimeoutError must be catchable as TimeoutError."""
+        exc = ReadTimeoutError("read timed out")
+        assert isinstance(exc, TimeoutError)
+
+    def test_connect_timeout_still_raises_pre_delivery_error(self) -> None:
+        """A plain TimeoutError (connect phase) must still raise pre-delivery RuntimeError."""
+        client = MagicMock()
+        client.request.side_effect = TimeoutError("connect timed out")
+        with pytest.raises(RuntimeError, match="timed out"):
             _execute(_adapter(client))
 
 
@@ -501,6 +559,20 @@ class TestUrllibClient:
             _UrllibClient(opener=_make_exc_opener(exc)).request(
                 "GET", "http://host/v1/health"
             )
+
+    def test_read_body_timeout_raises_read_timeout_error(self) -> None:
+        """TimeoutError during resp.read() must be converted to ReadTimeoutError."""
+        resp = MagicMock()
+        resp.status = 200
+        resp.read.side_effect = TimeoutError("read timed out")
+        resp.__enter__ = lambda s: s
+        resp.__exit__ = MagicMock(return_value=False)
+
+        def opener(req: Any, *, timeout: float = 30.0) -> Any:  # noqa: ARG001
+            return resp
+
+        with pytest.raises(ReadTimeoutError):
+            _UrllibClient(opener=opener).request("POST", "http://host/v1/execute")
 
     def test_url_error_with_non_oserror_reason_raises_oserror(self) -> None:
         exc = urllib.error.URLError(reason="unknown reason")

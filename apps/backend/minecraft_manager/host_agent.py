@@ -21,6 +21,17 @@ from typing import Any, Protocol
 
 LOGGER = logging.getLogger(__name__)
 
+
+class ReadTimeoutError(TimeoutError):
+    """Raised when a read-phase timeout occurs after the TCP handshake completed.
+
+    Unlike a connect-phase ``TimeoutError``, a ``ReadTimeoutError`` on a POST
+    request means the request body was likely delivered to the server.  Callers
+    must treat it as a post-delivery ambiguous failure and use recovery polling
+    rather than surfacing an immediate pre-delivery error.
+    """
+
+
 # How long to wait between polling attempts after POST /v1/execute returns 202.
 _POLL_INTERVAL_SECONDS = 5.0
 # Maximum poll attempts while waiting for the agent to complete.
@@ -53,6 +64,9 @@ class _HttpClient(Protocol):
         Raises:
             ConnectionRefusedError: when the TCP connection was refused
                 (pre-delivery failure — request was never delivered).
+            ReadTimeoutError: when a timeout fires during the read phase,
+                after the TCP handshake completed
+                (post-delivery ambiguous — request was likely delivered).
             TimeoutError: when a connect timeout fires before TCP handshake
                 (pre-delivery failure — request was never delivered).
             OSError: for all other transport-layer failures.  The caller must
@@ -86,7 +100,13 @@ class _UrllibClient:
             req.add_header(key, value)
         try:
             with self._opener(req, timeout=timeout) as resp:
-                raw = resp.read()
+                try:
+                    raw = resp.read()
+                except TimeoutError as exc:
+                    # TCP handshake and request delivery completed; timeout
+                    # occurred while reading the response body — treat as a
+                    # read-phase (post-delivery ambiguous) failure.
+                    raise ReadTimeoutError("read body timed out") from exc
                 return resp.status, json.loads(raw) if raw else {}
         except urllib.error.HTTPError as exc:
             raw = exc.read()
@@ -235,6 +255,18 @@ class HostAgentContainerOperations:
             raise RuntimeError(
                 "host agent unavailable: connection refused"
             ) from exc
+        except ReadTimeoutError:
+            # Read-phase timeout: TCP handshake completed and request was sent,
+            # but the response body read timed out.  The request was likely
+            # delivered; poll for the operation status before declaring failure.
+            LOGGER.warning(
+                "host_agent POST /v1/execute read-phase timeout — "
+                "entering recovery polling operation_id=%s",
+                operation_id,
+            )
+            deadline = time.monotonic() + _GLOBAL_POLL_DEADLINE_SECONDS
+            self._poll_with_recovery(operation_id, headers, deadline)
+            return
         except TimeoutError as exc:
             # Pre-delivery failure: connect timeout.
             raise RuntimeError(

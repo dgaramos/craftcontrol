@@ -219,7 +219,7 @@ class AuthService:
         now = time.time()
         current_hash = self._token_hash(session_token)
         with self._connect() as connection:
-            identity = connection.execute("SELECT identity FROM panel_sessions WHERE token_hash=?", (current_hash,)).fetchone()
+            identity = self._active_session_identity(connection, current_hash, now)
             if not identity:
                 raise ValueError("session not found")
             rows = connection.execute(
@@ -233,7 +233,7 @@ class AuthService:
         current_hash = self._token_hash(session_token)
         now = time.time()
         with self._connect() as connection:
-            identity = connection.execute("SELECT identity FROM panel_sessions WHERE token_hash=?", (current_hash,)).fetchone()
+            identity = self._active_session_identity(connection, current_hash, now)
             if not identity:
                 raise ValueError("session not found")
             rows = connection.execute("SELECT token_hash FROM panel_sessions WHERE identity=? AND revoked_at IS NULL", (identity[0],)).fetchall()
@@ -244,7 +244,7 @@ class AuthService:
 
     def revoke_other_sessions(self, session_token: str) -> None:
         with self._connect() as connection:
-            identity = connection.execute("SELECT identity FROM panel_sessions WHERE token_hash=?", (self._token_hash(session_token),)).fetchone()
+            identity = self._active_session_identity(connection, self._token_hash(session_token), time.time())
             if not identity:
                 raise ValueError("session not found")
             connection.execute("UPDATE panel_sessions SET revoked_at=? WHERE identity=? AND token_hash<>? AND revoked_at IS NULL", (time.time(), identity[0], self._token_hash(session_token)))
@@ -321,6 +321,17 @@ class AuthService:
             (identity,),
         ).fetchone()
         return token, self._public_user(identity, row[0], row[1])
+
+    @staticmethod
+    def _active_session_identity(connection: sqlite3.Connection, token_hash: str, now: float):
+        identity = connection.execute(
+            "SELECT s.identity FROM panel_sessions s JOIN panel_accounts a ON a.identity=s.identity "
+            "WHERE s.token_hash=? AND s.revoked_at IS NULL AND s.idle_expires_at>=? "
+            "AND s.absolute_expires_at>=? AND a.status='active'", (token_hash, now, now),
+        ).fetchone()
+        if not identity:
+            raise ValueError("session not found")
+        return identity
 
     @staticmethod
     def _public_user(identity: str, name: str, role: str) -> dict[str, Any]:

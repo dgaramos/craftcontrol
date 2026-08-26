@@ -86,11 +86,13 @@ async function showSessions() {
   const dialog = document.querySelector("#account-dialog");
   const data = await api("/api/auth/sessions");
   const others = data.sessions.filter((session) => !session.current);
-  dialog.innerHTML = `<section class="account-card block-panel"><div><span class="eyebrow">CRAFTCONTROL</span><h2>${words.sessionsTitle}</h2></div><div class="session-history">${data.sessions.map((session) => `<div class="session-item"><span>${session.current ? words.currentSession : new Date(session.last_seen_at * 1000).toLocaleString()}</span>${session.current ? "" : `<button class="danger" data-session="${session.id}">${words.revoke}</button>`}</div>`).join("")}</div>${others.length ? `<button id="revoke-others" class="danger">${words.revokeOthers}</button>` : `<p>${words.sessionsEmpty}</p>`}<button class="secondary" type="button">${words.cancel}</button></section>`;
-  dialog.querySelector(".secondary").onclick = () => dialog.close();
-  dialog.querySelectorAll("[data-session]").forEach((button) => { button.onclick = async () => { await api(`/api/auth/sessions/${button.dataset.session}`, { method: "DELETE" }); showSessions(); }; });
-  const revokeOthers = dialog.querySelector("#revoke-others");
-  if (revokeOthers) revokeOthers.onclick = async () => { await api("/api/auth/sessions", { method: "POST" }); showSessions(); };
+  dialog.setAttribute("aria-label", words.sessionsTitle);
+  const card = document.createElement("section"); card.className = "account-card block-panel";
+  const title = document.createElement("h2"); title.textContent = words.sessionsTitle; card.append(title);
+  const list = document.createElement("div"); list.className = "session-history";
+  data.sessions.forEach((session) => { const row = document.createElement("div"); row.className = "session-item"; const label = document.createElement("span"); label.textContent = session.current ? words.currentSession : new Date(session.last_seen_at * 1000).toLocaleString(); row.append(label); if (!session.current) { const button = document.createElement("button"); button.className = "danger"; button.textContent = words.revoke; button.dataset.session = session.id; button.onclick = async () => { await api(`/api/auth/sessions/${button.dataset.session}`, { method: "DELETE" }); showSessions(); }; row.append(button); } list.append(row); }); card.append(list);
+  if (others.length) { const button = document.createElement("button"); button.id = "revoke-others"; button.className = "danger"; button.textContent = words.revokeOthers; button.onclick = async () => { await api("/api/auth/sessions", { method: "POST" }); showSessions(); }; card.append(button); } else { const empty = document.createElement("p"); empty.textContent = words.sessionsEmpty; card.append(empty); }
+  const cancel = document.createElement("button"); cancel.className = "secondary"; cancel.type = "button"; cancel.textContent = words.cancel; cancel.onclick = () => dialog.close(); card.append(cancel); dialog.replaceChildren(card);
   dialog.showModal();
 }
 

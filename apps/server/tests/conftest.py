@@ -30,7 +30,7 @@ from minecraft_manager.server import WorldService
 from minecraft_manager.services import ManagerService
 from minecraft_manager.telemetry_repository import SQLiteTelemetryRepository
 from minecraft_manager.telemetry_service import TelemetryService
-from tests.fakes import FakeBedrock, FakeConsole, FakeDocker, FakeRuntime
+from fakes import FakeBedrock, FakeConsole, FakeDocker, FakeRuntime  # noqa: E402
 
 __all__ = ["FakeBedrock", "FakeConsole", "FakeDocker", "FakeRuntime"]
 

@@ -42,3 +42,9 @@ def test_local_agents_do_not_shadow_global_lifecycle_skills() -> None:
     lifecycle = {"create-issue", "execute-issue", "handle-pr-findings", "implement", "review-pr", "ship-issue", "start-issue"}
     local_entries = {path.parent.name for path in (ROOT / ".agents" / "skills").glob("*/SKILL.md")}
     assert lifecycle.isdisjoint(local_entries)
+
+
+def test_agent_workflow_flag_has_project_and_patch_coverage_statuses() -> None:
+    config = (ROOT / "codecov.yml").read_text()
+    assert config.count("agent-workflows:") == 3
+    assert "- apps/server/tests/test_agent_workflows.py" in config

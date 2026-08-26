@@ -12,15 +12,39 @@ from __future__ import annotations
 
 import logging
 from http.server import BaseHTTPRequestHandler
-from typing import Any
+from typing import Any, Protocol, TYPE_CHECKING
 
 from auth import verify_bearer_token
 from handler import EndpointMixin
-from operations import OperationExecutor
 from ports import ContainerStatusChecker
-from store import OperationStore
+
+if TYPE_CHECKING:
+    from store import OperationRecord
 
 logger = logging.getLogger("host-agent")
+
+
+class OperationStorePort(Protocol):
+    """Minimal port for the operation store used by ``AgentHandler``."""
+
+    def evict_expired(self) -> None: ...
+
+    def get(self, operation_id: str) -> OperationRecord | None: ...
+
+    def create(self, operation_id: str) -> OperationRecord | None: ...
+
+
+class OperationExecutorPort(Protocol):
+    """Minimal port for the operation executor used by ``AgentHandler``."""
+
+    def run(
+        self,
+        record: OperationRecord,
+        store: OperationStorePort,
+        intended_state: dict[str, Any],
+        health_timeout: int,
+        restart_timeout: int,
+    ) -> None: ...
 
 
 class AgentHandler(EndpointMixin, BaseHTTPRequestHandler):
@@ -31,8 +55,8 @@ class AgentHandler(EndpointMixin, BaseHTTPRequestHandler):
 
     # Set by build_handler_class before accepting connections
     token: str = ""
-    store: OperationStore
-    executor: OperationExecutor
+    store: OperationStorePort
+    executor: OperationExecutorPort
     status_checker: ContainerStatusChecker
     bedrock_container_name: str = "minecraft-server"
 
@@ -86,8 +110,8 @@ class AgentHandler(EndpointMixin, BaseHTTPRequestHandler):
 
 def build_handler_class(
     token: str,
-    store: OperationStore,
-    executor: OperationExecutor,
+    store: OperationStorePort,
+    executor: OperationExecutorPort,
     status_checker: ContainerStatusChecker,
     bedrock_container_name: str = "minecraft-server",
 ) -> type:
@@ -97,8 +121,8 @@ def build_handler_class(
         pass
 
     BoundHandler.token = token
-    BoundHandler.store = store  # type: ignore[assignment]
-    BoundHandler.executor = executor  # type: ignore[assignment]
+    BoundHandler.store = store
+    BoundHandler.executor = executor
     BoundHandler.status_checker = status_checker  # type: ignore[assignment]
     BoundHandler.bedrock_container_name = bedrock_container_name
     return BoundHandler

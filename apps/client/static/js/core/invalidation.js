@@ -1,11 +1,16 @@
 export function connectInvalidation({ connectEventStream, loadState, refreshStatus, setStatus, schedule = setTimeout, cancel = clearTimeout }) {
   let timer = null;
+  let pendingServerEvent = false;
   connectEventStream((event) => {
+    if (typeof event?.topic !== "string") return;
     if (event.topic !== "state.changed" && !event.topic.startsWith("server.")) return;
+    if (event.topic.startsWith("server.")) pendingServerEvent = true;
     cancel(timer);
     timer = schedule(async () => {
+      const needsStatus = pendingServerEvent;
+      pendingServerEvent = false;
       await loadState();
-      if (event.topic.startsWith("server.")) setStatus(await refreshStatus());
+      if (needsStatus) setStatus(await refreshStatus());
     }, 300);
   });
 }

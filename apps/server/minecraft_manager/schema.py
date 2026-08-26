@@ -183,7 +183,7 @@ for key, (label, description) in ENGLISH_FIELDS.items():
 def validate_value(definition: Field, value: Any) -> str:
     kind = definition["type"]
     if kind == "boolean":
-        if value not in (True, False, "true", "false"):
+        if not isinstance(value, bool) and not (isinstance(value, str) and value in ("true", "false")):
             raise ValueError("valor booleano inválido")
         return "true" if value in (True, "true") else "false"
     if kind == "number":

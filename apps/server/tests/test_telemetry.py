@@ -160,6 +160,7 @@ def test_block_deltas_update_bounded_type_maps_and_are_idempotent(
     ("X" * 65537, "too large"),
     ('{"schema":2,"sequence":1,"type":"snapshot.finished","player":null,"data":{}}', "schema"),
     ('{"schema":1,"sequence":-1,"type":"snapshot.finished","player":null,"data":{}}', "sequence"),
+    ('{"schema":1,"sequence":true,"type":"snapshot.finished","player":null,"data":{}}', "sequence"),
     ('{"schema":1,"sequence":"a","type":"snapshot.finished","player":null,"data":{}}', "sequence"),
     ('{"schema":1,"sequence":1,"type":"snapshot.finished","player":"notadict","data":{}}', "player"),
     ('{"schema":1,"sequence":1,"type":"snapshot.finished","player":{"name":123},"data":{}}', "player"),

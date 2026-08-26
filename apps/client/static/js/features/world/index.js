@@ -16,9 +16,11 @@ function renderTimePanel() {
   bindTimePanel();
 }
 
+const READ_ONLY_TIME_ACTIONS = new Set(["weather-query", "query"]);
+
 async function runTimeAction(action, payload = {}) {
   const result = await api(`/api/time/${action}`, { method: "POST", body: JSON.stringify(payload) });
-  toast(t("timeUpdated"));
+  if (!READ_ONLY_TIME_ACTIONS.has(action)) toast(t("timeUpdated"));
   return result;
 }
 

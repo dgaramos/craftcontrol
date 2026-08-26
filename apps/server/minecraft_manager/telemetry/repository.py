@@ -174,6 +174,14 @@ class SQLiteTelemetryRepository:
             row = connection.execute(
                 "SELECT stats FROM player_telemetry WHERE identity=?", (identity,)
             ).fetchone()
+            if not row:
+                connection.execute(
+                    "INSERT OR IGNORE INTO player_telemetry(identity,stats,sequence,updated_at) VALUES(?,?,?,?)",
+                    (identity, json.dumps({}), 0, now),
+                )
+                row = connection.execute(
+                    "SELECT stats FROM player_telemetry WHERE identity=?", (identity,)
+                ).fetchone()
             if row:
                 stats = json.loads(row[0])
                 if topic == "block.broken" and name == names[0]:

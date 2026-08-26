@@ -15,7 +15,7 @@ function bindPlayerAccess(profile, account) {
       const output = $("#detail-access-code");
       output.hidden = false;
       output.querySelector("code").textContent = result.token;
-      output.querySelector("button").onclick = async () => { await navigator.clipboard.writeText(result.token); toast(state.locale === "pt" ? "Código copiado" : "Code copied"); };
+      output.querySelector("button").onclick = async () => { try { await navigator.clipboard.writeText(result.token); toast(state.locale === "pt" ? "Código copiado" : "Code copied"); } catch { toast(state.locale === "pt" ? "Não foi possível copiar o código" : "Could not copy code", true); } };
     } catch (error) { toast(error.message, true); }
   };
   const suspend = $("#detail-access-suspend");

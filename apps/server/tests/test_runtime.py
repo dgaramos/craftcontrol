@@ -118,7 +118,7 @@ def test_player_disconnected_event(log_runtime) -> None:
 
 
 def test_death_event_dispatched(log_runtime) -> None:
-    runtime, broker, service = log_runtime
+    runtime, _, service = log_runtime
     runtime._handle_log("[INFO] Nicole was slain by Zombie")
     service.player_death_event.assert_called_once()
     args = service.player_death_event.call_args[0]
@@ -126,7 +126,7 @@ def test_death_event_dispatched(log_runtime) -> None:
 
 
 def test_telemetry_line_dispatched(log_runtime) -> None:
-    runtime, broker, service = log_runtime
+    runtime, _, service = log_runtime
     from minecraft_manager.telemetry import PREFIX
     service.telemetry_event = MagicMock()
     with patch("minecraft_manager.runtime.supervisor.parse_telemetry_line") as mock_parse:

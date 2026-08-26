@@ -119,14 +119,10 @@ def test_stream_replays_saved_events_before_live(broker: EventBroker, store: Mag
 
 def test_stream_registers_and_removes_subscriber(broker: EventBroker) -> None:
     assert len(broker._subscribers) == 0
-    registered = threading.Event()
     closed = threading.Event()
 
     def consume():
         gen = broker.stream(after_id=0)
-        # Signal once we've passed history replay and are waiting for live events
-        registered.set()
-        # Pull one item (will block until broker publishes or timeout)
         try:
             next(gen)
         except StopIteration:
@@ -137,8 +133,12 @@ def test_stream_registers_and_removes_subscriber(broker: EventBroker) -> None:
 
     t = threading.Thread(target=consume, daemon=True)
     t.start()
-    registered.wait(timeout=3)
-    # At this point stream() may still be setting up — check under lock
+    deadline = time.monotonic() + 3.0
+    while time.monotonic() < deadline:
+        with broker._lock:
+            if broker._subscribers:
+                break
+        time.sleep(0.001)
     with broker._lock:
         count = len(broker._subscribers)
     # Push an event to unblock the consumer

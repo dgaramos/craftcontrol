@@ -112,6 +112,27 @@ describe("createPlayerAccess — bindPlayerAccess", () => {
     }
   });
 
+  test("reports clipboard rejection without an unhandled promise", async () => {
+    const savedNavigator = global.navigator;
+    const deps = makeDeps();
+    const invite = { onclick: null };
+    const role = { value: "viewer" };
+    const code = { textContent: "" };
+    const copy = { onclick: null };
+    const output = { hidden: true, querySelector: (selector) => selector === "code" ? code : copy };
+    deps.$ = jest.fn((selector) => ({ "#detail-access-invite": invite, "#detail-access-role": role, "#detail-access-code": output, "#detail-access-suspend": null })[selector]);
+    deps.api.mockResolvedValue({ token: "once-token" });
+    global.navigator = { clipboard: { writeText: jest.fn().mockRejectedValue(new Error("denied")) } };
+    try {
+      createPlayerAccess(deps).bindPlayerAccess({ name: "Player One" }, null);
+      await invite.onclick();
+      await copy.onclick();
+      expect(deps.toast).toHaveBeenCalledWith("Could not copy code", true);
+    } finally {
+      global.navigator = savedNavigator;
+    }
+  });
+
   test("suspends confirmed access and handles cancellation and errors", async () => {
     const savedConfirm = global.confirm;
     const deps = makeDeps();

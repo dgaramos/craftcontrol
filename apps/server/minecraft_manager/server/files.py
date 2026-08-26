@@ -48,6 +48,8 @@ class ServerFiles:
         try:
             with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
                 handle.write("\n".join(output).rstrip() + "\n")
+                handle.flush()
+                os.fsync(handle.fileno())
             os.replace(temporary, self.env_file)
         finally:
             if os.path.exists(temporary):

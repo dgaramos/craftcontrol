@@ -4,7 +4,7 @@ set -euo pipefail
 readonly ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
 
-for gate in frontend backend host-agent contracts contracts-frontend integration; do
+for gate in frontend backend host-agent contracts contracts-frontend agent-workflows integration; do
   "bin/check-$gate"
 done
 

@@ -1,8 +1,13 @@
 let csrfToken = null;
 
+async function safeJson(response) {
+  if (response.status === 204 || response.status === 205) return {};
+  return response.json();
+}
+
 async function refreshCsrfToken() {
   const response = await fetch("/api/auth/me", { headers: { "Accept": "application/json" } });
-  const data = await response.json();
+  const data = await safeJson(response);
   if (!response.ok || typeof data.csrf_token !== "string") {
     const error = new Error(data.error || "Authentication required");
     error.status = response.status;
@@ -22,7 +27,7 @@ export async function api(url, options = {}, retry = true) {
     ...options,
     headers,
   });
-  const data = await response.json();
+  const data = await safeJson(response);
   if (typeof data.csrf_token === "string") csrfToken = data.csrf_token;
   if (!response.ok) {
     if (csrfProtected && retry && response.status === 403 && data.error === "invalid or missing CSRF token") {

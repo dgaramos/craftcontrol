@@ -123,7 +123,9 @@ export function createTrendsPanel({ state, content, t, uiIcon, api, $, analytics
     bindAnalyticsViewSwitch();
 
     const load = async () => {
-      target.replaceChildren(appendText(element("div", "analytics-loading"), "span", t("checking")));
+      const loadingDiv = element("div", "analytics-loading");
+      appendText(loadingDiv, "span", t("checking"));
+      target.replaceChildren(loadingDiv);
       try {
         const result = await api(`/api/analytics/periods?days=${analytics.periodDays}&limit=10`);
         const definition = periodDefinitions[analytics.periodMetric] || periodDefinitions.play_seconds;

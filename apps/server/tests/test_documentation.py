@@ -84,27 +84,6 @@ def test_readme_documents_independent_operations_and_safe_installation(readme: s
     assert "The immediate direction is:" not in readme
 
 
-def test_local_reviewer_profile_is_shared_by_codex_and_claude() -> None:
-    profile = ROOT / ".agent-review/craftcontrol/PROFILE.md"
-    assert profile.is_file()
-    assert "AGENTS.md" in (profile.parent / "references/frontend.md").read_text()
-
-    agent_rules = (ROOT / "AGENTS.md").read_text()
-    assert "Portuguese, English, and Spanish" in agent_rules
-
-    for checklist in ("backend.md", "frontend.md", "contracts.md", "operations.md", "contribution.md"):
-        assert (profile.parent / "references" / checklist).is_file()
-
-    for entry_point in (
-        ROOT / ".claude/agents/review-pr/SKILL.md",
-        ROOT / "AGENTS.md",
-        ROOT / "CLAUDE.md",
-    ):
-        assert ".agent-review/craftcontrol/PROFILE.md" in entry_point.read_text()
-
-    assert not (ROOT / ".agents/skills/review-pr/SKILL.md").exists()
-
-
 def test_documentation_diagrams_use_mermaid_fences() -> None:
     for relative_path, expected_count in DOCUMENTATION_DIAGRAMS.items():
         document = (ROOT / relative_path).read_text()

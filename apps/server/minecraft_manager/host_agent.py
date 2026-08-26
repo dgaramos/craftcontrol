@@ -214,7 +214,7 @@ class HostAgentContainerOperations:
         """Execute a server operation via the host agent.
 
         Only the ``"apply"`` and ``"restart"`` actions are supported; all
-        others raise ``KeyError``.
+        others raise ``RuntimeError``.
 
         Blocks until the agent reports a terminal result.  Raises
         ``RuntimeError`` on any failure so the ``ServerOperationService``

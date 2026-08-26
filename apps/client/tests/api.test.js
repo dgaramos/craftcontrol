@@ -42,6 +42,11 @@ describe("api — GET request", () => {
     global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 204, json: async () => { throw new SyntaxError("Unexpected end of JSON input"); } });
     await expect(api("/api/status")).resolves.toEqual({});
   });
+
+  test("rejects a successful response whose JSON body is malformed", async () => {
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => { throw new SyntaxError("Unexpected token"); } });
+    await expect(api("/api/status")).rejects.toThrow("Unexpected token");
+  });
 });
 
 describe("api — non-CSRF-protected URLs", () => {

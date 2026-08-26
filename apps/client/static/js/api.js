@@ -1,7 +1,8 @@
 let csrfToken = null;
 
 async function safeJson(response) {
-  try { return await response.json(); } catch { return {}; }
+  if (response.status === 204 || response.status === 205) return {};
+  return response.json();
 }
 
 async function refreshCsrfToken() {

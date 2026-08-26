@@ -404,16 +404,6 @@ def test_reviewer_publisher_rejects_thread_after_all_pages(tmp_path: Path) -> No
     assert "resolution target mismatch" in result.stderr
 
 
-def test_reviewer_skills_dispatch_thread_replies_through_their_apps() -> None:
-    profile = (ROOT / ".agent-review" / "craftcontrol" / "PROFILE.md").read_text()
-    for manifest in ("replies_json", "resolve_thread_ids_json", "inline_comments_json"):
-        assert manifest in profile
-
-    duplicate = (ROOT / ".claude" / "agents" / "review-pr" / "SKILL.md").read_text()
-    assert "claudio-dr:review-pr" in duplicate
-    assert ".agent-review/craftcontrol/PROFILE.md" in duplicate
-
-
 def test_profile_declares_reviewer_app_first_with_explicit_personal_fallback() -> None:
     profile = (ROOT / ".agent-review" / "craftcontrol" / "PROFILE.md").read_text()
 

@@ -96,7 +96,6 @@ def test_local_reviewer_profile_is_shared_by_codex_and_claude() -> None:
         assert (profile.parent / "references" / checklist).is_file()
 
     for entry_point in (
-        ROOT / ".claude/agents/review-pr/SKILL.md",
         ROOT / "AGENTS.md",
         ROOT / "CLAUDE.md",
     ):

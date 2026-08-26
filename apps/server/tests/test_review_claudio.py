@@ -24,7 +24,7 @@ import pytest
 from flask import Blueprint, Flask, jsonify
 
 from minecraft_manager.auth.http import require
-from tests.conftest import make_auth_mock, wire_auth
+from conftest import make_auth_mock, wire_auth
 
 ROOT = Path(__file__).resolve().parents[3]
 PROFILE = ROOT / ".agent-review" / "craftcontrol" / "PROFILE.md"

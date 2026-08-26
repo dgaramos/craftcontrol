@@ -5,8 +5,8 @@ import threading
 import time
 from pathlib import Path
 
-from tests.conftest import make_manager_service
-from tests.fakes import FakeBedrock
+from conftest import make_manager_service
+from fakes import FakeBedrock
 
 
 def _reconciliation(tmp_path: Path, bedrock: FakeBedrock | None = None):

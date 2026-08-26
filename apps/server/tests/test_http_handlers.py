@@ -11,7 +11,7 @@ from minecraft_manager.http.core import core_api
 from minecraft_manager.http.players import players_api
 from minecraft_manager.http.server import server_api
 from minecraft_manager.http.telemetry import telemetry_api
-from tests.conftest import make_auth_mock, wire_auth
+from conftest import make_auth_mock, wire_auth
 
 
 # ---------------------------------------------------------------------------

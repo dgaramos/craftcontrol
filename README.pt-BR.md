@@ -182,7 +182,7 @@ Veja [Integração do Telemetry Pack](docs/telemetry-pack.md) para o ciclo de vi
 O CraftControl requer Docker Engine com o plugin Compose e uma implantação
 existente de `itzg/minecraft-bedrock-server`. Ele roda ao lado do projeto
 Bedrock e deve ser implantado pelos comandos protegidos. Nunca execute
-`docker compose up` sem opções a partir de um checkout de desenvolvimento. Releases coordenadas preparam as duas imagens versionadas antes de recriar qualquer serviço e tentam novamente falhas transitórias de build de imagem até três vezes.
+`docker compose up` sem opções a partir de um checkout de desenvolvimento. Releases coordenadas preparam as duas imagens versionadas antes de recriar qualquer serviço e tentam realizar o build das imagens até três vezes.
 
 Veja [Instalação](docs/installation.pt-BR.md) para pré-requisitos, layout esperado,
 configuração, cutover, acesso, verificações pós-instalação e solução de problemas.

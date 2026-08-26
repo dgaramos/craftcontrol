@@ -1,6 +1,6 @@
 # Frontend Tests
 
-Jest test suite for `apps/frontend/static/js/`. Run from the repo root:
+Jest test suite for `apps/client/static/js/`. Run from the repo root:
 
 ```bash
 bin/check-frontend
@@ -9,7 +9,7 @@ bin/check-frontend
 Or directly:
 
 ```bash
-cd apps/frontend && npm test
+cd apps/client && npm test
 ```
 
 ## Two kinds of tests

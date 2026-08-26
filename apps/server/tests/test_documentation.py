@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[3]
 
 DOCUMENTATION_DIAGRAMS = {
     "README.md": 5,
@@ -28,7 +28,7 @@ def readme() -> str:
 
 
 def test_readme_documents_current_monorepo_boundaries(readme: str) -> None:
-    for path in ("apps/frontend/", "apps/backend/", "packages/contracts/", "packs/telemetry/", "versions.env"):
+    for path in ("apps/client/", "apps/server/", "packages/contracts/", "packs/telemetry/", "versions.env"):
         assert path in readme
     for boundary in ("composition.js", "core/", "components/", "features/", "i18n/"):
         assert boundary in readme

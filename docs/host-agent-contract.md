@@ -447,9 +447,9 @@ containers. The agent source and tests live under `services/host-agent/`. The sy
 ## Relationship to existing code
 
 The backend's `ContainerOperations` port
-(`apps/backend/minecraft_manager/ports.py`) defines the interface both adapters
+(`apps/server/minecraft_manager/ports.py`) defines the interface both adapters
 implement. `HostAgentContainerOperations` (implemented in
-`apps/backend/minecraft_manager/host_agent.py`) calls this agent over HTTP and
+`apps/server/minecraft_manager/host_agent.py`) calls this agent over HTTP and
 returns results in the executor result shape defined in
 `docs/operation-lifecycle.md`. `DockerOperations` is the direct Compose adapter
 used when the host agent is not configured.

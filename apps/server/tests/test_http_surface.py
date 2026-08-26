@@ -11,7 +11,7 @@ from minecraft_manager.config import Settings
 from minecraft_manager.routes import api
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[3]
 FRONTEND = ROOT / "apps" / "frontend"
 CONTRACT = ROOT / "packages" / "contracts" / "http-surface.json"
 
@@ -67,7 +67,7 @@ def test_browser_api_calls_remain_inside_the_declared_api_boundary(http_surface_
 # The import-string assertions below (e.g. `?v=9`, `?v=7`) stay in Python
 # because they test the HTTP surface: Flask must serve the correct versioned
 # content to browsers. They are not testing JS module wiring or composition
-# logic — that belongs in Jest (see apps/frontend/tests/players-contracts.test.js).
+# logic — that belongs in Jest (see apps/client/tests/players-contracts.test.js).
 def test_flask_compatibility_serves_frontend_from_the_application_boundary(tmp_path: Path) -> None:
     class FakeManager:
         def initialize(self) -> None:

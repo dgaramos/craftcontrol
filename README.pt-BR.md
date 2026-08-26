@@ -1,6 +1,6 @@
 <div align="center">
   <p><a href="README.md">Read in English</a></p>
-  <img src="apps/frontend/static/craftcontrol-mark.svg" width="112" alt="Logo do CraftControl">
+  <img src="apps/client/static/craftcontrol-mark.svg" width="112" alt="Logo do CraftControl">
   <h1>CraftControl</h1>
   <p><strong>Um centro de controle mobile-first para servidores Minecraft Bedrock.</strong></p>
   <p>Administre mundos, jogadores, regras, acesso, backups e estatísticas estruturadas sem viver no console do servidor.</p>
@@ -116,7 +116,7 @@ O frontend usa módulos ES nativos do navegador, sem bundler ou framework em tem
 
 ```mermaid
 flowchart TD
-    static["apps/frontend/static/"] --> app["app.js — bootstrap mínimo"]
+    static["apps/client/static/"] --> app["app.js — bootstrap mínimo"]
     static --> js["js/"]
     js --> composition["composition.js — montagem de dependências e início da aplicação"]
     js --> core["core/ — estado, DOM, rotas, navegação e invalidação"]
@@ -131,7 +131,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    manager["apps/backend/minecraft_manager/"] --> composition["composition.py — injeção manual de dependências de produção"]
+    manager["apps/server/minecraft_manager/"] --> composition["composition.py — injeção manual de dependências de produção"]
     manager --> http["http/ — mapeamento HTTP por domínio"]
     manager --> players["players/ — casos de uso de jogadores"]
     manager --> auth["auth/ — contas, sessões, papéis, CSRF e auditoria"]
@@ -148,7 +148,7 @@ Veja [Arquitetura](docs/architecture.md) para regras de dependência, consistên
 
 ### Contratos e documentação da API
 
-`packages/contracts/openapi.json` é o contrato de negócio OpenAPI 3.1 canônico. Declarações geradas do frontend ficam em `apps/frontend/static/js/api-contract.d.ts`; o portão de qualidade rejeita declarações desatualizadas.
+`packages/contracts/openapi.json` é o contrato de negócio OpenAPI 3.1 canônico. Declarações geradas do Client ficam em `apps/client/static/js/api-contract.d.ts`; o portão de qualidade rejeita declarações desatualizadas.
 
 Instalações autenticadas expõem:
 

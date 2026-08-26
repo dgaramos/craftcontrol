@@ -8,7 +8,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 SPEC_PATH = Path(__file__).with_name("openapi.json")
-OUTPUT_PATH = ROOT / "apps" / "frontend" / "static" / "js" / "api-contract.d.ts"
+OUTPUT_PATH = ROOT / "apps" / "client" / "static" / "js" / "api-contract.d.ts"
 
 
 def type_expression(schema: dict[str, Any]) -> str:
@@ -80,7 +80,7 @@ def main() -> int:
     if not OUTPUT_PATH.exists() or OUTPUT_PATH.read_text() != generated:
         print(f"stale generated API types: {OUTPUT_PATH}")
         return 1
-    print("frontend API types: current")
+    print("client API types: current")
     return 0
 
 

@@ -46,7 +46,7 @@ class TelemetryPackInstaller:
 
     @classmethod
     def bundled(cls, project: Path) -> "TelemetryPackInstaller":
-        source = Path(__file__).resolve().parents[2] / "packs" / "telemetry" / "behavior_pack"
+        source = Path(__file__).resolve().parents[4] / "packs" / "telemetry" / "behavior_pack"
         return cls(project, source)
 
     def status(self, world: str | None = None) -> TelemetryPackStatus:

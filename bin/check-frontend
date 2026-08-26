@@ -8,11 +8,11 @@ run_node_checks() {
   if command -v node >/dev/null 2>&1 && command -v npm >/dev/null 2>&1; then
     while IFS= read -r source; do
       node --check "$source"
-    done < <(find apps/frontend/static -type f -name '*.js' | sort)
+    done < <(find apps/client/static -type f -name '*.js' | sort)
 
-    node apps/frontend/scripts/check-i18n.mjs
-    node apps/frontend/scripts/check-dom-interactions.mjs
-    (cd apps/frontend && npm ci && npm test -- --testPathIgnorePatterns='.*-contracts\.test\.js$' --coverage)
+    node apps/client/scripts/check-i18n.mjs
+    node apps/client/scripts/check-dom-interactions.mjs
+    (cd apps/client && npm ci && npm test -- --testPathIgnorePatterns='.*-contracts\.test\.js$' --coverage)
     return
   fi
 
@@ -27,12 +27,12 @@ run_node_checks() {
     -w /workspace \
     node:22-alpine \
     sh -ec '
-      find apps/frontend/static -type f -name "*.js" | sort | while IFS= read -r source; do
+      find apps/client/static -type f -name "*.js" | sort | while IFS= read -r source; do
         node --check "$source"
       done
-      node apps/frontend/scripts/check-i18n.mjs
-      node apps/frontend/scripts/check-dom-interactions.mjs
-      cd apps/frontend
+      node apps/client/scripts/check-i18n.mjs
+      node apps/client/scripts/check-dom-interactions.mjs
+      cd apps/client
       npm ci
       npm test -- --testPathIgnorePatterns=".*-contracts\.test\.js$" --coverage
     '

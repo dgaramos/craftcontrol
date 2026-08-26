@@ -15,7 +15,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: python -m pip install -r apps/backend/requirements.txt
+      - run: python -m pip install -r apps/server/requirements.txt
       - run: bin/check-backend
 
   contracts-backend:
@@ -27,7 +27,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: python -m pip install -r apps/backend/requirements.txt
+      - run: python -m pip install -r apps/server/requirements.txt
       - run: bin/check-contracts
 
   contracts-frontend:
@@ -42,7 +42,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: python -m pip install -r apps/backend/requirements.txt
+      - run: python -m pip install -r apps/server/requirements.txt
       - run: bin/check-contracts-frontend
 
   frontend:
@@ -68,5 +68,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - run: python -m pip install -r apps/backend/requirements.txt
+      - run: python -m pip install -r apps/server/requirements.txt
       - run: bin/check-integration

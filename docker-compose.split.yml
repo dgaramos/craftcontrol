@@ -2,7 +2,7 @@ services:
   craftcontrol-backend:
     build:
       context: .
-      dockerfile: apps/backend/Dockerfile
+      dockerfile: apps/server/Dockerfile
       args:
         CRAFTCONTROL_BACKEND_VERSION: "${CRAFTCONTROL_BACKEND_VERSION:-0.1.0}"
     image: "craftcontrol-backend:${CRAFTCONTROL_BACKEND_VERSION:-0.1.0}"
@@ -48,7 +48,7 @@ services:
   craftcontrol-frontend:
     build:
       context: .
-      dockerfile: apps/frontend/Dockerfile
+      dockerfile: apps/client/Dockerfile
       args:
         CRAFTCONTROL_FRONTEND_VERSION: "${CRAFTCONTROL_FRONTEND_VERSION:-0.3.6}"
     image: "craftcontrol-frontend:${CRAFTCONTROL_FRONTEND_VERSION:-0.3.6}"
@@ -68,4 +68,3 @@ services:
       - no-new-privileges:true
     labels:
       io.craftcontrol.release-pair: "${CRAFTCONTROL_RELEASE_PAIR:-frontend-0.3.6_backend-0.1.0}"
-

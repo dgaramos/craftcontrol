@@ -28,11 +28,11 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ../minecraft-bedrock:/minecraft-project
       - ./data:/data
-      - ./apps/backend/app.py:/app/app.py:ro
-      - ./apps/backend/wsgi.py:/app/wsgi.py:ro
-      - ./apps/backend/minecraft_manager:/app/minecraft_manager:ro
-      - ./apps/frontend/static:/app/apps/frontend/static:ro
-      - ./apps/frontend/templates:/app/apps/frontend/templates:ro
+      - ./apps/server/app.py:/app/app.py:ro
+      - ./apps/server/wsgi.py:/app/wsgi.py:ro
+      - ./apps/server/minecraft_manager:/app/minecraft_manager:ro
+      - ./apps/client/static:/app/apps/client/static:ro
+      - ./apps/client/templates:/app/apps/client/templates:ro
       - ./packs:/app/packs:ro
     security_opt:
       - no-new-privileges:true

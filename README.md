@@ -1,6 +1,6 @@
 <div align="center">
   <p><a href="README.pt-BR.md">Leia em Português (Brasil)</a></p>
-  <img src="apps/frontend/static/craftcontrol-mark.svg" width="112" alt="CraftControl logo">
+  <img src="apps/client/static/craftcontrol-mark.svg" width="112" alt="CraftControl logo">
   <h1>CraftControl</h1>
   <p><strong>A mobile-first control center for Minecraft Bedrock servers.</strong></p>
   <p>Manage worlds, players, rules, access, backups, and structured gameplay statistics without living in a server console.</p>
@@ -116,7 +116,7 @@ The frontend uses browser-native ES modules with no bundler or build-time framew
 
 ```mermaid
 flowchart TD
-    static["apps/frontend/static/"] --> app["app.js — minimal bootstrap"]
+    static["apps/client/static/"] --> app["app.js — minimal bootstrap"]
     static --> js["js/"]
     js --> composition["composition.js — dependency assembly and application startup"]
     js --> core["core/ — state, DOM, routing, navigation, and invalidation"]
@@ -131,7 +131,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    manager["apps/backend/minecraft_manager/"] --> composition["composition.py — manual production dependency injection"]
+    manager["apps/server/minecraft_manager/"] --> composition["composition.py — manual production dependency injection"]
     manager --> http["http/ — HTTP mapping grouped by domain"]
     manager --> players["players/ — player application use cases"]
     manager --> auth["auth/ — accounts, sessions, roles, CSRF, and audit"]
@@ -148,7 +148,7 @@ See [Architecture](docs/architecture.md) for dependency rules, event consistency
 
 ### Contracts and API documentation
 
-`packages/contracts/openapi.json` is the canonical OpenAPI 3.1 business contract. Generated frontend declarations live at `apps/frontend/static/js/api-contract.d.ts`; the quality gate rejects stale declarations.
+`packages/contracts/openapi.json` is the canonical OpenAPI 3.1 business contract. Generated client declarations live at `apps/client/static/js/api-contract.d.ts`; the quality gate rejects stale declarations.
 
 Authenticated installations expose:
 

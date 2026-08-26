@@ -6,10 +6,10 @@ readonly PYTHON="${PYTHON:-python3}"
 cd "$ROOT"
 
 "$PYTHON" -m compileall -q \
-  apps/backend/minecraft_manager apps/backend/app.py apps/backend/wsgi.py app.py wsgi.py
+  apps/server/minecraft_manager apps/server/app.py apps/server/wsgi.py app.py wsgi.py
 mkdir -p test-results
-"$PYTHON" -m pytest tests/ \
-  --cov=apps/backend/minecraft_manager \
+"$PYTHON" -m pytest apps/server/tests/ \
+  --cov=apps/server/minecraft_manager \
   --cov-report=xml:coverage.xml \
   --junit-xml=test-results/results.xml \
   -v

@@ -13,9 +13,9 @@ if TYPE_CHECKING:
 def frontend_root(package_root: Path | None = None) -> Path:
     """Resolve frontend assets in both the monorepo and packaged image layouts."""
     package_root = package_root or Path(__file__).resolve().parent
-    if package_root.parent.name == "backend":
-        return package_root.parent.parent / "frontend"
-    return package_root.parent / "apps" / "frontend"
+    if package_root.parent.name == "server":
+        return package_root.parent.parent / "client"
+    return package_root.parent / "apps" / "client"
 
 
 def create_app(settings: Settings | None = None, service: ManagerService | None = None) -> Flask:

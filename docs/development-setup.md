@@ -139,13 +139,13 @@ Run only the gate that covers the layer you changed to get faster feedback durin
 ### Backend tests directly with pytest
 
 ```bash
-PYTHONPATH=apps/backend:. pytest tests/ -q
+PYTHONPATH=apps/server:. pytest apps/server/tests/ -q
 ```
 
 ### Frontend tests directly with npm
 
 ```bash
-cd apps/frontend && npm test
+cd apps/client && npm test
 ```
 
 ---
@@ -213,7 +213,7 @@ flowchart TD
     repo --> telemetry["packs/telemetry/ — embedded Behavior Pack and lifecycle assets"]
     repo --> bin["bin/ — quality, deployment, backup, and recovery commands"]
     repo --> docs["docs/ — architecture, security, telemetry, and operations guides"]
-    repo --> tests["tests/ — backend integration and persistence tests"]
+    repo --> tests["apps/server/tests/ — Server integration and persistence tests"]
 ```
 
 See [Architecture](architecture.md) for a full description of layers, dependency rules, and the incremental refactor target layout.

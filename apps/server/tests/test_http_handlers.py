@@ -19,7 +19,7 @@ from tests.conftest import make_auth_mock, wire_auth
 # ---------------------------------------------------------------------------
 
 def _make_app(manager: MagicMock, *, auth_mode: str = "disabled") -> Flask:
-    app = Flask(__name__, template_folder="../apps/frontend/templates")
+    app = Flask(__name__, template_folder="../apps/client/templates")
     app.extensions["manager_service"] = manager
     auth = make_auth_mock()
     wire_auth(app, auth, mode=auth_mode)
@@ -431,7 +431,7 @@ def test_telemetry_pack_action_file_not_found_returns_400(client) -> None:
 
 def _make_operations_app(manager: MagicMock, *, auth_mode: str = "disabled") -> Flask:
     from minecraft_manager.http.operations import operations_api as ops_bp
-    app = Flask(__name__, template_folder="../apps/frontend/templates")
+    app = Flask(__name__, template_folder="../apps/client/templates")
     app.extensions["manager_service"] = manager
     auth = make_auth_mock()
     wire_auth(app, auth, mode=auth_mode)

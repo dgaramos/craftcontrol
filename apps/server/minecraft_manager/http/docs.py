@@ -10,7 +10,7 @@ docs_api = Blueprint("docs_api", __name__)
 
 def contract_root(package_root: Path | None = None) -> Path:
     package_root = package_root or Path(__file__).resolve().parents[1]
-    if package_root.parent.name == "backend":
+    if package_root.parent.name == "server":
         return package_root.parents[2] / "packages" / "contracts"
     return package_root.parent / "packages" / "contracts"
 

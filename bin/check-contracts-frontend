@@ -7,7 +7,7 @@ cd "$ROOT"
 
 run_node_contract_checks() {
   if command -v node >/dev/null 2>&1 && command -v npm >/dev/null 2>&1; then
-    (cd apps/frontend && npm ci && npm test -- --testPathPattern='.*-contracts\.test\.js$')
+    (cd apps/client && npm ci && npm test -- --testPathPattern='.*-contracts\.test\.js$')
     return
   fi
 
@@ -22,12 +22,12 @@ run_node_contract_checks() {
     -w /workspace \
     node:22-alpine \
     sh -ec '
-      cd apps/frontend
+      cd apps/client
       npm ci
       npm test -- --testPathPattern=".*-contracts\.test\.js$"
     '
 }
 
 run_node_contract_checks
-"$PYTHON" -m pytest tests/test_brand.py -v
+"$PYTHON" -m pytest apps/server/tests/test_brand.py -v
 echo "contracts-frontend gate: ok"

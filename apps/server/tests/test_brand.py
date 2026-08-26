@@ -1,6 +1,6 @@
 """Brand and infrastructure tests for non-JS assets.
 
-JS structural contracts have been migrated to Jest — see apps/frontend/tests/.
+JS structural contracts have been migrated to Jest — see apps/client/tests/.
 This file covers assets that require Python tooling (SVG XML parsing, JSON,
 Markdown, YAML) and that are not part of the JS module graph.
 """
@@ -11,7 +11,7 @@ import xml.etree.ElementTree as element_tree
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[3]
 FRONTEND = ROOT / "apps" / "frontend"
 
 

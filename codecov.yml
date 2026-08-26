@@ -37,7 +37,6 @@ flags:
   backend:
     paths:
       - apps/backend/minecraft_manager/
-      - tests/
   frontend:
     paths:
       - apps/frontend/static/js/
@@ -45,6 +44,53 @@ flags:
     paths:
       - services/host-agent/
 
+component_management:
+  individual_components:
+    - component_id: backend_auth
+      name: "backend: auth"
+      paths:
+        - apps/backend/minecraft_manager/auth/
+    - component_id: backend_core
+      name: "backend: core"
+      paths:
+        - apps/backend/minecraft_manager/core/
+    - component_id: backend_http
+      name: "backend: http"
+      paths:
+        - apps/backend/minecraft_manager/http/
+    - component_id: backend_operations
+      name: "backend: operations"
+      paths:
+        - apps/backend/minecraft_manager/operations/
+    - component_id: backend_players
+      name: "backend: players"
+      paths:
+        - apps/backend/minecraft_manager/players/
+    - component_id: backend_runtime
+      name: "backend: runtime"
+      paths:
+        - apps/backend/minecraft_manager/runtime/
+    - component_id: backend_server
+      name: "backend: server"
+      paths:
+        - apps/backend/minecraft_manager/server/
+    - component_id: backend_telemetry
+      name: "backend: telemetry"
+      paths:
+        - apps/backend/minecraft_manager/telemetry/
+    - component_id: frontend_components
+      name: "frontend: components"
+      paths:
+        - apps/frontend/static/js/components/
+    - component_id: frontend_core
+      name: "frontend: core"
+      paths:
+        - apps/frontend/static/js/core/
+    - component_id: frontend_features
+      name: "frontend: features"
+      paths:
+        - apps/frontend/static/js/features/
+
 comment:
-  layout: "reach,diff,flags"
+  layout: "reach,diff,flags,components"
   behavior: default

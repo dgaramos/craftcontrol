@@ -16,6 +16,8 @@ Environment variables:
                               Default: /opt/craftcontrol/data/bedrock
   HOST_AGENT_BEDROCK_CONTAINER  Docker container name for the Bedrock server.
                                 Default: minecraft-server
+  HOST_AGENT_DB            Path to the SQLite database for operation persistence.
+                           Default: /var/lib/craftcontrol/host-agent.db
 """
 from __future__ import annotations
 
@@ -85,6 +87,7 @@ COMPOSE_PROJECT_DEFAULT = "minecraft-bedrock"
 COMPOSE_FILE_DEFAULT = "/opt/craftcontrol/docker-compose.yml"
 BEDROCK_DATA_DEFAULT = "/opt/craftcontrol/data/bedrock"
 BEDROCK_CONTAINER_DEFAULT = "minecraft-server"
+DB_DEFAULT = "/var/lib/craftcontrol/host-agent.db"
 
 
 def _load_token(path: str) -> str:
@@ -106,6 +109,7 @@ def _load_config() -> dict[str, str]:
         "compose_file": os.environ.get("HOST_AGENT_COMPOSE_FILE", COMPOSE_FILE_DEFAULT),
         "bedrock_data": os.environ.get("HOST_AGENT_BEDROCK_DATA", BEDROCK_DATA_DEFAULT),
         "bedrock_container": os.environ.get("HOST_AGENT_BEDROCK_CONTAINER", BEDROCK_CONTAINER_DEFAULT),
+        "db": os.environ.get("HOST_AGENT_DB", DB_DEFAULT),
     }
 
 
@@ -122,7 +126,7 @@ def run(*, bind: str, token: str, config: dict[str, str], subprocess_run: Any = 
     host = host or "0.0.0.0"
     port = int(port_str)
 
-    store = OperationStore()
+    store = OperationStore(db_path=config.get("db"))
     runner = DockerComposeRunner(config, subprocess_run=subprocess_run)
     filesystem = BedrockFileSystem(config["bedrock_data"])
     probe = RakNetHealthProbe()

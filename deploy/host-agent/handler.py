@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 import logging
-import threading
 from typing import Any
 
 from operations import (
@@ -73,7 +72,12 @@ class EndpointMixin:
         return body
 
     def _handle_health(self) -> None:
-        self._send_json(200, {"status": "ok", "version": VERSION})
+        body: dict[str, Any] = {"status": "ok", "version": VERSION}
+        op_queue = getattr(self, "operation_queue", None)  # type: ignore[attr-defined]
+        if op_queue is not None:
+            body["queue_depth"] = op_queue.queue_depth
+            body["worker_count"] = op_queue.worker_count
+        self._send_json(200, body)
 
     def _handle_bedrock_status(self) -> None:
         running = self.status_checker.is_running(self.bedrock_container_name)  # type: ignore[attr-defined]
@@ -160,12 +164,29 @@ class EndpointMixin:
 
         logger.info("Accepted operation %s", operation_id)
 
-        thread = threading.Thread(
-            target=self.executor.run,  # type: ignore[attr-defined]
-            args=(record, self.store, intended_state, health_timeout, restart_timeout),  # type: ignore[attr-defined]
-            daemon=True,
-            name=f"op-{operation_id[:8]}",
-        )
-        thread.start()
+        op_queue = getattr(self, "operation_queue", None)  # type: ignore[attr-defined]
+        if op_queue is not None:
+            accepted = op_queue.enqueue(
+                record,
+                self.store,  # type: ignore[attr-defined]
+                intended_state,
+                health_timeout,
+                restart_timeout,
+            )
+            if not accepted:
+                self._send_json(503, {
+                    "error": "queue_full",
+                    "message": "Operation queue is at capacity; try again later",
+                })
+                return
+        else:
+            import threading
+            thread = threading.Thread(
+                target=self.executor.run,  # type: ignore[attr-defined]
+                args=(record, self.store, intended_state, health_timeout, restart_timeout),  # type: ignore[attr-defined]
+                daemon=True,
+                name=f"op-{operation_id[:8]}",
+            )
+            thread.start()
 
         self._send_json(202, {"operation_id": operation_id, "status": "accepted"})

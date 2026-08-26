@@ -18,6 +18,10 @@ Environment variables:
                                 Default: minecraft-server
   HOST_AGENT_DB            Path to the SQLite database for operation persistence.
                            Default: /var/lib/craftcontrol/host-agent.db
+  HOST_AGENT_WORKERS       Number of worker threads in the operation pool.
+                           Default: 1 (sequential execution, no concurrent restarts).
+  HOST_AGENT_QUEUE_SIZE    Maximum pending operations before rejecting with 503.
+                           Default: 8.
 """
 from __future__ import annotations
 
@@ -59,6 +63,7 @@ from adapters.raknet import (  # noqa: F401
     _wait_for_health,
 )
 from router import AgentHandler, build_handler_class  # noqa: F401
+from queue_worker import OperationQueue  # noqa: F401
 from handler import (  # noqa: F401
     MAX_BODY_BYTES,
     VERSION,
@@ -110,6 +115,8 @@ def _load_config() -> dict[str, str]:
         "bedrock_data": os.environ.get("HOST_AGENT_BEDROCK_DATA", BEDROCK_DATA_DEFAULT),
         "bedrock_container": os.environ.get("HOST_AGENT_BEDROCK_CONTAINER", BEDROCK_CONTAINER_DEFAULT),
         "db": os.environ.get("HOST_AGENT_DB", DB_DEFAULT),
+        "workers": os.environ.get("HOST_AGENT_WORKERS", "1"),
+        "queue_size": os.environ.get("HOST_AGENT_QUEUE_SIZE", "8"),
     }
 
 
@@ -133,7 +140,18 @@ def run(*, bind: str, token: str, config: dict[str, str], subprocess_run: Any = 
     executor = OperationExecutor(runner, filesystem, probe)
     status_checker = DockerContainerStatus(subprocess_run=subprocess_run)
     bedrock_container = config.get("bedrock_container", "minecraft-server")
-    handler_class = build_handler_class(token, store, executor, status_checker, bedrock_container)
+
+    from queue_worker import OperationQueue
+    op_queue = OperationQueue(
+        executor,
+        workers=int(config.get("workers", "1")),
+        queue_size=int(config.get("queue_size", "8")),
+    )
+    op_queue.start()
+
+    handler_class = build_handler_class(
+        token, store, executor, status_checker, bedrock_container, op_queue
+    )
 
     server = HTTPServer((host, port), handler_class)
     logger.info("Host agent v%s listening on %s:%d", VERSION, host, port)

@@ -30,6 +30,7 @@ class AuthService:
     SCRYPT_R = 8
     SCRYPT_P = 1
     SESSION_TOUCH_INTERVAL_SECONDS = 60
+    SESSION_LIST_LIMIT = 50
 
     def __init__(self, database: Path, idle_seconds: int = 43200, absolute_seconds: int = 604800) -> None:
         self.database = database
@@ -224,8 +225,8 @@ class AuthService:
                 raise ValueError("session not found")
             rows = connection.execute(
                 "SELECT token_hash,created_at,last_seen_at FROM panel_sessions WHERE identity=? AND revoked_at IS NULL "
-                "AND idle_expires_at>=? AND absolute_expires_at>=? ORDER BY last_seen_at DESC",
-                (identity[0], now, now),
+                "AND idle_expires_at>=? AND absolute_expires_at>=? ORDER BY last_seen_at DESC LIMIT ?",
+                (identity[0], now, now, self.SESSION_LIST_LIMIT),
             ).fetchall()
         return [{"id": hashlib.sha256(row[0].encode()).hexdigest()[:24], "created_at": row[1], "last_seen_at": row[2], "current": hmac.compare_digest(row[0], current_hash)} for row in rows]
 
@@ -233,6 +234,7 @@ class AuthService:
         current_hash = self._token_hash(session_token)
         now = time.time()
         with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
             identity = self._active_session_identity(connection, current_hash, now)
             if not identity:
                 raise ValueError("session not found")
@@ -244,6 +246,7 @@ class AuthService:
 
     def revoke_other_sessions(self, session_token: str) -> None:
         with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
             identity = self._active_session_identity(connection, self._token_hash(session_token), time.time())
             if not identity:
                 raise ValueError("session not found")

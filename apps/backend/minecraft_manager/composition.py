@@ -39,6 +39,12 @@ def compose_manager(
     repository = StateRepository(settings.database)
     files = ServerFiles(settings.env_file, settings.properties_file, settings.permissions_file)
     if bedrock is None:
+        # BedrockClient uses the Docker SDK directly (attach socket, exec, logs)
+        # for console operations and log streaming.  It requires a Docker socket
+        # mount in all topologies, including split-mode with HOST_AGENT_URL set.
+        # The host-agent contract covers ContainerOperations only (PREPARATION,
+        # RESTART, HEALTH_WAIT); console and log-stream operations are not
+        # delegated to the agent — see docs/host-agent-contract.md.
         bedrock = BedrockClient(settings.container, list(GAMERULES), settings.console_wait_seconds)
     if docker is None:
         if settings.host_agent_url:

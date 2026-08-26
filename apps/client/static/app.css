@@ -402,6 +402,7 @@ dialog.drawer { position: fixed; inset: auto 0 0; width: min(100%, 680px); max-h
 }
 
 .telemetry-pack-card { display: grid; gap: 1rem; margin-bottom: 1rem; padding: 1.25rem; }
+.telemetry-pack-card, .telemetry-pack-state, .operation-progress-card, .settings-accordion { min-width: 0; }
 .telemetry-pack-card h3 { margin: .2rem 0; }
 .telemetry-pack-card p { margin: 0; color: var(--muted); }
 .telemetry-pack-state { display: grid; gap: 1rem; }
@@ -461,6 +462,17 @@ dialog.drawer { position: fixed; inset: auto 0 0; width: min(100%, 680px); max-h
 .op-changes { font-size: .82rem; }
 .op-changes summary { cursor: pointer; color: var(--muted); padding: .2rem 0; }
 .op-changes ul { margin: .4rem 0 0; padding-left: 1rem; display: grid; gap: .25rem; }
+
+@media (max-width: 520px) {
+  /* Server diagnostics can contain versions, errors and timestamps. Keep every
+     block readable instead of letting a two-column layout squeeze the page. */
+  .telemetry-pack-card, .operation-progress-card { padding: 1rem; }
+  .release-version-grid, .telemetry-pack-state dl, .op-evidence { grid-template-columns: 1fr; }
+  .capability-panel > div, .op-headline { align-items: flex-start; flex-direction: column; gap: .35rem; }
+  .telemetry-pack-actions { display: grid; grid-template-columns: 1fr; }
+  .telemetry-pack-actions button { width: 100%; }
+  .op-stage { width: 100%; }
+}
 
 @media (min-width: 760px) {
   .telemetry-pack-card { grid-template-columns: minmax(14rem, .8fr) minmax(0, 1.2fr); align-items: start; }

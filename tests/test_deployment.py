@@ -139,19 +139,28 @@ def test_split_images_isolate_privileged_backend_from_frontend() -> None:
     frontend = split.split("  craftcontrol-frontend:", 1)[1]
     backend = split.split("  craftcontrol-backend:", 1)[1].split("  craftcontrol-frontend:", 1)[0]
     assert "apps/backend/Dockerfile" in backend
-    # The split topology routes Docker operations through the host agent;
-    # the Docker socket is not mounted in this topology.
-    assert "/var/run/docker.sock" not in backend
+    # The Docker socket is mounted read-only in the backend service.  BedrockClient
+    # uses it for console operations (send, query_state, set_operator,
+    # request_telemetry_snapshot) and EventRuntime uses it for log and Docker-event
+    # streaming.  These are not covered by the host-agent contract.
+    assert "/var/run/docker.sock" in backend
     assert "/minecraft-project" in backend
     assert "./data:/data" in backend
     assert "apps/frontend/Dockerfile" in frontend
+    # The frontend never needs the Docker socket.
     assert "/var/run/docker.sock" not in frontend
     assert "/minecraft-project" not in frontend
     assert "./data:/data" not in frontend
     assert "read_only: true" in frontend
 
 
-def test_split_backend_reaches_host_agent_and_omits_docker_socket() -> None:
+def test_split_backend_reaches_host_agent_and_mounts_docker_socket() -> None:
+    """Split-mode backend must configure the host agent AND mount the Docker socket.
+
+    The host agent handles container lifecycle (ContainerOperations boundary).
+    The Docker socket remains required for BedrockClient console operations and
+    EventRuntime log/event streaming, which are not delegated to the host agent.
+    """
     split = (ROOT / "docker-compose.split.yml").read_text()
     backend = split.split("  craftcontrol-backend:", 1)[1].split("  craftcontrol-frontend:", 1)[0]
     # Exact URL — must not be configurable via env substitution in this file.
@@ -164,7 +173,8 @@ def test_split_backend_reaches_host_agent_and_omits_docker_socket() -> None:
     assert "host-gateway:host-gateway" in backend
     # Volume must bind-mount the token at the path the adapter reads.
     assert "/etc/craftcontrol/host-agent-token:/run/host-agent-token:ro" in backend
-    assert "/var/run/docker.sock" not in backend
+    # Docker socket must be mounted read-only for BedrockClient and EventRuntime.
+    assert "/var/run/docker.sock:/var/run/docker.sock:ro" in backend
 
 
 def test_host_agent_systemd_unit_is_present_and_well_formed() -> None:

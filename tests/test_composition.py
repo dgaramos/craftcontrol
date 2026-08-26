@@ -8,6 +8,7 @@ import pytest
 
 from minecraft_manager.config import Settings
 from minecraft_manager.composition import _docker_factory, compose_manager
+from minecraft_manager.host_agent import HostAgentContainerOperations
 from minecraft_manager.services import ManagerService
 
 
@@ -102,3 +103,41 @@ def test_compose_manager_builds_runtime_when_none(tmp_path: Path) -> None:
         manager = compose_manager(settings, bedrock=MagicMock(), docker=MagicMock())
     mock_cls.assert_called_once()
     assert manager.runtime is fake_runtime
+
+
+def _split_settings(root: Path) -> Settings:
+    """Settings mimicking a split-mode deployment with HOST_AGENT_URL configured."""
+    return Settings(
+        container="bedrock",
+        project=root,
+        database=root / "manager.db",
+        compose_project="minecraft-bedrock",
+        auth_cookie_secure=False,
+        host_agent_url="http://host-gateway:7890",
+        host_agent_token_file=str(root / "token"),
+    )
+
+
+def test_compose_manager_split_mode_builds_host_agent_container_ops(tmp_path: Path) -> None:
+    """When HOST_AGENT_URL is configured, ContainerOperations must use HostAgentContainerOperations."""
+    token_file = tmp_path / "token"
+    token_file.write_text("test-token")
+    settings = _split_settings(tmp_path)
+    fake_runtime = MagicMock()
+    manager = compose_manager(settings, bedrock=MagicMock(), runtime=fake_runtime)
+    assert isinstance(manager.docker, HostAgentContainerOperations)
+
+
+def test_compose_manager_split_mode_still_builds_bedrock_client(tmp_path: Path) -> None:
+    """In split-mode, BedrockClient is still constructed — it requires the Docker socket."""
+    token_file = tmp_path / "token"
+    token_file.write_text("test-token")
+    settings = _split_settings(tmp_path)
+    fake_bedrock = MagicMock()
+    fake_runtime = MagicMock()
+    with patch("minecraft_manager.composition.BedrockClient", return_value=fake_bedrock) as mock_cls:
+        manager = compose_manager(settings, docker=MagicMock(), runtime=fake_runtime)
+    mock_cls.assert_called_once_with(
+        settings.container, list(mock_cls.call_args[0][1]), settings.console_wait_seconds
+    )
+    assert manager.bedrock is fake_bedrock

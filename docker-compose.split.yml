@@ -21,9 +21,14 @@ services:
       AUTH_COOKIE_SECURE: "${AUTH_COOKIE_SECURE:-true}"
       TZ: "${TZ:-America/Sao_Paulo}"
       CRAFTCONTROL_VERSION: "${CRAFTCONTROL_BACKEND_VERSION:-0.1.0}"
-      # Host agent: the split topology routes privileged host operations through
-      # the craftcontrol-host-agent systemd service (docs/host-agent.md).
-      # The Docker socket is not mounted in this topology.
+      # Host agent: the split topology routes privileged container lifecycle
+      # operations (PREPARATION, RESTART, HEALTH_WAIT) through the
+      # craftcontrol-host-agent systemd service (docs/host-agent-contract.md).
+      # The Docker socket is still required for Bedrock console operations
+      # (BedrockClient: send, query_state, set_operator, request_telemetry_snapshot)
+      # and for the log and Docker-event streams used by EventRuntime.
+      # These operations are not part of the host-agent contract and must
+      # reach the Docker daemon directly from inside the backend container.
       HOST_AGENT_URL: http://host-gateway:7890
       HOST_AGENT_TOKEN_FILE: /run/host-agent-token
     extra_hosts:
@@ -31,6 +36,7 @@ services:
     expose:
       - "8082"
     volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
       - /etc/craftcontrol/host-agent-token:/run/host-agent-token:ro
       - ../minecraft-bedrock:/minecraft-project
       - ./data:/data

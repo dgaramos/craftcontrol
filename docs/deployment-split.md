@@ -1,9 +1,10 @@
 # Frontend/backend deployment split
 
-CraftControl runs as two independently deployable images
-inside the same repository and Compose project. The target preserves one public
-origin: the frontend serves the browser application and proxies `/api/*`,
-including `/api/events`, to the backend over the private Compose network.
+CraftControl runs as the independently deployable **CraftControl Client** and
+**CraftControl Server** images inside the same repository and Compose project.
+The target preserves one public origin: the Client serves the browser
+application and proxies `/api/*`, including `/api/events`, to the Server over
+the private Compose network.
 
 ## Current ownership inventory
 
@@ -66,7 +67,7 @@ backup first.
    invariants, automatic failure recovery, and explicit compatibility rollback
    are enforced by the cutover workflow.
 
-## Host agent execution boundary
+## CraftControl Host Agent execution boundary
 
 The split topology introduces an optional privileged-execution boundary between
 the backend container and the Docker daemon. When `HOST_AGENT_URL` is set in the
@@ -141,8 +142,9 @@ and caching, retains a long read timeout, and passes reconnect headers. Docker's
 embedded DNS is resolved dynamically so recreating only the backend does not
 leave the frontend pinned to an obsolete container address.
 
-`apps/backend/Dockerfile` contains the Flask application, OpenAPI contracts,
-Telemetry Pack, and operations CLI, but no frontend files. In
+`apps/backend/Dockerfile` contains the CraftControl Server Flask application,
+OpenAPI contracts, CraftControl Telemetry Pack, and operations CLI, but no
+CraftControl Client files. In
 `docker-compose.split.yml`, only this service receives SQLite, Bedrock, backup,
 and Docker access; it has no host-published port. The production frontend uses port
 `8082`; the backend has no host-published port.

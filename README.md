@@ -35,7 +35,7 @@
 - Player-backed owner, operator, and viewer accounts with opaque sessions and session-bound CSRF tokens.
 - A responsive interface in Portuguese, English, and Spanish with original CraftControl pixel-art icons.
 
-The manager remains useful without the Telemetry Pack, Prometheus, Grafana, Loki, or any external observability service.
+CraftControl Server remains useful without the optional CraftControl Telemetry Pack, Prometheus, Grafana, Loki, or any external observability service.
 
 ## Interface
 
@@ -48,7 +48,7 @@ The six primary areas are task-oriented:
 | Players | Permanent profiles, sessions, access, permissions, and individual telemetry |
 | Data | Activity, deaths, rankings, blocks, combat, exploration, and periods |
 | Rules | Gameplay, interface, mobs, drops, commands, fire, TNT, and regeneration |
-| Server | Telemetry Pack, network, performance, backups, and container lifecycle |
+| Server | CraftControl Telemetry Pack, network, performance, backups, and container lifecycle |
 
 Navigation is encoded in the URL, so refreshing a browser preserves the active area. Persistent setting changes enter a review drawer; lightning-marked gamerules apply immediately.
 
@@ -61,9 +61,9 @@ flowchart TD
     client["CraftControl Client<br/>browser"]
 
     subgraph docker["Docker Engine / Compose"]
-        frontend["CraftControl Frontend<br/>Nginx · static UI · API/SSE proxy"]
+        frontend["CraftControl Client<br/>Nginx · static UI · API/SSE proxy"]
         server["CraftControl Server<br/>Flask modular monolith<br/>API · event broker · SSE"]
-        bedrock["Minecraft Bedrock Server<br/>optional Telemetry Pack"]
+        bedrock["Minecraft Bedrock Server<br/>optional CraftControl Telemetry Pack"]
         daemon["Docker Engine<br/>container events"]
         frontend --> server
     end
@@ -78,11 +78,11 @@ flowchart TD
     daemon -. "container events" .-> server
 ```
 
-The frontend owns the public origin. Nginx serves static assets and proxies `/api/*`, including unbuffered Server-Sent Events, to the private backend. The frontend has no persistent or privileged mounts. The backend owns durable state (SQLite), Bedrock files, coordinated backups, console operations, log streaming, and Docker events.
+CraftControl Client owns the public origin. Nginx serves static assets and proxies `/api/*`, including unbuffered Server-Sent Events, to the private CraftControl Server. The Client has no persistent or privileged mounts. The Server owns durable state (SQLite), Bedrock files, coordinated backups, console operations, log streaming, and Docker events.
 
-CraftControl has three runtime boundaries: the **frontend** (Nginx container serving static assets and proxying the API), the **backend** (Flask modular monolith inside Docker managing state, auth, and Bedrock operations), and the **host agent** (`craftcontrol-host-agent`, a systemd service running on the Docker host outside all containers).
+CraftControl has three runtime boundaries: the **CraftControl Client** (Nginx container serving static assets and proxying the API), the **CraftControl Server** (Flask modular monolith inside Docker managing state, auth, and Bedrock operations), and the **CraftControl Host Agent** (`craftcontrol-host-agent`, a systemd service running on the Docker host outside all containers).
 
-When the host agent is configured (`HOST_AGENT_URL` is set), server lifecycle operations — `PREPARATION` (writing configuration), `RESTART` (restarting the Compose service), and `HEALTH_WAIT` (polling the Bedrock UDP probe) — are delegated to the host agent over an authenticated HTTP channel. The agent handles Docker socket access for those three stages so the backend does not need to execute them directly; the Docker socket remains mounted in the backend for Bedrock console attachment, log streaming, and Docker events, which are not part of the host-agent contract. Without the host agent, the backend performs all lifecycle operations directly.
+When the CraftControl Host Agent is configured (`HOST_AGENT_URL` is set), server lifecycle operations — `PREPARATION` (writing configuration), `RESTART` (restarting the Compose service), and `HEALTH_WAIT` (polling the Bedrock UDP probe) — are delegated to it over an authenticated HTTP channel. The agent handles Docker socket access for those three stages so the CraftControl Server does not need to execute them directly; the Docker socket remains mounted in the Server for Bedrock console attachment, log streaming, and Docker events, which are not part of the Host Agent contract. Without the Host Agent, the Server performs all lifecycle operations directly.
 
 The host agent is intentionally **not** a Docker container. Containerizing it would require either mounting the Docker socket into the container (defeating least-privilege isolation) or using privileged host mounts with elevated network namespaces. Running it as a systemd service on the host gives Docker socket access through OS-level group membership without exposing the socket to the container network or the backend image.
 
@@ -142,7 +142,7 @@ flowchart TD
     manager --> ports["ports.py — structural external-boundary contracts"]
 ```
 
-Routes translate HTTP requests and responses. Use cases coordinate behavior. Repositories own persistence. Adapters isolate Docker, Bedrock console, files, and Telemetry Pack installation. Production dependencies are assembled manually; there is no service locator or dependency-injection framework.
+Routes translate HTTP requests and responses. Use cases coordinate behavior. Repositories own persistence. Adapters isolate Docker, Bedrock console, files, and CraftControl Telemetry Pack installation. Production dependencies are assembled manually; there is no service locator or dependency-injection framework.
 
 See [Architecture](docs/architecture.md) for dependency rules, event consistency, deliberate non-goals, and the incremental target layout.
 
@@ -187,7 +187,7 @@ docker compose -f docker-compose.split.yml exec craftcontrol-backend craftcontro
 docker compose -f docker-compose.split.yml exec craftcontrol-backend craftcontrol telemetry install
 ```
 
-See [Telemetry Pack integration](docs/telemetry-pack.md) for the lifecycle and recovery runbook.
+See [CraftControl Telemetry Pack integration](docs/telemetry-pack.md) for the lifecycle and recovery runbook.
 
 ## Installation
 

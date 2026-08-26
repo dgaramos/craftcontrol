@@ -25,7 +25,7 @@ docker --version
 docker compose version
 ```
 
-CraftControl is useful without the optional Telemetry Pack, Prometheus,
+CraftControl Server is useful without the optional CraftControl Telemetry Pack, Prometheus,
 Grafana, Loki, or another observability service.
 
 ## Directory layout
@@ -40,8 +40,8 @@ flowchart TD
     docker --> craftcontrol["craftcontrol/"]
 ```
 
-The backend accesses the Bedrock project, world data, the manager SQLite
-database, and coordinated backups. The frontend has no privileged or
+The CraftControl Server accesses the Bedrock project, world data, the manager SQLite
+database, and coordinated backups. The CraftControl Client has no privileged or
 persistent mounts.
 
 ## Configure CraftControl
@@ -66,13 +66,13 @@ Review every value in `.env` before deployment. At minimum, verify:
 
 Never commit, replace, or copy a production `.env` into another installation.
 
-## Optional: install the host agent
+## Optional: install the CraftControl Host Agent
 
-The host agent is a systemd service that runs on the Docker host outside all
+The CraftControl Host Agent is a systemd service that runs on the Docker host outside all
 containers. It handles the privileged container lifecycle operations
-(PREPARATION, RESTART, HEALTH_WAIT) so the backend container does not need
+(PREPARATION, RESTART, HEALTH_WAIT) so the Server container does not need
 unrestricted Docker socket access for those steps. Installing the agent is
-optional; the backend falls back to direct Docker Compose access when
+optional; the Server falls back to direct Docker Compose access when
 `HOST_AGENT_URL` is not set.
 
 ### 1. Create the OS user

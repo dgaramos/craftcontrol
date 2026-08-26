@@ -1,6 +1,6 @@
 # Host Agent Installation Guide
 
-This guide describes how to install and configure the CraftControl host agent
+This guide describes how to install and configure the **CraftControl Host Agent**
 on a Docker host running the split deployment topology. Read
 `docs/host-agent-contract.md` for the full inter-process design contract and
 `docs/deployment-split.md` for the split topology architecture.
@@ -9,15 +9,15 @@ on a Docker host running the split deployment topology. Read
 
 ## Overview
 
-The host agent runs as a systemd service **outside all containers**. It
-accepts authenticated HTTP requests from the CraftControl backend and executes
+The CraftControl Host Agent runs as a systemd service **outside all containers**. It
+accepts authenticated HTTP requests from the CraftControl Server and executes
 exactly the permitted host-level operations: writing Bedrock configuration
 files, issuing a `docker compose restart`, and polling the Bedrock UDP health
 probe.
 
-When the host agent is active, server lifecycle operations (PREPARATION,
+When the Host Agent is active, server lifecycle operations (PREPARATION,
 RESTART, HEALTH_WAIT) are delegated to the agent rather than executed directly
-from within the backend container. The backend still mounts the Docker socket
+from within the Server container. The Server still mounts the Docker socket
 for Bedrock console attachment, log streaming, and Docker events — operations
 that are not part of the host-agent contract.
 
@@ -34,12 +34,12 @@ systemd unit file is under `deploy/host-agent/systemd/`.
 ```mermaid
 flowchart LR
     subgraph host["Docker host"]
-        agent["craftcontrol-host-agent\n(systemd, port 7890)"]
+        agent["CraftControl Host Agent\n(systemd, port 7890)"]
         docker["Docker daemon\n(/var/run/docker.sock)"]
         bedrock["Bedrock server\n(UDP 19132)"]
     end
     subgraph compose["Docker Compose network"]
-        backend["craftcontrol-backend\n(container)"]
+        backend["CraftControl Server\n(container)"]
     end
     backend -- "HTTP :7890\nBearer token" --> agent
     agent -- "docker compose restart" --> docker
@@ -247,7 +247,7 @@ that interval.
 3. Restart the host agent: `sudo systemctl restart craftcontrol-host-agent`.
    The agent now accepts only the new token. All backend requests return 401
    until step 4 completes.
-4. Restart the CraftControl backend: `bin/deploy-craftcontrol`. The backend
+4. Restart the CraftControl Server: `bin/deploy-craftcontrol`. The Server
    reads the new token from the volume and resumes authenticated requests.
 
 ---

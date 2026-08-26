@@ -136,6 +136,8 @@ def test_compose_mounts_explicit_application_boundaries() -> None:
 
 def test_split_images_isolate_privileged_backend_from_frontend() -> None:
     split = (ROOT / "docker-compose.split.yml").read_text()
+    frontend_dockerfile = (ROOT / "apps" / "frontend" / "Dockerfile").read_text()
+    backend_dockerfile = (ROOT / "apps" / "backend" / "Dockerfile").read_text()
     frontend = split.split("  craftcontrol-frontend:", 1)[1]
     backend = split.split("  craftcontrol-backend:", 1)[1].split("  craftcontrol-frontend:", 1)[0]
     assert "apps/backend/Dockerfile" in backend
@@ -152,6 +154,8 @@ def test_split_images_isolate_privileged_backend_from_frontend() -> None:
     assert "/minecraft-project" not in frontend
     assert "./data:/data" not in frontend
     assert "read_only: true" in frontend
+    assert 'org.opencontainers.image.title="CraftControl Client"' in frontend_dockerfile
+    assert 'org.opencontainers.image.title="CraftControl Server"' in backend_dockerfile
 
 
 def test_split_backend_reaches_host_agent_and_mounts_docker_socket() -> None:

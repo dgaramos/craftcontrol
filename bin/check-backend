@@ -10,7 +10,6 @@ cd "$ROOT"
 mkdir -p test-results
 "$PYTHON" -m pytest tests/ \
   --cov=apps/backend/minecraft_manager \
-  --cov=tests \
   --cov-report=xml:coverage.xml \
   --junit-xml=test-results/results.xml \
   -v

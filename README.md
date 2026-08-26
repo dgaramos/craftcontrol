@@ -64,16 +64,18 @@ flowchart TD
         frontend["CraftControl Frontend<br/>Nginx · static UI · API/SSE proxy"]
         server["CraftControl Server<br/>Flask modular monolith<br/>API · event broker · SSE"]
         bedrock["Minecraft Bedrock Server<br/>optional Telemetry Pack"]
+        daemon["Docker Engine<br/>container events"]
         frontend --> server
     end
 
     agent["CraftControl Host Agent<br/>systemd · outside Docker"]
 
     client --> frontend
-    server -->|"configuration and restart workflow"| agent
+    server -->|"when HOST_AGENT_URL is set:<br/>configuration and restart workflow"| agent
     agent -->|"Compose, filesystem, health probe"| bedrock
-    server -->|"allowlisted Bedrock console"| bedrock
-    bedrock -. "logs, Docker events, telemetry" .-> server
+    server -->|"allowlisted Bedrock console;<br/>lifecycle fallback"| bedrock
+    bedrock -. "logs and optional telemetry" .-> server
+    daemon -. "container events" .-> server
 ```
 
 The frontend owns the public origin. Nginx serves static assets and proxies `/api/*`, including unbuffered Server-Sent Events, to the private backend. The frontend has no persistent or privileged mounts. The backend owns durable state (SQLite), Bedrock files, coordinated backups, console operations, log streaming, and Docker events.

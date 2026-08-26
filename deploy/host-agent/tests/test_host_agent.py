@@ -338,7 +338,7 @@ class TestExecuteIdempotency:
         op_id = _op_id()
         rec = store.create(op_id)
         assert rec is not None
-        store.update(op_id, status="done", outcome="ok", completed_at=time.monotonic())
+        store.update(op_id, status="done", outcome="ok", completed_at=time.time())
 
         status, body = _call_handler("POST", "/v1/execute",
                                      body={"operation_id": op_id, "intended_state": {}},
@@ -381,7 +381,7 @@ class TestStatus:
                      detail="ok",
                      error_code=None,
                      exception_type=None,
-                     completed_at=time.monotonic())
+                     completed_at=time.time())
 
         status, body = _call_handler("GET", f"/v1/status/{op_id}", store=store)
         assert status == 200
@@ -403,7 +403,7 @@ class TestStatus:
                      detail="timed out",
                      error_code="health_probe_timeout",
                      exception_type=None,
-                     completed_at=time.monotonic())
+                     completed_at=time.time())
 
         status, body = _call_handler("GET", f"/v1/status/{op_id}", store=store)
         assert status == 200

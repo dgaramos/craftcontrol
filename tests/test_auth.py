@@ -81,6 +81,15 @@ def test_session_actions_reject_a_revoked_current_session(auth_db) -> None:
         auth.revoke_other_sessions(session)
 
 
+def test_session_list_is_bounded(auth_db) -> None:
+    _, auth = auth_db
+    invitation = auth.create_invitation("Nicole", "viewer")
+    session, _ = auth.claim("Nicole", invitation, "a sufficiently long password")
+    for _ in range(auth.SESSION_LIST_LIMIT + 2):
+        auth.login("Nicole", "a sufficiently long password")
+    assert len(auth.sessions(session)) == auth.SESSION_LIST_LIMIT
+
+
 def test_change_password_rotates_current_session_and_revokes_existing_sessions(auth_db) -> None:
     _, auth = auth_db
     invitation = auth.create_invitation("Nicole", "operator")

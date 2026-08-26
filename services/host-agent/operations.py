@@ -236,7 +236,7 @@ class OperationExecutor:
                 detail=str(exc),
                 error_code="preparation_write_failed",
                 exception_type=type(exc).__name__,
-                completed_at=time.monotonic(),
+                completed_at=time.time(),
             )
             return
 
@@ -258,7 +258,7 @@ class OperationExecutor:
                 detail="docker compose restart timed out",
                 error_code="restart_timeout",
                 exception_type=type(exc).__name__,
-                completed_at=time.monotonic(),
+                completed_at=time.time(),
             )
             return
         except Exception as exc:
@@ -274,7 +274,7 @@ class OperationExecutor:
                 detail=str(exc),
                 error_code="restart_command_failed",
                 exception_type=type(exc).__name__,
-                completed_at=time.monotonic(),
+                completed_at=time.time(),
             )
             return
 
@@ -296,7 +296,7 @@ class OperationExecutor:
                 detail=str(exc),
                 error_code="health_wait_error",
                 exception_type=type(exc).__name__,
-                completed_at=time.monotonic(),
+                completed_at=time.time(),
             )
             return
 
@@ -312,7 +312,7 @@ class OperationExecutor:
                 detail="Server reached healthy state",
                 error_code=None,
                 exception_type=None,
-                completed_at=time.monotonic(),
+                completed_at=time.time(),
             )
             logger.info(
                 "operation %s completed successfully (executor_ref=%s)",
@@ -330,7 +330,7 @@ class OperationExecutor:
                 detail=f"Server did not reach healthy state within {health_timeout}s",
                 error_code="health_probe_timeout",
                 exception_type=None,
-                completed_at=time.monotonic(),
+                completed_at=time.time(),
             )
             logger.error(
                 "operation %s health probe timed out after %ss",

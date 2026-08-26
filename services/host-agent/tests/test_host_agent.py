@@ -20,7 +20,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-# The agent lives in deploy/host-agent/agent.py — import it directly.
+# The agent lives in services/host-agent/agent.py — import it directly.
 import sys
 
 _AGENT_DIR = Path(__file__).resolve().parents[1]
@@ -65,7 +65,7 @@ def _make_store() -> ha.OperationStore:
 
 
 class _FakeProbe(_FakeProbeBase):
-    """Re-exported from conftest for local use in facade tests."""
+    """Re-exported from helpers.py for local use in facade tests."""
 
 
 def _make_executor(

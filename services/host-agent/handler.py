@@ -174,6 +174,16 @@ class EndpointMixin:
                 restart_timeout,
             )
             if not accepted:
+                import time as _time
+                self.store.update(  # type: ignore[attr-defined]
+                    operation_id,
+                    status="done",
+                    outcome="error",
+                    failed_stage=None,
+                    detail="Operation rejected: queue at capacity",
+                    error_code="queue_full",
+                    completed_at=_time.time(),
+                )
                 self._send_json(503, {
                     "error": "queue_full",
                     "message": "Operation queue is at capacity; try again later",

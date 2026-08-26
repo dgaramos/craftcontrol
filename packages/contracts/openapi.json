@@ -493,11 +493,11 @@
       }
     },
     "/api/auth/sessions": {
-      "get": {"tags": ["Authentication"], "operationId": "listSessions", "summary": "List safe evidence for active account sessions", "responses": {"200": {"description": "Active sessions", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SessionList"}}}}}},
-      "post": {"tags": ["Authentication"], "operationId": "revokeOtherSessions", "summary": "Revoke all sessions except the current one", "parameters": [{"$ref": "#/components/parameters/CsrfToken"}], "responses": {"200": {"$ref": "#/components/responses/Ok"}, "403": {"$ref": "#/components/responses/Forbidden"}}}
+      "get": {"tags": ["Authentication"], "operationId": "listSessions", "summary": "List safe evidence for active account sessions", "responses": {"200": {"description": "Active sessions", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SessionList"}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}}},
+      "post": {"tags": ["Authentication"], "operationId": "revokeOtherSessions", "summary": "Revoke all sessions except the current one", "parameters": [{"$ref": "#/components/parameters/CsrfToken"}], "responses": {"200": {"$ref": "#/components/responses/Ok"}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}}}
     },
     "/api/auth/sessions/{session_id}": {
-      "delete": {"tags": ["Authentication"], "operationId": "revokeSession", "summary": "Revoke one other active session", "parameters": [{"name": "session_id", "in": "path", "required": true, "schema": {"type": "string"}}, {"$ref": "#/components/parameters/CsrfToken"}], "responses": {"200": {"$ref": "#/components/responses/Ok"}, "400": {"$ref": "#/components/responses/BadRequest"}, "403": {"$ref": "#/components/responses/Forbidden"}}}
+      "delete": {"tags": ["Authentication"], "operationId": "revokeSession", "summary": "Revoke one other active session", "parameters": [{"name": "session_id", "in": "path", "required": true, "schema": {"type": "string"}}, {"$ref": "#/components/parameters/CsrfToken"}], "responses": {"200": {"$ref": "#/components/responses/Ok"}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}}}
     },
     "/api/auth/me": {
       "get": {

@@ -111,6 +111,12 @@ def test_sessions_are_listed_and_another_session_can_be_revoked(client, auth: Ma
     auth.revoke_session.assert_called_once_with("", "other-id")
 
 
+def test_session_revocation_returns_bad_request_for_service_error(client, auth: MagicMock) -> None:
+    auth.revoke_other_sessions.side_effect = ValueError("session not found")
+    response = client.post("/api/auth/sessions")
+    assert response.status_code == 400
+
+
 # ---------------------------------------------------------------------------
 # /api/auth/access — access_list
 # ---------------------------------------------------------------------------

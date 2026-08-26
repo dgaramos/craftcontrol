@@ -1,22 +1,22 @@
 # CraftControl Architecture
 
-CraftControl has a modular-monolith backend for operating one Minecraft Bedrock Dedicated Server and an independently deployable browser frontend. The two services share one public origin through a private same-origin proxy boundary.
+CraftControl has a modular-monolith **CraftControl Server** for operating one Minecraft Bedrock Dedicated Server and an independently deployable **CraftControl Client** browser application. The two services share one public origin through a private same-origin proxy boundary.
 
 ## Current system context
 
 ```mermaid
 flowchart TD
-    client["Phone / tablet / desktop"] -->|"HTTP + Server-Sent Events"| frontend["Frontend: Nginx + static browser app<br/>public origin; /api and SSE reverse proxy"]
-    frontend -->|"private network"| backend["Backend: Flask modular monolith<br/>routes → use cases → ports → adapters<br/>runtime → SQLite / Docker / files / SSE"]
+    client["Phone / tablet / desktop"] -->|"HTTP + Server-Sent Events"| frontend["CraftControl Client: Nginx + static browser app<br/>public origin; /api and SSE reverse proxy"]
+    frontend -->|"private network"| backend["CraftControl Server: Flask modular monolith<br/>routes → use cases → ports → adapters<br/>runtime → SQLite / Docker / files / SSE"]
     backend -->|"console, logs, events (Docker socket)"| bedrock["Minecraft Bedrock Dedicated Server"]
-    backend -->|"ContainerOperations (HTTP, split mode)"| hostagent["Host Agent: craftcontrol-host-agent<br/>systemd service on Docker host<br/>PREPARATION · RESTART · HEALTH_WAIT"]
+    backend -->|"ContainerOperations (HTTP, split mode)"| hostagent["CraftControl Host Agent: craftcontrol-host-agent<br/>systemd service on Docker host<br/>PREPARATION · RESTART · HEALTH_WAIT"]
     hostagent -->|"docker compose, filesystem, UDP probe"| bedrock
-    bedrock -. "optional" .-> telemetry["Telemetry Pack"]
+    bedrock -. "optional" .-> telemetry["CraftControl Telemetry Pack"]
 ```
 
-The manager remains operational without the Telemetry Pack, exporter, Prometheus, Grafana, or Loki. SQLite stores durable manager state; the Minecraft world remains owned by the Bedrock deployment.
+The CraftControl Server remains operational without the CraftControl Telemetry Pack, exporter, Prometheus, Grafana, or Loki. SQLite stores durable server state; the Minecraft world remains owned by the Bedrock deployment.
 
-The host agent is an optional execution boundary. When `HOST_AGENT_URL` is set, the backend delegates the `ContainerOperations` lifecycle (writing configuration, restarting the Compose service, and polling the Bedrock health probe) to the `craftcontrol-host-agent` systemd service running on the Docker host outside all containers. The agent owns Docker socket access for those operations. The Docker socket is still mounted in the backend container for Bedrock console operations (`BedrockClient`): attaching to the container, streaming logs, and receiving Docker events. Those responsibilities are not part of the host-agent contract and remain in the backend directly.
+The CraftControl Host Agent is an optional execution boundary. When `HOST_AGENT_URL` is set, the CraftControl Server delegates the `ContainerOperations` lifecycle (writing configuration, restarting the Compose service, and polling the Bedrock health probe) to the `craftcontrol-host-agent` systemd service running on the Docker host outside all containers. The agent owns Docker socket access for those operations. The Docker socket is still mounted in the Server container for Bedrock console operations (`BedrockClient`): attaching to the container, streaming logs, and receiving Docker events. Those responsibilities are not part of the Host Agent contract and remain in the Server directly.
 
 ## Architectural style
 
@@ -112,7 +112,7 @@ flowchart LR
     runtime --> broker["broker"] --> sqlite["SQLite durable event store"] --> sse["SSE"]
     runtime --> targeted["targeted reconciliation"]
     timer["safety timer"] --> full["full reconciliation"]
-    snapshot["Telemetry Pack snapshot"] --> state["authoritative telemetry state"]
+    snapshot["CraftControl Telemetry Pack snapshot"] --> state["authoritative telemetry state"]
 ```
 
 Cached values keep observation and change timestamps. Missing signals cause stale or degraded state, not invented zero values. Full reconciliation runs after manager startup, relevant stream recovery, manual refresh, and the configured safety interval.

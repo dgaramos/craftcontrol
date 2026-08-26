@@ -49,6 +49,25 @@ def test_readme_documents_runtime_contract_and_security(readme: str) -> None:
     assert "Snapshots can recover lifetime aggregates" in readme
 
 
+def test_runtime_boundaries_use_craftcontrol_product_names(readme: str) -> None:
+    for name in (
+        "CraftControl Client",
+        "CraftControl Server",
+        "CraftControl Host Agent",
+        "CraftControl Telemetry Pack",
+    ):
+        assert name in readme
+
+    architecture = (ROOT / "docs" / "architecture.md").read_text()
+    for name in (
+        "CraftControl Client",
+        "CraftControl Server",
+        "CraftControl Host Agent",
+        "CraftControl Telemetry Pack",
+    ):
+        assert name in architecture
+
+
 def test_readme_documents_independent_operations_and_safe_installation(readme: str) -> None:
     for command in (
         "bin/deploy-craftcontrol-frontend",

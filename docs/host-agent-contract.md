@@ -10,7 +10,7 @@ be implementable independently from this document alone.
 ## Scope
 
 The host agent is a minimal service deployed on the Docker host (outside all
-containers). It accepts authenticated requests from the CraftControl backend,
+containers). It accepts authenticated requests from the CraftControl Server,
 executes exactly the permitted host-level operations (Docker Compose restarts
 and host filesystem reads), and returns structured evidence that conforms to the
 [operation lifecycle contract](operation-lifecycle.md).
@@ -58,7 +58,7 @@ connections on port `7890` to the Docker bridge subnet only. A deployment that
 can guarantee the Docker bridge address (e.g. `172.17.0.1`) may bind to that
 address instead.
 
-The CraftControl backend reaches the agent via the Docker host gateway address
+The CraftControl Server reaches the agent via the Docker host gateway address
 visible from inside the container (typically `host-gateway`, configured in
 `docker-compose.yml` as an `extra_hosts` entry). The agent itself is not part
 of any Docker network.
@@ -132,7 +132,7 @@ Rotation requires no code change:
 2. Update the backend secret source (Docker secret or bind mount) to point to
    the new value.
 3. Restart the host agent (`sudo systemctl restart craftcontrol-host-agent`).
-4. Restart the CraftControl backend (`bin/deploy-craftcontrol`).
+4. Restart the CraftControl Server (`bin/deploy-craftcontrol`).
 
 There is no overlap window: the agent begins rejecting the old token as soon as
 it restarts. Schedule the rotation during a planned maintenance window.

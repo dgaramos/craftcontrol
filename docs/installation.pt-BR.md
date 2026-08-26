@@ -20,7 +20,7 @@ docker --version
 docker compose version
 ```
 
-O CraftControl continua útil sem o Telemetry Pack opcional, Prometheus, Grafana, Loki ou outro serviço de observabilidade.
+O CraftControl Server continua útil sem o CraftControl Telemetry Pack opcional, Prometheus, Grafana, Loki ou outro serviço de observabilidade.
 
 ## Layout de diretórios
 
@@ -32,7 +32,7 @@ flowchart TD
     docker --> craftcontrol["craftcontrol/"]
 ```
 
-O backend acessa o projeto Bedrock, dados do mundo, banco SQLite do gerenciador e backups coordenados. O frontend não recebe montagens privilegiadas ou persistentes.
+O CraftControl Server acessa o projeto Bedrock, dados do mundo, banco SQLite do gerenciador e backups coordenados. O CraftControl Client não recebe montagens privilegiadas ou persistentes.
 
 ## Configure o CraftControl
 
@@ -85,7 +85,7 @@ Veja [implantação automatizada](automated-deployment.md) para o fluxo que exec
 
 Em produção, use o hostname HTTPS do proxy reverso, por exemplo `https://craftcontrol.example`. Em uma instalação deliberada de LAN confiável com cookies seguros desativados, abra `http://HOST_IP:8082`.
 
-O frontend é dono dessa origem pública e encaminha `/api/*` e Server-Sent Events para o backend privado. Não publique o backend diretamente.
+O CraftControl Client é dono dessa origem pública e encaminha `/api/*` e Server-Sent Events para o CraftControl Server privado. Não publique o Server diretamente.
 
 ## Verificações pós-instalação
 

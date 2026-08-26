@@ -1,8 +1,8 @@
 FROM python:3.12-alpine
 
 ARG CRAFTCONTROL_BACKEND_VERSION=0.1.0
-LABEL org.opencontainers.image.title="CraftControl Backend" \
-      org.opencontainers.image.description="CraftControl API and Bedrock operations service" \
+LABEL org.opencontainers.image.title="CraftControl Server" \
+      org.opencontainers.image.description="CraftControl server API and Bedrock operations" \
       org.opencontainers.image.version="${CRAFTCONTROL_BACKEND_VERSION}"
 
 RUN apk add --no-cache docker-cli docker-cli-compose \

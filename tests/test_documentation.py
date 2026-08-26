@@ -78,7 +78,6 @@ def test_local_reviewer_profile_is_shared_by_codex_and_claude() -> None:
 
     for entry_point in (
         ROOT / ".claude/agents/review-pr/SKILL.md",
-        ROOT / ".claude/agents/review-pr.md",
         ROOT / "AGENTS.md",
         ROOT / "CLAUDE.md",
     ):

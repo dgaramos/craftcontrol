@@ -14,8 +14,7 @@ The tool-neutral profile at `.agent-review/craftcontrol/PROFILE.md` is the
 authoritative CraftControl-specific review context. Load it and every applicable
 layer checklist for any PR review, whether the reviewer is Cody DR, Claudio DR,
 or another agent. The profile augments generic review skills; it does not
-trigger a review automatically. If it is unavailable, use the repository-native
-`review-pr` entry point. Never copy roadmap content, credentials, databases, or
+trigger a review automatically. If it is unavailable, use the `claudio-reviewer` agent. Never copy roadmap content, credentials, databases, or
 world data into the profile or review output.
 
 ## Architecture

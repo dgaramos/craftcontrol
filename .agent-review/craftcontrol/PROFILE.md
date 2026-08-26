@@ -60,6 +60,16 @@ This profile never triggers an automatic review.
 Run `bin/check` before handoff. A failed gate stops implementation, shipping,
 or a claim that a finding is resolved.
 
+## Testing conventions
+
+Flag any new `unittest.mock.patch` call that targets a stdlib module
+(`pathlib.Path`, `subprocess`, `socket`, `time`, `sqlite3`, etc.) as a
+correctness risk. The project rule is constructor injection: infrastructure
+dependencies are injected as constructor parameters with production defaults,
+and tests pass fakes directly. `patch` is permitted only at third-party
+boundaries with no injectable seam. Suggest adding the injection point when
+none exists.
+
 ## Lifecycle skill mapping
 
 | Local entry point | Portable skill |

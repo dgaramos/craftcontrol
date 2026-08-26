@@ -71,6 +71,33 @@ test in exactly one gate unless a boundary invariant deliberately spans gates.
 
 Update tests and the English `README.md` whenever public behavior, persistence, recovery rules, configuration, or API contracts change.
 
+## Testing conventions
+
+**Prefer constructor injection over monkey-patching.**
+
+Inject infrastructure dependencies (subprocess runners, file readers, socket
+factories, time functions) as constructor parameters with production defaults.
+Tests pass fakes or `MagicMock` instances directly; they never use
+`unittest.mock.patch` on stdlib modules (`pathlib.Path`, `subprocess`,
+`socket`, `time`, etc.).
+
+```python
+# preferred — dependency injected, no patch needed in tests
+class BedrockFileSystem:
+    def __init__(self, data_dir: str, read_text=None):
+        self._read_text = read_text or (lambda p, **kw: p.read_text(**kw))
+
+# avoid — leaks into stdlib, breaks isolation, hides the seam
+with patch.object(Path, "write_text", _fail):
+    ...
+```
+
+When a class or function has no injection point and requires `patch`, add the
+injection point instead of the patch. Reserve `patch` for third-party library
+boundaries that cannot be refactored (e.g. a C-extension with no seam).
+
+This rule applies to both `apps/backend/` and `deploy/host-agent/`.
+
 ## Production deployment
 
 - Deploy only with `bin/deploy-craftcontrol` from a clean, published `main`.

@@ -58,7 +58,7 @@ CraftControl is a monorepo with two independently deployable containerized appli
 
 ```mermaid
 flowchart TD
-    client["Phone, tablet, or desktop"] -->|"HTTP :8082 — trusted LAN / external TLS proxy"| frontend["Frontend · Nginx · static and read-only<br/>Browser UI · same-origin /api + SSE proxy"]
+    client["Phone, tablet, or desktop"] -->|"HTTP :8082 — trusted LAN / external TLS proxy"| frontend["Frontend · Nginx · static and stateless<br/>Browser UI · same-origin /api + SSE proxy"]
     frontend -->|"private Compose network"| backend["Backend · Flask modular monolith<br/>HTTP → use cases → ports/adapters → SQLite"]
     backend -->|"console, logs, events (Docker socket)"| bedrock["Minecraft Bedrock Dedicated Server"]
     backend -->|"ContainerOperations (HTTP, when configured)"| hostagent["Host Agent · craftcontrol-host-agent<br/>systemd · PREPARATION · RESTART · HEALTH_WAIT"]

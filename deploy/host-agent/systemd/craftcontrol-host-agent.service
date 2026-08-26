@@ -35,13 +35,15 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-# Allow the agent to read its token file and write Bedrock config.
-# IMPORTANT: ReadWritePaths must match HOST_AGENT_BEDROCK_DATA exactly.
-# If you override HOST_AGENT_BEDROCK_DATA via /etc/craftcontrol/host-agent.env
-# or a drop-in, add a matching ReadWritePaths= line in a drop-in unit
+# Allow the agent to read its token file, write Bedrock config, and persist
+# operation state to SQLite.
+# IMPORTANT: ReadWritePaths must match HOST_AGENT_BEDROCK_DATA and HOST_AGENT_DB
+# (parent directory) exactly.  If you override either variable via
+# /etc/craftcontrol/host-agent.env or a drop-in, add a matching
+# ReadWritePaths= line in a drop-in unit
 # (e.g. /etc/systemd/system/craftcontrol-host-agent.service.d/paths.conf)
 # to keep ProtectSystem=strict from blocking the write.
-ReadWritePaths=/opt/minecraft-bedrock
+ReadWritePaths=/opt/minecraft-bedrock /var/lib/craftcontrol
 ReadOnlyPaths=/etc/craftcontrol /opt/craftcontrol/docker-compose.yml
 
 [Install]

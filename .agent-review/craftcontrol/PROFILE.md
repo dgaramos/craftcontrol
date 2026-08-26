@@ -128,11 +128,10 @@ review manifests `inline_comments_json`, `replies_json`, and
 ### Create issue
 
 Dispatch `publish-cody-issue.yml` or `publish-claudio-issue.yml` with `title`,
-`body`, labels, assignees, `milestone_number`, `project_owner`,
-`project_number`, and `project_status`. The App applies and verifies issue,
-label, assignee, and milestone metadata. A personal Project requires an
-explicitly authorized, disclosed personal fallback. Do not supply review-only
-fields to this mode.
+`body`, labels, assignees, and `milestone_number`. Project metadata is optional:
+when used, supply `project_owner`, `project_number`, and `project_status`
+together. The App applies and verifies issue, label, assignee, milestone, and,
+when supplied, Project metadata. Do not supply review-only fields to this mode.
 
 ### Apply PR metadata
 

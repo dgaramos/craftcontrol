@@ -133,22 +133,24 @@ and the three project fields `project_owner`, `project_number`, `project_status`
 (must be supplied together or not at all).
 
 The workflow authenticates as the matching App, verifies the publishing identity,
-applies all supplied metadata, and then re-reads the PR to confirm every field.
-A missing permission or a verification mismatch fails the workflow before any
-personal-account fallback. Project metadata is required by CraftControl; a
-personal Project therefore requires an explicitly authorized fallback that
-records the personal actor.
+applies App-safe metadata, and then re-reads the PR to confirm every field. A
+personal Project is not App-safe: add it only through an explicitly authorized,
+disclosed personal fallback, and verify its actor and status separately. The
+portable `ship-change` adapter must support this dispatch boundary before it can
+claim complete CraftControl PR metadata publication.
 
 | Reviewer | Mode | Availability |
 | --- | --- | --- |
 | Cody DR | review | available |
 | Cody DR | create-issue | available |
-| Cody DR | apply-pr-metadata | available |
+| Cody DR | apply-pr-metadata (App-safe fields) | available |
+| Cody DR | personal Project metadata | explicit personal fallback required |
 | Cody DR | reply | available |
 | Cody DR | resolve-thread | available |
 | Claudio DR | review | available |
 | Claudio DR | create-issue | available |
-| Claudio DR | apply-pr-metadata | available |
+| Claudio DR | apply-pr-metadata (App-safe fields) | available |
+| Claudio DR | personal Project metadata | explicit personal fallback required |
 | Claudio DR | reply | available |
 | Claudio DR | resolve-thread | available |
 

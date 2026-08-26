@@ -374,11 +374,12 @@ def test_reviewer_publisher_rejects_thread_after_all_pages(tmp_path: Path) -> No
 
 def test_reviewer_skills_dispatch_thread_replies_through_their_apps() -> None:
     cody = (ROOT / ".agents" / "skills" / "review-pr" / "SKILL.md").read_text()
-    for skill in (cody,):
-        assert "replies_json" in skill
-        assert "resolve_thread_ids_json" in skill
-        assert "inline_comments_json" in skill
-        assert "cody-dr" in skill
+    assert "cody-dr:review-pr" in cody
+    assert ".agent-review/craftcontrol/PROFILE.md" in cody
+
+    profile = (ROOT / ".agent-review" / "craftcontrol" / "PROFILE.md").read_text()
+    for manifest in ("replies_json", "resolve_thread_ids_json", "inline_comments_json"):
+        assert manifest in profile
 
     wrapper = (ROOT / ".claude" / "agents" / "review-pr.md").read_text()
     duplicate = (ROOT / ".claude" / "agents" / "review-pr" / "SKILL.md").read_text()
@@ -387,34 +388,19 @@ def test_reviewer_skills_dispatch_thread_replies_through_their_apps() -> None:
     assert ".agent-review/craftcontrol/PROFILE.md" in wrapper
 
 
-def test_local_findings_skill_prefers_reviewer_app_with_explicit_personal_fallback() -> None:
+def test_profile_declares_reviewer_app_first_with_explicit_personal_fallback() -> None:
     skill = (ROOT / ".agents" / "skills" / "handle-pr-findings" / "SKILL.md").read_text()
     profile = (ROOT / ".agent-review" / "craftcontrol" / "PROFILE.md").read_text()
 
-    assert "publish-cody-review.yml" in skill
-    assert "replies_json" in skill
-    assert "resolve_thread_ids_json" in skill
-    assert "indisponível ou não configurada **antes**" in skill
-    assert "não use fallback nesse caso" in skill
+    assert "cody-dr:handle-pr-findings" in skill
     assert "Cody DR | reply | available" in profile
     assert "Cody DR | resolve-thread | available" in profile
     assert "personal GitHub account is permitted" in profile
     assert "unconfigured or unavailable before dispatch" in profile
     assert "Without explicit user authorization, return publication-ready" in profile
 
-    thread_section = skill.split("### 4. Atualizar o PR e as threads", 1)[1]
-    thread_section = thread_section.split("### 5.", 1)[0]
-    dispatch_at = thread_section.index("gh workflow run publish-cody-review.yml")
-    authorization_at = thread_section.index("autorização explícita do usuário")
-    fallback_at = thread_section.index(
-        "Use o `gh api` com a conta pessoal autenticada somente se"
-    )
-    personal_endpoint_at = thread_section.index("gh api repos/{owner}/{repo}/pulls")
-    assert dispatch_at < fallback_at
-    assert authorization_at < fallback_at
-    assert authorization_at < personal_endpoint_at
-    assert "gh api" not in thread_section[:fallback_at]
-    assert personal_endpoint_at > fallback_at
+    assert "publish-cody-review.yml" in profile
+    assert "publish-claudio-review.yml" in profile
 
 
 def test_claude_workflow_entry_points_are_matching_thin_plugin_wrappers() -> None:
@@ -448,4 +434,25 @@ def test_claude_workflow_entry_points_are_matching_thin_plugin_wrappers() -> Non
         assert "skills:" in frontmatter
         assert [line.strip()[2:] for line in frontmatter if line.startswith("  - ")] == [f"claudio-dr:{skill}"]
         assert "You are Claudio DR." in text
+        assert ".agent-review/craftcontrol/PROFILE.md" in text
+
+
+def test_cody_workflow_entry_points_are_matching_thin_plugin_wrappers() -> None:
+    expected_skills = {
+        "create-issue": "author-issue",
+        "execute-issue": "execute-issue",
+        "handle-pr-findings": "handle-pr-findings",
+        "implement": "implement-issue",
+        "review-pr": "review-pr",
+        "ship-issue": "ship-change",
+        "start-issue": "start-issue",
+    }
+
+    for entry_point, skill in expected_skills.items():
+        path = ROOT / ".agents" / "skills" / entry_point / "SKILL.md"
+        text = path.read_text()
+        assert len(text.splitlines()) <= 10
+        assert f"name: {entry_point}" in text
+        assert f"cody-dr:{skill}" in text
+        assert "You are Cody DR." in text
         assert ".agent-review/craftcontrol/PROFILE.md" in text

@@ -29,6 +29,7 @@ from tests.conftest import make_auth_mock, wire_auth
 ROOT = Path(__file__).resolve().parents[1]
 PROFILE = ROOT / ".agent-review" / "craftcontrol" / "PROFILE.md"
 CLAUDIO_WORKFLOW = ROOT / ".github" / "workflows" / "publish-claudio-review.yml"
+CODY_WORKFLOW = ROOT / ".github" / "workflows" / "publish-cody-review.yml"
 
 
 # ---------------------------------------------------------------------------
@@ -36,22 +37,24 @@ CLAUDIO_WORKFLOW = ROOT / ".github" / "workflows" / "publish-claudio-review.yml"
 # ---------------------------------------------------------------------------
 
 class TestPublishWorkflowEvent:
-    """The Claudio DR publisher must default to COMMENT, not APPROVE or REQUEST_CHANGES."""
+    """Reviewer publishers must allow COMMENT only; approvals remain human decisions."""
 
-    def test_default_event_is_comment(self) -> None:
-        text = CLAUDIO_WORKFLOW.read_text()
+    @pytest.mark.parametrize("workflow", [CODY_WORKFLOW, CLAUDIO_WORKFLOW])
+    def test_default_event_is_comment(self, workflow: Path) -> None:
+        text = workflow.read_text()
         # Match: event: {... default: COMMENT ...} on the same line
         match = re.search(r"event:\s*\{[^}]*default:\s*(\w+)", text)
         assert match is not None, "Could not locate event input in publish-claudio-review.yml"
         default_value = match.group(1)
         assert default_value == "COMMENT", (
-            "publish-claudio-review.yml must default to COMMENT. "
+            f"{workflow.name} must default to COMMENT. "
             f"Current default is '{default_value}'. "
             "APPROVE and REQUEST_CHANGES are human decisions."
         )
 
-    def test_options_list_contains_only_comment(self) -> None:
-        text = CLAUDIO_WORKFLOW.read_text()
+    @pytest.mark.parametrize("workflow", [CODY_WORKFLOW, CLAUDIO_WORKFLOW])
+    def test_options_list_contains_only_comment(self, workflow: Path) -> None:
+        text = workflow.read_text()
         # Anchor to the event input line to avoid matching unrelated options lists.
         # The workflow uses inline YAML: event: {... options: [COMMENT]}
         event_block = re.search(
@@ -64,7 +67,7 @@ class TestPublishWorkflowEvent:
         )
         options = [o.strip() for o in event_block.group(1).split(",")]
         assert options == ["COMMENT"], (
-            "publish-claudio-review.yml must list exactly [COMMENT] as the only "
+            f"{workflow.name} must list exactly [COMMENT] as the only "
             "allowed event. APPROVE and REQUEST_CHANGES are human decisions and "
             f"must not appear as selectable options. Current options: {options}."
         )

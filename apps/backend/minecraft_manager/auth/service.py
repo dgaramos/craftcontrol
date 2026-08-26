@@ -214,6 +214,41 @@ class AuthService:
             with self._connect() as connection:
                 connection.execute("UPDATE panel_sessions SET revoked_at=? WHERE token_hash=?", (time.time(), self._token_hash(token)))
 
+    def sessions(self, session_token: str) -> list[dict[str, Any]]:
+        """Return safe activity evidence for the authenticated account only."""
+        now = time.time()
+        current_hash = self._token_hash(session_token)
+        with self._connect() as connection:
+            identity = connection.execute("SELECT identity FROM panel_sessions WHERE token_hash=?", (current_hash,)).fetchone()
+            if not identity:
+                raise ValueError("session not found")
+            rows = connection.execute(
+                "SELECT token_hash,created_at,last_seen_at FROM panel_sessions WHERE identity=? AND revoked_at IS NULL "
+                "AND idle_expires_at>=? AND absolute_expires_at>=? ORDER BY last_seen_at DESC",
+                (identity[0], now, now),
+            ).fetchall()
+        return [{"id": hashlib.sha256(row[0].encode()).hexdigest()[:24], "created_at": row[1], "last_seen_at": row[2], "current": hmac.compare_digest(row[0], current_hash)} for row in rows]
+
+    def revoke_session(self, session_token: str, session_id: str) -> None:
+        current_hash = self._token_hash(session_token)
+        now = time.time()
+        with self._connect() as connection:
+            identity = connection.execute("SELECT identity FROM panel_sessions WHERE token_hash=?", (current_hash,)).fetchone()
+            if not identity:
+                raise ValueError("session not found")
+            rows = connection.execute("SELECT token_hash FROM panel_sessions WHERE identity=? AND revoked_at IS NULL", (identity[0],)).fetchall()
+            target = next((row[0] for row in rows if hmac.compare_digest(hashlib.sha256(row[0].encode()).hexdigest()[:24], session_id)), None)
+            if target is None or hmac.compare_digest(target, current_hash):
+                raise ValueError("session cannot be revoked")
+            connection.execute("UPDATE panel_sessions SET revoked_at=? WHERE token_hash=?", (now, target))
+
+    def revoke_other_sessions(self, session_token: str) -> None:
+        with self._connect() as connection:
+            identity = connection.execute("SELECT identity FROM panel_sessions WHERE token_hash=?", (self._token_hash(session_token),)).fetchone()
+            if not identity:
+                raise ValueError("session not found")
+            connection.execute("UPDATE panel_sessions SET revoked_at=? WHERE identity=? AND token_hash<>? AND revoked_at IS NULL", (time.time(), identity[0], self._token_hash(session_token)))
+
     def change_password(self, session_token: str, current_password: str, new_password: str) -> tuple[str, dict[str, Any]]:
         """Replace an authenticated account password and rotate all of its sessions."""
         self.validate_password(current_password)

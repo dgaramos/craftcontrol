@@ -104,6 +104,13 @@ def test_change_password_returns_400_for_invalid_current_password(client, auth: 
     assert resp.get_json()["error"] == "current password is incorrect"
 
 
+def test_sessions_are_listed_and_another_session_can_be_revoked(client, auth: MagicMock) -> None:
+    auth.sessions.return_value = [{"id": "safe-id", "created_at": 1, "last_seen_at": 2, "current": True}]
+    assert client.get("/api/auth/sessions").get_json()["sessions"][0]["id"] == "safe-id"
+    assert client.delete("/api/auth/sessions/other-id").status_code == 200
+    auth.revoke_session.assert_called_once_with("", "other-id")
+
+
 # ---------------------------------------------------------------------------
 # /api/auth/access — access_list
 # ---------------------------------------------------------------------------

@@ -135,18 +135,18 @@ def test_compose_manager_split_mode_builds_host_agent_container_ops(tmp_path: Pa
 
 
 def test_compose_manager_split_mode_still_builds_bedrock_client(tmp_path: Path) -> None:
-    """In split-mode, BedrockClient is still constructed — it requires the Docker socket."""
+    """In split-mode, both transports are selected: HostAgentContainerOperations for docker
+    and BedrockClient (with Docker SDK) for console operations."""
     token_file = tmp_path / "token"
     token_file.write_text("test-token")
     settings = _split_settings(tmp_path)
     fake_docker_client = MagicMock()
-    fake_runtime = MagicMock()
     manager = compose_manager(
         settings,
-        docker=MagicMock(),
-        runtime=fake_runtime,
+        runtime=MagicMock(),
         bedrock_docker_factory=lambda: fake_docker_client,
     )
+    assert isinstance(manager.docker, HostAgentContainerOperations)
     assert isinstance(manager.bedrock, BedrockClient)
     assert manager.bedrock.container_name == settings.container
     assert manager.bedrock.console_wait_seconds == settings.console_wait_seconds

@@ -26,6 +26,7 @@
   <symbol id="ui-building" viewBox="0 0 24 24"><path fill="#26332c" d="M2 2h9v9H2zm11 0h9v9h-9zM2 13h9v9H2zm11 0h9v9h-9z"/><path fill="#799083" d="M4 4h5v5H4zm11 0h5v5h-5zM4 15h5v5H4zm11 0h5v5h-5z"/></symbol>
   <symbol id="ui-distance" viewBox="0 0 24 24"><path fill="#26332c" d="M2 9h20v6H2z"/><path fill="#70bdd0" d="M4 11h16v2H4z"/><path fill="#b9e4ec" d="m2 12 5-5v4h10V7l5 5-5 5v-4H7v4z"/></symbol>
   <symbol id="ui-sessions" viewBox="0 0 24 24"><path fill="#26332c" d="M2 2h20v20H2z"/><path fill="#d6c68e" d="M10 5h4v8l5 3-2 3-7-4z"/><path fill="#75c358" d="M10 3h4v3h-4z"/></symbol>
+  <symbol id="ui-password" viewBox="0 0 24 24"><path fill="#26332c" d="M3 10h18v12H3z"/><path fill="#d7c9a1" d="M5 12h14v8H5z"/><path fill="#3d2c21" d="M10 15h4v5h-4z"/><path fill="#71c55b" d="M6 4h10v8h-3V7H9v5H6z"/><path fill="#b6ec8c" d="M9 5h4v2H9z"/></symbol>
   <symbol id="ui-damage" viewBox="0 0 24 24"><path fill="#3b2524" d="M12 22 2 12V5l4-3 6 5 6-5 4 3v7z"/><path fill="#d6655b" d="M12 18 5 11V6l2-1 5 5 5-5 2 1v5z"/></symbol>
   <symbol id="ui-check" viewBox="0 0 24 24"><path fill="#21442b" d="M2 2h20v20H2z"/><path fill="#8bd36a" d="m5 11 4 4L18 6l3 3L9 20l-7-7z"/></symbol>
   <symbol id="ui-close" viewBox="0 0 24 24"><path fill="#3b2524" d="M2 2h20v20H2z"/><path fill="#df796d" d="m5 8 3-3 4 4 4-4 3 3-4 4 4 4-3 3-4-4-4 4-3-3 4-4z"/></symbol>

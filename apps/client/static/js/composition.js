@@ -1,6 +1,6 @@
 import { api } from "./api.js?v=7";
 import { connectEventStream } from "./events.js";
-import { requireSession } from "./auth.js?v=7";
+import { requireSession } from "./auth.js?v=8";
 import { state } from "./core/state.js?v=7";
 import { $, escapeHtml } from "./core/dom.js?v=7";
 import { connectInvalidation } from "./core/invalidation.js?v=7";

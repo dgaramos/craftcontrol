@@ -28,9 +28,17 @@
 .account-card label { display: grid; gap: 7px; font-weight: 700; }
 .account-card input { min-height: 48px; padding: 0 12px; font: inherit; border: 2px solid #526258; background: #111814; color: #fff; }
 .account-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.account-card .session-history { display: grid; gap: 10px; }
+.account-card .session-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 13px; background: #111612; border: 1px solid #344038; }
+.session-item-copy { min-width: 0; overflow-wrap: anywhere; }
+.session-item-copy strong { display: block; line-height: 1.35; }
+.session-item-action { display: flex; align-items: center; }
+.session-item-action .danger { min-width: 96px; min-height: 46px; }
 @media (max-width: 620px) {
   #identity { gap: 0; }
   #identity > span, #identity > small, #identity button > span { display: none; }
   #identity button { width: 44px; min-width: 44px; min-height: 44px; padding: 6px; justify-content: center; }
   #identity button .cc-icon { width: 24px; height: 24px; margin: 0; }
+  .account-card .session-item { grid-template-columns: minmax(0, 1fr); align-items: stretch; }
+  .session-item-action .danger { width: 100%; }
 }

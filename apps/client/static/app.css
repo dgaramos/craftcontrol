@@ -463,6 +463,6 @@ dialog.drawer { position: fixed; inset: auto 0 0; width: min(100%, 680px); max-h
 .op-changes ul { margin: .4rem 0 0; padding-left: 1rem; display: grid; gap: .25rem; }
 
 @media (min-width: 760px) {
-  .telemetry-pack-card { grid-template-columns: minmax(14rem, .8fr) minmax(24rem, 1.2fr); align-items: start; }
+  .telemetry-pack-card { grid-template-columns: minmax(14rem, .8fr) minmax(0, 1.2fr); align-items: start; }
   .telemetry-pack-state dl { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }

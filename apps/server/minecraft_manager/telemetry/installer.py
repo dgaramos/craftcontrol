@@ -46,8 +46,12 @@ class TelemetryPackInstaller:
 
     @classmethod
     def bundled(cls, project: Path) -> "TelemetryPackInstaller":
-        source = Path(__file__).resolve().parents[4] / "packs" / "telemetry" / "behavior_pack"
-        return cls(project, source)
+        here = Path(__file__).resolve()
+        for parent in here.parents:
+            candidate = parent / "packs" / "telemetry" / "behavior_pack"
+            if candidate.is_dir():
+                return cls(project, candidate)
+        raise FileNotFoundError("Telemetry behavior pack not found relative to installer")
 
     def status(self, world: str | None = None) -> TelemetryPackStatus:
         world_name, world_directory = self._world(world)

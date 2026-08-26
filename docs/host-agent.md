@@ -73,7 +73,8 @@ membership. It does not need a login shell or a home directory.
 ## Step 2 — Install the agent
 
 ```bash
-sudo cp -r services/host-agent /opt/craftcontrol/host-agent
+sudo mkdir -p /opt/craftcontrol/host-agent
+sudo cp -r services/host-agent/. /opt/craftcontrol/host-agent/
 sudo chown -R craftcontrol-agent:craftcontrol-agent /opt/craftcontrol/host-agent
 sudo chmod 0755 /opt/craftcontrol/host-agent/agent.py
 ```
@@ -222,7 +223,10 @@ services:
       - /etc/craftcontrol/host-agent-token:/run/host-agent-token:ro
       - ../minecraft-bedrock:/minecraft-project
       - ./data:/data
-      # Docker socket is no longer needed when HOST_AGENT_URL is set.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # The Docker socket is still required for BedrockClient (console,
+      # log streaming, Docker events). The host agent handles lifecycle
+      # operations (PREPARATION, RESTART, HEALTH_WAIT) only.
 ```
 
 The `host-gateway` special value resolves to the Docker host IP at container

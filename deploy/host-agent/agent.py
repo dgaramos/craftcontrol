@@ -56,9 +56,8 @@ from adapters.raknet import (  # noqa: F401
     _probe_bedrock,
     _wait_for_health,
 )
+from router import AgentHandler, build_handler_class  # noqa: F401
 from handler import (  # noqa: F401
-    AgentHandler,
-    build_handler_class,
     MAX_BODY_BYTES,
     VERSION,
     HEALTH_TIMEOUT_MIN,

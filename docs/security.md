@@ -85,9 +85,11 @@ CraftControl is **not** hardened for public-internet deployments without additio
 
 The split topology introduces a `craftcontrol-host-agent` systemd service that
 runs on the Docker host outside all containers. It owns Docker socket access for
-the operations it executes: writing Bedrock configuration files, restarting the
-Compose service, and polling the Bedrock UDP health probe. No other operations
-are permitted — the agent rejects anything not in its explicit allowlist.
+the operations it executes. The explicit allowlist for `PREPARATION` includes
+staging and validating the Compose project file and writing Bedrock configuration
+files; `RESTART` issues a `docker compose restart`; `HEALTH_WAIT` polls the
+Bedrock UDP health probe. No other operations are permitted — the agent rejects
+anything outside this allowlist.
 
 Communication between the backend container and the host agent uses a
 shared-secret bearer token carried in the `Authorization` header. The token is

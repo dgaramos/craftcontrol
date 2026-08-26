@@ -97,10 +97,12 @@ variable, log line, or committed file.
 
 ### 3. Install the agent
 
-Copy the agent source from `deploy/host-agent/` to the host, install its
-dependencies, and install the systemd unit:
+Copy the complete agent source directory to the host, then install the systemd
+unit. The agent uses only the Python standard library — no dependency
+installation step is required.
 
 ```bash
+sudo cp -r deploy/host-agent /opt/craftcontrol/host-agent
 sudo cp deploy/host-agent/systemd/craftcontrol-host-agent.service \
   /etc/systemd/system/
 sudo systemctl daemon-reload
@@ -118,7 +120,7 @@ curl http://127.0.0.1:7890/v1/health
 
 Add the following to your `.env` (the token file path is inside the container):
 
-```
+```dotenv
 HOST_AGENT_URL=http://host-gateway:7890
 HOST_AGENT_TOKEN_FILE=/run/host-agent-token
 ```

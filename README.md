@@ -66,9 +66,9 @@ flowchart TD
     bedrock -. "optional" .-> telemetry["CraftControl Telemetry Pack"]
 ```
 
-The frontend owns the public origin. Nginx serves static assets and proxies `/api/*`, including unbuffered Server-Sent Events, to the private backend. The frontend has no persistent or privileged mounts. Only the backend can access SQLite, Bedrock files, coordinated backups, or Docker operations.
+The frontend owns the public origin. Nginx serves static assets and proxies `/api/*`, including unbuffered Server-Sent Events, to the private backend. The frontend has no persistent or privileged mounts. The backend owns durable state (SQLite), Bedrock files, coordinated backups, console operations, log streaming, and Docker events.
 
-When the host agent is configured (`HOST_AGENT_URL` is set), server lifecycle operations — writing configuration, restarting the Compose service, and polling the Bedrock health probe — are delegated to the `craftcontrol-host-agent` systemd service running on the Docker host outside all containers. The agent owns Docker socket access for those operations; the Docker socket remains mounted in the backend for Bedrock console attachment, log streaming, and Docker events. Without the host agent, the backend performs all operations directly.
+When the host agent is configured (`HOST_AGENT_URL` is set), server lifecycle operations — `PREPARATION` (writing configuration), `RESTART` (restarting the Compose service), and `HEALTH_WAIT` (polling the Bedrock UDP probe) — are delegated to the `craftcontrol-host-agent` systemd service running on the Docker host outside all containers. The agent owns Docker socket access for those three stages; the Docker socket remains mounted in the backend for Bedrock console attachment, log streaming, and Docker events, which are not part of the host-agent contract. Without the host agent, the backend performs all lifecycle operations directly.
 
 The backend intentionally runs one Gunicorn worker with multiple threads. Its event broker, supervisors, refresh lock, and SSE delivery are process-local; multiple workers would duplicate those responsibilities.
 

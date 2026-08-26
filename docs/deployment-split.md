@@ -73,7 +73,7 @@ the backend container and the Docker daemon. When `HOST_AGENT_URL` is set in the
 backend's environment, the composition root wires `HostAgentContainerOperations`
 instead of the direct `DockerOperations` adapter:
 
-```
+```text
 Backend container
   └── ContainerOperations (HTTP)
         └── craftcontrol-host-agent (systemd, Docker host)
@@ -116,13 +116,13 @@ mount. No token value may appear in logs, API responses, or the `.env` file.
 
 ### Failure behavior
 
-Agent unavailability is surfaced as an operation failure with `error_code:
-executor_internal_error`. The backend follows the failure protocol described in
-`docs/host-agent-contract.md`: pre-delivery failures are safe to fail
-immediately; post-delivery failures require status polling before concluding an
-ambiguous result. The operation is transitioned to FAILED and SSE delivers
-`operation.failed`. No host internals (agent address, filesystem paths, container
-names) are exposed in the UI or public API responses.
+The backend follows the failure protocol described in `docs/host-agent-contract.md`:
+
+- **Pre-delivery failures** (connection refused, connect timeout before TCP handshake) — the request was never delivered; the operation is failed immediately with `error_code: executor_internal_error`.
+- **Post-delivery ambiguous failures** (read-phase timeout after TCP handshake, or an OSError after delivery) — the request may have been delivered; the backend retries `GET /v1/status/{operation_id}` up to three times before concluding the result is ambiguous and failing the operation with `error_code: executor_internal_error`.
+- **Successful completion** — the agent returns `status: done` with `outcome: ok` or `outcome: error`; the backend records the structured `error_code` and transitions the operation accordingly.
+
+In all failure paths the operation is transitioned to FAILED and SSE delivers `operation.failed`. Transport details, agent addresses, filesystem paths, and container names are sanitized before being stored in `terminal_error` or returned in public API responses — no host internals are exposed in the UI.
 
 ## Independent quality gates
 

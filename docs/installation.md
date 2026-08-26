@@ -66,6 +66,91 @@ Review every value in `.env` before deployment. At minimum, verify:
 
 Never commit, replace, or copy a production `.env` into another installation.
 
+## Optional: install the host agent
+
+The host agent is a systemd service that runs on the Docker host outside all
+containers. It handles the privileged container lifecycle operations
+(PREPARATION, RESTART, HEALTH_WAIT) so the backend container does not need
+unrestricted Docker socket access for those steps. Installing the agent is
+optional; the backend falls back to direct Docker Compose access when
+`HOST_AGENT_URL` is not set.
+
+### 1. Create the OS user
+
+```bash
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin craftcontrol-agent
+sudo usermod -aG docker craftcontrol-agent
+```
+
+### 2. Generate and store the shared secret
+
+```bash
+TOKEN=$(python3 -c "import secrets; print(secrets.token_urlsafe(32), end='')")
+sudo mkdir -p /etc/craftcontrol
+echo -n "$TOKEN" | sudo install -m 0600 -o craftcontrol-agent -g craftcontrol-agent \
+  /dev/stdin /etc/craftcontrol/host-agent-token
+```
+
+Keep `$TOKEN` in a secure location — you will need it for the backend
+configuration below. The token value must never appear in a plain environment
+variable, log line, or committed file.
+
+### 3. Install the agent
+
+Copy the agent source from `deploy/host-agent/` to the host, install its
+dependencies, and install the systemd unit:
+
+```bash
+sudo cp deploy/host-agent/systemd/craftcontrol-host-agent.service \
+  /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now craftcontrol-host-agent
+```
+
+Verify the agent is running:
+
+```bash
+sudo systemctl status craftcontrol-host-agent
+curl http://127.0.0.1:7890/v1/health
+```
+
+### 4. Configure the backend
+
+Add the following to your `.env` (the token file path is inside the container):
+
+```
+HOST_AGENT_URL=http://host-gateway:7890
+HOST_AGENT_TOKEN_FILE=/run/host-agent-token
+```
+
+Then add the token file bind mount to `docker-compose.split.yml` under the
+backend service volumes:
+
+```yaml
+- /etc/craftcontrol/host-agent-token:/run/host-agent-token:ro
+```
+
+The backend reads the token once at startup. The `extra_hosts` entry
+`host-gateway:host-gateway` must be present in the backend service so the
+container can resolve the host IP.
+
+### 5. Restrict network access
+
+Restrict inbound connections on port `7890` to the Docker bridge subnet only.
+For example, with `ufw`:
+
+```bash
+sudo ufw allow in on docker0 to any port 7890
+sudo ufw deny 7890
+```
+
+Adjust the interface name to match your Docker bridge (`docker0` is the
+default). The agent binds to `0.0.0.0:7890` by default; the firewall rule
+provides the network isolation.
+
+See `docs/host-agent-contract.md` for the full threat model, token rotation
+procedure, and permitted operation list.
+
 ## Validate and run the cutover
 
 Validate the split Compose topology first:

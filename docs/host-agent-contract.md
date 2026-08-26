@@ -431,8 +431,7 @@ file writes are permitted.
 ## Deployment
 
 The agent runs as a **systemd service** on the Docker host, outside all
-containers. A minimal unit file is provided under `deploy/host-agent/` (to be
-added in #230).
+containers. The unit file and agent source are available under `deploy/host-agent/`.
 
 | Property | Value |
 |----------|-------|
@@ -447,12 +446,27 @@ added in #230).
 
 ## Relationship to existing code
 
-The backend's existing `ContainerOperations` port
-(`apps/backend/minecraft_manager/ports.py`) defines the interface the Compose
-adapter currently implements. Issue #231 will add an `HttpHostAgentAdapter` that
-implements the same port by calling this agent. No application service or use
-case changes are required as long as the adapter returns results in the executor
-result shape defined in `docs/operation-lifecycle.md`.
+The backend's `ContainerOperations` port
+(`apps/backend/minecraft_manager/ports.py`) defines the interface both adapters
+implement. `HostAgentContainerOperations` (implemented in
+`apps/backend/minecraft_manager/host_agent.py`) calls this agent over HTTP and
+returns results in the executor result shape defined in
+`docs/operation-lifecycle.md`. `DockerOperations` is the direct Compose adapter
+used when the host agent is not configured.
+
+Configuration selects exactly one implementation at startup: when `HOST_AGENT_URL`
+is set in the environment, `HostAgentContainerOperations` is composed; otherwise
+`DockerOperations` is used. No application service or use case changes are
+required to switch between adapters — both satisfy the same `ContainerOperations`
+port.
+
+The direct Compose adapter (`DockerOperations`) and the host-agent adapter
+(`HostAgentContainerOperations`) coexist in the codebase. The host agent owns
+Docker socket access for the operations it executes (PREPARATION, RESTART,
+HEALTH_WAIT). The Docker socket is still mounted in the backend container for
+operations that remain there: `BedrockClient` uses it for console attachment,
+log streaming, and Docker event subscriptions. Those operations are not delegated
+to the agent.
 
 ---
 

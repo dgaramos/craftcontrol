@@ -60,11 +60,15 @@ CraftControl is a monorepo with two independently deployable services, not a set
 flowchart TD
     client["Phone, tablet, or desktop"] -->|"HTTP :8082 — trusted LAN / external TLS proxy"| frontend["Frontend · Nginx · static and read-only<br/>Browser UI · same-origin /api + SSE proxy"]
     frontend -->|"private Compose network"| backend["Backend · Flask modular monolith<br/>HTTP → use cases → ports/adapters → SQLite"]
-    backend -->|"Docker, files, console, logs"| bedrock["Minecraft Bedrock Dedicated Server"]
+    backend -->|"console, logs, events (Docker socket)"| bedrock["Minecraft Bedrock Dedicated Server"]
+    backend -->|"ContainerOperations (HTTP, when configured)"| hostagent["Host Agent · craftcontrol-host-agent<br/>systemd · PREPARATION · RESTART · HEALTH_WAIT"]
+    hostagent -->|"docker compose, filesystem, UDP probe"| bedrock
     bedrock -. "optional" .-> telemetry["CraftControl Telemetry Pack"]
 ```
 
 The frontend owns the public origin. Nginx serves static assets and proxies `/api/*`, including unbuffered Server-Sent Events, to the private backend. The frontend has no persistent or privileged mounts. Only the backend can access SQLite, Bedrock files, coordinated backups, or Docker operations.
+
+When the host agent is configured (`HOST_AGENT_URL` is set), server lifecycle operations — writing configuration, restarting the Compose service, and polling the Bedrock health probe — are delegated to the `craftcontrol-host-agent` systemd service running on the Docker host outside all containers. The agent owns Docker socket access for those operations; the Docker socket remains mounted in the backend for Bedrock console attachment, log streaming, and Docker events. Without the host agent, the backend performs all operations directly.
 
 The backend intentionally runs one Gunicorn worker with multiple threads. Its event broker, supervisors, refresh lock, and SSE delivery are process-local; multiple workers would duplicate those responsibilities.
 

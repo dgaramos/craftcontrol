@@ -66,6 +66,64 @@ backup first.
    invariants, automatic failure recovery, and explicit compatibility rollback
    are enforced by the cutover workflow.
 
+## Host agent execution boundary
+
+The split topology introduces an optional privileged-execution boundary between
+the backend container and the Docker daemon. When `HOST_AGENT_URL` is set in the
+backend's environment, the composition root wires `HostAgentContainerOperations`
+instead of the direct `DockerOperations` adapter:
+
+```
+Backend container
+  └── ContainerOperations (HTTP)
+        └── craftcontrol-host-agent (systemd, Docker host)
+              ├── PREPARATION — writes configuration files
+              ├── RESTART     — docker compose restart minecraft-server
+              └── HEALTH_WAIT — Bedrock UDP health probe
+```
+
+The backend still mounts the Docker socket for Bedrock console operations
+(`BedrockClient`): attaching to the container stdin, streaming logs, and
+receiving Docker events. These operations are not part of the host-agent contract
+and are not delegated.
+
+The two adapters coexist in the codebase. Configuration selects exactly one
+`ContainerOperations` implementation:
+
+| `HOST_AGENT_URL` set? | Adapter |
+|---|---|
+| Yes | `HostAgentContainerOperations` (HTTP, delegates to agent) |
+| No | `DockerOperations` (direct Compose, no agent required) |
+
+The adapter switch is invisible to application services and use cases: both
+satisfy the same `ContainerOperations` port. SQLite persistence, event delivery,
+SSE publication, and operation evidence remain owned by the backend regardless
+of which adapter is selected.
+
+### Required backend configuration (split mode with host agent)
+
+| Variable | Where set | Description |
+|---|---|---|
+| `HOST_AGENT_URL` | backend environment | Base URL the backend uses to reach the agent, e.g. `http://host-gateway:7890`. |
+| `HOST_AGENT_TOKEN_FILE` | backend environment | Path to the shared-secret file inside the container, e.g. `/run/host-agent-token`. |
+
+The token file is mounted from the host via a bind mount or Docker secret. Its
+value must match the secret file read by the agent on the host side. See
+`docs/host-agent-contract.md` for key distribution and token rotation procedures.
+
+Never set the token value as a plain environment variable; always use a file
+mount. No token value may appear in logs, API responses, or the `.env` file.
+
+### Failure behavior
+
+Agent unavailability is surfaced as an operation failure with `error_code:
+executor_internal_error`. The backend follows the failure protocol described in
+`docs/host-agent-contract.md`: pre-delivery failures are safe to fail
+immediately; post-delivery failures require status polling before concluding an
+ambiguous result. The operation is transitioned to FAILED and SSE delivers
+`operation.failed`. No host internals (agent address, filesystem paths, container
+names) are exposed in the UI or public API responses.
+
 ## Independent quality gates
 
 `bin/check-frontend`, `bin/check-backend`, `bin/check-contracts`, and

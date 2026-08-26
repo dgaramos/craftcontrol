@@ -24,9 +24,9 @@ import pytest
 from flask import Blueprint, Flask, jsonify
 
 from minecraft_manager.auth.http import require
-from tests.conftest import make_auth_mock, wire_auth
+from conftest import make_auth_mock, wire_auth
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[3]
 PROFILE = ROOT / ".agent-review" / "craftcontrol" / "PROFILE.md"
 CLAUDIO_WORKFLOW = ROOT / ".github" / "workflows" / "publish-claudio-review.yml"
 CODY_WORKFLOW = ROOT / ".github" / "workflows" / "publish-cody-review.yml"

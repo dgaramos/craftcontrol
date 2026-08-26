@@ -17,20 +17,20 @@ class FakeConsole:
         self.operators.append((player, enabled))
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[3]
 
 
 def test_frontend_path_resolves_in_source_and_packaged_image_layouts() -> None:
-    assert frontend_root(ROOT / "apps" / "backend" / "minecraft_manager") == ROOT / "apps" / "frontend"
-    assert frontend_root(Path("/app/minecraft_manager")) == Path("/app/apps/frontend")
+    assert frontend_root(ROOT / "apps" / "server" / "minecraft_manager") == ROOT / "apps" / "client"
+    assert frontend_root(Path("/app/minecraft_manager")) == Path("/app/apps/client")
 
 
 def test_frontend_and_backend_have_explicit_application_boundaries() -> None:
-    assert (ROOT / "apps" / "frontend" / "static" / "app.js").is_file()
-    assert (ROOT / "apps" / "backend" / "minecraft_manager" / "composition.py").is_file()
-    assert (ROOT / "minecraft_manager").resolve() == (ROOT / "apps" / "backend" / "minecraft_manager").resolve()
+    assert (ROOT / "apps" / "client" / "static" / "app.js").is_file()
+    assert (ROOT / "apps" / "server" / "minecraft_manager" / "composition.py").is_file()
+    assert (ROOT / "minecraft_manager").resolve() == (ROOT / "apps" / "server" / "minecraft_manager").resolve()
     compose = (ROOT / "docker-compose.yml").read_text()
-    assert "./apps/backend/minecraft_manager:/app/minecraft_manager:ro" in compose
+    assert "./apps/server/minecraft_manager:/app/minecraft_manager:ro" in compose
 
 
 def test_player_use_cases_accept_injected_boundary_adapters(tmp_path: Path) -> None:

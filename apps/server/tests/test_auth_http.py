@@ -7,7 +7,7 @@ import pytest
 from flask import Flask, jsonify
 
 from minecraft_manager.auth.http import auth_api, require
-from tests.conftest import make_auth_mock, wire_auth
+from conftest import make_auth_mock, wire_auth
 
 
 def _make_app(auth: MagicMock, *, mode: str = "local") -> Flask:

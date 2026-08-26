@@ -12,7 +12,7 @@ from minecraft_manager.routes import api
 from packages.contracts.generate_types import OUTPUT_PATH, generate
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[3]
 OPENAPI = ROOT / "packages" / "contracts" / "openapi.json"
 SURFACE = ROOT / "packages" / "contracts" / "http-surface.json"
 DOC_PATHS = {"/api/docs", "/api/docs/assets/<path:filename>", "/api/openapi.json"}
@@ -138,7 +138,7 @@ def test_operation_ids_are_unique_and_mutations_declare_csrf(openapi_specs) -> N
 
 
 def test_contract_paths_resolve_in_source_and_packaged_layouts() -> None:
-    assert contract_root(ROOT / "apps" / "backend" / "minecraft_manager") == ROOT / "packages" / "contracts"
+    assert contract_root(ROOT / "apps" / "server" / "minecraft_manager") == ROOT / "packages" / "contracts"
     assert contract_root(Path("/app/minecraft_manager")) == Path("/app/packages/contracts")
 
 

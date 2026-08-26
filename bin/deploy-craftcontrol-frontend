@@ -27,7 +27,7 @@ readonly COMPOSE_FILE="$DEPLOY_ROOT/docker-compose.split.yml"
 fail() { echo "frontend deploy refused: $*" >&2; exit 1; }
 compose() { docker compose --project-directory "$DEPLOY_ROOT" --file "$COMPOSE_FILE" "$@"; }
 prepare_forward_image() {
-  git -C "$SOURCE_ROOT" ls-files -z apps/frontend docker-compose.split.yml versions.env \
+  git -C "$SOURCE_ROOT" ls-files -z apps/client docker-compose.split.yml versions.env \
     | rsync -a --from0 --files-from=- "$SOURCE_ROOT/" "$DEPLOY_ROOT/"
   for attempt in 1 2 3; do
     if compose build craftcontrol-frontend; then

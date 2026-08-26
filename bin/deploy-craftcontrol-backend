@@ -42,7 +42,7 @@ validate_database() {
     || fail "SQLite integrity check failed"
 }
 prepare_forward_image() {
-  git -C "$SOURCE_ROOT" ls-files -z apps/backend packages packs bin/craftcontrol docker-compose.split.yml versions.env \
+  git -C "$SOURCE_ROOT" ls-files -z apps/server packages packs bin/craftcontrol docker-compose.split.yml versions.env \
     | rsync -a --from0 --files-from=- "$SOURCE_ROOT/" "$DEPLOY_ROOT/"
   for attempt in 1 2 3; do
     if compose build craftcontrol-backend; then

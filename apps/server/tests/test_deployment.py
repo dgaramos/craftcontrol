@@ -4,7 +4,7 @@ import shutil
 import subprocess
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[3]
 BASH = shutil.which("bash")
 
 if BASH is None:
@@ -127,20 +127,20 @@ def test_cutover_proves_auth_csrf_sse_and_persistent_state() -> None:
 
 def test_compose_mounts_explicit_application_boundaries() -> None:
     compose = (ROOT / "docker-compose.yml").read_text()
-    assert "./apps/frontend/static:/app/apps/frontend/static:ro" in compose
-    assert "./apps/frontend/templates:/app/apps/frontend/templates:ro" in compose
-    assert "./apps/backend/minecraft_manager:/app/minecraft_manager:ro" in compose
+    assert "./apps/client/static:/app/apps/client/static:ro" in compose
+    assert "./apps/client/templates:/app/apps/client/templates:ro" in compose
+    assert "./apps/server/minecraft_manager:/app/minecraft_manager:ro" in compose
     assert "./static:/app/static" not in compose
     assert "./templates:/app/templates" not in compose
 
 
 def test_split_images_isolate_privileged_backend_from_frontend() -> None:
     split = (ROOT / "docker-compose.split.yml").read_text()
-    frontend_dockerfile = (ROOT / "apps" / "frontend" / "Dockerfile").read_text()
-    backend_dockerfile = (ROOT / "apps" / "backend" / "Dockerfile").read_text()
+    frontend_dockerfile = (ROOT / "apps" / "client" / "Dockerfile").read_text()
+    backend_dockerfile = (ROOT / "apps" / "server" / "Dockerfile").read_text()
     frontend = split.split("  craftcontrol-frontend:", 1)[1]
     backend = split.split("  craftcontrol-backend:", 1)[1].split("  craftcontrol-frontend:", 1)[0]
-    assert "apps/backend/Dockerfile" in backend
+    assert "apps/server/Dockerfile" in backend
     # The Docker socket is mounted read-only in the backend service.  BedrockClient
     # uses it for console operations (send, query_state, set_operator,
     # request_telemetry_snapshot) and EventRuntime uses it for log and Docker-event
@@ -148,7 +148,7 @@ def test_split_images_isolate_privileged_backend_from_frontend() -> None:
     assert "/var/run/docker.sock" in backend
     assert "/minecraft-project" in backend
     assert "./data:/data" in backend
-    assert "apps/frontend/Dockerfile" in frontend
+    assert "apps/client/Dockerfile" in frontend
     # The frontend never needs the Docker socket.
     assert "/var/run/docker.sock" not in frontend
     assert "/minecraft-project" not in frontend
@@ -215,7 +215,7 @@ def test_host_agent_coverage_is_scoped_to_the_service_boundary() -> None:
 
 
 def test_frontend_proxy_preserves_same_origin_and_sse_streaming() -> None:
-    nginx = (ROOT / "apps" / "frontend" / "nginx.conf").read_text()
+    nginx = (ROOT / "apps" / "client" / "nginx.conf").read_text()
     assert "location /api/" in nginx
     assert "location = /api/events" in nginx
     assert "resolver 127.0.0.11" in nginx
@@ -227,11 +227,11 @@ def test_frontend_proxy_preserves_same_origin_and_sse_streaming() -> None:
 
 
 def test_backend_image_does_not_bundle_frontend_application() -> None:
-    backend = (ROOT / "apps" / "backend" / "Dockerfile").read_text()
-    frontend = (ROOT / "apps" / "frontend" / "Dockerfile").read_text()
-    assert "apps/frontend" not in backend
+    backend = (ROOT / "apps" / "server" / "Dockerfile").read_text()
+    frontend = (ROOT / "apps" / "client" / "Dockerfile").read_text()
+    assert "apps/client" not in backend
     assert "minecraft_manager" not in frontend
-    assert "COPY apps/frontend/static" in frontend
+    assert "COPY apps/client/static" in frontend
     assert "chmod -R a=rX /usr/share/nginx/html" in frontend
 
 

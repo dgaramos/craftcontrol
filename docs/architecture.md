@@ -30,7 +30,7 @@ CraftControl is not a strict textbook Clean Architecture implementation. It appl
 
 ```mermaid
 flowchart TD
-    manager["apps/backend/minecraft_manager/"] --> core["core/ — configuration, database, events, validation"]
+    manager["apps/server/minecraft_manager/"] --> core["core/ — configuration, database, events, validation"]
     manager --> server["server/ — settings, gamerules, world and lifecycle use cases"]
     manager --> players["players/ — profiles, sessions, history and permissions"]
     manager --> telemetry["telemetry/ — protocol, reconciliation, persistence and installation"]
@@ -39,7 +39,7 @@ flowchart TD
     manager --> http["http/ — HTTP mapping grouped by domain"]
 ```
 
-Migration to this shape is incremental. `apps/frontend/` and `apps/backend/`
+Migration to this shape is incremental. `apps/client/` and `apps/server/`
 are now explicit code boundaries, while root Python entry points and package
 links temporarily preserve local tooling. Existing public APIs, database
 tables, environment variables, world data, and deployment paths remain

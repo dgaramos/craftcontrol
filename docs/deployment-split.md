@@ -8,12 +8,12 @@ the private Compose network.
 
 ## Current ownership inventory
 
-The frontend now lives under `apps/frontend/` and contains templates, static
+The Client now lives under `apps/client/` and contains templates, static
 files, browser-side API and authentication code, localization, and visual
 assets. Flask still serves the index template and `/static/*` from that
 application directory as compatibility behavior.
 
-The backend now lives under `apps/backend/` and contains the Python package,
+The Server now lives under `apps/server/` and contains the Python package,
 entry points, dependencies, SQLite, authentication and CSRF enforcement, the
 SSE stream, Bedrock and Docker adapters, telemetry ingestion, pack lifecycle,
 and coordinated backups. Root entry points and package links remain temporary
@@ -27,7 +27,7 @@ Swagger UI from the backend and reuses the active session and CSRF protections.
 guard: tests compare it with Flask's real URL map, ensure browser calls remain
 within `/api`, and require the documented business methods to stay aligned.
 Stable OpenAPI schemas also generate
-`apps/frontend/static/js/api-contract.d.ts`; a deterministic check prevents the
+`apps/client/static/js/api-contract.d.ts`; a deterministic check prevents the
 browser declarations and backend contract from drifting. Representative Flask
 responses are validated against the same published schemas.
 
@@ -135,14 +135,14 @@ disabled, so one failure does not hide results from the other applications.
 
 ## Split-image production topology
 
-`apps/frontend/Dockerfile` builds a static, read-only Nginx image. It owns the
+`apps/client/Dockerfile` builds a static, read-only Nginx image. It owns the
 public origin and forwards `/api/*` to `craftcontrol-backend` on the private
 Compose network. The dedicated `/api/events` location disables proxy buffering
 and caching, retains a long read timeout, and passes reconnect headers. Docker's
 embedded DNS is resolved dynamically so recreating only the backend does not
 leave the frontend pinned to an obsolete container address.
 
-`apps/backend/Dockerfile` contains the CraftControl Server Flask application,
+`apps/server/Dockerfile` contains the CraftControl Server Flask application,
 OpenAPI contracts, CraftControl Telemetry Pack, and operations CLI, but no
 CraftControl Client files. In
 `docker-compose.split.yml`, only this service receives SQLite, Bedrock, backup,

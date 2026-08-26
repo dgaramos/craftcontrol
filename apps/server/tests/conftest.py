@@ -11,7 +11,7 @@ from unittest.mock import MagicMock
 # host-agent path bootstrap (shared by test_host_agent_* modules)
 # ---------------------------------------------------------------------------
 _HOST_AGENT_DIR = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "services", "host-agent")
+    os.path.join(os.path.dirname(__file__), "..", "..", "..", "services", "host-agent")
 )
 if _HOST_AGENT_DIR not in sys.path:
     sys.path.insert(0, _HOST_AGENT_DIR)
@@ -30,7 +30,7 @@ from minecraft_manager.server import WorldService
 from minecraft_manager.services import ManagerService
 from minecraft_manager.telemetry_repository import SQLiteTelemetryRepository
 from minecraft_manager.telemetry_service import TelemetryService
-from tests.fakes import FakeBedrock, FakeConsole, FakeDocker, FakeRuntime
+from fakes import FakeBedrock, FakeConsole, FakeDocker, FakeRuntime  # noqa: E402
 
 __all__ = ["FakeBedrock", "FakeConsole", "FakeDocker", "FakeRuntime"]
 

@@ -1,6 +1,6 @@
 # Database migrations
 
-CraftControl evolves its embedded SQLite schema through numbered, contiguous migrations in `apps/backend/minecraft_manager/migrations.py`. The database stores its applied version in SQLite's native `PRAGMA user_version`; this is independent from both the Telemetry Pack storage version and telemetry protocol schema.
+CraftControl evolves its embedded SQLite schema through numbered, contiguous migrations in `apps/server/minecraft_manager/migrations.py`. The database stores its applied version in SQLite's native `PRAGMA user_version`; this is independent from both the Telemetry Pack storage version and telemetry protocol schema.
 
 Schema version `4` adds `player_daily`, the source for honest 7/30-day rankings, calendars, and daily telemetry deltas. Existing lifetime telemetry is retained as a baseline and is not backfilled into an invented historical day.
 

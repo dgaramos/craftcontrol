@@ -20,7 +20,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: python -m pip install -r apps/backend/requirements.txt
+      - run: python -m pip install -r apps/server/requirements.txt
       - run: bin/check-backend
       - name: Upload backend coverage
         uses: codecov/codecov-action@v5.4.3
@@ -44,7 +44,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: python -m pip install -r apps/backend/requirements.txt
+      - run: python -m pip install -r apps/server/requirements.txt
       - run: bin/check-contracts
 
   host-agent:
@@ -58,7 +58,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: python -m pip install -r apps/backend/requirements.txt
+      - run: python -m pip install -r apps/server/requirements.txt
       - run: bin/check-host-agent
       - name: Upload host-agent coverage
         uses: codecov/codecov-action@v5.4.3
@@ -80,7 +80,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: python -m pip install -r apps/backend/requirements.txt
+      - run: python -m pip install -r apps/server/requirements.txt
       - run: bin/check-contracts-frontend
 
   frontend:
@@ -97,12 +97,12 @@ jobs:
       - name: Upload frontend coverage
         uses: codecov/codecov-action@v5.4.3
         with:
-          files: apps/frontend/coverage/lcov.info
+          files: apps/client/coverage/lcov.info
           flags: frontend
       - name: Upload frontend test results
         uses: codecov/test-results-action@v1.1.1
         with:
-          files: apps/frontend/junit.xml
+          files: apps/client/junit.xml
           flags: frontend
 
   integration:
@@ -120,5 +120,5 @@ jobs:
       - uses: actions/setup-node@v4.4.0
         with:
           node-version: "22"
-      - run: python -m pip install -r apps/backend/requirements.txt
+      - run: python -m pip install -r apps/server/requirements.txt
       - run: bin/check-integration

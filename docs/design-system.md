@@ -6,9 +6,9 @@ product's block interface without reproducing Mojang artwork.
 
 ## Icon families
 
-- `apps/frontend/static/craftcontrol-ui.svg` contains navigation, actions, states, and metric icons.
-- `apps/frontend/static/craftcontrol-mobs.svg` contains creature, player, and projectile portraits.
-- `apps/frontend/static/craftcontrol-blocks.svg` contains semantic block and ore families.
+- `apps/client/static/craftcontrol-ui.svg` contains navigation, actions, states, and metric icons.
+- `apps/client/static/craftcontrol-mobs.svg` contains creature, player, and projectile portraits.
+- `apps/client/static/craftcontrol-blocks.svg` contains semantic block and ore families.
 
 Every symbol uses a `24 × 24` view box, integer-aligned geometry, square corners,
 and a small palette derived from CraftControl's deepslate, grass, copper, sand,

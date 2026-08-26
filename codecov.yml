@@ -36,10 +36,10 @@ coverage:
 flags:
   backend:
     paths:
-      - apps/backend/minecraft_manager/
+      - apps/server/minecraft_manager/
   frontend:
     paths:
-      - apps/frontend/static/js/
+      - apps/client/static/js/
   host-agent:
     paths:
       - services/host-agent/
@@ -49,47 +49,47 @@ component_management:
     - component_id: backend_auth
       name: "backend: auth"
       paths:
-        - apps/backend/minecraft_manager/auth/
+        - apps/server/minecraft_manager/auth/
     - component_id: backend_core
       name: "backend: core"
       paths:
-        - apps/backend/minecraft_manager/core/
+        - apps/server/minecraft_manager/core/
     - component_id: backend_http
       name: "backend: http"
       paths:
-        - apps/backend/minecraft_manager/http/
+        - apps/server/minecraft_manager/http/
     - component_id: backend_operations
       name: "backend: operations"
       paths:
-        - apps/backend/minecraft_manager/operations/
+        - apps/server/minecraft_manager/operations/
     - component_id: backend_players
       name: "backend: players"
       paths:
-        - apps/backend/minecraft_manager/players/
+        - apps/server/minecraft_manager/players/
     - component_id: backend_runtime
       name: "backend: runtime"
       paths:
-        - apps/backend/minecraft_manager/runtime/
+        - apps/server/minecraft_manager/runtime/
     - component_id: backend_server
       name: "backend: server"
       paths:
-        - apps/backend/minecraft_manager/server/
+        - apps/server/minecraft_manager/server/
     - component_id: backend_telemetry
       name: "backend: telemetry"
       paths:
-        - apps/backend/minecraft_manager/telemetry/
+        - apps/server/minecraft_manager/telemetry/
     - component_id: frontend_components
       name: "frontend: components"
       paths:
-        - apps/frontend/static/js/components/
+        - apps/client/static/js/components/
     - component_id: frontend_core
       name: "frontend: core"
       paths:
-        - apps/frontend/static/js/core/
+        - apps/client/static/js/core/
     - component_id: frontend_features
       name: "frontend: features"
       paths:
-        - apps/frontend/static/js/features/
+        - apps/client/static/js/features/
     - component_id: host_agent
       name: "host-agent"
       paths:

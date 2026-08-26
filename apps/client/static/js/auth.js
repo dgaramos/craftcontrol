@@ -1,6 +1,7 @@
 import { api } from "./api.js?v=7";
 
 const locale = () => ["pt", "en", "es"].includes(localStorage.getItem("craftcontrol-locale")) ? localStorage.getItem("craftcontrol-locale") : "pt";
+const sessionLocale = { pt: "pt-BR", en: "en-US", es: "es-ES" };
 const copy = {
   pt: { title: "Entrar no CraftControl", claimTitle: "Criar acesso", player: "Gamertag", password: "Senha", login: "Entrar", noAccount: "Primeiro acesso ou recebeu um convite?", claim: "Criar acesso", token: "Código de convite", choose: "Escolha uma senha com pelo menos 8 caracteres", activate: "Cadastrar", back: "Já tem acesso? Entrar", logout: "Sair", changePassword: "Alterar senha", changePasswordTitle: "Alterar sua senha", currentPassword: "Senha atual", newPassword: "Nova senha", savePassword: "Salvar nova senha", cancel: "Cancelar", passwordChanged: "Senha alterada. Sua sessão foi renovada.", requestFailed: "Não foi possível concluir a solicitação.", showPassword: "Mostrar senha", hidePassword: "Ocultar senha", sessions: "Sessões", sessionsTitle: "Sessões ativas", currentSession: "Esta sessão", revoke: "Revogar", revokeOthers: "Revogar outras", sessionsEmpty: "Nenhuma outra sessão ativa." },
   en: { title: "Sign in to CraftControl", claimTitle: "Create access", player: "Gamertag", password: "Password", login: "Sign in", noAccount: "First access or received an invitation?", claim: "Sign up", token: "Invitation code", choose: "Choose a password with at least 8 characters", activate: "Sign up", back: "Already have access? Sign in", logout: "Sign out", changePassword: "Change password", changePasswordTitle: "Change your password", currentPassword: "Current password", newPassword: "New password", savePassword: "Save new password", cancel: "Cancel", passwordChanged: "Password changed. Your session was renewed.", requestFailed: "We could not complete the request.", showPassword: "Show password", hidePassword: "Hide password", sessions: "Sessions", sessionsTitle: "Active sessions", currentSession: "This session", revoke: "Revoke", revokeOthers: "Revoke others", sessionsEmpty: "No other active sessions." },
@@ -44,6 +45,8 @@ function showIdentity(user) {
   passwordBtn.onclick = showPasswordChange;
   const sessionsBtn = clone.querySelector("#manage-sessions");
   sessionsBtn.querySelector("span").textContent = copy[locale()].sessions;
+  sessionsBtn.setAttribute("aria-label", copy[locale()].sessions);
+  sessionsBtn.setAttribute("title", copy[locale()].sessions);
   sessionsBtn.onclick = showSessions;
   container.replaceChildren(clone);
   container.querySelector("#logout").onclick = async () => { await api("/api/auth/logout", { method: "POST" }); window.location.reload(); };
@@ -93,7 +96,23 @@ async function showSessions() {
   const title = document.createElement("h2"); title.textContent = words.sessionsTitle; card.append(title);
   const errorBox = document.createElement("p"); errorBox.className = "auth-error"; errorBox.role = "alert"; card.append(errorBox);
   const list = document.createElement("div"); list.className = "session-history";
-  data.sessions.forEach((session) => { const row = document.createElement("div"); row.className = "session-item"; const label = document.createElement("span"); label.textContent = session.current ? words.currentSession : new Date(session.last_seen_at * 1000).toLocaleString(); row.append(label); if (!session.current) { const button = document.createElement("button"); button.className = "danger"; button.textContent = words.revoke; button.dataset.session = session.id; button.onclick = async () => { try { await api(`/api/auth/sessions/${button.dataset.session}`, { method: "DELETE" }); showSessions(); } catch { errorBox.textContent = words.requestFailed; } }; row.append(button); } list.append(row); }); card.append(list);
+  data.sessions.forEach((session) => {
+    const row = document.createElement("article"); row.className = "session-item";
+    const details = document.createElement("div"); details.className = "session-item-copy";
+    const label = document.createElement("strong");
+    label.textContent = session.current ? words.currentSession : new Date(session.last_seen_at * 1000).toLocaleString(sessionLocale[locale()]);
+    details.append(label);
+    row.append(details);
+    if (!session.current) {
+      const action = document.createElement("div"); action.className = "session-item-action";
+      const button = document.createElement("button"); button.className = "danger"; button.textContent = words.revoke; button.dataset.session = session.id;
+      button.onclick = async () => { try { await api(`/api/auth/sessions/${button.dataset.session}`, { method: "DELETE" }); showSessions(); } catch { errorBox.textContent = words.requestFailed; } };
+      action.append(button);
+      row.append(action);
+    }
+    list.append(row);
+  });
+  card.append(list);
   if (others.length) { const button = document.createElement("button"); button.id = "revoke-others"; button.className = "danger"; button.textContent = words.revokeOthers; button.onclick = async () => { try { await api("/api/auth/sessions", { method: "POST" }); showSessions(); } catch { errorBox.textContent = words.requestFailed; } }; card.append(button); } else { const empty = document.createElement("p"); empty.textContent = words.sessionsEmpty; card.append(empty); }
   const cancel = document.createElement("button"); cancel.className = "secondary"; cancel.type = "button"; cancel.textContent = words.cancel; cancel.onclick = () => dialog.close(); card.append(cancel); dialog.replaceChildren(card);
   dialog.showModal();

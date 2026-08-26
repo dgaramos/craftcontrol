@@ -14,6 +14,7 @@ const JS = join(STATIC, "js");
 
 const authScript = readFileSync(join(JS, "auth.js"), "utf8");
 const authCss = readFileSync(join(STATIC, "auth.css"), "utf8");
+const indexTemplate = readFileSync(join(FRONTEND, "templates", "index.html"), "utf8");
 
 describe("auth contracts — password toggle accessibility", () => {
   test("auth.js has password-toggle class", () => {
@@ -69,5 +70,37 @@ describe("auth contracts — ui-eye icon in SVG sprite", () => {
   test("craftcontrol-ui.svg contains ui-eye symbol", () => {
     const svgSource = readFileSync(join(STATIC, "craftcontrol-ui.svg"), "utf8");
     expect(svgSource).toContain('id="ui-eye"');
+  });
+});
+
+describe("auth contracts — account workspace usability", () => {
+  test("identity actions use distinct original password and sessions icons", () => {
+    const svgSource = readFileSync(join(STATIC, "craftcontrol-ui.svg"), "utf8");
+    expect(svgSource).toContain('id="ui-password"');
+    expect(svgSource).toContain('id="ui-sessions"');
+    expect(indexTemplate).toMatch(/id="change-password"[^>]*>\s*<svg[^>]*>\s*<use[^>]*#ui-password/);
+    expect(indexTemplate).toMatch(/id="manage-sessions"[^>]*>\s*<svg[^>]*>\s*<use[^>]*#ui-sessions/);
+  });
+
+  test("keeps account action icons touch-sized when their labels collapse", () => {
+    expect(authCss).toContain("#identity button .cc-icon");
+    expect(authCss).toContain("min-height: 44px");
+  });
+
+  test("keeps the localized sessions label available to assistive technology", () => {
+    expect(authScript).toContain('sessionsBtn.setAttribute("aria-label", copy[locale()].sessions)');
+  });
+
+  test("formats inactive session dates in the selected interface locale", () => {
+    expect(authScript).toContain('pt: "pt-BR", en: "en-US", es: "es-ES"');
+    expect(authScript).toContain("toLocaleString(sessionLocale[locale()])");
+  });
+
+  test("renders session cards with separated metadata and revoke actions", () => {
+    expect(authScript).toContain('className = "session-item-copy"');
+    expect(authScript).toContain('className = "session-item-action"');
+    expect(authCss).toContain(".session-item-action .danger");
+    expect(authCss).toContain(".session-item-copy");
+    expect(authCss).toContain("overflow-wrap: anywhere");
   });
 });

@@ -46,6 +46,30 @@ def test_login_logout_and_alias_identity(auth_db) -> None:
     assert auth.authenticate(second_session) is not None
 
 
+def test_lists_safe_sessions_and_revokes_only_another_session(auth_db) -> None:
+    _, auth = auth_db
+    invitation = auth.create_invitation("Nicole", "viewer")
+    current, _ = auth.claim("Nicole", invitation, "a sufficiently long password")
+    other, _ = auth.login("Nicole", "a sufficiently long password")
+    sessions = auth.sessions(current)
+    assert {"id", "created_at", "last_seen_at", "current"} == set(sessions[0])
+    assert all(other not in str(session) and current not in str(session) for session in sessions)
+    other_id = next(session["id"] for session in sessions if not session["current"])
+    auth.revoke_session(current, other_id)
+    assert auth.authenticate(other) is None
+    assert auth.authenticate(current) is not None
+
+
+def test_revoking_other_sessions_preserves_current_session(auth_db) -> None:
+    _, auth = auth_db
+    invitation = auth.create_invitation("Nicole", "viewer")
+    current, _ = auth.claim("Nicole", invitation, "a sufficiently long password")
+    other, _ = auth.login("Nicole", "a sufficiently long password")
+    auth.revoke_other_sessions(current)
+    assert auth.authenticate(current) is not None
+    assert auth.authenticate(other) is None
+
+
 def test_change_password_rotates_current_session_and_revokes_existing_sessions(auth_db) -> None:
     _, auth = auth_db
     invitation = auth.create_invitation("Nicole", "operator")

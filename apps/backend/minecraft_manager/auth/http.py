@@ -133,6 +133,29 @@ def change_password():
     return _session_response(user, token)
 
 
+@auth_api.get("/api/auth/sessions")
+def sessions():
+    return jsonify(sessions=auth_service().sessions(request.cookies.get(COOKIE_NAME) or ""))
+
+
+@auth_api.delete("/api/auth/sessions/<session_id>")
+def revoke_session(session_id: str):
+    try:
+        auth_service().revoke_session(request.cookies.get(COOKIE_NAME) or "", session_id)
+    except ValueError as error:
+        return jsonify(error=str(error)), 400
+    return jsonify(ok=True)
+
+
+@auth_api.post("/api/auth/sessions")
+def revoke_other_sessions():
+    try:
+        auth_service().revoke_other_sessions(request.cookies.get(COOKIE_NAME) or "")
+    except ValueError as error:
+        return jsonify(error=str(error)), 400
+    return jsonify(ok=True)
+
+
 @auth_api.get("/api/auth/access")
 @require("security.manage_users")
 def access_list():

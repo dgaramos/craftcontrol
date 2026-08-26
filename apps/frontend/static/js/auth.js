@@ -2,9 +2,9 @@ import { api } from "./api.js?v=7";
 
 const locale = () => ["pt", "en", "es"].includes(localStorage.getItem("craftcontrol-locale")) ? localStorage.getItem("craftcontrol-locale") : "pt";
 const copy = {
-  pt: { title: "Entrar no CraftControl", claimTitle: "Criar acesso", player: "Gamertag", password: "Senha", login: "Entrar", noAccount: "Primeiro acesso ou recebeu um convite?", claim: "Criar acesso", token: "Código de convite", choose: "Escolha uma senha com pelo menos 8 caracteres", activate: "Cadastrar", back: "Já tem acesso? Entrar", logout: "Sair", changePassword: "Alterar senha", changePasswordTitle: "Alterar sua senha", currentPassword: "Senha atual", newPassword: "Nova senha", savePassword: "Salvar nova senha", cancel: "Cancelar", passwordChanged: "Senha alterada. Sua sessão foi renovada.", showPassword: "Mostrar senha", hidePassword: "Ocultar senha" },
-  en: { title: "Sign in to CraftControl", claimTitle: "Create access", player: "Gamertag", password: "Password", login: "Sign in", noAccount: "First access or received an invitation?", claim: "Sign up", token: "Invitation code", choose: "Choose a password with at least 8 characters", activate: "Sign up", back: "Already have access? Sign in", logout: "Sign out", changePassword: "Change password", changePasswordTitle: "Change your password", currentPassword: "Current password", newPassword: "New password", savePassword: "Save new password", cancel: "Cancel", passwordChanged: "Password changed. Your session was renewed.", showPassword: "Show password", hidePassword: "Hide password" },
-  es: { title: "Entrar en CraftControl", claimTitle: "Crear acceso", player: "Gamertag", password: "Contraseña", login: "Entrar", noAccount: "¿Primer acceso o recibiste una invitación?", claim: "Registrarse", token: "Código de invitación", choose: "Elige una contraseña de al menos 8 caracteres", activate: "Registrarse", back: "¿Ya tienes acceso? Entrar", logout: "Salir", changePassword: "Cambiar contraseña", changePasswordTitle: "Cambia tu contraseña", currentPassword: "Contraseña actual", newPassword: "Nueva contraseña", savePassword: "Guardar nueva contraseña", cancel: "Cancelar", passwordChanged: "Contraseña cambiada. Tu sesión fue renovada.", showPassword: "Mostrar contraseña", hidePassword: "Ocultar contraseña" },
+  pt: { title: "Entrar no CraftControl", claimTitle: "Criar acesso", player: "Gamertag", password: "Senha", login: "Entrar", noAccount: "Primeiro acesso ou recebeu um convite?", claim: "Criar acesso", token: "Código de convite", choose: "Escolha uma senha com pelo menos 8 caracteres", activate: "Cadastrar", back: "Já tem acesso? Entrar", logout: "Sair", changePassword: "Alterar senha", changePasswordTitle: "Alterar sua senha", currentPassword: "Senha atual", newPassword: "Nova senha", savePassword: "Salvar nova senha", cancel: "Cancelar", passwordChanged: "Senha alterada. Sua sessão foi renovada.", showPassword: "Mostrar senha", hidePassword: "Ocultar senha", sessions: "Sessões", sessionsTitle: "Sessões ativas", currentSession: "Esta sessão", revoke: "Revogar", revokeOthers: "Revogar outras", sessionsEmpty: "Nenhuma outra sessão ativa." },
+  en: { title: "Sign in to CraftControl", claimTitle: "Create access", player: "Gamertag", password: "Password", login: "Sign in", noAccount: "First access or received an invitation?", claim: "Sign up", token: "Invitation code", choose: "Choose a password with at least 8 characters", activate: "Sign up", back: "Already have access? Sign in", logout: "Sign out", changePassword: "Change password", changePasswordTitle: "Change your password", currentPassword: "Current password", newPassword: "New password", savePassword: "Save new password", cancel: "Cancel", passwordChanged: "Password changed. Your session was renewed.", showPassword: "Show password", hidePassword: "Hide password", sessions: "Sessions", sessionsTitle: "Active sessions", currentSession: "This session", revoke: "Revoke", revokeOthers: "Revoke others", sessionsEmpty: "No other active sessions." },
+  es: { title: "Entrar en CraftControl", claimTitle: "Crear acceso", player: "Gamertag", password: "Contraseña", login: "Entrar", noAccount: "¿Primer acceso o recibiste una invitación?", claim: "Registrarse", token: "Código de invitación", choose: "Elige una contraseña de al menos 8 caracteres", activate: "Registrarse", back: "¿Ya tienes acceso? Entrar", logout: "Salir", changePassword: "Cambiar contraseña", changePasswordTitle: "Cambia tu contraseña", currentPassword: "Contraseña actual", newPassword: "Nueva contraseña", savePassword: "Guardar nueva contraseña", cancel: "Cancelar", passwordChanged: "Contraseña cambiada. Tu sesión fue renovada.", showPassword: "Mostrar contraseña", hidePassword: "Ocultar contraseña", sessions: "Sesiones", sessionsTitle: "Sesiones activas", currentSession: "Esta sesión", revoke: "Revocar", revokeOthers: "Revocar otras", sessionsEmpty: "No hay otras sesiones activas." },
 };
 
 function passwordInput(words, name, autocomplete, minimum = "") {
@@ -42,6 +42,9 @@ function showIdentity(user) {
   passwordBtn.setAttribute("aria-label", copy[locale()].changePassword);
   passwordBtn.setAttribute("title", copy[locale()].changePassword);
   passwordBtn.onclick = showPasswordChange;
+  const sessionsBtn = clone.querySelector("#manage-sessions");
+  sessionsBtn.querySelector("span").textContent = copy[locale()].sessions;
+  sessionsBtn.onclick = showSessions;
   container.replaceChildren(clone);
   container.querySelector("#logout").onclick = async () => { await api("/api/auth/logout", { method: "POST" }); window.location.reload(); };
 }
@@ -76,6 +79,19 @@ function showAuth() {
     };
   };
   render(window.location.hash === "#/first-access" ? "claim" : "login");
+}
+
+async function showSessions() {
+  const words = copy[locale()];
+  const dialog = document.querySelector("#account-dialog");
+  const data = await api("/api/auth/sessions");
+  const others = data.sessions.filter((session) => !session.current);
+  dialog.innerHTML = `<section class="account-card block-panel"><div><span class="eyebrow">CRAFTCONTROL</span><h2>${words.sessionsTitle}</h2></div><div class="session-history">${data.sessions.map((session) => `<div class="session-item"><span>${session.current ? words.currentSession : new Date(session.last_seen_at * 1000).toLocaleString()}</span>${session.current ? "" : `<button class="danger" data-session="${session.id}">${words.revoke}</button>`}</div>`).join("")}</div>${others.length ? `<button id="revoke-others" class="danger">${words.revokeOthers}</button>` : `<p>${words.sessionsEmpty}</p>`}<button class="secondary" type="button">${words.cancel}</button></section>`;
+  dialog.querySelector(".secondary").onclick = () => dialog.close();
+  dialog.querySelectorAll("[data-session]").forEach((button) => { button.onclick = async () => { await api(`/api/auth/sessions/${button.dataset.session}`, { method: "DELETE" }); showSessions(); }; });
+  const revokeOthers = dialog.querySelector("#revoke-others");
+  if (revokeOthers) revokeOthers.onclick = async () => { await api("/api/auth/sessions", { method: "POST" }); showSessions(); };
+  dialog.showModal();
 }
 
 function showPasswordChange() {

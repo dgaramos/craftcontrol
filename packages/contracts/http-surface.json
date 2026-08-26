@@ -110,6 +110,21 @@
       "owner": "backend"
     },
     {
+      "path": "/api/auth/sessions",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "owner": "backend"
+    },
+    {
+      "path": "/api/auth/sessions/<session_id>",
+      "methods": [
+        "DELETE"
+      ],
+      "owner": "backend"
+    },
+    {
       "path": "/api/config",
       "methods": [
         "GET",

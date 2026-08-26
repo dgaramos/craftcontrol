@@ -77,13 +77,14 @@ def test_local_reviewer_profile_is_shared_by_codex_and_claude() -> None:
         assert (profile.parent / "references" / checklist).is_file()
 
     for entry_point in (
-        ROOT / ".agents/skills/review-pr/SKILL.md",
         ROOT / ".claude/agents/review-pr/SKILL.md",
         ROOT / ".claude/agents/review-pr.md",
         ROOT / "AGENTS.md",
         ROOT / "CLAUDE.md",
     ):
         assert ".agent-review/craftcontrol/PROFILE.md" in entry_point.read_text()
+
+    assert not (ROOT / ".agents/skills/review-pr/SKILL.md").exists()
 
 
 def test_documentation_diagrams_use_mermaid_fences() -> None:

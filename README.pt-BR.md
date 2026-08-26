@@ -300,26 +300,19 @@ Veja [CONTRIBUTING.md](CONTRIBUTING.md) para nomes de branch, formato de título
 
 ### Skills do Codex
 
-Se você usa Codex, as entradas de ciclo de vida em `.agents/skills/` são
-wrappers finos dos workflows portáteis instalados do `cody-dr`. Elas carregam o
-perfil compartilhado do projeto; instale o plugin Cody DR antes de invocar uma
-entrada de ciclo de vida.
+Se você usa Codex, instale o plugin global de workflows portáteis `cody-dr`
+para criação e execução de issues, revisões e tratamento de findings. O
+CraftControl não sombreia essas skills de ciclo de vida localmente; o plugin
+descobre o perfil compartilhado do projeto automaticamente.
 
 | Skill | Quando usar |
 |---|---|
-| `execute-issue` | Executa uma issue pelo número ou link, da branch ao PR aberto |
-| `start-issue` | Verifica metadados, lê contexto, mapeia código e cria branch |
-| `implement` | Detecta a camada, implementa, testa e faz self-review |
-| `ship-issue` | Commit e PR com descrição baseada no diff e todos os metadados da issue |
-| `handle-pr-findings` | Faz a triagem e pede uma decisão explícita antes de cada correção ou ação em thread |
-| `review-pr` | Self-review ou triagem de findings por camada |
 | `backend` | Padrões Python: DI, Protocols, `is None`, composition root e fakes |
 | `frontend` | Padrões JS: injeção de deps, ESM, i18n e testes |
-| `create-issue` | Redige uma issue estruturada; a publicação exige autorização explícita |
 | `manage-project` | Gerencia issues nos GitHub Project boards |
 | `manage-milestone` | Gerencia milestones e audita backlog |
 
-Os wrappers são instruções do repositório: o Codex continua seguindo `AGENTS.md` e as instruções de segurança. Um pedido para executar uma issue até o PR (inclusive via link) autoriza branch, commit, push e abertura do PR; merge e deploy continuam exigindo pedido explícito.
+As skills locais complementam o plugin: o Codex continua seguindo `AGENTS.md` e as instruções de segurança. Um pedido para executar uma issue até o PR (inclusive via link) autoriza branch, commit, push e abertura do PR; merge e deploy continuam exigindo pedido explícito.
 
 O perfil tool-neutral em [`.agent-review/craftcontrol/PROFILE.md`](.agent-review/craftcontrol/PROFILE.md)
 concentra as salvaguardas específicas das revisões Cody DR e Claudio DR. Veja

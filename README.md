@@ -305,25 +305,19 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for branch naming, PR title format, metad
 
 ### Codex skills
 
-If you use Codex, the lifecycle entries in `.agents/skills/` are thin wrappers
-around the installed `cody-dr` portable workflows. They load the shared project
-profile; install the Cody DR plugin before invoking a lifecycle entry point.
+If you use Codex, install the global `cody-dr` portable workflow plugin for
+issue authoring, delivery, reviews, and findings handling. CraftControl does
+not shadow those lifecycle skills locally; the plugin discovers the shared
+project profile automatically.
 
 | Skill | When to use |
 |---|---|
-| `execute-issue` | Executa uma issue pelo número ou link, da branch ao PR aberto |
-| `start-issue` | Verifica metadados, lê contexto, mapeia código e cria branch |
-| `implement` | Detecta a camada, implementa e testa |
-| `ship-issue` | Commit e PR com descrição baseada no diff e todos os metadados da issue |
-| `handle-pr-findings` | Triages findings and requests an explicit decision before each fix or thread action |
-| `review-pr <PR ou ref>` | Revisão cruzada sob demanda ou re-review incremental de um PR/ref, por camada |
 | `backend` | Padrões Python: DI, Protocols, `is None`, composition root e fakes |
 | `frontend` | Padrões JS: injeção de deps, ESM, i18n e testes |
-| `create-issue` | Drafts a structured issue; publication requires explicit authorization |
 | `manage-project` | Gerencia issues nos GitHub Project boards |
 | `manage-milestone` | Gerencia milestones e audita backlog |
 
-The wrappers are repository guidance: Codex continues to follow `AGENTS.md`
+The local skills complement the plugin: Codex continues to follow `AGENTS.md`
 and the security instructions. A request to execute an issue
 até o PR (inclusive via link) autoriza branch, commit, push e abertura do PR;
 merge e deploy continuam exigindo pedido explícito.

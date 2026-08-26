@@ -1,6 +1,7 @@
 import { api } from "./api.js?v=7";
 
 const locale = () => ["pt", "en", "es"].includes(localStorage.getItem("craftcontrol-locale")) ? localStorage.getItem("craftcontrol-locale") : "pt";
+const sessionLocale = { pt: "pt-BR", en: "en-US", es: "es-ES" };
 const copy = {
   pt: { title: "Entrar no CraftControl", claimTitle: "Criar acesso", player: "Gamertag", password: "Senha", login: "Entrar", noAccount: "Primeiro acesso ou recebeu um convite?", claim: "Criar acesso", token: "Código de convite", choose: "Escolha uma senha com pelo menos 8 caracteres", activate: "Cadastrar", back: "Já tem acesso? Entrar", logout: "Sair", changePassword: "Alterar senha", changePasswordTitle: "Alterar sua senha", currentPassword: "Senha atual", newPassword: "Nova senha", savePassword: "Salvar nova senha", cancel: "Cancelar", passwordChanged: "Senha alterada. Sua sessão foi renovada.", requestFailed: "Não foi possível concluir a solicitação.", showPassword: "Mostrar senha", hidePassword: "Ocultar senha", sessions: "Sessões", sessionsTitle: "Sessões ativas", currentSession: "Esta sessão", revoke: "Revogar", revokeOthers: "Revogar outras", sessionsEmpty: "Nenhuma outra sessão ativa." },
   en: { title: "Sign in to CraftControl", claimTitle: "Create access", player: "Gamertag", password: "Password", login: "Sign in", noAccount: "First access or received an invitation?", claim: "Sign up", token: "Invitation code", choose: "Choose a password with at least 8 characters", activate: "Sign up", back: "Already have access? Sign in", logout: "Sign out", changePassword: "Change password", changePasswordTitle: "Change your password", currentPassword: "Current password", newPassword: "New password", savePassword: "Save new password", cancel: "Cancel", passwordChanged: "Password changed. Your session was renewed.", requestFailed: "We could not complete the request.", showPassword: "Show password", hidePassword: "Hide password", sessions: "Sessions", sessionsTitle: "Active sessions", currentSession: "This session", revoke: "Revoke", revokeOthers: "Revoke others", sessionsEmpty: "No other active sessions." },
@@ -99,7 +100,7 @@ async function showSessions() {
     const row = document.createElement("article"); row.className = "session-item";
     const details = document.createElement("div"); details.className = "session-item-copy";
     const label = document.createElement("strong");
-    label.textContent = session.current ? words.currentSession : new Date(session.last_seen_at * 1000).toLocaleString();
+    label.textContent = session.current ? words.currentSession : new Date(session.last_seen_at * 1000).toLocaleString(sessionLocale[locale()]);
     details.append(label);
     row.append(details);
     if (!session.current) {

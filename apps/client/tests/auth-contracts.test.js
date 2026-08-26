@@ -91,6 +91,11 @@ describe("auth contracts — account workspace usability", () => {
     expect(authScript).toContain('sessionsBtn.setAttribute("aria-label", copy[locale()].sessions)');
   });
 
+  test("formats inactive session dates in the selected interface locale", () => {
+    expect(authScript).toContain('pt: "pt-BR", en: "en-US", es: "es-ES"');
+    expect(authScript).toContain("toLocaleString(sessionLocale[locale()])");
+  });
+
   test("renders session cards with separated metadata and revoke actions", () => {
     expect(authScript).toContain('className = "session-item-copy"');
     expect(authScript).toContain('className = "session-item-action"');

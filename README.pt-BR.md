@@ -54,7 +54,7 @@ A navegação é codificada na URL; recarregar o navegador preserva a área ativ
 
 ## Arquitetura
 
-O CraftControl é um monorepo com dois serviços implantáveis de modo independente, não um conjunto de microsserviços. O backend continua sendo um monólito modular.
+O CraftControl é um monorepo com dois serviços de aplicação em contêiner implantáveis de modo independente, não um conjunto de microsserviços. O backend continua sendo um monólito modular; um host agent systemd opcional é uma fronteira de execução separada no host.
 
 ```mermaid
 flowchart TD
@@ -182,7 +182,7 @@ Veja [Integração do Telemetry Pack](docs/telemetry-pack.md) para o ciclo de vi
 O CraftControl requer Docker Engine com o plugin Compose e uma implantação
 existente de `itzg/minecraft-bedrock-server`. Ele roda ao lado do projeto
 Bedrock e deve ser implantado pelos comandos protegidos. Nunca execute
-`docker compose up` sem opções a partir de um checkout de desenvolvimento.
+`docker compose up` sem opções a partir de um checkout de desenvolvimento. Releases coordenadas preparam as duas imagens versionadas antes de recriar qualquer serviço e tentam novamente falhas transitórias de build de imagem até três vezes.
 
 Veja [Instalação](docs/installation.pt-BR.md) para pré-requisitos, layout esperado,
 configuração, cutover, acesso, verificações pós-instalação e solução de problemas.
@@ -203,6 +203,8 @@ configuração, cutover, acesso, verificações pós-instalação e solução de
 | `TZ` | `America/Sao_Paulo` | Fuso horário de runtime e análises |
 
 As versões em execução do frontend e backend vêm de `versions.env`. Nomes antigos de serviço, banco, pacote e variáveis de ambiente continuam suportados como overlays de compatibilidade; caminhos persistentes não são renomeados destrutivamente.
+
+O host agent é opcional. Quando estiver habilitado, configure `HOST_AGENT_URL` e `HOST_AGENT_TOKEN_FILE` para o backend; veja [Host agent](docs/host-agent.md) para a configuração do segredo compartilhado, systemd e caminhos.
 
 ## Autenticação e acesso
 
@@ -283,12 +285,15 @@ O CraftControl usa Python 3.12, Flask, Gunicorn, SQLite, Docker SDK para Python,
 ```bash
 bin/check-frontend       # Sintaxe JS, i18n, testes de interação e contrato visual
 bin/check-backend        # Aplicação Python e testes de persistência
+bin/check-host-agent     # Testes independentes do host agent e relatório de cobertura
 bin/check-contracts      # OpenAPI, superfície de rotas, Swagger, declarações geradas
 bin/check-integration    # Builds Compose, runtime dividido, arquitetura e segurança de deploy
 bin/check                # portão local completo
 ```
 
-GitHub Actions e Gitea Actions executam as quatro fronteiras de modo independente. As alterações usam Conventional Commits e a implantação de produção só é aceita a partir de `main` limpo e publicado.
+GitHub Actions e Gitea Actions executam os seis portões de qualidade de modo independente: frontend, backend, host agent, contratos do backend, contratos do frontend e integração. As alterações usam Conventional Commits e a implantação de produção só é aceita a partir de `main` limpo e publicado.
+
+Execuções de qualidade bem-sucedidas no `main` do GitHub implantam automaticamente pelo runner homelab específico do repositório. O workflow sincroniza o Gitea e invoca o mesmo comando protegido de release usado nas operações manuais; veja [Implantação automatizada no homelab](docs/automated-deployment.md).
 
 Veja [Configuração de desenvolvimento](docs/development-setup.md) para pré-requisitos, configuração de ambiente e guia de tarefas comuns.
 

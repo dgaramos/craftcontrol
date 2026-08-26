@@ -54,7 +54,7 @@ Navigation is encoded in the URL, so refreshing a browser preserves the active a
 
 ## Architecture
 
-CraftControl is a monorepo with two independently deployable services, not a set of microservices. The backend remains a modular monolith.
+CraftControl is a monorepo with two independently deployable containerized application services, not a set of microservices. The backend remains a modular monolith; an optional systemd host agent is a separate host-level execution boundary.
 
 ```mermaid
 flowchart TD
@@ -181,7 +181,7 @@ See [Telemetry Pack integration](docs/telemetry-pack.md) for the lifecycle and r
 
 CraftControl requires Docker Engine with the Compose plugin and an existing
 `itzg/minecraft-bedrock-server` deployment. It runs alongside the Bedrock
-project and must be deployed with its guarded commands. Never run a bare `docker compose up` from a development checkout. Coordinated releases prepare both versioned images before recreating either service and retry transient image-registry failures up to three times.
+project and must be deployed with its guarded commands. Never run a bare `docker compose up` from a development checkout. Coordinated releases prepare both versioned images before recreating either service and retry transient image-build failures up to three times.
 
 See [Installation](docs/installation.md) for prerequisites, expected directory
 layout, configuration, cutover, access, post-install checks, and troubleshooting.
@@ -202,6 +202,8 @@ layout, configuration, cutover, access, post-install checks, and troubleshooting
 | `TZ` | `America/Sao_Paulo` | Runtime and analytics timezone |
 
 The running frontend and backend versions come from `versions.env`. Old service names, database filenames, package paths, and environment variables remain supported as compatibility overlays; persistent paths are not renamed destructively.
+
+The host agent is optional. When it is enabled, configure `HOST_AGENT_URL` and `HOST_AGENT_TOKEN_FILE` for the backend; see [Host agent](docs/host-agent.md) for the shared-secret, systemd, and path configuration.
 
 ## Authentication and access
 
@@ -288,7 +290,7 @@ bin/check-integration    # Compose builds, split runtime, architecture and deplo
 bin/check                # complete local gate
 ```
 
-GitHub Actions and Gitea Actions run the four boundaries independently. Changes use Conventional Commits and production deployment is accepted only from clean, published `main`.
+GitHub Actions and Gitea Actions run the six quality gates independently: frontend, backend, host agent, backend contracts, frontend contracts, and integration. Changes use Conventional Commits and production deployment is accepted only from clean, published `main`.
 
 Successful GitHub `main` quality runs deploy automatically through the
 repository-scoped homelab runner. The workflow synchronizes Gitea and invokes

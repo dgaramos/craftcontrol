@@ -60,11 +60,15 @@ O CraftControl é um monorepo com dois serviços implantáveis de modo independe
 flowchart TD
     client["Celular, tablet ou desktop"] -->|"HTTP :8082 — LAN confiável / proxy TLS externo"| frontend["Frontend · Nginx · estático e somente leitura<br/>UI do navegador · /api mesma origem + proxy SSE"]
     frontend -->|"rede Compose privada"| backend["Backend · monólito modular Flask<br/>HTTP → casos de uso → portas/adapters → SQLite"]
-    backend -->|"Docker, arquivos, console, logs"| bedrock["Servidor dedicado Minecraft Bedrock"]
+    backend -->|"console, logs, eventos (socket Docker)"| bedrock["Servidor dedicado Minecraft Bedrock"]
+    backend -->|"ContainerOperations (HTTP, quando configurado)"| hostagent["Host Agent · craftcontrol-host-agent<br/>systemd · PREPARATION · RESTART · HEALTH_WAIT"]
+    hostagent -->|"docker compose, filesystem, sonda UDP"| bedrock
     bedrock -. "opcional" .-> telemetry["CraftControl Telemetry Pack"]
 ```
 
 O frontend é dono da origem pública. O Nginx serve ativos estáticos e encaminha `/api/*`, inclusive Server-Sent Events sem buffer, para o backend privado. O frontend não possui montagens persistentes ou privilegiadas. Somente o backend acessa SQLite, arquivos Bedrock, backups coordenados ou operações Docker.
+
+Quando o host agent está configurado (`HOST_AGENT_URL` definido), as operações de ciclo de vida do servidor — escrita de configuração, reinício do serviço Compose e sondagem de saúde Bedrock — são delegadas ao serviço systemd `craftcontrol-host-agent`, que roda no host Docker fora de todos os contêineres. O agente possui acesso ao socket Docker para essas operações; o socket Docker continua montado no backend para conexão ao console Bedrock, streaming de logs e eventos Docker. Sem o host agent, o backend executa todas as operações diretamente.
 
 O backend roda intencionalmente com um worker Gunicorn e várias threads. Seu broker de eventos, supervisores, lock de atualização e entrega SSE são locais ao processo; vários workers duplicariam essas responsabilidades.
 

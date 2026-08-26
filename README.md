@@ -68,7 +68,11 @@ flowchart TD
 
 The frontend owns the public origin. Nginx serves static assets and proxies `/api/*`, including unbuffered Server-Sent Events, to the private backend. The frontend has no persistent or privileged mounts. The backend owns durable state (SQLite), Bedrock files, coordinated backups, console operations, log streaming, and Docker events.
 
-When the host agent is configured (`HOST_AGENT_URL` is set), server lifecycle operations — `PREPARATION` (writing configuration), `RESTART` (restarting the Compose service), and `HEALTH_WAIT` (polling the Bedrock UDP probe) — are delegated to the `craftcontrol-host-agent` systemd service running on the Docker host outside all containers. The agent owns Docker socket access for those three stages; the Docker socket remains mounted in the backend for Bedrock console attachment, log streaming, and Docker events, which are not part of the host-agent contract. Without the host agent, the backend performs all lifecycle operations directly.
+CraftControl has three runtime boundaries: the **frontend** (Nginx container serving static assets and proxying the API), the **backend** (Flask modular monolith inside Docker managing state, auth, and Bedrock operations), and the **host agent** (`craftcontrol-host-agent`, a systemd service running on the Docker host outside all containers).
+
+When the host agent is configured (`HOST_AGENT_URL` is set), server lifecycle operations — `PREPARATION` (writing configuration), `RESTART` (restarting the Compose service), and `HEALTH_WAIT` (polling the Bedrock UDP probe) — are delegated to the host agent over an authenticated HTTP channel. The agent owns Docker socket access for those three stages; the Docker socket remains mounted in the backend for Bedrock console attachment, log streaming, and Docker events, which are not part of the host-agent contract. Without the host agent, the backend performs all lifecycle operations directly.
+
+The host agent is intentionally **not** a Docker container. Containerizing it would require either mounting the Docker socket into the container (defeating least-privilege isolation) or using privileged host mounts with elevated network namespaces. Running it as a systemd service on the host gives Docker socket access through OS-level group membership without exposing the socket to the container network or the backend image.
 
 The backend intentionally runs one Gunicorn worker with multiple threads. Its event broker, supervisors, refresh lock, and SSE delivery are process-local; multiple workers would duplicate those responsibilities.
 
@@ -79,9 +83,12 @@ flowchart TD
     repo["CraftControl repository"] --> apps["apps/"]
     apps --> frontend["frontend/ — Nginx image, HTML, CSS, and native ES modules"]
     apps --> backend["backend/ — Flask image, composition root, and Python application"]
+    repo --> services["services/"]
+    services --> hostagentsvc["host-agent/ — independently deployed systemd service (host-level, outside Docker)"]
     repo --> contracts["packages/contracts/ — canonical OpenAPI 3.1 contract and generated types"]
     repo --> telemetry["packs/telemetry/ — embedded Behavior Pack and lifecycle assets"]
     repo --> bin["bin/ — quality, deployment, cutover, backup, and recovery commands"]
+    repo --> deploy["deploy/ — deployment-only assets (systemd units, install scripts)"]
     repo --> docs["docs/ — architecture, security, telemetry, and operations guides"]
     repo --> overlay["minecraft_manager/, app.py, wsgi.py — temporary backend compatibility overlays"]
     repo --> split["docker-compose.split.yml — active split production topology"]

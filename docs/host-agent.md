@@ -18,6 +18,16 @@ probe.
 When the host agent is active, the backend container no longer needs a Docker
 socket mount. The socket is managed entirely on the host side.
 
+The host agent is intentionally **not** a Docker container. Containerizing it
+would require either mounting the Docker socket into the container (defeating
+least-privilege isolation) or using privileged host mounts with elevated network
+namespaces. Running it as a systemd service on the host gives Docker socket
+access through OS-level group membership without exposing the socket to the
+container network or the backend image.
+
+The agent source lives under `services/host-agent/` in the repository. The
+systemd unit file is under `deploy/host-agent/systemd/`.
+
 ```mermaid
 flowchart LR
     subgraph host["Docker host"]
@@ -61,7 +71,7 @@ membership. It does not need a login shell or a home directory.
 
 ```bash
 sudo mkdir -p /opt/craftcontrol/host-agent
-sudo cp deploy/host-agent/agent.py /opt/craftcontrol/host-agent/agent.py
+sudo cp services/host-agent/agent.py /opt/craftcontrol/host-agent/agent.py
 sudo chown craftcontrol-agent:craftcontrol-agent /opt/craftcontrol/host-agent/agent.py
 sudo chmod 0755 /opt/craftcontrol/host-agent/agent.py
 ```

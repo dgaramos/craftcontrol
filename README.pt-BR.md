@@ -68,7 +68,11 @@ flowchart TD
 
 O frontend é dono da origem pública. O Nginx serve ativos estáticos e encaminha `/api/*`, inclusive Server-Sent Events sem buffer, para o backend privado. O frontend não possui montagens persistentes ou privilegiadas. O backend é dono do estado durável (SQLite), arquivos Bedrock, backups coordenados, operações de console, streaming de logs e eventos Docker.
 
-Quando o host agent está configurado (`HOST_AGENT_URL` definido), as operações de ciclo de vida do servidor — `PREPARATION` (escrita de configuração), `RESTART` (reinício do serviço Compose) e `HEALTH_WAIT` (sondagem UDP Bedrock) — são delegadas ao serviço systemd `craftcontrol-host-agent`, que roda no host Docker fora de todos os contêineres. O agente possui acesso ao socket Docker para essas três etapas; o socket Docker continua montado no backend para conexão ao console Bedrock, streaming de logs e eventos Docker, que não fazem parte do contrato do host agent. Sem o host agent, o backend executa todas as operações de ciclo de vida diretamente.
+O CraftControl possui três fronteiras de execução: o **frontend** (contêiner Nginx servindo ativos estáticos e fazendo proxy da API), o **backend** (monólito modular Flask dentro do Docker gerenciando estado, autenticação e operações Bedrock) e o **host agent** (`craftcontrol-host-agent`, um serviço systemd rodando no host Docker fora de todos os contêineres).
+
+Quando o host agent está configurado (`HOST_AGENT_URL` definido), as operações de ciclo de vida do servidor — `PREPARATION` (escrita de configuração), `RESTART` (reinício do serviço Compose) e `HEALTH_WAIT` (sondagem UDP Bedrock) — são delegadas ao host agent por meio de um canal HTTP autenticado. O agente possui acesso ao socket Docker para essas três etapas; o socket Docker continua montado no backend para conexão ao console Bedrock, streaming de logs e eventos Docker, que não fazem parte do contrato do host agent. Sem o host agent, o backend executa todas as operações de ciclo de vida diretamente.
+
+O host agent é intencionalmente **não** um contêiner Docker. Containerizá-lo exigiria montar o socket Docker dentro do contêiner (desfazendo o isolamento de menor privilégio) ou usar montagens de host privilegiadas com namespaces de rede elevados. Rodando como serviço systemd no host, o acesso ao socket Docker é obtido por meio de associação de grupo no nível do sistema operacional, sem expor o socket à rede de contêineres ou à imagem do backend.
 
 O backend roda intencionalmente com um worker Gunicorn e várias threads. Seu broker de eventos, supervisores, lock de atualização e entrega SSE são locais ao processo; vários workers duplicariam essas responsabilidades.
 
@@ -79,9 +83,12 @@ flowchart TD
     repo["Repositório CraftControl"] --> apps["apps/"]
     apps --> frontend["frontend/ — imagem Nginx, HTML, CSS e módulos ES nativos"]
     apps --> backend["backend/ — imagem Flask, composition root e aplicação Python"]
+    repo --> services["services/"]
+    services --> hostagentsvc["host-agent/ — serviço systemd implantado independentemente (nível de host, fora do Docker)"]
     repo --> contracts["packages/contracts/ — contrato OpenAPI 3.1 canônico e tipos gerados"]
     repo --> telemetry["packs/telemetry/ — Behavior Pack embutido e ativos de ciclo de vida"]
     repo --> bin["bin/ — comandos de qualidade, implantação, cutover, backup e recuperação"]
+    repo --> deploy["deploy/ — ativos exclusivos de implantação (unidades systemd, scripts de instalação)"]
     repo --> docs["docs/ — guias de arquitetura, segurança, telemetria e operações"]
     repo --> overlay["minecraft_manager/, app.py, wsgi.py — overlays temporários de compatibilidade do backend"]
     repo --> split["docker-compose.split.yml — topologia de produção dividida ativa"]

@@ -431,7 +431,7 @@ file writes are permitted.
 ## Deployment
 
 The agent runs as a **systemd service** on the Docker host, outside all
-containers. The unit file and agent source are available under `deploy/host-agent/`.
+containers. The agent source and tests live under `services/host-agent/`. The systemd unit file is available under `deploy/host-agent/systemd/`.
 
 | Property | Value |
 |----------|-------|

@@ -43,7 +43,7 @@ flags:
       - apps/frontend/static/js/
   host-agent:
     paths:
-      - deploy/host-agent/
+      - services/host-agent/
 
 comment:
   layout: "reach,diff,flags"

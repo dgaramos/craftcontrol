@@ -58,12 +58,22 @@ O CraftControl é um monorepo com dois serviços de aplicação em contêiner im
 
 ```mermaid
 flowchart TD
-    client["Celular, tablet ou desktop"] -->|"HTTP :8082 — LAN confiável / proxy TLS externo"| frontend["Frontend · Nginx · estático e sem estado<br/>UI do navegador · /api mesma origem + proxy SSE"]
-    frontend -->|"rede Compose privada"| backend["Backend · monólito modular Flask<br/>HTTP → casos de uso → portas/adapters → SQLite"]
-    backend -->|"console, logs, eventos (socket Docker)"| bedrock["Servidor dedicado Minecraft Bedrock"]
-    backend -->|"ContainerOperations (HTTP, quando configurado)"| hostagent["Host Agent · craftcontrol-host-agent<br/>systemd · PREPARATION · RESTART · HEALTH_WAIT"]
-    hostagent -->|"docker compose, filesystem, sonda UDP"| bedrock
-    bedrock -. "opcional" .-> telemetry["CraftControl Telemetry Pack"]
+    client["CraftControl Client<br/>navegador"]
+
+    subgraph docker["Docker Engine / Compose"]
+        frontend["CraftControl Frontend<br/>Nginx · UI estática · proxy API/SSE"]
+        server["CraftControl Server<br/>monólito modular Flask<br/>API · broker de eventos · SSE"]
+        bedrock["Servidor Minecraft Bedrock<br/>Telemetry Pack opcional"]
+        frontend --> server
+    end
+
+    agent["CraftControl Host Agent<br/>systemd · fora do Docker"]
+
+    client --> frontend
+    server -->|"fluxo de configuração e reinício"| agent
+    agent -->|"Compose, filesystem, sonda de saúde"| bedrock
+    server -->|"console Bedrock com allowlist"| bedrock
+    bedrock -. "logs, eventos Docker, telemetria" .-> server
 ```
 
 O frontend é dono da origem pública. O Nginx serve ativos estáticos e encaminha `/api/*`, inclusive Server-Sent Events sem buffer, para o backend privado. O frontend não possui montagens persistentes ou privilegiadas. O backend é dono do estado durável (SQLite), arquivos Bedrock, backups coordenados, operações de console, streaming de logs e eventos Docker.

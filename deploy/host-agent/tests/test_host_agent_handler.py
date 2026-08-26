@@ -15,6 +15,7 @@ if str(_AGENT_DIR) not in sys.path:  # pragma: no cover - test bootstrap
     sys.path.insert(0, str(_AGENT_DIR))
 
 import handler as hd
+import router as rt
 import store as st
 from operations import OperationExecutor
 from helpers import make_executor as _make_executor_base
@@ -53,7 +54,7 @@ def _handler_class(
     store = store or _make_store()
     executor = executor or _make_executor()
     checker = status_checker if status_checker is not None else _make_status_checker()
-    return hd.build_handler_class(token, store, executor, checker, bedrock_container_name)
+    return rt.build_handler_class(token, store, executor, checker, bedrock_container_name)
 
 
 class FakeRequest:

@@ -1,11 +1,14 @@
-"""AgentHandler and build_handler_class: HTTP routing and Bearer auth."""
+"""Per-endpoint request/response handlers for the host agent.
+
+Each method in ``EndpointMixin`` owns exactly one endpoint: JSON parsing,
+field validation, delegation to ``operations.py``, and response serialisation.
+Routing and authentication live in ``router.py``.
+"""
 from __future__ import annotations
 
-import hmac
 import json
 import logging
 import threading
-from http.server import BaseHTTPRequestHandler
 from typing import Any
 
 from operations import (
@@ -13,7 +16,6 @@ from operations import (
     _INTENDED_STATE_FIELDS,
     _validate_intended_state_values,
 )
-from ports import ContainerStatusChecker
 from store import OperationStore
 
 logger = logging.getLogger("host-agent")
@@ -30,44 +32,28 @@ RESTART_TIMEOUT_MAX = 300
 RESTART_TIMEOUT_DEFAULT = 60
 
 
-class AgentHandler(BaseHTTPRequestHandler):
-    """HTTP request handler for the host agent."""
+class EndpointMixin:
+    """Mixin that provides I/O helpers and one method per endpoint.
 
-    # Set by the server before accepting connections
-    token: str = ""
-    store: OperationStore
-    executor: OperationExecutor
-    status_checker: ContainerStatusChecker
-    bedrock_container_name: str = "minecraft-server"
-
-    def log_message(self, format: str, *args: Any) -> None:  # noqa: A002
-        logger.info(format, *args)
+    Relies on ``self.wfile``, ``self.rfile``, ``self.headers``,
+    ``self.send_response``, ``self.send_header``, and ``self.end_headers``
+    being supplied by ``http.server.BaseHTTPRequestHandler`` (via the concrete
+    class in ``router.py``).  Also relies on ``self.store``,
+    ``self.executor``, ``self.status_checker``, and
+    ``self.bedrock_container_name`` being injected by ``build_handler_class``.
+    """
 
     def _send_json(self, status: int, body: dict[str, Any]) -> None:
         data = json.dumps(body).encode()
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(data)))
-        self.end_headers()
-        self.wfile.write(data)
-
-    def _authenticate(self) -> bool:
-        auth = self.headers.get("Authorization", "")
-        if not auth.startswith("Bearer "):
-            return False
-        received = auth[len("Bearer "):]
-        return hmac.compare_digest(received.encode(), self.token.encode())
-
-    def _require_auth(self) -> bool:
-        if not self._authenticate():
-            logger.warning("Unauthorized request from %s: %s %s", self.client_address, self.command, self.path)
-            self._send_json(401, {"error": "unauthorized", "message": "Invalid or missing token"})
-            return False
-        return True
+        self.send_response(status)  # type: ignore[attr-defined]
+        self.send_header("Content-Type", "application/json")  # type: ignore[attr-defined]
+        self.send_header("Content-Length", str(len(data)))  # type: ignore[attr-defined]
+        self.end_headers()  # type: ignore[attr-defined]
+        self.wfile.write(data)  # type: ignore[attr-defined]
 
     def _read_json_body(self) -> dict[str, Any] | None:
         try:
-            length = int(self.headers.get("Content-Length", 0))
+            length = int(self.headers.get("Content-Length", 0))  # type: ignore[attr-defined]
         except ValueError:
             self._send_json(400, {"error": "bad_request", "message": "Invalid Content-Length"})
             return None
@@ -77,7 +63,7 @@ class AgentHandler(BaseHTTPRequestHandler):
         if length == 0:
             return {}
         try:
-            body = json.loads(self.rfile.read(length))
+            body = json.loads(self.rfile.read(length))  # type: ignore[attr-defined]
         except json.JSONDecodeError as exc:
             self._send_json(400, {"error": "bad_request", "message": f"Invalid JSON: {exc}"})
             return None
@@ -86,48 +72,17 @@ class AgentHandler(BaseHTTPRequestHandler):
             return None
         return body
 
-    def do_GET(self) -> None:  # noqa: N802
-        path = self.path.split("?")[0]
-
-        if path == "/v1/health":
-            self._handle_health()
-        elif path == "/v1/bedrock/status":
-            if not self._require_auth():
-                return
-            self._handle_bedrock_status()
-        elif path.startswith("/v1/status/"):
-            if not self._require_auth():
-                return
-            operation_id = path[len("/v1/status/"):]
-            self._handle_status(operation_id)
-        else:
-            self._send_json(404, {"error": "not_found", "message": "Unknown path"})
-
-    def do_POST(self) -> None:  # noqa: N802
-        path = self.path.split("?")[0]
-
-        if path == "/v1/execute":
-            if not self._require_auth():
-                return
-            body = self._read_json_body()
-            if body is None:
-                return
-            self._handle_execute(body)
-        else:
-            self._send_json(404, {"error": "not_found", "message": "Unknown path"})
-
     def _handle_health(self) -> None:
         self._send_json(200, {"status": "ok", "version": VERSION})
 
     def _handle_bedrock_status(self) -> None:
-        running = self.status_checker.is_running(self.bedrock_container_name)
+        running = self.status_checker.is_running(self.bedrock_container_name)  # type: ignore[attr-defined]
         self._send_json(200, {"bedrock_running": running})
 
     def _handle_status(self, operation_id: str) -> None:
-        # Evict expired records opportunistically
-        self.store.evict_expired()
+        self.store.evict_expired()  # type: ignore[attr-defined]
 
-        rec = self.store.get(operation_id)
+        rec = self.store.get(operation_id)  # type: ignore[attr-defined]
         if rec is None:
             self._send_json(404, {
                 "error": "not_found",
@@ -142,7 +97,6 @@ class AgentHandler(BaseHTTPRequestHandler):
             self._send_json(200, rec.to_done_dict())
 
     def _handle_execute(self, body: dict[str, Any]) -> None:
-        # Validate required fields
         operation_id = body.get("operation_id")
         if not operation_id or not isinstance(operation_id, str):
             self._send_json(400, {"error": "bad_request", "message": "'operation_id' is required and must be a string"})
@@ -153,7 +107,6 @@ class AgentHandler(BaseHTTPRequestHandler):
             self._send_json(400, {"error": "bad_request", "message": "'intended_state' is required and must be an object"})
             return
 
-        # Reject unknown fields in intended_state
         unknown = set(intended_state) - _INTENDED_STATE_FIELDS
         if unknown:
             self._send_json(400, {
@@ -162,13 +115,11 @@ class AgentHandler(BaseHTTPRequestHandler):
             })
             return
 
-        # Validate field values (type, domain, and injection safety)
         value_error = _validate_intended_state_values(intended_state)
         if value_error is not None:
             self._send_json(400, {"error": "bad_request", "message": value_error})
             return
 
-        # Validate optional timeouts
         health_timeout = body.get("health_timeout_seconds", HEALTH_TIMEOUT_DEFAULT)
         restart_timeout = body.get("restart_timeout_seconds", RESTART_TIMEOUT_DEFAULT)
 
@@ -186,8 +137,7 @@ class AgentHandler(BaseHTTPRequestHandler):
             })
             return
 
-        # Check for duplicate / replay
-        existing = self.store.get(operation_id)
+        existing = self.store.get(operation_id)  # type: ignore[attr-defined]
         if existing is not None:
             if existing.status == "running":
                 self._send_json(409, {
@@ -196,13 +146,11 @@ class AgentHandler(BaseHTTPRequestHandler):
                     "message": "Operation already in progress",
                 })
                 return
-            # Done — idempotent replay
             self._send_json(202, {"operation_id": operation_id, "status": "accepted"})
             return
 
-        record = self.store.create(operation_id)
+        record = self.store.create(operation_id)  # type: ignore[attr-defined]
         if record is None:
-            # Race: another thread created it between our get() and create()
             self._send_json(409, {
                 "error": "conflict",
                 "operation_id": operation_id,
@@ -213,31 +161,11 @@ class AgentHandler(BaseHTTPRequestHandler):
         logger.info("Accepted operation %s", operation_id)
 
         thread = threading.Thread(
-            target=self.executor.run,
-            args=(record, self.store, intended_state, health_timeout, restart_timeout),
+            target=self.executor.run,  # type: ignore[attr-defined]
+            args=(record, self.store, intended_state, health_timeout, restart_timeout),  # type: ignore[attr-defined]
             daemon=True,
             name=f"op-{operation_id[:8]}",
         )
         thread.start()
 
         self._send_json(202, {"operation_id": operation_id, "status": "accepted"})
-
-
-def build_handler_class(
-    token: str,
-    store: OperationStore,
-    executor: OperationExecutor,
-    status_checker: ContainerStatusChecker,
-    bedrock_container_name: str = "minecraft-server",
-) -> type:
-    """Return an AgentHandler subclass with dependencies injected as class attributes."""
-
-    class BoundHandler(AgentHandler):
-        pass
-
-    BoundHandler.token = token
-    BoundHandler.store = store  # type: ignore[assignment]
-    BoundHandler.executor = executor  # type: ignore[assignment]
-    BoundHandler.status_checker = status_checker  # type: ignore[assignment]
-    BoundHandler.bedrock_container_name = bedrock_container_name
-    return BoundHandler

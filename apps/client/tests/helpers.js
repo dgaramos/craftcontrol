@@ -187,12 +187,7 @@ export function makeSettingsDeps(stateOverrides = {}) {
     if (!elements[sel]) elements[sel] = makeEl();
     return elements[sel];
   });
-  // Stub document.querySelector used by updateSaveLabel footer logic
-  if (typeof global.document === "undefined") {
-    global.document = { querySelector: jest.fn(() => ({ classList: { toggle: jest.fn() } })) };
-  } else {
-    global.document.querySelector = jest.fn(() => ({ classList: { toggle: jest.fn() } }));
-  }
+  const document = { querySelector: jest.fn(() => ({ classList: { toggle: jest.fn() } })) };
   const state = {
     locale: "en",
     tab: "world",
@@ -216,7 +211,7 @@ export function makeSettingsDeps(stateOverrides = {}) {
   const api = jest.fn();
   const toast = jest.fn();
   const refreshActivePanel = jest.fn();
-  return { state, $, content, t, escapeHtml, uiIcon, optionLabel, localeTag, groupLabel, toast, api, render: refreshActivePanel, refreshActivePanel, elements };
+  return { state, $, content, t, escapeHtml, uiIcon, optionLabel, localeTag, groupLabel, toast, api, render: refreshActivePanel, refreshActivePanel, document, elements };
 }
 
 export class FakeEventSource {

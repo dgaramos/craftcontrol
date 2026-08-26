@@ -8,6 +8,12 @@ def test_normalizes_boolean_values() -> None:
     assert validate_value(SETTINGS["ALLOW_CHEATS"], "false") == "false"
 
 
+@pytest.mark.parametrize("value", [0, 1])
+def test_rejects_numeric_boolean_values(value: int) -> None:
+    with pytest.raises(ValueError, match="valor booleano inválido"):
+        validate_value(SETTINGS["ALLOW_CHEATS"], value)
+
+
 def test_rejects_out_of_range_number() -> None:
     with pytest.raises(ValueError, match="fora do intervalo"):
         validate_value(SETTINGS["MAX_PLAYERS"], 101)

@@ -79,4 +79,17 @@ describe("connectInvalidation", () => {
     expect(loadState).toHaveBeenCalled();
     expect(setStatus).toHaveBeenCalledWith("online");
   });
+
+  test("preserves a coalesced server status refresh after state.changed", async () => {
+    let callback;
+    const schedule = jest.fn((fn) => { callback = fn; return 1; });
+    const { listener, refreshStatus, setStatus } = makeSetup({ schedule });
+
+    listener({ topic: "server.started" });
+    listener({ topic: "state.changed" });
+    await callback();
+
+    expect(refreshStatus).toHaveBeenCalledTimes(1);
+    expect(setStatus).toHaveBeenCalledWith("online");
+  });
 });

@@ -44,7 +44,10 @@ class TelemetryService:
             self._diagnostics["duration_max_ms"] = max(float(self._diagnostics["duration_max_ms"]), duration)
         with self._lock:
             topic = envelope["type"]
-            sequence = int(envelope["sequence"])
+            _raw_seq = envelope["sequence"]
+            if isinstance(_raw_seq, bool):
+                raise ValueError(f"sequence must be an integer, got bool: {_raw_seq!r}")
+            sequence = int(_raw_seq)
             snapshot_topic = topic.startswith("snapshot.")
             telemetry = self.repository.snapshot().get("telemetry", {})
             last_sequence = int(telemetry["sequence"]) if telemetry.get("sequence", "").isdigit() else None

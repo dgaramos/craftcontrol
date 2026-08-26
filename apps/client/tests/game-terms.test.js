@@ -38,8 +38,8 @@ describe("createGameTerms — blockName via blockTermMarkup", () => {
 
   test("unknown block generates localized words in pt", () => {
     const terms = makeTerms("pt");
-    const html = terms.blockTermMarkup("oak_log");
-    expect(html).toContain("Tronco de carvalho");
+    const html = terms.blockTermMarkup("custom_oak_block");
+    expect(html).toContain("Custom carvalho block");
   });
 
   test("null identifier is handled", () => {

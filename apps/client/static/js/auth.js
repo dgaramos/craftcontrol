@@ -84,14 +84,16 @@ function showAuth() {
 async function showSessions() {
   const words = copy[locale()];
   const dialog = document.querySelector("#account-dialog");
-  const data = await api("/api/auth/sessions");
+  let data;
+  try { data = await api("/api/auth/sessions"); }
+  catch (error) { window.alert(error.message); return; }
   const others = data.sessions.filter((session) => !session.current);
   dialog.setAttribute("aria-label", words.sessionsTitle);
   const card = document.createElement("section"); card.className = "account-card block-panel";
   const title = document.createElement("h2"); title.textContent = words.sessionsTitle; card.append(title);
   const list = document.createElement("div"); list.className = "session-history";
-  data.sessions.forEach((session) => { const row = document.createElement("div"); row.className = "session-item"; const label = document.createElement("span"); label.textContent = session.current ? words.currentSession : new Date(session.last_seen_at * 1000).toLocaleString(); row.append(label); if (!session.current) { const button = document.createElement("button"); button.className = "danger"; button.textContent = words.revoke; button.dataset.session = session.id; button.onclick = async () => { await api(`/api/auth/sessions/${button.dataset.session}`, { method: "DELETE" }); showSessions(); }; row.append(button); } list.append(row); }); card.append(list);
-  if (others.length) { const button = document.createElement("button"); button.id = "revoke-others"; button.className = "danger"; button.textContent = words.revokeOthers; button.onclick = async () => { await api("/api/auth/sessions", { method: "POST" }); showSessions(); }; card.append(button); } else { const empty = document.createElement("p"); empty.textContent = words.sessionsEmpty; card.append(empty); }
+  data.sessions.forEach((session) => { const row = document.createElement("div"); row.className = "session-item"; const label = document.createElement("span"); label.textContent = session.current ? words.currentSession : new Date(session.last_seen_at * 1000).toLocaleString(); row.append(label); if (!session.current) { const button = document.createElement("button"); button.className = "danger"; button.textContent = words.revoke; button.dataset.session = session.id; button.onclick = async () => { try { await api(`/api/auth/sessions/${button.dataset.session}`, { method: "DELETE" }); showSessions(); } catch (error) { const err = document.querySelector("#account-dialog .auth-error"); if (err) err.textContent = error.message; } }; row.append(button); } list.append(row); }); card.append(list);
+  if (others.length) { const button = document.createElement("button"); button.id = "revoke-others"; button.className = "danger"; button.textContent = words.revokeOthers; button.onclick = async () => { try { await api("/api/auth/sessions", { method: "POST" }); showSessions(); } catch (error) { const err = document.querySelector("#account-dialog .auth-error"); if (err) err.textContent = error.message; } }; card.append(button); } else { const empty = document.createElement("p"); empty.textContent = words.sessionsEmpty; card.append(empty); }
   const cancel = document.createElement("button"); cancel.className = "secondary"; cancel.type = "button"; cancel.textContent = words.cancel; cancel.onclick = () => dialog.close(); card.append(cancel); dialog.replaceChildren(card);
   dialog.showModal();
 }

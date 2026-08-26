@@ -58,8 +58,7 @@ describe("updateSaveLabel", () => {
 
     const { updateSaveLabel } = createSettingsFeature(deps);
     updateSaveLabel();
-    // renderChangesDrawer sets innerHTML on #changes-list when called
-    expect(changesListEl.innerHTML).not.toBe(undefined);
+    expect(changesListEl.innerHTML).toContain("max_players");
   });
 
   test("when no changes, hides #save", () => {

@@ -578,8 +578,15 @@ class TestServerOperationService:
         def apply_fn():
             pass
 
-        service.apply_restart_required({"MAX_PLAYERS": "1"}, apply_fn)
-        time.sleep(0.2)  # Let the operation start
+        operation = service.apply_restart_required({"MAX_PLAYERS": "1"}, apply_fn)
+        deadline = time.monotonic() + 3.0
+        while time.monotonic() < deadline:
+            current = service.get_operation(operation.operation_id)
+            if current is not None and current.state == OperationState.RUNNING:
+                break
+            time.sleep(0.01)
+        else:
+            raise AssertionError("Operation did not start before the concurrency check")
         with pytest.raises(ConflictingOperationError):
             service.apply_restart_required({"MAX_PLAYERS": "2"}, apply_fn)
         barrier.set()

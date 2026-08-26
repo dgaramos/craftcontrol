@@ -1,4 +1,4 @@
-export function createSettingsFeature({ state, content, t, api, $, escapeHtml, toast, uiIcon, optionLabel, localeTag, groupLabel, refreshActivePanel }) {
+export function createSettingsFeature({ state, content, t, api, $, escapeHtml, toast, uiIcon, optionLabel, localeTag, groupLabel, refreshActivePanel, document: documentRef = document }) {
   function can(capability) {
     const capabilities = state.user?.capabilities || [];
     return capabilities.includes("*") || capabilities.includes(capability);
@@ -50,7 +50,7 @@ export function createSettingsFeature({ state, content, t, api, $, escapeHtml, t
     const count = Object.keys(state.changes).length;
     $("#save").hidden = count === 0 || state.operationActive;
     $("#save-label").textContent = t("reviewCount", count);
-    document.querySelector("footer").classList.toggle("has-pending", count > 0);
+    documentRef.querySelector("footer").classList.toggle("has-pending", count > 0);
     if ($("#changes-drawer").open) renderChangesDrawer();
   }
 

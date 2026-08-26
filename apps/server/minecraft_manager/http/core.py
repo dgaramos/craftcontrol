@@ -5,6 +5,7 @@ import json
 from flask import Blueprint, Response, jsonify, render_template, request, stream_with_context
 
 from ..schema import GAMERULES, SETTINGS
+from ..auth.http import require
 from .dependencies import manager
 
 core_api = Blueprint("core_api", __name__)
@@ -40,6 +41,7 @@ def state():
 
 
 @core_api.post("/api/refresh")
+@require("server.configure")
 def refresh():
     manager().refresh_async(reason="manual")
     return jsonify(ok=True, refreshing=True), 202

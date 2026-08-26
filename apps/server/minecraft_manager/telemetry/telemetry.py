@@ -23,7 +23,7 @@ def parse_telemetry_line(line: str) -> dict[str, Any] | None:
         raise ValueError("unsupported telemetry schema")
     if payload.get("type") not in TOPICS:
         raise ValueError("unsupported telemetry topic")
-    if not isinstance(payload.get("sequence"), int) or payload["sequence"] < 0:
+    if isinstance(payload.get("sequence"), bool) or not isinstance(payload.get("sequence"), int) or payload["sequence"] < 0:
         raise ValueError("invalid telemetry sequence")
     player = payload.get("player")
     if player is not None:

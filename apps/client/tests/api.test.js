@@ -37,6 +37,11 @@ describe("api — GET request", () => {
     global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 500, json: async () => ({}) });
     await expect(api("/api/status")).rejects.toMatchObject({ message: "Request failed", status: 500 });
   });
+
+  test("returns an empty payload when a successful response has no JSON body", async () => {
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 204, json: async () => { throw new SyntaxError("Unexpected end of JSON input"); } });
+    await expect(api("/api/status")).resolves.toEqual({});
+  });
 });
 
 describe("api — non-CSRF-protected URLs", () => {

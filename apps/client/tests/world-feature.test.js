@@ -113,6 +113,9 @@ describe("renderTimePanel", () => {
 });
 
 describe("renderTimePanel — bindings", () => {
+  let savedConfirm;
+  beforeEach(() => { savedConfirm = global.confirm; });
+  afterEach(() => { global.confirm = savedConfirm; });
   function makeSetup(stateOverrides = {}) {
     const deps = makeDeps({ state: { locale: "en", gamerules: { dodaylightcycle: "true", doweathercycle: "true" }, ...stateOverrides } });
     const buttons = [];
@@ -197,6 +200,7 @@ describe("renderTimePanel — bindings", () => {
     expect(deps.elements["#time-query-result"].textContent).toContain("1200");
     expect(deps.api).toHaveBeenCalledWith("/api/time/weather-query", expect.anything());
     expect(deps.api).toHaveBeenCalledWith("/api/time/query", expect.anything());
+    expect(deps.toast).not.toHaveBeenCalledWith("timeUpdated");
   });
 });
 

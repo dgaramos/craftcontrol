@@ -19,7 +19,7 @@ from conftest import make_auth_mock, wire_auth
 # ---------------------------------------------------------------------------
 
 def _make_app(manager: MagicMock, *, auth_mode: str = "disabled") -> Flask:
-    app = Flask(__name__, template_folder="../apps/client/templates")
+    app = Flask(__name__, template_folder="../../client/templates")
     app.extensions["manager_service"] = manager
     auth = make_auth_mock()
     wire_auth(app, auth, mode=auth_mode)
@@ -127,6 +127,19 @@ def test_refresh_returns_202(client, service: MagicMock) -> None:
     assert resp.status_code == 202
     assert resp.get_json()["ok"] is True
     service.refresh_async.assert_called_once_with(reason="manual")
+
+
+def test_refresh_requires_server_configure_capability(service: MagicMock) -> None:
+    app = _make_app(service, auth_mode="local")
+    auth = app.extensions["auth_service"]
+    client = app.test_client()
+    auth.authenticate.return_value = {"id": "viewer", "role": "viewer", "capabilities": []}
+    auth.require_capability.side_effect = PermissionError("server.configure")
+
+    response = client.post("/api/refresh")
+
+    assert response.status_code == 403
+    service.refresh_async.assert_not_called()
 
 
 def test_events_returns_event_stream(client) -> None:
@@ -431,7 +444,7 @@ def test_telemetry_pack_action_file_not_found_returns_400(client) -> None:
 
 def _make_operations_app(manager: MagicMock, *, auth_mode: str = "disabled") -> Flask:
     from minecraft_manager.http.operations import operations_api as ops_bp
-    app = Flask(__name__, template_folder="../apps/client/templates")
+    app = Flask(__name__, template_folder="../../client/templates")
     app.extensions["manager_service"] = manager
     auth = make_auth_mock()
     wire_auth(app, auth, mode=auth_mode)

@@ -19,7 +19,7 @@ def test_component_deploy_canaries_use_the_production_port_default() -> None:
 
 
 def test_quality_gates_are_partitioned_and_automated() -> None:
-    gates = ["frontend", "backend", "contracts", "integration"]
+    gates = ["frontend", "backend", "contracts", "agent-workflows", "integration"]
     for gate in gates:
         script = ROOT / "bin" / f"check-{gate}"
         assert script.is_file()
@@ -27,11 +27,11 @@ def test_quality_gates_are_partitioned_and_automated() -> None:
     assert (ROOT / "bin" / "check-contracts-frontend").is_file()
     umbrella = (ROOT / "bin" / "check").read_text()
     assert "contracts-frontend" in umbrella
-    assert "frontend" in umbrella and "backend" in umbrella and "contracts" in umbrella and "integration" in umbrella
+    assert "frontend" in umbrella and "backend" in umbrella and "contracts" in umbrella and "agent-workflows" in umbrella and "integration" in umbrella
     for workflow in (ROOT / ".github" / "workflows" / "quality.yml", ROOT / ".gitea" / "workflows" / "quality.yml"):
         assert workflow.is_file()
         text = workflow.read_text()
-        for job in ("backend", "contracts-backend", "contracts-frontend", "frontend", "integration"):
+        for job in ("backend", "contracts-backend", "contracts-frontend", "frontend", "agent-workflows", "integration"):
             assert job in text
 
 
@@ -402,43 +402,3 @@ def test_reviewer_publisher_rejects_thread_after_all_pages(tmp_path: Path) -> No
     result = subprocess.run([BASH, ".github/scripts/publish-review.sh"], env=env, capture_output=True, text=True)
     assert result.returncode != 0
     assert "resolution target mismatch" in result.stderr
-
-
-def test_profile_declares_reviewer_app_first_with_explicit_personal_fallback() -> None:
-    profile = (ROOT / ".agent-review" / "craftcontrol" / "PROFILE.md").read_text()
-
-    assert "Cody DR | reply | available" in profile
-    assert "Cody DR | resolve-thread | available" in profile
-    assert "personal GitHub account is permitted" in profile
-    assert "unconfigured or unavailable before dispatch" in profile
-    assert "Without explicit user authorization, return publication-ready" in profile
-
-    assert "publish-cody-review.yml" in profile
-    assert "publish-claudio-review.yml" in profile
-
-
-def test_no_claudio_dr_wrapper_md_files_exist_in_agents_directory() -> None:
-    agents_directory = ROOT / ".claude" / "agents"
-    for agent in agents_directory.glob("*.md"):
-        text = agent.read_text()
-        if "---" not in text:
-            continue
-        frontmatter = text.split("---", maxsplit=2)[1].strip().splitlines()
-        declared_skills = [line.strip()[2:] for line in frontmatter if line.startswith("  - ")]
-        assert not any(skill.startswith("claudio-dr:") for skill in declared_skills), (
-            f"{agent.name} is a claudio-dr wrapper .md file that should have been removed"
-        )
-
-
-def test_codex_does_not_shadow_global_cody_lifecycle_skills() -> None:
-    lifecycle_entries = {
-        "create-issue",
-        "execute-issue",
-        "handle-pr-findings",
-        "implement",
-        "review-pr",
-        "ship-issue",
-        "start-issue",
-    }
-    local_entries = {path.parent.name for path in (ROOT / ".agents" / "skills").glob("*/SKILL.md")}
-    assert lifecycle_entries.isdisjoint(local_entries)

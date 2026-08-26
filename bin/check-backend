@@ -9,6 +9,7 @@ cd "$ROOT"
   apps/server/minecraft_manager apps/server/app.py apps/server/wsgi.py app.py wsgi.py
 mkdir -p test-results
 "$PYTHON" -m pytest apps/server/tests/ \
+  --ignore=apps/server/tests/test_agent_workflows.py \
   --cov=apps/server/minecraft_manager \
   --cov-report=xml:coverage.xml \
   --junit-xml=test-results/results.xml \

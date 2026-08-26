@@ -47,6 +47,25 @@ class OperationExecutorPort(Protocol):
     ) -> None: ...
 
 
+class OperationQueuePort(Protocol):
+    """Minimal port for the operation queue used by ``AgentHandler``."""
+
+    @property
+    def queue_depth(self) -> int: ...
+
+    @property
+    def worker_count(self) -> int: ...
+
+    def enqueue(
+        self,
+        record: "OperationRecord",
+        store: Any,
+        intended_state: dict[str, Any],
+        health_timeout: int,
+        restart_timeout: int,
+    ) -> bool: ...
+
+
 class AgentHandler(EndpointMixin, BaseHTTPRequestHandler):
     """HTTP request handler for the host agent.
 
@@ -59,6 +78,7 @@ class AgentHandler(EndpointMixin, BaseHTTPRequestHandler):
     executor: OperationExecutorPort
     status_checker: ContainerStatusChecker
     bedrock_container_name: str = "minecraft-server"
+    operation_queue: OperationQueuePort | None = None
 
     def log_message(self, format: str, *args: Any) -> None:  # noqa: A002
         # Strip query strings from requestline args to avoid logging sensitive params.
@@ -119,6 +139,7 @@ def build_handler_class(
     executor: OperationExecutorPort,
     status_checker: ContainerStatusChecker,
     bedrock_container_name: str = "minecraft-server",
+    operation_queue: "OperationQueuePort | None" = None,
 ) -> type:
     """Return an AgentHandler subclass with dependencies injected as class attributes."""
 
@@ -130,4 +151,5 @@ def build_handler_class(
     BoundHandler.executor = executor
     BoundHandler.status_checker = status_checker  # type: ignore[assignment]
     BoundHandler.bedrock_container_name = bedrock_container_name
+    BoundHandler.operation_queue = operation_queue  # type: ignore[assignment]
     return BoundHandler

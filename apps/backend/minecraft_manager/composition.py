@@ -34,6 +34,7 @@ def compose_manager(
     bedrock: ServerConsole | None = None,
     docker: ContainerOperations | None = None,
     runtime: RuntimeSupervisor | None = None,
+    bedrock_docker_factory: object = None,
 ) -> ManagerService:
     """Build the production object graph in one explicit composition root."""
     repository = StateRepository(settings.database)
@@ -45,7 +46,12 @@ def compose_manager(
         # The host-agent contract covers ContainerOperations only (PREPARATION,
         # RESTART, HEALTH_WAIT); console and log-stream operations are not
         # delegated to the agent — see docs/host-agent-contract.md.
-        bedrock = BedrockClient(settings.container, list(GAMERULES), settings.console_wait_seconds)
+        bedrock = BedrockClient(
+            settings.container,
+            list(GAMERULES),
+            settings.console_wait_seconds,
+            docker_factory=bedrock_docker_factory,
+        )
     if docker is None:
         if settings.host_agent_url:
             token = _load_token(settings.host_agent_token_file)

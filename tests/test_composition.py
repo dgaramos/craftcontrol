@@ -9,6 +9,7 @@ import pytest
 from minecraft_manager.config import Settings
 from minecraft_manager.composition import _docker_factory, compose_manager
 from minecraft_manager.host_agent import HostAgentContainerOperations
+from minecraft_manager.server.console import BedrockClient
 from minecraft_manager.services import ManagerService
 
 
@@ -70,11 +71,16 @@ def test_docker_factory_calls_docker_from_env() -> None:
 
 def test_compose_manager_builds_bedrock_when_none(tmp_path: Path) -> None:
     settings = _minimal_settings(tmp_path)
-    fake_bedrock = MagicMock()
-    with patch("minecraft_manager.composition.BedrockClient", return_value=fake_bedrock) as mock_cls:
-        manager = compose_manager(settings, docker=MagicMock(), runtime=MagicMock())
-    mock_cls.assert_called_once_with(settings.container, list(mock_cls.call_args[0][1]), settings.console_wait_seconds)
-    assert manager.bedrock is fake_bedrock
+    fake_docker_client = MagicMock()
+    manager = compose_manager(
+        settings,
+        docker=MagicMock(),
+        runtime=MagicMock(),
+        bedrock_docker_factory=lambda: fake_docker_client,
+    )
+    assert isinstance(manager.bedrock, BedrockClient)
+    assert manager.bedrock.container_name == settings.container
+    assert manager.bedrock.console_wait_seconds == settings.console_wait_seconds
 
 
 def test_compose_manager_builds_docker_when_none(tmp_path: Path) -> None:
@@ -133,11 +139,14 @@ def test_compose_manager_split_mode_still_builds_bedrock_client(tmp_path: Path) 
     token_file = tmp_path / "token"
     token_file.write_text("test-token")
     settings = _split_settings(tmp_path)
-    fake_bedrock = MagicMock()
+    fake_docker_client = MagicMock()
     fake_runtime = MagicMock()
-    with patch("minecraft_manager.composition.BedrockClient", return_value=fake_bedrock) as mock_cls:
-        manager = compose_manager(settings, docker=MagicMock(), runtime=fake_runtime)
-    mock_cls.assert_called_once_with(
-        settings.container, list(mock_cls.call_args[0][1]), settings.console_wait_seconds
+    manager = compose_manager(
+        settings,
+        docker=MagicMock(),
+        runtime=fake_runtime,
+        bedrock_docker_factory=lambda: fake_docker_client,
     )
-    assert manager.bedrock is fake_bedrock
+    assert isinstance(manager.bedrock, BedrockClient)
+    assert manager.bedrock.container_name == settings.container
+    assert manager.bedrock.console_wait_seconds == settings.console_wait_seconds

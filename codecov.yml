@@ -90,6 +90,10 @@ component_management:
       name: "frontend: features"
       paths:
         - apps/frontend/static/js/features/
+    - component_id: host_agent
+      name: "host-agent"
+      paths:
+        - services/host-agent/
 
 comment:
   layout: "reach,diff,flags,components"

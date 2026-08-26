@@ -194,6 +194,22 @@ def test_host_agent_systemd_unit_is_present_and_well_formed() -> None:
     assert "HOST_AGENT_SECRET_FILE=/etc/craftcontrol/host-agent-token" in unit
 
 
+def test_host_agent_coverage_is_scoped_to_the_service_boundary() -> None:
+    gate = (ROOT / "bin" / "check-host-agent").read_text()
+    workflow = (ROOT / ".github" / "workflows" / "quality.yml").read_text()
+    codecov = (ROOT / "codecov.yml").read_text()
+
+    assert "services/host-agent/tests/" in gate
+    assert "--cov=services/host-agent" in gate
+    assert "--cov=deploy/host-agent" not in gate
+    assert "files: coverage-host-agent.xml" in workflow
+    assert "flags: host-agent" in workflow
+    assert "component_id: host_agent" in codecov
+    assert 'name: "host-agent"' in codecov
+    assert "- services/host-agent/" in codecov
+    assert "- deploy/host-agent/" not in codecov
+
+
 def test_frontend_proxy_preserves_same_origin_and_sse_streaming() -> None:
     nginx = (ROOT / "apps" / "frontend" / "nginx.conf").read_text()
     assert "location /api/" in nginx

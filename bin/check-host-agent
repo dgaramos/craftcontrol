@@ -5,8 +5,8 @@ readonly ROOT="$(git rev-parse --show-toplevel)"
 readonly PYTHON="${PYTHON:-python3}"
 cd "$ROOT"
 
-"$PYTHON" -m pytest deploy/host-agent/tests/ \
-  --cov=deploy/host-agent \
+"$PYTHON" -m pytest services/host-agent/tests/ \
+  --cov=services/host-agent \
   --cov-report=xml:coverage-host-agent.xml \
   -v
 echo "host-agent gate: ok"

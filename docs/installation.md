@@ -102,7 +102,7 @@ unit. The agent uses only the Python standard library — no dependency
 installation step is required.
 
 ```bash
-sudo cp -r deploy/host-agent /opt/craftcontrol/host-agent
+sudo cp -r services/host-agent /opt/craftcontrol/host-agent
 sudo cp deploy/host-agent/systemd/craftcontrol-host-agent.service \
   /etc/systemd/system/
 sudo systemctl daemon-reload

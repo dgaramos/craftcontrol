@@ -215,7 +215,7 @@ def test_host_agent_coverage_is_scoped_to_the_service_boundary() -> None:
 
 
 def test_frontend_proxy_preserves_same_origin_and_sse_streaming() -> None:
-    nginx = (ROOT / "apps" / "frontend" / "nginx.conf").read_text()
+    nginx = (ROOT / "apps" / "client" / "nginx.conf").read_text()
     assert "location /api/" in nginx
     assert "location = /api/events" in nginx
     assert "resolver 127.0.0.11" in nginx

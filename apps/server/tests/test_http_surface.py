@@ -12,7 +12,7 @@ from minecraft_manager.routes import api
 
 
 ROOT = Path(__file__).resolve().parents[3]
-FRONTEND = ROOT / "apps" / "frontend"
+FRONTEND = ROOT / "apps" / "client"
 CONTRACT = ROOT / "packages" / "contracts" / "http-surface.json"
 
 

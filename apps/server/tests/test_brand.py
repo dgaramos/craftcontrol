@@ -12,7 +12,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[3]
-FRONTEND = ROOT / "apps" / "frontend"
+FRONTEND = ROOT / "apps" / "client"
 
 
 def test_template_uses_product_brand_and_dynamic_instance_name() -> None:

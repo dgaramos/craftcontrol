@@ -109,7 +109,10 @@ class _UrllibClient:
                     raise ReadTimeoutError("read body timed out") from exc
                 return resp.status, json.loads(raw) if raw else {}
         except urllib.error.HTTPError as exc:
-            raw = exc.read()
+            try:
+                raw = exc.read()
+            except TimeoutError as read_exc:
+                raise ReadTimeoutError("read error body timed out") from read_exc
             try:
                 body_dict: dict[str, Any] = json.loads(raw) if raw else {}
             except json.JSONDecodeError:

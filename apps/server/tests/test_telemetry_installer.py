@@ -76,3 +76,11 @@ def test_rejects_world_path_traversal(installer_env) -> None:
     env = installer_env
     with pytest.raises(FileNotFoundError):
         env["installer"].status("../BedrockLevel")
+
+
+def test_bundled_resolves_pack_source_path(tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    (project / "data" / "worlds" / "BedrockLevel").mkdir(parents=True)
+    (project / ".env").write_text("LEVEL_NAME=BedrockLevel\n", encoding="utf-8")
+    installer = TelemetryPackInstaller.bundled(project)
+    assert installer.source.name == "behavior_pack"

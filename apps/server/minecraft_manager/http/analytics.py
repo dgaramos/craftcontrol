@@ -63,6 +63,8 @@ def periods():
         limit = int(request.args.get("limit", "10"))
         if not (1 <= days <= 365):
             return jsonify(error="days must be between 1 and 365"), 400
+        if not (1 <= limit <= 100):
+            return jsonify(error="limit must be between 1 and 100"), 400
         return jsonify(manager().period_analytics(days, limit))
     except (TypeError, ValueError) as error:
         return jsonify(error=str(error)), 400

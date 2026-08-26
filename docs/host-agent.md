@@ -15,8 +15,11 @@ exactly the permitted host-level operations: writing Bedrock configuration
 files, issuing a `docker compose restart`, and polling the Bedrock UDP health
 probe.
 
-When the host agent is active, the backend container no longer needs a Docker
-socket mount. The socket is managed entirely on the host side.
+When the host agent is active, server lifecycle operations (PREPARATION,
+RESTART, HEALTH_WAIT) are delegated to the agent rather than executed directly
+from within the backend container. The backend still mounts the Docker socket
+for Bedrock console attachment, log streaming, and Docker events — operations
+that are not part of the host-agent contract.
 
 The host agent is intentionally **not** a Docker container. Containerizing it
 would require either mounting the Docker socket into the container (defeating
@@ -70,9 +73,8 @@ membership. It does not need a login shell or a home directory.
 ## Step 2 — Install the agent
 
 ```bash
-sudo mkdir -p /opt/craftcontrol/host-agent
-sudo cp services/host-agent/agent.py /opt/craftcontrol/host-agent/agent.py
-sudo chown craftcontrol-agent:craftcontrol-agent /opt/craftcontrol/host-agent/agent.py
+sudo cp -r services/host-agent /opt/craftcontrol/host-agent
+sudo chown -R craftcontrol-agent:craftcontrol-agent /opt/craftcontrol/host-agent
 sudo chmod 0755 /opt/craftcontrol/host-agent/agent.py
 ```
 

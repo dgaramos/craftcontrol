@@ -34,4 +34,4 @@ These tests guard architectural boundaries: that a feature module exports its fa
 
 ## Non-JS asset tests
 
-Tests for SVG sprites, webmanifest, HTML templates, README, and docker-compose live in `tests/test_brand.py` (Python/pytest) because they require XML parsing or cover artifacts outside the JS module graph. They are not duplicated here.
+Tests for SVG sprites, webmanifest, HTML templates, README, and docker-compose live in `apps/server/tests/test_brand.py` (Python/pytest) because they require XML parsing or cover artifacts outside the JS module graph. They are not duplicated here.

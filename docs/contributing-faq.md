@@ -69,6 +69,18 @@ checks and review findings are resolved. Do not merge directly to `main`.
 
 ## I use Claude Code. Are there skills that help me follow project conventions?
 
+## I use Codex. Are there skills that help me follow project conventions?
+
+Yes. CraftControl provides Codex lifecycle wrappers under `.agents/skills/`.
+They delegate to the installed `cody-dr` portable workflows and load
+`.agent-review/craftcontrol/PROFILE.md`. Issue authoring remains draft-first,
+findings handling requires an explicit decision before each fix or publication,
+and the Cody App publishes review content only as `COMMENT`.
+
+The profile distinguishes App-safe PR metadata from a personal GitHub Project.
+The latter requires an explicitly authorized, disclosed personal fallback until
+the portable `ship-change` adapter supports the repository publisher dispatch.
+
 Yes. CraftControl provides Claude Code agents under `.claude/agents/`.
 The lifecycle agents delegate to the portable Claudio DR workflows from the
 `claudio-dr` plugin, which supply the evidence-first review contract,

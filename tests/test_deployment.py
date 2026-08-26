@@ -248,7 +248,7 @@ def test_reviewer_publishers_support_thread_replies_without_creating_a_review() 
     assert "PUBLISHER_APP_SLUG" in publisher
 
 
-def test_app_publishers_require_and_verify_personal_project_metadata() -> None:
+def test_app_publishers_allow_issues_without_project_metadata_and_verify_it_when_supplied() -> None:
     for reviewer in ("cody", "claudio"):
         issue_workflow = (
             ROOT / ".github" / "workflows" / f"publish-{reviewer}-issue.yml"
@@ -260,7 +260,9 @@ def test_app_publishers_require_and_verify_personal_project_metadata() -> None:
         for field in ("project_owner", "project_number", "project_status"):
             assert f"{field}:" in issue_workflow
             assert f"{field}:" in metadata_workflow
-        assert "complete project metadata is required" in issue_workflow
+        assert "supply all Project fields or none" in issue_workflow
+        assert "project metadata must be complete when supplied" in issue_workflow
+        assert 'if [[ -n "$PROJECT_OWNER" ]]; then' in issue_workflow
         assert f"{reviewer}-dr[bot]" in issue_workflow
         assert "unexpected issue publisher" in issue_workflow
         assert "gh project item-add" in issue_workflow

@@ -24,16 +24,16 @@ on:
         required: false
         type: string
       project_owner:
-        description: Project owner
-        required: true
+        description: Optional Project owner; supply all Project fields or none
+        required: false
         type: string
       project_number:
-        description: Project number
-        required: true
+        description: Optional Project number; supply all Project fields or none
+        required: false
         type: string
       project_status:
-        description: Project Status option
-        required: true
+        description: Optional Project Status; supply all Project fields or none
+        required: false
         type: string
 
 permissions:
@@ -72,12 +72,14 @@ jobs:
           [[ -n "$TITLE" ]] || { echo "title is required" >&2; exit 1; }
           [[ -n "$BODY" ]] || { echo "body is required" >&2; exit 1; }
           [[ -z "$MILESTONE_NUMBER" || "$MILESTONE_NUMBER" =~ ^[1-9][0-9]*$ ]] || { echo "milestone_number must be a positive integer" >&2; exit 1; }
-          [[ -n "$PROJECT_OWNER" && "$PROJECT_NUMBER" =~ ^[1-9][0-9]*$ && -n "$PROJECT_STATUS" ]] || { echo "complete project metadata is required" >&2; exit 1; }
-          [[ "$PROJECT_OWNER" == dgaramos ]] || { echo "project_owner must be dgaramos" >&2; exit 1; }
-          project_json="$(gh project view "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --format json)"
-          fields_json="$(gh project field-list "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --format json)"
-          field_id="$(jq -er '.fields[] | select(.name == "Status") | .id' <<<"$fields_json")"
-          option_id="$(jq -er --arg status "$PROJECT_STATUS" '.fields[] | select(.name == "Status") | .options[] | select(.name == $status) | .id' <<<"$fields_json")"
+          if [[ -n "$PROJECT_OWNER$PROJECT_NUMBER$PROJECT_STATUS" ]]; then
+            [[ -n "$PROJECT_OWNER" && "$PROJECT_NUMBER" =~ ^[1-9][0-9]*$ && -n "$PROJECT_STATUS" ]] || { echo "project metadata must be complete when supplied" >&2; exit 1; }
+            [[ "$PROJECT_OWNER" == dgaramos ]] || { echo "project_owner must be dgaramos" >&2; exit 1; }
+            project_json="$(gh project view "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --format json)"
+            fields_json="$(gh project field-list "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --format json)"
+            field_id="$(jq -er '.fields[] | select(.name == "Status") | .id' <<<"$fields_json")"
+            option_id="$(jq -er --arg status "$PROJECT_STATUS" '.fields[] | select(.name == "Status") | .options[] | select(.name == $status) | .id' <<<"$fields_json")"
+          fi
           jq -n \
             --arg title "$TITLE" \
             --arg body "$BODY" \
@@ -93,10 +95,12 @@ jobs:
           [[ "$actual_author" == "$EXPECTED_AUTHOR" ]] || { echo "unexpected issue author: $actual_author" >&2; exit 1; }
           [[ "$PUBLISHER_APP_SLUG" == "${EXPECTED_AUTHOR%\[bot\]}" ]] || { echo "unexpected issue publisher" >&2; exit 1; }
           issue_number="$(jq -r .number created-issue.json)"
-          project_id="$(jq -er .id <<<"$project_json")"
-          item_json="$(gh project item-add "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --url "https://github.com/${GITHUB_REPOSITORY}/issues/${issue_number}" --format json)"
-          item_id="$(jq -er .id <<<"$item_json")"
-          gh project item-edit --id "$item_id" --project-id "$project_id" --field-id "$field_id" --single-select-option-id "$option_id"
-          gh issue view "$issue_number" --repo "$GITHUB_REPOSITORY" --json labels,assignees,milestone,projectItems | jq -e --arg title "$(jq -er .title <<<"$project_json")" 'any(.projectItems[]; .title == $title)' >/dev/null
-          gh project item-list "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --limit 1000 --format json | jq -e --arg id "$item_id" --arg status "$PROJECT_STATUS" 'any(.items[]; .id == $id and .status == $status)' >/dev/null
+          if [[ -n "$PROJECT_OWNER" ]]; then
+            project_id="$(jq -er .id <<<"$project_json")"
+            item_json="$(gh project item-add "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --url "https://github.com/${GITHUB_REPOSITORY}/issues/${issue_number}" --format json)"
+            item_id="$(jq -er .id <<<"$item_json")"
+            gh project item-edit --id "$item_id" --project-id "$project_id" --field-id "$field_id" --single-select-option-id "$option_id"
+            gh issue view "$issue_number" --repo "$GITHUB_REPOSITORY" --json labels,assignees,milestone,projectItems | jq -e --arg title "$(jq -er .title <<<"$project_json")" 'any(.projectItems[]; .title == $title)' >/dev/null
+            gh project item-list "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --limit 1000 --format json | jq -e --arg id "$item_id" --arg status "$PROJECT_STATUS" 'any(.items[]; .id == $id and .status == $status)' >/dev/null
+          fi
           jq -r '"Created and verified Claudio DR issue #\(.number): \(.html_url)"' created-issue.json

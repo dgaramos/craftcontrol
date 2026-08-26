@@ -140,9 +140,10 @@ class OperationStore:
     def __init__(
         self,
         db_path: str | None = None,
-        time_func: Callable[[], float] = time.monotonic,
+        time_func: Callable[[], float] = time.time,
     ) -> None:
         self._lock = threading.Lock()
+        self._db_lock = threading.Lock()
         self._records: dict[str, OperationRecord] = {}
         self._time_func = time_func
         self._conn: sqlite3.Connection | None = None
@@ -164,7 +165,7 @@ class OperationStore:
         if self._conn is None:
             return
         try:
-            with self._conn:
+            with self._db_lock, self._conn:
                 self._conn.execute(_UPSERT, rec._db_row())
         except Exception:
             logger.exception("Failed to persist operation %s to SQLite", rec.operation_id)
@@ -174,7 +175,7 @@ class OperationStore:
         if self._conn is None:
             return
         try:
-            with self._conn:
+            with self._db_lock, self._conn:
                 self._conn.execute(
                     "DELETE FROM operations WHERE operation_id = ?", (operation_id,)
                 )
@@ -184,12 +185,13 @@ class OperationStore:
     def _load_and_recover(self) -> None:
         """Load all rows from SQLite; mark in-progress records as FAILED."""
         assert self._conn is not None
-        cur = self._conn.execute(
-            "SELECT operation_id, status, current_stage, outcome, executor_ref, "
-            "health_reached, failed_stage, detail, error_code, exception_type, completed_at "
-            "FROM operations"
-        )
-        rows = cur.fetchall()
+        with self._db_lock:
+            cur = self._conn.execute(
+                "SELECT operation_id, status, current_stage, outcome, executor_ref, "
+                "health_reached, failed_stage, detail, error_code, exception_type, completed_at "
+                "FROM operations"
+            )
+            rows = cur.fetchall()
         now = self._time_func()
         to_recover: list[OperationRecord] = []
         for row in rows:
@@ -205,7 +207,7 @@ class OperationStore:
             rec.detail = "Agent restarted while operation was in progress"
             rec.completed_at = now
             try:
-                with self._conn:
+                with self._db_lock, self._conn:
                     self._conn.execute(_UPSERT, rec._db_row())
             except Exception:
                 logger.exception(

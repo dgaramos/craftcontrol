@@ -268,7 +268,9 @@ class HostAgentContainerOperations:
                 operation_id,
             )
             deadline = time.monotonic() + _GLOBAL_POLL_DEADLINE_SECONDS
-            self._poll_with_recovery(operation_id, headers, deadline)
+            still_running = self._poll_with_recovery(operation_id, headers, deadline)
+            if still_running:
+                self._poll_until_done(operation_id, headers, deadline)
             return
         except TimeoutError as exc:
             # Pre-delivery failure: connect timeout.

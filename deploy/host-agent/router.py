@@ -61,17 +61,22 @@ class AgentHandler(EndpointMixin, BaseHTTPRequestHandler):
     bedrock_container_name: str = "minecraft-server"
 
     def log_message(self, format: str, *args: Any) -> None:  # noqa: A002
-        logger.info(format, *args)
+        # Strip query strings from requestline args to avoid logging sensitive params.
+        sanitized = tuple(
+            a.split("?")[0] if isinstance(a, str) and "?" in a else a for a in args
+        )
+        logger.info(format, *sanitized)
 
     def _require_auth(self) -> bool:
         """Return True if the request carries a valid Bearer token; send 401 and return False otherwise."""
         auth = self.headers.get("Authorization", "")
         if not verify_bearer_token(auth, self.token):
+            safe_path = self.path.split("?")[0]
             logger.warning(
                 "Unauthorized request from %s: %s %s",
                 self.client_address,
                 self.command,
-                self.path,
+                safe_path,
             )
             self._send_json(401, {"error": "unauthorized", "message": "Invalid or missing token"})
             return False

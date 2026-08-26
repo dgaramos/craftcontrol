@@ -44,6 +44,8 @@ function showIdentity(user) {
   passwordBtn.onclick = showPasswordChange;
   const sessionsBtn = clone.querySelector("#manage-sessions");
   sessionsBtn.querySelector("span").textContent = copy[locale()].sessions;
+  sessionsBtn.setAttribute("aria-label", copy[locale()].sessions);
+  sessionsBtn.setAttribute("title", copy[locale()].sessions);
   sessionsBtn.onclick = showSessions;
   container.replaceChildren(clone);
   container.querySelector("#logout").onclick = async () => { await api("/api/auth/logout", { method: "POST" }); window.location.reload(); };

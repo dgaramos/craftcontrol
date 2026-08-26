@@ -87,6 +87,10 @@ describe("auth contracts — account workspace usability", () => {
     expect(authCss).toContain("min-height: 44px");
   });
 
+  test("keeps the localized sessions label available to assistive technology", () => {
+    expect(authScript).toContain('sessionsBtn.setAttribute("aria-label", copy[locale()].sessions)');
+  });
+
   test("renders session cards with separated metadata and revoke actions", () => {
     expect(authScript).toContain('className = "session-item-copy"');
     expect(authScript).toContain('className = "session-item-action"');

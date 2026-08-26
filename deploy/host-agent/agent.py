@@ -14,6 +14,8 @@ Environment variables:
                               Default: /opt/craftcontrol/docker-compose.yml
   HOST_AGENT_BEDROCK_DATA     Path to the Bedrock data directory.
                               Default: /opt/craftcontrol/data/bedrock
+  HOST_AGENT_BEDROCK_CONTAINER  Docker container name for the Bedrock server.
+                                Default: minecraft-server
 """
 from __future__ import annotations
 
@@ -83,6 +85,7 @@ SECRET_FILE_DEFAULT = "/etc/craftcontrol/host-agent-token"
 COMPOSE_PROJECT_DEFAULT = "minecraft-bedrock"
 COMPOSE_FILE_DEFAULT = "/opt/craftcontrol/docker-compose.yml"
 BEDROCK_DATA_DEFAULT = "/opt/craftcontrol/data/bedrock"
+BEDROCK_CONTAINER_DEFAULT = "minecraft-server"
 
 
 def _load_token(path: str) -> str:
@@ -103,6 +106,7 @@ def _load_config() -> dict[str, str]:
         "compose_project": os.environ.get("HOST_AGENT_COMPOSE_PROJECT", COMPOSE_PROJECT_DEFAULT),
         "compose_file": os.environ.get("HOST_AGENT_COMPOSE_FILE", COMPOSE_FILE_DEFAULT),
         "bedrock_data": os.environ.get("HOST_AGENT_BEDROCK_DATA", BEDROCK_DATA_DEFAULT),
+        "bedrock_container": os.environ.get("HOST_AGENT_BEDROCK_CONTAINER", BEDROCK_CONTAINER_DEFAULT),
     }
 
 

@@ -70,6 +70,17 @@ def test_revoking_other_sessions_preserves_current_session(auth_db) -> None:
     assert auth.authenticate(other) is None
 
 
+def test_session_actions_reject_a_revoked_current_session(auth_db) -> None:
+    _, auth = auth_db
+    invitation = auth.create_invitation("Nicole", "viewer")
+    session, _ = auth.claim("Nicole", invitation, "a sufficiently long password")
+    auth.logout(session)
+    with pytest.raises(ValueError, match="session not found"):
+        auth.sessions(session)
+    with pytest.raises(ValueError, match="session not found"):
+        auth.revoke_other_sessions(session)
+
+
 def test_change_password_rotates_current_session_and_revokes_existing_sessions(auth_db) -> None:
     _, auth = auth_db
     invitation = auth.create_invitation("Nicole", "operator")

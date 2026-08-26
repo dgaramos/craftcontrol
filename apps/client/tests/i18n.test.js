@@ -32,6 +32,7 @@ describe("createI18n — translation lookup (t)", () => {
     expect(createI18n(() => "pt").t("periodDaysLabel", 2)).toBe("2 dias");
     expect(createI18n(() => "es").t("periodDaysLabel", 1)).toBe("1 día");
     expect(createI18n(() => "es").t("periodDaysLabel", 2)).toBe("2 días");
+    expect(createI18n(() => "es").t("eventCount", 3)).toBe("3 eventos");
   });
 });
 

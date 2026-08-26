@@ -110,6 +110,13 @@ def test_diagnostics_summarize_telemetry_and_broker_counters(tmp_path: Path) -> 
     assert diagnostics["telemetry_state"].keys() == {"status", "sequence", "expected_sequence", "gap_count", "missing_events", "reset_count", "last_snapshot_at", "last_event_at"}
 
 
+def test_telemetry_event_rejects_boolean_sequence(tmp_path: Path) -> None:
+    service = _make_service(tmp_path)
+
+    with pytest.raises(ValueError, match="sequence must be an integer"):
+        service.telemetry_event({"schema": 1, "sequence": True, "type": "block.broken", "timestamp": 1, "player": {"name": "VonCrush"}, "data": {}})
+
+
 def test_diagnostics_tolerate_a_broker_without_diagnostics(tmp_path: Path) -> None:
     service = _make_service(tmp_path, manager_broker=object())
     assert service.diagnostics()["broker"] == {}

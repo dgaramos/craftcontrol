@@ -2,6 +2,7 @@ export function connectInvalidation({ connectEventStream, loadState, refreshStat
   let timer = null;
   let pendingServerEvent = false;
   connectEventStream((event) => {
+    if (typeof event?.topic !== "string") return;
     if (event.topic !== "state.changed" && !event.topic.startsWith("server.")) return;
     if (event.topic.startsWith("server.")) pendingServerEvent = true;
     cancel(timer);

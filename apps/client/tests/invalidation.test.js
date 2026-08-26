@@ -29,6 +29,13 @@ describe("connectInvalidation", () => {
     expect(schedule).not.toHaveBeenCalled();
   });
 
+  test("ignores events without a string topic", () => {
+    const { listener, schedule } = makeSetup();
+    listener(null);
+    listener({});
+    expect(schedule).not.toHaveBeenCalled();
+  });
+
   test("schedules loadState on state.changed", () => {
     const { listener, schedule } = makeSetup();
     listener({ topic: "state.changed" });

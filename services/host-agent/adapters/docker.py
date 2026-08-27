@@ -26,11 +26,12 @@ class DockerComposeRunner:
         """Run ``docker compose restart`` and return an executor reference string."""
         project = self._config["compose_project"]
         compose_file = self._config["compose_file"]
+        service = self._config.get("compose_service", "minecraft-server")
         cmd = [
             "docker", "compose",
             "--project-name", project,
             "--file", compose_file,
-            "restart", "minecraft-server",
+            "restart", service,
         ]
         logger.info("Running: %s (timeout=%ds)", " ".join(cmd), timeout)
         try:
@@ -49,7 +50,7 @@ class DockerComposeRunner:
             raise RuntimeError(f"docker compose restart failed (exit {result.returncode}): {stderr}")
 
         ts = int(time.time())
-        return f"{project}_minecraft-server_restart_{ts}"
+        return f"{project}_{service}_restart_{ts}"
 
 
 class DockerContainerStatus:

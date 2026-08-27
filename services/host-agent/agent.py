@@ -14,6 +14,8 @@ Environment variables:
                               Default: /opt/craftcontrol/docker-compose.yml
   HOST_AGENT_BEDROCK_DATA     Path to the Bedrock data directory.
                               Default: /opt/craftcontrol/data/bedrock
+  HOST_AGENT_COMPOSE_SERVICE   Docker Compose service name for the Bedrock server.
+                               Default: minecraft-server
   HOST_AGENT_BEDROCK_CONTAINER  Docker container name for the Bedrock server.
                                 Default: minecraft-server
   HOST_AGENT_DB            Path to the SQLite database for operation persistence.
@@ -90,6 +92,7 @@ BIND_DEFAULT = "0.0.0.0:7890"
 SECRET_FILE_DEFAULT = "/etc/craftcontrol/host-agent-token"
 COMPOSE_PROJECT_DEFAULT = "minecraft-bedrock"
 COMPOSE_FILE_DEFAULT = "/opt/craftcontrol/docker-compose.yml"
+COMPOSE_SERVICE_DEFAULT = "minecraft-server"
 BEDROCK_DATA_DEFAULT = "/opt/craftcontrol/data/bedrock"
 BEDROCK_CONTAINER_DEFAULT = "minecraft-server"
 DB_DEFAULT = "/var/lib/craftcontrol/host-agent.db"
@@ -112,6 +115,7 @@ def _load_config() -> dict[str, str]:
         "secret_file": os.environ.get("HOST_AGENT_SECRET_FILE", SECRET_FILE_DEFAULT),
         "compose_project": os.environ.get("HOST_AGENT_COMPOSE_PROJECT", COMPOSE_PROJECT_DEFAULT),
         "compose_file": os.environ.get("HOST_AGENT_COMPOSE_FILE", COMPOSE_FILE_DEFAULT),
+        "compose_service": os.environ.get("HOST_AGENT_COMPOSE_SERVICE", COMPOSE_SERVICE_DEFAULT),
         "bedrock_data": os.environ.get("HOST_AGENT_BEDROCK_DATA", BEDROCK_DATA_DEFAULT),
         "bedrock_container": os.environ.get("HOST_AGENT_BEDROCK_CONTAINER", BEDROCK_CONTAINER_DEFAULT),
         "db": os.environ.get("HOST_AGENT_DB", DB_DEFAULT),

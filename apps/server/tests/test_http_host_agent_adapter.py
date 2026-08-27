@@ -677,3 +677,21 @@ class TestIntendedStateKeyTranslation:
     def test_adventure_gamemode_value_is_preserved(self) -> None:
         sent = self._execute_with_state({"GAMEMODE": "adventure"})
         assert sent["gamemode"] == "adventure"
+
+    def test_conflicting_aliases_uppercase_first_raises_value_error(self) -> None:
+        """GAMEMODE=survival then gamemode=creative → conflict → ValueError before payload."""
+        from minecraft_manager.host_agent import _translate_intended_state
+        with pytest.raises(ValueError, match="conflicting"):
+            _translate_intended_state({"GAMEMODE": "survival", "gamemode": "creative"})
+
+    def test_conflicting_aliases_lowercase_first_raises_value_error(self) -> None:
+        """gamemode=creative then GAMEMODE=survival → conflict → ValueError before payload."""
+        from minecraft_manager.host_agent import _translate_intended_state
+        with pytest.raises(ValueError, match="conflicting"):
+            _translate_intended_state({"gamemode": "creative", "GAMEMODE": "survival"})
+
+    def test_duplicate_aliases_same_value_collapsed(self) -> None:
+        """GAMEMODE=survival and gamemode=survival → same value → collapsed to one entry."""
+        from minecraft_manager.host_agent import _translate_intended_state
+        result = _translate_intended_state({"GAMEMODE": "survival", "gamemode": "survival"})
+        assert result == {"gamemode": "survival"}

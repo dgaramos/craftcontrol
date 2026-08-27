@@ -43,8 +43,22 @@ def _translate_intended_state(intended_state: dict[str, Any]) -> dict[str, Any]:
     Keys already in lowercase format are preserved unchanged via the
     ``_SCHEMA_TO_AGENT_FIELD.get(k, k)`` fallback, making the function
     idempotent for callers that already use the agent format.
+
+    Raises ``ValueError`` when two keys in *intended_state* translate to the
+    same target field with different values (e.g. ``"GAMEMODE"`` and
+    ``"gamemode"`` both present but carrying different values).  Duplicate
+    aliases with the same value are allowed and collapsed to one entry.
     """
-    return {_SCHEMA_TO_AGENT_FIELD.get(k, k): v for k, v in intended_state.items()}
+    result: dict[str, Any] = {}
+    for k, v in intended_state.items():
+        target = _SCHEMA_TO_AGENT_FIELD.get(k, k)
+        if target in result and result[target] != v:
+            raise ValueError(
+                f"intended_state contains conflicting values for field {target!r}: "
+                f"keys {k!r} and an earlier equivalent key disagree"
+            )
+        result[target] = v
+    return result
 
 
 class ReadTimeoutError(TimeoutError):

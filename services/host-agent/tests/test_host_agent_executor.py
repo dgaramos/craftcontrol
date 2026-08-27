@@ -484,6 +484,40 @@ class TestProtocolStubs:
 # operations.py: empty intended_state skips write
 # ---------------------------------------------------------------------------
 
+class TestGamemodeIntendedState:
+    """gamemode in intended_state must be written to server.properties."""
+
+    def _run_with_gamemode(self, gamemode: str) -> tuple[str, str]:
+        """Run an operation with the given gamemode and return (outcome, properties_content)."""
+        mock_run = MagicMock(return_value=MagicMock(returncode=0, stdout="", stderr=""))
+        with tempfile.TemporaryDirectory() as tmp:
+            executor = _make_executor(subprocess_run=mock_run, probe_result=True, bedrock_data=tmp)
+            store = st.OperationStore()
+            op_id = _op_id()
+            record = store.create(op_id)
+            assert record is not None
+            executor.run(record, store, {"gamemode": gamemode}, 10, 30)
+            rec = store.get(op_id)
+            assert rec is not None
+            content = (Path(tmp) / "server.properties").read_text()
+            return rec.outcome, content
+
+    def test_gamemode_survival_written_to_server_properties(self) -> None:
+        outcome, content = self._run_with_gamemode("survival")
+        assert outcome == "ok"
+        assert "gamemode=survival" in content
+
+    def test_gamemode_creative_written_to_server_properties(self) -> None:
+        outcome, content = self._run_with_gamemode("creative")
+        assert outcome == "ok"
+        assert "gamemode=creative" in content
+
+    def test_gamemode_adventure_written_to_server_properties(self) -> None:
+        outcome, content = self._run_with_gamemode("adventure")
+        assert outcome == "ok"
+        assert "gamemode=adventure" in content
+
+
 class TestOperationExecutorEmptyState:
     def test_empty_intended_state_skips_write_and_succeeds(self) -> None:
         """When intended_state is empty the prepare stage logs and continues."""

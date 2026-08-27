@@ -613,3 +613,67 @@ class TestLoadToken:
     def test_missing_file_raises_runtime_error(self) -> None:
         with pytest.raises(RuntimeError, match="not readable"):
             _load_token("/nonexistent/path/host-agent-token")
+
+
+# ---------------------------------------------------------------------------
+# execute(): intended_state key translation (uppercase schema → agent field)
+# ---------------------------------------------------------------------------
+
+class TestIntendedStateKeyTranslation:
+    """GAMEMODE and other uppercase schema keys must be translated to agent field names."""
+
+    def _execute_with_state(
+        self,
+        intended_state: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Post an execute call and return the parsed payload sent to the agent."""
+        client = _make_client([
+            (202, {"operation_id": OP_ID, "status": "accepted"}),
+            (200, {"status": "done", "outcome": "ok", "executor_ref": None,
+                   "health_reached": True, "failed_stage": None,
+                   "detail": "ok", "error_code": None, "exception_type": None}),
+        ])
+        _adapter(client).execute(
+            "apply",
+            operation_id=OP_ID,
+            intended_state=intended_state,
+        )
+        post_call = client.request.call_args_list[0]
+        import json as _json
+        return _json.loads(post_call.kwargs["body"])["intended_state"]
+
+    def test_gamemode_uppercase_is_translated_to_lowercase(self) -> None:
+        """GAMEMODE (backend schema key) must become gamemode in the agent payload."""
+        sent = self._execute_with_state({"GAMEMODE": "survival"})
+        assert "gamemode" in sent
+        assert "GAMEMODE" not in sent
+        assert sent["gamemode"] == "survival"
+
+    def test_difficulty_uppercase_is_translated(self) -> None:
+        sent = self._execute_with_state({"DIFFICULTY": "hard"})
+        assert "difficulty" in sent
+        assert "DIFFICULTY" not in sent
+
+    def test_server_name_uppercase_is_translated(self) -> None:
+        sent = self._execute_with_state({"SERVER_NAME": "My Server"})
+        assert "server_name" in sent
+        assert "SERVER_NAME" not in sent
+
+    def test_server_port_v6_maps_to_server_portv6(self) -> None:
+        """SERVER_PORT_V6 → server-portv6 (properties) → server_portv6 (agent field)."""
+        sent = self._execute_with_state({"SERVER_PORT_V6": 19133})
+        assert "server_portv6" in sent
+        assert "SERVER_PORT_V6" not in sent
+
+    def test_lowercase_keys_are_preserved_unchanged(self) -> None:
+        """Keys already in agent format must survive the translation unchanged."""
+        sent = self._execute_with_state({"server_name": "Direct"})
+        assert sent["server_name"] == "Direct"
+
+    def test_creative_gamemode_value_is_preserved(self) -> None:
+        sent = self._execute_with_state({"GAMEMODE": "creative"})
+        assert sent["gamemode"] == "creative"
+
+    def test_adventure_gamemode_value_is_preserved(self) -> None:
+        sent = self._execute_with_state({"GAMEMODE": "adventure"})
+        assert sent["gamemode"] == "adventure"

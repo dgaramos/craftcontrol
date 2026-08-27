@@ -548,3 +548,41 @@ class TestIntendedStateValueValidation:
             executor=executor,
         )
         assert status == 202
+
+
+# ---------------------------------------------------------------------------
+# execute(): gamemode field — acceptance and validation
+# ---------------------------------------------------------------------------
+
+class TestGamemodeField:
+    """gamemode is an accepted intended_state field with a Bedrock-constrained value set."""
+
+    def _execute(self, intended_state: dict) -> tuple[int, dict]:
+        return _call_handler(
+            "POST", "/v1/execute",
+            body={"operation_id": _op_id(), "intended_state": intended_state},
+        )
+
+    def test_survival_gamemode_accepted(self) -> None:
+        status, _ = self._execute({"gamemode": "survival"})
+        assert status == 202
+
+    def test_creative_gamemode_accepted(self) -> None:
+        status, _ = self._execute({"gamemode": "creative"})
+        assert status == 202
+
+    def test_adventure_gamemode_accepted(self) -> None:
+        status, _ = self._execute({"gamemode": "adventure"})
+        assert status == 202
+
+    def test_invalid_gamemode_returns_400(self) -> None:
+        status, body = self._execute({"gamemode": "spectator"})
+        assert status == 400
+        assert body.get("error") == "bad_request"
+        assert "gamemode" in body.get("message", "").lower()
+
+    def test_uppercase_gamemode_key_rejected_as_unrecognised(self) -> None:
+        """The host agent contract uses lowercase keys; GAMEMODE must be rejected."""
+        status, body = self._execute({"GAMEMODE": "survival"})
+        assert status == 400
+        assert "GAMEMODE" in body.get("message", "")

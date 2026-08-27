@@ -19,7 +19,32 @@ import urllib.request
 from pathlib import Path
 from typing import Any, Protocol
 
+from minecraft_manager.schema import PROPERTY_NAMES
+
 LOGGER = logging.getLogger(__name__)
+
+# Maps backend uppercase schema keys (e.g. "GAMEMODE") to the host-agent's
+# lowercase underscore field names (e.g. "gamemode").  Derived from the shared
+# PROPERTY_NAMES table so there is one authoritative source for the mapping.
+_SCHEMA_TO_AGENT_FIELD: dict[str, str] = {
+    key: prop_name.replace("-", "_")
+    for key, prop_name in PROPERTY_NAMES.items()
+}
+
+
+def _translate_intended_state(intended_state: dict[str, Any]) -> dict[str, Any]:
+    """Translate backend schema keys to host-agent field names.
+
+    The backend schema uses uppercase env-var style keys (e.g. ``GAMEMODE``,
+    ``DIFFICULTY``).  The host-agent contract uses lowercase underscore keys
+    (e.g. ``gamemode``, ``difficulty``).  This function maps across the
+    boundary using the shared ``PROPERTY_NAMES`` table.
+
+    Keys already in lowercase format are preserved unchanged via the
+    ``_SCHEMA_TO_AGENT_FIELD.get(k, k)`` fallback, making the function
+    idempotent for callers that already use the agent format.
+    """
+    return {_SCHEMA_TO_AGENT_FIELD.get(k, k): v for k, v in intended_state.items()}
 
 
 class ReadTimeoutError(TimeoutError):
@@ -230,6 +255,8 @@ class HostAgentContainerOperations:
             raise ValueError("operation_id is required for HostAgentContainerOperations.execute")
         if intended_state is None:
             intended_state = {}
+
+        intended_state = _translate_intended_state(intended_state)
 
         payload = {
             "operation_id": operation_id,

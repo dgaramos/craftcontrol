@@ -42,6 +42,23 @@ def test_bootstrap_raises_on_pending_owner_invitation(auth_db) -> None:
         auth.bootstrap("VonCrush")
 
 
+def test_bootstrap_raises_on_pending_owner_invitation_when_active_operator_exists(auth_db) -> None:
+    """Bootstrap must detect a pending owner invitation via panel_invitations.role,
+    not via a join to panel_accounts. If an active operator account exists with no
+    active owner, the join-based guard would miss any outstanding invitation and
+    allow a second one to be created for a different identity."""
+    path, auth = auth_db
+    # Create an active operator account for Nicole — no active owner exists yet.
+    operator_inv = auth.create_invitation("Nicole", "operator")
+    auth.claim("Nicole", operator_inv, "a sufficiently long password")
+    # First bootstrap for VonCrush: must succeed and leave a pending owner invitation.
+    auth.bootstrap("VonCrush")
+    # Second bootstrap for Nicole: must be rejected because the invitation already exists
+    # in panel_invitations with role='owner', regardless of Nicole's active operator role.
+    with pytest.raises(ValueError, match="pending owner invitation"):
+        auth.bootstrap("Nicole")
+
+
 def test_login_logout_and_alias_identity(auth_db) -> None:
     path, auth = auth_db
     invitation = auth.create_invitation("Nicole", "operator")

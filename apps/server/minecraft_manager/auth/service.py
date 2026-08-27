@@ -139,8 +139,8 @@ class AuthService:
             if connection.execute("SELECT 1 FROM panel_accounts WHERE role='owner' AND status='active'").fetchone():
                 raise ValueError("an active owner already exists")
             if connection.execute(
-                "SELECT 1 FROM panel_invitations i JOIN panel_accounts a ON a.identity=i.identity "
-                "WHERE a.role='owner' AND i.used_at IS NULL AND i.expires_at>?",
+                "SELECT 1 FROM panel_invitations i "
+                "WHERE i.role='owner' AND i.used_at IS NULL AND i.expires_at>?",
                 (now,),
             ).fetchone():
                 raise ValueError("a pending owner invitation already exists")

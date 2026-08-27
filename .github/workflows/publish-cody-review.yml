@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       pr_number: { description: Pull request number, required: true, type: string }
-      event: { description: Review event, required: true, default: COMMENT, type: choice, options: [COMMENT, APPROVE] }
+      event: { description: Review event, required: true, default: COMMENT, type: choice, options: [COMMENT] }
       review_body: { description: Review summary in Markdown, required: false, default: '', type: string }
       reviewed_head_sha: { description: Full PR head SHA reviewed, required: true, type: string }
       inline_comments_json: { description: JSON array of path, line, and body findings, required: false, default: '[]', type: string }

@@ -101,29 +101,53 @@ class AuthService:
         if role not in ROLE_CAPABILITIES:
             raise ValueError("invalid panel role")
         now = time.time()
-        token = secrets.token_urlsafe(24)
         with self._connect() as connection:
             identity = self._resolve_identity(connection, player)
-            connection.execute(
-                "INSERT INTO panel_accounts(identity,role,status,created_at,updated_at) VALUES(?,?,'invited',?,?) "
-                "ON CONFLICT(identity) DO UPDATE SET role=CASE WHEN panel_accounts.status='active' THEN panel_accounts.role "
-                "ELSE excluded.role END,status=CASE WHEN panel_accounts.status='active' THEN panel_accounts.status "
-                "ELSE 'invited' END,updated_at=excluded.updated_at",
-                (identity, role, now, now),
-            )
-            connection.execute("DELETE FROM panel_invitations WHERE identity=? AND used_at IS NULL", (identity,))
-            connection.execute(
-                "INSERT INTO panel_invitations(token_hash,identity,role,created_at,expires_at,created_by) VALUES(?,?,?,?,?,?)",
-                (self._token_hash(token), identity, role, now, now + lifetime, actor),
-            )
+            token = self._insert_invitation(connection, identity, role, actor, now, lifetime)
             self._audit(connection, actor, "auth.invitation.created", identity, "success", {"role": role})
         return token
 
+    def _insert_invitation(
+        self,
+        connection: sqlite3.Connection,
+        identity: str,
+        role: str,
+        actor: str | None,
+        now: float,
+        lifetime: int,
+    ) -> str:
+        token = secrets.token_urlsafe(24)
+        connection.execute(
+            "INSERT INTO panel_accounts(identity,role,status,created_at,updated_at) VALUES(?,?,'invited',?,?) "
+            "ON CONFLICT(identity) DO UPDATE SET role=CASE WHEN panel_accounts.status='active' THEN panel_accounts.role "
+            "ELSE excluded.role END,status=CASE WHEN panel_accounts.status='active' THEN panel_accounts.status "
+            "ELSE 'invited' END,updated_at=excluded.updated_at",
+            (identity, role, now, now),
+        )
+        connection.execute("DELETE FROM panel_invitations WHERE identity=? AND used_at IS NULL", (identity,))
+        connection.execute(
+            "INSERT INTO panel_invitations(token_hash,identity,role,created_at,expires_at,created_by) VALUES(?,?,?,?,?,?)",
+            (self._token_hash(token), identity, role, now, now + lifetime, actor),
+        )
+        return token
+
     def bootstrap(self, player: str) -> str:
+        now = time.time()
+        lifetime = 1800
         with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
             if connection.execute("SELECT 1 FROM panel_accounts WHERE role='owner' AND status='active'").fetchone():
                 raise ValueError("an active owner already exists")
-        return self.create_invitation(player, "owner", actor=None, lifetime=1800)
+            if connection.execute(
+                "SELECT 1 FROM panel_invitations i JOIN panel_accounts a ON a.identity=i.identity "
+                "WHERE a.role='owner' AND i.used_at IS NULL AND i.expires_at>?",
+                (now,),
+            ).fetchone():
+                raise ValueError("a pending owner invitation already exists")
+            identity = self._resolve_identity(connection, player)
+            token = self._insert_invitation(connection, identity, "owner", None, now, lifetime)
+            self._audit(connection, None, "auth.invitation.created", identity, "success", {"role": "owner"})
+        return token
 
     def create_recovery(self, player: str, lifetime: int = 900) -> tuple[str, str]:
         """Create a one-time credential reset without changing the account's panel role."""

@@ -35,6 +35,13 @@ def test_bootstrap_claim_creates_first_owner_and_one_time_session(auth_db) -> No
         auth.bootstrap("VonCrush")
 
 
+def test_bootstrap_raises_on_pending_owner_invitation(auth_db) -> None:
+    _, auth = auth_db
+    auth.bootstrap("VonCrush")
+    with pytest.raises(ValueError, match="pending owner invitation"):
+        auth.bootstrap("VonCrush")
+
+
 def test_login_logout_and_alias_identity(auth_db) -> None:
     path, auth = auth_db
     invitation = auth.create_invitation("Nicole", "operator")

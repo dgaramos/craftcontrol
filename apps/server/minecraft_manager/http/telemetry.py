@@ -63,14 +63,17 @@ def telemetry_pack_action(action: str):
         elif action == "disable":
             result = installer.disable()
         elif action == "rollback":
-            confirmed = request.args.get("confirm") == "true" or (request.get_json(silent=True) or {}).get("confirm") is True
+            body = request.get_json(silent=True)
+            body_confirm = body.get("confirm") is True if isinstance(body, dict) else False
+            confirmed = request.args.get("confirm") == "true" or body_confirm
             if not confirmed:
                 return jsonify(error="Rollback requires explicit confirmation (confirm=true)"), 400
             docker_status = manager().docker.status()
             if docker_status.get("running"):
                 return jsonify(error="Rollback requires the server to be offline"), 409
+            prior_backup = installer.latest_backup_name()
             recovery = installer.snapshot()
-            result = installer.rollback()
+            result = installer.rollback(prior_backup)
             result["recovery"] = recovery
         else:
             return jsonify(error="Ação de telemetria não permitida"), 404

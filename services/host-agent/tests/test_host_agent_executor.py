@@ -144,6 +144,36 @@ class TestDockerComposeRunnerRestart:
         with pytest.raises(RestartTimeoutError):
             runner.restart(60)
 
+    def test_configured_service_used_in_command_and_ref(self) -> None:
+        """compose_service from config must appear in the restart command and the returned ref."""
+        config = {
+            "compose_project": "minecraft-bedrock",
+            "compose_file": "/opt/craftcontrol/docker-compose.yml",
+            "compose_service": "minecraft-bedrock",
+            "bedrock_data": "/tmp/bedrock",
+        }
+        mock_run = MagicMock(return_value=MagicMock(returncode=0, stdout="", stderr=""))
+        runner = DockerComposeRunner(config, subprocess_run=mock_run)
+        ref = runner.restart(60)
+        cmd = mock_run.call_args[0][0]
+        assert "minecraft-bedrock" in cmd
+        assert cmd[-1] == "minecraft-bedrock"
+        assert "minecraft-bedrock_restart_" in ref
+
+    def test_default_service_used_when_compose_service_absent(self) -> None:
+        """When compose_service is absent the default 'minecraft-server' is used."""
+        config = {
+            "compose_project": "mc",
+            "compose_file": "/tmp/dc.yml",
+            "bedrock_data": "/tmp/bd",
+        }
+        mock_run = MagicMock(return_value=MagicMock(returncode=0, stdout="", stderr=""))
+        runner = DockerComposeRunner(config, subprocess_run=mock_run)
+        ref = runner.restart(60)
+        cmd = mock_run.call_args[0][0]
+        assert cmd[-1] == "minecraft-server"
+        assert "minecraft-server_restart_" in ref
+
 
 # ---------------------------------------------------------------------------
 # DockerContainerStatus: is_running

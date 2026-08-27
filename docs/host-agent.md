@@ -188,6 +188,7 @@ HOST_AGENT_BIND=0.0.0.0:7890
 HOST_AGENT_SECRET_FILE=/etc/craftcontrol/host-agent-token
 HOST_AGENT_COMPOSE_PROJECT=minecraft-bedrock
 HOST_AGENT_COMPOSE_FILE=/opt/craftcontrol/docker-compose.yml
+HOST_AGENT_COMPOSE_SERVICE=minecraft-bedrock
 HOST_AGENT_BEDROCK_DATA=/opt/minecraft-bedrock
 ```
 

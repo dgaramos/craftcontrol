@@ -305,7 +305,7 @@ bin/check                # portão local completo
 
 GitHub Actions e Gitea Actions executam os seis portões de qualidade de modo independente: frontend, backend, host agent, contratos do backend, contratos do frontend e integração. As alterações usam Conventional Commits e a implantação de produção só é aceita a partir de `main` limpo e publicado.
 
-Execuções de qualidade bem-sucedidas no `main` do GitHub implantam automaticamente pelo runner homelab específico do repositório. O workflow sincroniza o Gitea e invoca o mesmo comando protegido de release usado nas operações manuais; veja [Implantação automatizada no homelab](docs/automated-deployment.md).
+Execuções de qualidade bem-sucedidas no `main` do Gitea implantam automaticamente pelo runner homelab específico do repositório. O workflow invoca o mesmo comando protegido de release usado nas operações manuais; veja [Implantação automatizada no homelab](docs/automated-deployment.md).
 
 Veja [Configuração de desenvolvimento](docs/development-setup.md) para pré-requisitos, configuração de ambiente e guia de tarefas comuns.
 

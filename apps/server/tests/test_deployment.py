@@ -100,14 +100,15 @@ def test_coordinated_release_uses_the_pinned_pair_and_component_commands() -> No
 
 
 def test_successful_main_quality_run_triggers_the_guarded_homelab_release() -> None:
-    workflow = (ROOT / ".gitea" / "workflows" / "deploy.yml").read_text()
+    workflow = (ROOT / ".gitea" / "workflows" / "quality.yml").read_text()
     runbook = (ROOT / "docs" / "automated-deployment.md").read_text()
-    assert "workflow_run:" in workflow
     assert "branches: [main]" in workflow
+    assert "needs: [integration]" in workflow
+    assert "github.event_name == 'push'" in workflow
     assert "runs-on: [self-hosted, homelab, craftcontrol]" in workflow
     assert "craftcontrol-homelab-production" in workflow
     assert "/usr/local/bin/craftcontrol-homelab-deploy" in workflow
-    assert "GitHub-hosted runners never receive Docker or LAN access" in runbook
+    assert "Gitea-hosted runners never receive Docker or LAN access" in runbook
 
 
 def test_cutover_proves_auth_csrf_sse_and_persistent_state() -> None:

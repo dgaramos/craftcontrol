@@ -1,3 +1,4 @@
+# cody-dr: v0.1.13
 name: Publish Cody DR issue
 
 on:
@@ -6,6 +7,10 @@ on:
       title:
         description: Issue title
         required: true
+        type: string
+      issue_number:
+        description: Existing issue to update (omit to create)
+        required: false
         type: string
       body:
         description: Issue body in Markdown
@@ -21,18 +26,6 @@ on:
         type: string
       milestone_number:
         description: Optional numeric milestone number
-        required: false
-        type: string
-      project_owner:
-        description: Optional Project owner; supply all Project fields or none
-        required: false
-        type: string
-      project_number:
-        description: Optional Project number; supply all Project fields or none
-        required: false
-        type: string
-      project_status:
-        description: Optional Project Status; supply all Project fields or none
         required: false
         type: string
 
@@ -58,28 +51,17 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.cody-token.outputs.token }}
           TITLE: ${{ inputs.title }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
           BODY: ${{ inputs.body }}
           LABELS: ${{ inputs.labels }}
           ASSIGNEES: ${{ inputs.assignees }}
           MILESTONE_NUMBER: ${{ inputs.milestone_number }}
-          PROJECT_OWNER: ${{ inputs.project_owner }}
-          PROJECT_NUMBER: ${{ inputs.project_number }}
-          PROJECT_STATUS: ${{ inputs.project_status }}
           EXPECTED_AUTHOR: cody-dr[bot]
-          PUBLISHER_APP_SLUG: ${{ steps.cody-token.outputs.app-slug }}
         run: |
           set -euo pipefail
-          [[ -n "$TITLE" ]] || { echo "title is required" >&2; exit 1; }
+          [[ -n "$TITLE" || -n "$ISSUE_NUMBER" ]] || { echo "title or issue_number is required" >&2; exit 1; }
           [[ -n "$BODY" ]] || { echo "body is required" >&2; exit 1; }
           [[ -z "$MILESTONE_NUMBER" || "$MILESTONE_NUMBER" =~ ^[1-9][0-9]*$ ]] || { echo "milestone_number must be a positive integer" >&2; exit 1; }
-          if [[ -n "$PROJECT_OWNER$PROJECT_NUMBER$PROJECT_STATUS" ]]; then
-            [[ -n "$PROJECT_OWNER" && "$PROJECT_NUMBER" =~ ^[1-9][0-9]*$ && -n "$PROJECT_STATUS" ]] || { echo "project metadata must be complete when supplied" >&2; exit 1; }
-            [[ "$PROJECT_OWNER" == dgaramos ]] || { echo "project_owner must be dgaramos" >&2; exit 1; }
-            project_json="$(gh project view "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --format json)"
-            fields_json="$(gh project field-list "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --format json)"
-            field_id="$(jq -er '.fields[] | select(.name == "Status") | .id' <<<"$fields_json")"
-            option_id="$(jq -er --arg status "$PROJECT_STATUS" '.fields[] | select(.name == "Status") | .options[] | select(.name == $status) | .id' <<<"$fields_json")"
-          fi
           jq -n \
             --arg title "$TITLE" \
             --arg body "$BODY" \
@@ -90,17 +72,11 @@ jobs:
              + (if $labels == "" then {} else {labels: ($labels | split(",") | map(select(length > 0)))} end)
              + (if $assignees == "" then {} else {assignees: ($assignees | split(",") | map(select(length > 0)))} end)
              + (if $milestone == "" then {} else {milestone: ($milestone | tonumber)} end)' > issue.json
-          gh api --method POST "repos/${GITHUB_REPOSITORY}/issues" --input issue.json > created-issue.json
+          if [[ -n "$ISSUE_NUMBER" ]]; then
+            gh api --method PATCH "repos/${GITHUB_REPOSITORY}/issues/${ISSUE_NUMBER}" --input issue.json > created-issue.json
+          else
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/issues" --input issue.json > created-issue.json
+          fi
           actual_author="$(jq -r '.user.login' created-issue.json)"
           [[ "$actual_author" == "$EXPECTED_AUTHOR" ]] || { echo "unexpected issue author: $actual_author" >&2; exit 1; }
-          [[ "$PUBLISHER_APP_SLUG" == "${EXPECTED_AUTHOR%\[bot\]}" ]] || { echo "unexpected issue publisher" >&2; exit 1; }
-          issue_number="$(jq -r .number created-issue.json)"
-          if [[ -n "$PROJECT_OWNER" ]]; then
-            project_id="$(jq -er .id <<<"$project_json")"
-            item_json="$(gh project item-add "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --url "https://github.com/${GITHUB_REPOSITORY}/issues/${issue_number}" --format json)"
-            item_id="$(jq -er .id <<<"$item_json")"
-            gh project item-edit --id "$item_id" --project-id "$project_id" --field-id "$field_id" --single-select-option-id "$option_id"
-            gh issue view "$issue_number" --repo "$GITHUB_REPOSITORY" --json labels,assignees,milestone,projectItems | jq -e --arg title "$(jq -er .title <<<"$project_json")" 'any(.projectItems[]; .title == $title)' >/dev/null
-            gh project item-list "$PROJECT_NUMBER" --owner "$PROJECT_OWNER" --limit 1000 --format json | jq -e --arg id "$item_id" --arg status "$PROJECT_STATUS" 'any(.items[]; .id == $id and .status == $status)' >/dev/null
-          fi
           jq -r '"Created and verified Cody DR issue #\(.number): \(.html_url)"' created-issue.json

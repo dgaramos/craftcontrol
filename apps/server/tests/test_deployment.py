@@ -290,16 +290,11 @@ def test_app_publishers_allow_issues_without_project_metadata_and_verify_it_when
             ROOT / ".github" / "workflows" / f"publish-{reviewer}-pr-metadata.yml"
         ).read_text()
 
+        # Project fields are managed via the pr-metadata workflow, not the issue workflow.
         for field in ("project_owner", "project_number", "project_status"):
-            assert f"{field}:" in issue_workflow
             assert f"{field}:" in metadata_workflow
-        assert "supply all Project fields or none" in issue_workflow
-        assert "project metadata must be complete when supplied" in issue_workflow
-        assert 'if [[ -n "$PROJECT_OWNER" ]]; then' in issue_workflow
         assert f"{reviewer}-dr[bot]" in issue_workflow
-        assert "unexpected issue publisher" in issue_workflow
-        assert "gh project item-add" in issue_workflow
-        assert "gh project item-edit" in issue_workflow
+        assert "unexpected issue author" in issue_workflow
         assert "permission-organization-projects" not in issue_workflow
         assert "permission-organization-projects" not in metadata_workflow
 

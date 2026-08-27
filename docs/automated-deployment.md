@@ -13,7 +13,11 @@ flowchart LR
     push["push to Gitea main"] --> quality["Quality gates"] --> runner["homelab runner"] --> preflight --> images["prepare images"] --> backup --> activate --> canaries
 ```
 
-The preflight and deployment use `bin/deploy-craftcontrol-release`. They retain
+The preflight and container deployment use `bin/deploy-craftcontrol-release`.
+When a revision changes `services/host-agent/` or `deploy/host-agent/`, the
+same job queues a host-agent activation after the container release. The
+root-owned host service validates the revision, atomically activates the staged
+agent, and restores the previous agent if its systemd health check fails. This path retains
 the existing guarantees: clean and published GitHub source, validated production
 mounts, a verified coordinated backup before backend replacement, SQLite
 integrity checks, frontend/backend health checks, anonymous-authentication
@@ -31,6 +35,26 @@ The runner Compose project lives at
 `/mnt/storage/docker/craftcontrol-github-runner`. Its registration token is
 short-lived and is used only for initial runner registration; persistent runner
 state and the local deployment agent remain outside this repository.
+
+### Host Agent update bootstrap
+
+The first setup is performed once on the Docker host; it does not expose an
+HTTP endpoint or grant the runner systemd access. Install the two checked-in
+helpers and enable the local path watcher:
+
+```bash
+sudo install -d -m 0755 /mnt/storage/docker/craftcontrol-host-agent-update
+sudo install -m 0750 deploy/host-agent/bin/craftcontrol-host-agent-update /usr/local/bin/
+sudo install -m 0755 deploy/host-agent/systemd/craftcontrol-host-agent-update.service /etc/systemd/system/
+sudo install -m 0644 deploy/host-agent/systemd/craftcontrol-host-agent-update.path /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now craftcontrol-host-agent-update.path
+```
+
+The runner writes only a 40-character revision request. The host helper rejects
+paths, commands, dirty source, unpublished revisions, and any release that
+does not restart as active. It does not alter agent tokens, runtime
+configuration, world data, or the agent operation database.
 
 ## Failure behavior
 

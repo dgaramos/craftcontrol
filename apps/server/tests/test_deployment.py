@@ -108,6 +108,8 @@ def test_successful_main_quality_run_triggers_the_guarded_homelab_release() -> N
     assert "runs-on: [self-hosted, homelab, craftcontrol]" in workflow
     assert "craftcontrol-homelab-production" in workflow
     assert "/usr/local/bin/craftcontrol-homelab-deploy" in workflow
+    assert "craftcontrol-host-agent-request-update" in workflow
+    assert "deploy/host-agent services/host-agent" in workflow
     assert "Gitea-hosted runners never receive Docker or LAN access" in runbook
 
 

@@ -1,16 +1,16 @@
 # Automated homelab deployment
 
-CraftControl deploys a successful `main` revision automatically after the
-GitHub `Quality gates` workflow finishes. The deployment job runs on the
+CraftControl deploys a successful Gitea `main` revision automatically as the
+final job of the `Quality gates` workflow. The deployment job runs on the
 repository-scoped `craftcontrol-homelab` self-hosted runner inside the homelab;
-GitHub-hosted runners never receive Docker or LAN access.
+Gitea-hosted runners never receive Docker or LAN access.
 
-The workflow checks out the exact accepted GitHub commit and asks the runner's
+The workflow checks out the exact accepted revision and asks the runner's
 local deployment agent to run the guarded coordinated deployment:
 
 ```mermaid
 flowchart LR
-    merge["merge to main"] --> quality["Quality gates"] --> runner["homelab runner"] --> preflight --> images["prepare images"] --> backup --> activate --> canaries
+    push["push to Gitea main"] --> quality["Quality gates"] --> runner["homelab runner"] --> preflight --> images["prepare images"] --> backup --> activate --> canaries
 ```
 
 The preflight and deployment use `bin/deploy-craftcontrol-release`. They retain
@@ -35,7 +35,8 @@ state and the local deployment agent remain outside this repository.
 ## Failure behavior
 
 Deployments are serialized with the `craftcontrol-homelab-production`
-concurrency group. A failed quality workflow never starts a deployment. A
+concurrency group. The deploy job depends on integration and runs only for a
+Gitea `push` to `main`; a failed quality job never starts a deployment. A
 guarded release builds both images before recreating either service. Each image
 build is retried up to three times for transient registry or DNS failures; if
 preparation still fails, no service is recreated. A failure after activation

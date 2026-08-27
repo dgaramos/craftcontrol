@@ -304,9 +304,9 @@ bin/check                # complete local gate
 
 GitHub Actions and Gitea Actions run the six quality gates independently: frontend, backend, host agent, backend contracts, frontend contracts, and integration. Changes use Conventional Commits and production deployment is accepted only from clean, published `main`.
 
-Successful GitHub `main` quality runs deploy automatically through the
-repository-scoped homelab runner. The workflow synchronizes Gitea and invokes
-the same guarded release command used for manual operations; see [Automated
+Successful Gitea `main` quality runs deploy automatically through the
+repository-scoped homelab runner. The workflow invokes the same guarded release
+command used for manual operations; see [Automated
 homelab deployment](docs/automated-deployment.md).
 
 See [Development setup](docs/development-setup.md) for prerequisites, environment configuration, and a guide to common development tasks.

@@ -115,7 +115,7 @@ def _load_config() -> dict[str, str]:
         "secret_file": os.environ.get("HOST_AGENT_SECRET_FILE", SECRET_FILE_DEFAULT),
         "compose_project": os.environ.get("HOST_AGENT_COMPOSE_PROJECT", COMPOSE_PROJECT_DEFAULT),
         "compose_file": os.environ.get("HOST_AGENT_COMPOSE_FILE", COMPOSE_FILE_DEFAULT),
-        "compose_service": os.environ.get("HOST_AGENT_COMPOSE_SERVICE", COMPOSE_SERVICE_DEFAULT),
+        "compose_service": os.environ.get("HOST_AGENT_COMPOSE_SERVICE") or COMPOSE_SERVICE_DEFAULT,
         "bedrock_data": os.environ.get("HOST_AGENT_BEDROCK_DATA", BEDROCK_DATA_DEFAULT),
         "bedrock_container": os.environ.get("HOST_AGENT_BEDROCK_CONTAINER", BEDROCK_CONTAINER_DEFAULT),
         "db": os.environ.get("HOST_AGENT_DB", DB_DEFAULT),

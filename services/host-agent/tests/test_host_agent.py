@@ -708,6 +708,14 @@ class TestAgentBootstrap:
         assert config["bind"] == "127.0.0.1:9999"
         assert config["compose_project"] == "my-project"
 
+    def test_load_config_compose_service_empty_string_falls_back_to_default(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """An empty HOST_AGENT_COMPOSE_SERVICE must be treated as absent and fall back to the default."""
+        monkeypatch.setenv("HOST_AGENT_COMPOSE_SERVICE", "")
+        config = ha._load_config()
+        assert config["compose_service"] == ha.COMPOSE_SERVICE_DEFAULT
+
     def test_run_starts_and_stops(self, tmp_path: Path) -> None:
         """ha.run must build adapters, start the server, and stop on KeyboardInterrupt."""
         import threading

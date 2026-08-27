@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Root-owned systemd helper. It consumes a revision-only request from the
+# repository runner; it never accepts a path, command, or configuration value.
+readonly STATE_ROOT=/mnt/storage/docker/craftcontrol-host-agent-update
+readonly REQUEST_FILE="$STATE_ROOT/request"
+readonly RESULT_FILE="$STATE_ROOT/result"
+readonly SOURCE_ROOT=/mnt/storage/docker/craftcontrol
+readonly ACTIVE_ROOT=/opt/craftcontrol/host-agent
+readonly SERVICE=craftcontrol-host-agent
+
+write_result() {
+  local status="$1" revision="$2" detail="$3" temporary
+  temporary="$(mktemp "$STATE_ROOT/.result.XXXXXX")"
+  printf '%s\n%s\n%s\n' "$status" "$revision" "$detail" > "$temporary"
+  chmod 0644 "$temporary"
+  mv -f "$temporary" "$RESULT_FILE"
+}
+
+fail() {
+  write_result failed "${revision:-unknown}" "$1"
+  exit 1
+}
+
+[[ -f "$REQUEST_FILE" && ! -L "$REQUEST_FILE" ]] || exit 0
+revision="$(sed -n '1p' "$REQUEST_FILE")"
+[[ "$revision" =~ ^[0-9a-f]{40}$ ]] || fail "invalid revision request"
+[[ "$(sed -n '2p' "$REQUEST_FILE")" == "" ]] || fail "invalid revision request"
+
+[[ -d "$SOURCE_ROOT/.git" ]] || fail "release source is unavailable"
+[[ "$(git -C "$SOURCE_ROOT" rev-parse HEAD)" == "$revision" ]] || fail "release source revision differs"
+[[ -z "$(git -C "$SOURCE_ROOT" status --porcelain)" ]] || fail "release source is not clean"
+[[ "$(git -C "$SOURCE_ROOT" ls-remote origin refs/heads/main | awk '{print $1}')" == "$revision" ]] || fail "release source is not published"
+
+staged="$(mktemp -d /opt/craftcontrol/.host-agent-stage.XXXXXX)"
+previous="/opt/craftcontrol/.host-agent-previous-${revision}"
+cleanup() { rm -rf "$staged"; }
+trap cleanup EXIT
+cp -a "$SOURCE_ROOT/services/host-agent/." "$staged/"
+chown -R craftcontrol-agent:craftcontrol-agent "$staged"
+
+rm -rf "$previous"
+mv "$ACTIVE_ROOT" "$previous"
+mv "$staged" "$ACTIVE_ROOT"
+trap - EXIT
+
+if systemctl restart "$SERVICE" && systemctl is-active --quiet "$SERVICE"; then
+  rm -rf "$previous"
+  write_result activated "$revision" "host agent is active"
+  exit 0
+fi
+
+failed="/opt/craftcontrol/.host-agent-failed-${revision}"
+rm -rf "$failed"
+mv "$ACTIVE_ROOT" "$failed"
+mv "$previous" "$ACTIVE_ROOT"
+systemctl restart "$SERVICE" || true
+write_result rolled-back "$revision" "host agent activation failed; previous release restored"
+exit 1

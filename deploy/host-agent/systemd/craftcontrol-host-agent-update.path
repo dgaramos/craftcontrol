@@ -1,0 +1,9 @@
+[Unit]
+Description=Watch for verified CraftControl Host Agent release requests
+
+[Path]
+PathChanged=/mnt/storage/docker/craftcontrol-host-agent-update/request
+Unit=craftcontrol-host-agent-update.service
+
+[Install]
+WantedBy=multi-user.target

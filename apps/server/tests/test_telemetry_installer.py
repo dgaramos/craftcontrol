@@ -72,6 +72,25 @@ def test_remove_keeps_recoverable_backup(installer_env) -> None:
     assert (env["project"] / "backups" / "craftcontrol-telemetry" / result["backup"] / "backup.json").is_file()
 
 
+def test_snapshot_creates_backup_and_returns_name(installer_env) -> None:
+    env = installer_env
+    env["installer"].install()
+    name = env["installer"].snapshot()
+    backup_dir = env["project"] / "backups" / "craftcontrol-telemetry" / name
+    assert backup_dir.is_dir()
+    assert (backup_dir / "backup.json").is_file()
+
+
+def test_latest_backup_name_returns_most_recent_then_none(installer_env) -> None:
+    env = installer_env
+    assert env["installer"].latest_backup_name() is None
+    env["installer"].install()
+    name1 = env["installer"].snapshot()
+    assert env["installer"].latest_backup_name() == name1
+    name2 = env["installer"].snapshot()
+    assert env["installer"].latest_backup_name() == name2
+
+
 def test_rejects_world_path_traversal(installer_env) -> None:
     env = installer_env
     with pytest.raises(FileNotFoundError):

@@ -435,7 +435,8 @@ def test_telemetry_pack_rollback_rejected_when_server_running(client, service: M
 
 def test_telemetry_pack_rollback_creates_recovery_copy_and_proceeds(client, service: MagicMock) -> None:
     fake_installer = MagicMock()
-    fake_installer.snapshot.return_value = "20240101T000000.000000Z"
+    fake_installer.latest_backup_name.return_value = "20240101T000000.000000Z"
+    fake_installer.snapshot.return_value = "20240101T000001.000000Z"
     fake_installer.rollback.return_value = {"changed": True, "action": "rollback"}
     service.docker.status.return_value = {"running": False}
     with patch("minecraft_manager.http.telemetry.telemetry_installer", return_value=fake_installer):
@@ -443,9 +444,22 @@ def test_telemetry_pack_rollback_creates_recovery_copy_and_proceeds(client, serv
     assert resp.status_code == 200
     data = resp.get_json()
     assert data["changed"] is True
-    assert data["recovery"] == "20240101T000000.000000Z"
+    assert data["recovery"] == "20240101T000001.000000Z"
     fake_installer.snapshot.assert_called_once()
-    fake_installer.rollback.assert_called_once()
+    fake_installer.rollback.assert_called_once_with("20240101T000000.000000Z")
+
+
+def test_telemetry_pack_rollback_rejected_with_non_dict_json_body(client, service: MagicMock) -> None:
+    fake_installer = MagicMock()
+    service.docker.status.return_value = {"running": False}
+    with patch("minecraft_manager.http.telemetry.telemetry_installer", return_value=fake_installer):
+        resp = client.post(
+            "/api/telemetry-pack/rollback",
+            data="true",
+            content_type="application/json",
+        )
+    assert resp.status_code == 400
+    assert "confirm" in resp.get_json()["error"].lower()
 
 
 def test_telemetry_pack_unknown_action_returns_404(client) -> None:

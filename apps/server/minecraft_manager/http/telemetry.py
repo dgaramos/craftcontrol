@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 
 from .dependencies import manager, telemetry_installer
 from ..auth.http import require
@@ -63,7 +63,18 @@ def telemetry_pack_action(action: str):
         elif action == "disable":
             result = installer.disable()
         elif action == "rollback":
-            result = installer.rollback()
+            body = request.get_json(silent=True)
+            body_confirm = body.get("confirm") is True if isinstance(body, dict) else False
+            confirmed = request.args.get("confirm") == "true" or body_confirm
+            if not confirmed:
+                return jsonify(error="Rollback requires explicit confirmation (confirm=true)"), 400
+            docker_status = manager().docker.status()
+            if docker_status.get("running"):
+                return jsonify(error="Rollback requires the server to be offline"), 409
+            prior_backup = installer.latest_backup_name()
+            recovery = installer.snapshot()
+            result = installer.rollback(prior_backup)
+            result["recovery"] = recovery
         else:
             return jsonify(error="Ação de telemetria não permitida"), 404
         return jsonify(result)

@@ -119,6 +119,17 @@ class TelemetryPackInstaller:
                 shutil.rmtree(destination)
         return {"changed": True, "action": "remove", "status": self.status(world_name).to_dict(), "backup": backup.name, "restart_required": True}
 
+    def latest_backup_name(self) -> str | None:
+        """Return the name of the most recent backup directory, or None if no backups exist."""
+        backups = sorted((item for item in self._backup_root.glob("*") if item.is_dir()), reverse=True)
+        return backups[0].name if backups else None
+
+    def snapshot(self, world: str | None = None) -> str:
+        """Create a recovery copy of the current installed state and return the backup name."""
+        world_name, world_directory = self._world(world)
+        backup = self._backup(world_name, world_directory)
+        return backup.name
+
     def rollback(self, backup_name: str | None = None) -> dict[str, Any]:
         backups = sorted((item for item in self._backup_root.glob("*") if item.is_dir()), reverse=True)
         backup = self._backup_root / backup_name if backup_name else (backups[0] if backups else None)

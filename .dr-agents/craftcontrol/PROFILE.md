@@ -130,9 +130,7 @@ metadata before handoff.
 Codex reviews are attributed to **Cody DR** and Claude Code reviews to
 **Claudio DR**. The optional GitHub App publishers are `cody-dr` and
 `claudio-dr`. Without explicit user authorization, return publication-ready
-content marked not published. With explicit authorization, a personal GitHub
-account may publish only as a disclosed fallback when the requested App
-operation is unconfigured or unavailable before dispatch.
+content marked not published. With explicit authorization, a personal GitHub account may publish only as a disclosed fallback when the requested App operation is unconfigured or unavailable before dispatch.
 
 When a reviewer authors a commit, use its matching co-author trailer:
 `Cody DR <dgaramos+cody@gmail.com>` or `Claudio DR <dgaramos+claudio@gmail.com>`.

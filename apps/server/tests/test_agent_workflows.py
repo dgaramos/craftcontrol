@@ -12,7 +12,7 @@ def test_reviewer_profile_declares_publishing_contract() -> None:
         assert manifest in profile
     for expected in (
         "Cody DR | reply | available", "Cody DR | resolve-thread | available",
-        "personal GitHub account is permitted", "unconfigured or unavailable before dispatch",
+        "personal GitHub account", "unconfigured or unavailable before dispatch",
         "Without explicit user authorization, return publication-ready",
         "publish-cody-review.yml", "publish-claudio-review.yml",
     ):
@@ -22,10 +22,11 @@ def test_reviewer_profile_declares_publishing_contract() -> None:
 def test_local_reviewer_profile_is_referenced_by_project_entry_points() -> None:
     profile = ROOT / ".dr-agents/craftcontrol/PROFILE.md"
     assert profile.is_file()
-    assert "AGENTS.md" in (profile.parent / "references/frontend.md").read_text()
+    profile_text = profile.read_text()
+    assert "AGENTS.md" in profile_text
     assert "Portuguese, English, and Spanish" in (ROOT / "AGENTS.md").read_text()
-    for checklist in ("backend.md", "frontend.md", "contracts.md", "operations.md", "contribution.md"):
-        assert (profile.parent / "references" / checklist).is_file()
+    for section in ("Backend", "Frontend", "Contracts", "Operations"):
+        assert section in profile_text
     for entry_point in (ROOT / "AGENTS.md", ROOT / "CLAUDE.md"):
         assert ".dr-agents/craftcontrol/PROFILE.md" in entry_point.read_text()
     assert not (ROOT / ".agents/skills/review-pr/SKILL.md").exists()

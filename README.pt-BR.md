@@ -342,9 +342,9 @@ descobre o perfil compartilhado do projeto automaticamente.
 
 As skills locais complementam o plugin: o Codex continua seguindo `AGENTS.md` e as instruções de segurança. Um pedido para executar uma issue até o PR (inclusive via link) autoriza branch, commit, push e abertura do PR; merge e deploy continuam exigindo pedido explícito.
 
-O perfil tool-neutral em [`.agent-review/craftcontrol/PROFILE.md`](.agent-review/craftcontrol/PROFILE.md)
+O perfil tool-neutral em [`.dr-agents/craftcontrol/PROFILE.md`](.dr-agents/craftcontrol/PROFILE.md)
 concentra as salvaguardas específicas das revisões Cody DR e Claudio DR. Veja
-[Perfil de revisão de agentes](docs/agent-review-profile.md) para usá-lo também
+[Perfil de revisão de agentes](docs/dr-agents-profile.md) para usá-lo também
 com os plugins portáteis. Qualquer agente pode seguir o perfil local ao receber
 o caminho; ele complementa skills genéricas e não dispara uma revisão sozinho.
 

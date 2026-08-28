@@ -73,7 +73,7 @@ checks and review findings are resolved. Do not merge directly to `main`.
 
 Yes. Install the global `cody-dr` portable workflow plugin. CraftControl does
 not duplicate its lifecycle skills under `.agents/skills/`; the plugin loads
-`.agent-review/craftcontrol/PROFILE.md`. Issue authoring remains draft-first,
+`.dr-agents/craftcontrol/PROFILE.md`. Issue authoring remains draft-first,
 findings handling requires an explicit decision before each fix or publication,
 and the Cody App publishes review content only as `COMMENT`.
 
@@ -103,7 +103,7 @@ Invoke with `/skill-name`; use the issue number where indicated.
 
 Use `/execute-issue <n>` for a normal issue. Use `/create-issue` before work
 when the request is not yet a complete GitHub issue. These agents load the
-CraftControl-local profile at `.agent-review/craftcontrol/PROFILE.md`, which
+CraftControl-local profile at `.dr-agents/craftcontrol/PROFILE.md`, which
 applies architecture, quality gate, and publisher rules to every run.
 
 Claudio DR is the default reviewer and issue author for Claude Code sessions.

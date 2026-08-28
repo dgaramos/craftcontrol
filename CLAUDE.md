@@ -2,7 +2,7 @@
 
 Follow `AGENTS.md` as the authoritative project instruction file. Before working, read `README.md` and all Markdown files in `roadmap/` when present. The `roadmap/` directory is private, ignored planning context and must never be committed, published, or included in deployment copies.
 
-For any PR review, load `.agent-review/craftcontrol/PROFILE.md` and its
+For any PR review, load `.dr-agents/craftcontrol/PROFILE.md` and its
 applicable layer checklists. This local profile supplies CraftControl-specific
 review rules to Claudio DR or any other agent; it augments generic skills and
 never triggers review automatically. Use the `claudio-reviewer` agent if

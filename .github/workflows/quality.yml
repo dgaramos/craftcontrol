@@ -105,8 +105,8 @@ jobs:
           files: apps/client/junit.xml
           flags: frontend
 
-  agent-workflows:
-    name: agent-workflows
+  dr-agents:
+    name: dr-agents
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4.2.2
@@ -117,22 +117,22 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: python -m pip install -r apps/server/requirements.txt
-      - run: bin/check-agent-workflows
-      - name: Upload agent-workflows coverage
+      - run: bin/check-dr-agents
+      - name: Upload dr-agents coverage
         uses: codecov/codecov-action@v5.4.3
         with:
-          files: coverage-agent-workflows.xml
-          flags: agent-workflows
-      - name: Upload agent-workflows test results
+          files: coverage-dr-agents.xml
+          flags: dr-agents
+      - name: Upload dr-agents test results
         uses: codecov/test-results-action@v1.1.1
         with:
-          files: test-results/agent-workflows.xml
-          flags: agent-workflows
+          files: test-results/dr-agents.xml
+          flags: dr-agents
 
   integration:
     name: integration
     runs-on: ubuntu-latest
-    needs: [backend, contracts-backend, contracts-frontend, frontend, host-agent, agent-workflows]
+    needs: [backend, contracts-backend, contracts-frontend, frontend, host-agent, dr-agents]
     steps:
       - uses: actions/checkout@v4.2.2
         with:

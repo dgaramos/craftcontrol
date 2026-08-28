@@ -1,6 +1,6 @@
 # CraftControl agent review profile
 
-The tool-neutral profile at `.agent-review/craftcontrol/PROFILE.md` is the
+The tool-neutral profile at `.dr-agents/craftcontrol/PROFILE.md` is the
 source of CraftControl-specific review safeguards. It stays in this repository
 so it evolves with its architecture, quality gates, and operational rules.
 
@@ -17,7 +17,7 @@ explicitly with the requested PR/ref:
 
 ```text
 Review https://github.com/dgaramos/craftcontrol/pull/123 using
-.agent-review/craftcontrol/PROFILE.md.
+.dr-agents/craftcontrol/PROFILE.md.
 ```
 
 The profile does not contain publisher credentials. If an adapter or the local

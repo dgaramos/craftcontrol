@@ -108,8 +108,10 @@ applies architecture, quality gate, and publisher rules to every run.
 
 Claudio DR is the default reviewer and issue author for Claude Code sessions.
 Reviews published through the Claudio GitHub App appear with `claudio-dr[bot]`
-as the author; publication requires explicit authorization — no personal account
-is used as a fallback.
+as the author; publication requires explicit authorization — a personal account
+is permitted only as an explicitly authorized fallback when the GitHub App is
+unconfigured or unavailable before dispatch, and never after an App dispatch or
+verification failure.
 
 ### Layer agents (standalone native utilities)
 

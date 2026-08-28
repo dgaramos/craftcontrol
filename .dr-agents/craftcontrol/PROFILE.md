@@ -1,64 +1,83 @@
-# CraftControl reviewer profile
+# CraftControl profile
 
-Use this profile only when reviewing CraftControl. It strengthens the portable
-review contract; explicit PR/ref input, evidence requirements, incremental
-re-review, and explicit publication authorization still apply.
+Use this profile when reviewing, implementing, or authoring issues in
+CraftControl. It strengthens the portable contract; explicit PR/ref input,
+evidence requirements, incremental re-review, and explicit publication
+authorization still apply.
+
+## Project identity
+
+- **Repository:** `dgaramos/craftcontrol`
+- **Main branch:** `main`
+- **Supported branches:** `<issue-number>-<type>/<slug>`
+- **Quality command:** `bin/check`
 
 ## Required context
 
-Before planning, reviewing, or changing CraftControl, read `README.md`, every
-Markdown file in `roadmap/`, `AGENTS.md`, and `CONTRIBUTING.md`. The roadmap is
-private operational context: never stage, quote, publish, or copy it into an
-artifact. Read `docs/architecture.md` for architecture, persistence, runtime,
-or infrastructure changes.
+Read before reviewing or implementing: `README.md`, every Markdown file in
+`roadmap/`, `AGENTS.md`, `CONTRIBUTING.md`, and `docs/architecture.md`. The
+roadmap is private operational context: never stage, quote, publish, or copy it
+into an artifact.
 
-## Layer selection
+## Architecture boundaries
 
-Load every matching checklist before concluding:
+### Backend (`apps/server/`)
 
-| Changed boundary | Checklist |
-| --- | --- |
-| `apps/backend/` or `tests/` | [backend](references/backend.md) |
-| `apps/frontend/static/js/` or `apps/frontend/tests/` | [frontend](references/frontend.md) |
-| OpenAPI, HTTP routes, or generated declarations | [contracts](references/contracts.md) |
-| `packs/telemetry/`, `bin/`, Compose, Docker, deploy, backup, or restore | [operations](references/operations.md) |
-| `README`, Markdown, `CONTRIBUTING`, or `AGENTS` | [contribution](references/contribution.md) |
+- HTTP → use cases → ports/adapters. Routes do not reach repositories or
+  adapters; runtime supervisors call application-facing ports.
+- Inject dependencies through constructors and assemble production in the
+  composition root. Use `Protocol` only for meaningful replaceable boundaries.
+- Preserve XUID as internal identity, permanent player profiles, idempotent
+  ingestion, and the separation of player history from operational retention.
+- Migrate SQLite without deleting user data. Do not add locks or transactions
+  that harm runtime reconciliation or SSE delivery.
+- Enforce capabilities, allowlists, and CSRF. Do not expose arbitrary console
+  access, session identifiers, credentials, or XUIDs.
 
-Review changed code with its callers, tests, and public contract. Always assess
-compatibility, persistence, authorization, player data, and backup/recovery
-when applicable.
+### Frontend (`apps/client/static/js/`)
 
-## Quality and contribution rules
+- Preserve native ES modules and dependency direction: `core` → `components` →
+  `features`; core never imports features.
+- Inject feature dependencies through the composition root. Avoid direct global
+  DOM coupling when an injected helper exists.
+- Keep all visible copy localized in every UI locale defined by `AGENTS.md`.
+  Preserve touch usability, empty/error states, CSRF behavior, and SSE-driven
+  refreshes; do not add browser polling when targeted invalidation is sufficient.
+- Escape external content before DOM insertion.
+- Keep tests deterministic, restore globals, and avoid time/order coupling.
 
-Run `bin/check` before handoff. Its independent gates are
-`bin/check-frontend`, `bin/check-backend`, `bin/check-contracts`, and
-`bin/check-integration`; keep a test in exactly one gate unless it deliberately
-spans a boundary. Changes to public behavior, persistence, recovery,
-configuration, or API contracts require tests and the English `README.md`.
+### Contracts (`packages/contracts/openapi.json`)
 
-Use an issue branch, Conventional Commits, and a PR with Project, Milestone,
-Label, and Assignee. Address actionable CodeRabbit findings before merge. Never
-commit roadmap content, `.env`, databases, world data, credentials, or keys.
+- Treat `packages/contracts/openapi.json` as canonical. Keep routes, envelopes,
+  errors, authentication cookies, capabilities, CSRF, pagination, and generated
+  frontend declarations aligned.
+- Do not change only one side of an endpoint. Evaluate consumer compatibility,
+  migration, and contract coverage.
 
-## Identity and publication
+### Operations (Compose, Docker, deploy, backup, restore)
 
-Codex reviews are attributed to **Cody DR** and Claude Code reviews to
-**Claudio DR**. The optional GitHub App publishers are `cody-dr` and
-`claudio-dr`. Without explicit user authorization, return publication-ready
-content marked not published. With explicit authorization, a personal GitHub
-account may publish only as a disclosed fallback when the requested App
-operation is unconfigured or unavailable before dispatch.
+- Keep the panel usable without Prometheus, Grafana, the exporter, or the
+  Telemetry Pack. Derived events retain evidence and never become authoritative.
+- Pack lifecycle uses the shared installer, persistent Bedrock data, backups,
+  atomic association updates, and an explicit restart decision.
+- Coordinated backups pause saves only for the copy window and resume in
+  `finally`. Restore is offline, confirmed, creates a recovery copy, and never
+  restores `.env` automatically.
+- Do not deploy with bare Compose from a development checkout. Protect `.env`,
+  SQLite, and world data from overwrite or development bind mounts.
 
-When a reviewer authors a commit, use its matching co-author trailer:
-`Cody DR <dgaramos+cody@gmail.com>` or `Claudio DR
-<dgaramos+claudio@gmail.com>`.
+## Review checklist
 
-This profile never triggers an automatic review.
-
-## Quality gate
-
-Run `bin/check` before handoff. A failed gate stops implementation, shipping,
-or a claim that a finding is resolved.
+- [ ] HTTP → use cases → ports/adapters boundary preserved; no route reaches a repository
+- [ ] Dependencies injected through constructors; `patch` only at third-party boundaries
+- [ ] `core` → `components` → `features` dependency direction preserved in JS
+- [ ] All visible copy localized; SSE-driven refresh used instead of polling
+- [ ] `packages/contracts/openapi.json` and generated frontend declarations in sync
+- [ ] SQLite migration is backward-compatible and data-safe
+- [ ] Backup/restore conventions preserved for any operations change
+- [ ] English `README.md` updated for any public behavior change
+- [ ] Roadmap content not staged, quoted, or published
+- [ ] `bin/check` passes before handoff
 
 ## Testing conventions
 
@@ -67,8 +86,22 @@ Flag any new `unittest.mock.patch` call that targets a stdlib module
 correctness risk. The project rule is constructor injection: infrastructure
 dependencies are injected as constructor parameters with production defaults,
 and tests pass fakes directly. `patch` is permitted only at third-party
-boundaries with no injectable seam. Suggest adding the injection point when
-none exists.
+boundaries with no injectable seam.
+
+## Quality and contribution rules
+
+Run `bin/check` before handoff. Independent gates: `bin/check-frontend`,
+`bin/check-backend`, `bin/check-contracts`, `bin/check-dr-agents`, and
+`bin/check-integration`; keep a test in exactly one gate unless it deliberately
+spans a boundary.
+
+Use an issue branch, Conventional Commits, and a PR with Project, Milestone,
+Label, and Assignee. Address actionable CodeRabbit findings before merge. Never
+commit roadmap content, `.env`, databases, world data, credentials, or keys.
+
+Validate commands, paths, versions, contracts, and links against the current
+repository state. Check branch name, PR title, linked issue, and required
+metadata before handoff.
 
 ## Lifecycle skill mapping
 
@@ -92,61 +125,21 @@ none exists.
 - **Merge policy:** squash merge after required checks and actionable findings
   are addressed
 
+## Identity and publication
+
+Codex reviews are attributed to **Cody DR** and Claude Code reviews to
+**Claudio DR**. The optional GitHub App publishers are `cody-dr` and
+`claudio-dr`. Without explicit user authorization, return publication-ready
+content marked not published. With explicit authorization, a personal GitHub
+account may publish only as a disclosed fallback when the requested App
+operation is unconfigured or unavailable before dispatch.
+
+When a reviewer authors a commit, use its matching co-author trailer:
+`Cody DR <dgaramos+cody@gmail.com>` or `Claudio DR <dgaramos+claudio@gmail.com>`.
+
+This profile never triggers an automatic review.
+
 ## Publisher dispatch contract
-
-Publication remains explicitly authorized. Use the configured reviewer App
-first. A personal GitHub account is permitted only as an explicitly authorized
-fallback when the requested App operation is unconfigured or unavailable before
-dispatch; record its login in the outcome. Never fall back after an App dispatch
-or verification failure.
-
-### Review
-
-Dispatch `publish-cody-review.yml` or `publish-claudio-review.yml` with
-`pr_number`, `reviewed_head_sha`, `event`, `review_body`, and the optional
-review manifests `inline_comments_json`, `replies_json`, and
-`resolve_thread_ids_json`.
-
-**Review event rules (enforced):**
-
-- Always use `event: COMMENT`. Never use `APPROVE` or `REQUEST_CHANGES`.
-  Merge blocking and approval are human decisions; no reviewer bot may submit
-  either state for this project.
-- Every formal finding whose evidence line is within the diff must be delivered
-  as an inline diff comment in `inline_comments_json`, not embedded as body
-  text in the top-level review comment.
-- Informational observations must be labelled non-actionable and must not
-  appear in the merge-risk justification or approval rationale.
-- A claim about authentication, CSRF, or authorization must be grounded in the
-  repository's real auth rules (see `apps/backend/minecraft_manager/auth/`)
-  before it is included in any finding. Mutation-only assumptions must not be
-  applied to read-only endpoints.
-- A recommendation to change an OpenAPI response schema must identify a
-  concrete contract risk and its consumer impact before it is classified as a
-  finding.
-
-### Create issue
-
-Dispatch `publish-cody-issue.yml` or `publish-claudio-issue.yml` with `title`,
-`body`, labels, assignees, and `milestone_number`. Project metadata is optional:
-when used, supply `project_owner`, `project_number`, and `project_status`
-together. The App applies and verifies issue, label, assignee, milestone, and,
-when supplied, Project metadata. Do not supply review-only fields to this mode.
-
-### Apply PR metadata
-
-Dispatch `publish-cody-pr-metadata.yml` or `publish-claudio-pr-metadata.yml`
-with `pr_number` and `base_branch` (required), plus any of `labels_json`
-(JSON array), `assignees_json` (JSON array), `milestone_number` (numeric string),
-and the three project fields `project_owner`, `project_number`, `project_status`
-(must be supplied together or not at all).
-
-The workflow authenticates as the matching App, verifies the publishing identity,
-applies App-safe metadata, and then re-reads the PR to confirm every field. A
-personal Project is not App-safe: add it only through an explicitly authorized,
-disclosed personal fallback, and verify its actor and status separately. The
-portable `ship-change` adapter must support this dispatch boundary before it can
-claim complete CraftControl PR metadata publication.
 
 | Reviewer | Mode | Availability |
 | --- | --- | --- |
@@ -163,12 +156,23 @@ claim complete CraftControl PR metadata publication.
 | Claudio DR | reply | available |
 | Claudio DR | resolve-thread | available |
 
-## Post-publication verification
+Dispatch `publish-cody-review.yml` or `publish-claudio-review.yml` with
+`pr_number`, `reviewed_head_sha`, `event`, `review_body`, and the optional
+manifests `inline_comments_json`, `replies_json`, and `resolve_thread_ids_json`.
 
-After an App publication, verify the target and that the author is
-`cody-dr[bot]` for Cody DR or `claudio-dr[bot]` for Claudio DR. Verify reply
-and resolution actions for both reviewers. A failed App verification is a
-failed publication, not a fallback to a personal account. When an App operation
-was unavailable before dispatch and a personal fallback was explicitly
-authorized, verify the authenticated personal actor and report it as a personal
-fallback rather than a reviewer-App action.
+**Review event rules:** always use `event: COMMENT`; never `APPROVE` or
+`REQUEST_CHANGES`. Every finding whose evidence line is within the diff must be
+an inline diff comment. Informational observations must be labelled
+non-actionable. Auth/CSRF claims must be grounded in `apps/server/minecraft_manager/auth/`.
+
+Dispatch `publish-cody-issue.yml` or `publish-claudio-issue.yml` with `title`,
+`body`, labels, assignees, and `milestone_number`.
+
+Dispatch `publish-cody-pr-metadata.yml` or `publish-claudio-pr-metadata.yml`
+with `pr_number`, `base_branch`, and any of `labels_json`, `assignees_json`,
+`milestone_number`, and the three project fields `project_owner`,
+`project_number`, `project_status`.
+
+After any App publication, verify the author is `cody-dr[bot]` or
+`claudio-dr[bot]`. A failed App verification is a failed publication, not a
+fallback trigger.

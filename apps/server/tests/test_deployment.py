@@ -19,7 +19,7 @@ def test_component_deploy_canaries_use_the_production_port_default() -> None:
 
 
 def test_quality_gates_are_partitioned_and_automated() -> None:
-    gates = ["frontend", "backend", "contracts", "agent-workflows", "integration"]
+    gates = ["frontend", "backend", "contracts", "dr-agents", "integration"]
     for gate in gates:
         script = ROOT / "bin" / f"check-{gate}"
         assert script.is_file()
@@ -27,11 +27,11 @@ def test_quality_gates_are_partitioned_and_automated() -> None:
     assert (ROOT / "bin" / "check-contracts-frontend").is_file()
     umbrella = (ROOT / "bin" / "check").read_text()
     assert "contracts-frontend" in umbrella
-    assert "frontend" in umbrella and "backend" in umbrella and "contracts" in umbrella and "agent-workflows" in umbrella and "integration" in umbrella
+    assert "frontend" in umbrella and "backend" in umbrella and "contracts" in umbrella and "dr-agents" in umbrella and "integration" in umbrella
     for workflow in (ROOT / ".github" / "workflows" / "quality.yml", ROOT / ".gitea" / "workflows" / "quality.yml"):
         assert workflow.is_file()
         text = workflow.read_text()
-        for job in ("backend", "contracts-backend", "contracts-frontend", "frontend", "agent-workflows", "integration"):
+        for job in ("backend", "contracts-backend", "contracts-frontend", "frontend", "dr-agents", "integration"):
             assert job in text
 
 

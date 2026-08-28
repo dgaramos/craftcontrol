@@ -12,7 +12,7 @@ def test_reviewer_profile_declares_publishing_contract() -> None:
         assert manifest in profile
     for expected in (
         "Cody DR | reply | available", "Cody DR | resolve-thread | available",
-        "personal GitHub account may publish only as a disclosed fallback", "unconfigured or unavailable before dispatch",
+        "a personal GitHub account may publish only as a disclosed fallback when the requested App operation is unconfigured or unavailable before dispatch",
         "Without explicit user authorization, return publication-ready",
         "publish-cody-review.yml", "publish-claudio-review.yml",
     ):

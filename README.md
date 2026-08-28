@@ -347,9 +347,9 @@ and the security instructions. A request to execute an issue
 até o PR (inclusive via link) autoriza branch, commit, push e abertura do PR;
 merge e deploy continuam exigindo pedido explícito.
 
-The tool-neutral [`.agent-review/craftcontrol/PROFILE.md`](.agent-review/craftcontrol/PROFILE.md)
+The tool-neutral [`.dr-agents/craftcontrol/PROFILE.md`](.dr-agents/craftcontrol/PROFILE.md)
 contains the safeguards specific to Cody DR and Claudio DR reviews. See
-[Agent review profile](docs/agent-review-profile.md) to use it with portable
+[Agent review profile](docs/dr-agents-profile.md) to use it with portable
 plugins too. Any agent can follow this local profile when it receives the path;
 the profile augments generic review skills and does not trigger review by itself.
 

@@ -27,7 +27,7 @@ from minecraft_manager.auth.http import require
 from conftest import make_auth_mock, wire_auth
 
 ROOT = Path(__file__).resolve().parents[3]
-PROFILE = ROOT / ".agent-review" / "craftcontrol" / "PROFILE.md"
+PROFILE = ROOT / ".dr-agents" / "craftcontrol" / "PROFILE.md"
 CLAUDIO_WORKFLOW = ROOT / ".github" / "workflows" / "publish-claudio-review.yml"
 CODY_WORKFLOW = ROOT / ".github" / "workflows" / "publish-cody-review.yml"
 

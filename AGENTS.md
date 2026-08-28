@@ -10,7 +10,7 @@ Before planning, reviewing, or changing this project, read `README.md` and every
 
 ## Agent review profile
 
-The tool-neutral profile at `.agent-review/craftcontrol/PROFILE.md` is the
+The tool-neutral profile at `.dr-agents/craftcontrol/PROFILE.md` is the
 authoritative CraftControl-specific review context. Load it and every applicable
 layer checklist for any PR review, whether the reviewer is Cody DR, Claudio DR,
 or another agent. The profile augments generic review skills; it does not

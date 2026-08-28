@@ -16,9 +16,9 @@ coverage:
           - host-agent
         target: 85%
         threshold: 2%
-      agent-workflows:
+      dr-agents:
         flags:
-          - agent-workflows
+          - dr-agents
         target: 90%
         threshold: 2%
     patch:
@@ -37,9 +37,9 @@ coverage:
           - host-agent
         target: 75%
         threshold: 5%
-      agent-workflows:
+      dr-agents:
         flags:
-          - agent-workflows
+          - dr-agents
         target: 90%
         threshold: 5%
 
@@ -53,7 +53,7 @@ flags:
   host-agent:
     paths:
       - services/host-agent/
-  agent-workflows:
+  dr-agents:
     paths:
       - apps/server/tests/test_agent_workflows.py
 

@@ -158,10 +158,11 @@ Dispatch `publish-cody-review.yml` or `publish-claudio-review.yml` with
 `pr_number`, `reviewed_head_sha`, `event`, `review_body`, and the optional
 manifests `inline_comments_json`, `replies_json`, and `resolve_thread_ids_json`.
 
-**Review event rules:** always use `event: COMMENT`; never `APPROVE` or
-`REQUEST_CHANGES`. Every finding whose evidence line is within the diff must be
-an inline diff comment. Informational observations must be labelled
-non-actionable. Auth/CSRF claims must be grounded in `apps/server/minecraft_manager/auth/`.
+**Review event rules:** always use `event: COMMENT`; never use `APPROVE` or
+`REQUEST_CHANGES` — approval is a human decision. Every finding whose evidence
+line is within the diff must be delivered via `inline_comments_json`, not
+embedded as body text in the top-level review comment. Informational observations must be labelled non-actionable and must not appear in the merge-risk justification or approval rationale. Auth/CSRF claims must be grounded in
+`apps/server/minecraft_manager/auth/` before inclusion in any finding.
 
 Dispatch `publish-cody-issue.yml` or `publish-claudio-issue.yml` with `title`,
 `body`, labels, assignees, and `milestone_number`.

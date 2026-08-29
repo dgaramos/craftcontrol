@@ -47,6 +47,7 @@ _PORT_FIELDS = frozenset({"server_port", "server_portv6"})
 
 _BOOL_FIELDS = frozenset({
     "online_mode", "white_list", "allow_list", "allow_cheats",
+    "force_gamemode",
     "enable_lan_visibility", "texturepack_required",
     "content_log_file_enabled", "correct_player_movement",
     "server_authoritative_block_breaking",
@@ -78,6 +79,7 @@ _INTENDED_STATE_FIELDS = frozenset({
     "max_threads",
     "level_type",
     "allow_cheats",
+    "force_gamemode",
     "server_portv6",
     "enable_lan_visibility",
     "default_player_permission_level",
@@ -118,6 +120,7 @@ _FIELD_MAP: dict[str, str] = {
     "max_threads": "max-threads",
     "level_type": "level-type",
     "allow_cheats": "allow-cheats",
+    "force_gamemode": "force-gamemode",
     "server_portv6": "server-portv6",
     "enable_lan_visibility": "enable-lan-visibility",
     "default_player_permission_level": "default-player-permission-level",

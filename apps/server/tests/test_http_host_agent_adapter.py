@@ -695,3 +695,18 @@ class TestIntendedStateKeyTranslation:
         from minecraft_manager.host_agent import _translate_intended_state
         result = _translate_intended_state({"GAMEMODE": "survival", "gamemode": "survival"})
         assert result == {"gamemode": "survival"}
+
+    def test_every_restart_required_setting_has_a_host_agent_field(self) -> None:
+        """The UI schema must not gain a setting that is forwarded as an uppercase key."""
+        from minecraft_manager.host_agent import _translate_intended_state
+        from minecraft_manager.schema import SETTINGS
+
+        translated = _translate_intended_state({key: "value" for key in SETTINGS})
+
+        assert set(translated) == {
+            "server_name", "gamemode", "difficulty", "allow_cheats", "max_players",
+            "view_distance", "tick_distance", "level_name", "level_seed", "level_type",
+            "force_gamemode", "player_idle_timeout", "default_player_permission_level",
+            "allow_list", "online_mode", "texturepack_required", "enable_lan_visibility",
+            "server_port", "server_portv6", "max_threads", "compression_threshold",
+        }

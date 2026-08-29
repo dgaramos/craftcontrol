@@ -547,6 +547,17 @@ class TestGamemodeIntendedState:
         assert outcome == "ok"
         assert "gamemode=adventure" in content
 
+    def test_force_gamemode_written_to_server_properties(self) -> None:
+        mock_run = MagicMock(return_value=MagicMock(returncode=0, stdout="", stderr=""))
+        with tempfile.TemporaryDirectory() as tmp:
+            executor = _make_executor(subprocess_run=mock_run, probe_result=True, bedrock_data=tmp)
+            store = st.OperationStore()
+            record = store.create(_op_id())
+            assert record is not None
+            executor.run(record, store, {"force_gamemode": True}, 10, 30)
+            content = (Path(tmp) / "server.properties").read_text()
+        assert "force-gamemode=true" in content
+
 
 class TestOperationExecutorEmptyState:
     def test_empty_intended_state_skips_write_and_succeeds(self) -> None:

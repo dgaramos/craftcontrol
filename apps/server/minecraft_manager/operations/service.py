@@ -436,7 +436,12 @@ class ServerOperationService:
         evidence: dict[str, Any] | None = None,
     ) -> None:
         operation.fail_stage(stage, error, evidence)
-        self._reconcile_failed_operation(operation)
+        # REVIEW fails before any configuration can reach the filesystem, so
+        # there is no desired-versus-effective state to reconcile. Every later
+        # lifecycle stage may have changed disk or container state and must be
+        # observed before its terminal result is exposed.
+        if stage is not OperationStage.REVIEW:
+            self._reconcile_failed_operation(operation)
         self._repo.save(operation)
         self._publish(operation)
         LOGGER.warning(

@@ -987,8 +987,8 @@ class TestRecoveryAndReconciliation:
         assert reconciled is not None
         assert reconciled.state == OperationState.CONFIRMED
 
-    def test_reconciliation_marks_divergent_when_config_differs(self, tmp_path: Path):
-        """request_reconciliation marks FAILED → DIVERGENT when server online but config differs."""
+    def test_failure_reconciliation_marks_divergent_when_config_differs(self, tmp_path: Path):
+        """A failed restart immediately records DIVERGENT when observed config differs."""
         docker = MagicMock()
         docker.status.return_value = {"state": "running", "online": True}
         docker.execute.side_effect = RuntimeError("conflict")
@@ -998,7 +998,7 @@ class TestRecoveryAndReconciliation:
         op = service.apply_restart_required({"MAX_PLAYERS": "20"}, lambda: None)
         wait_for_terminal(service, op.operation_id)
         failed = service.get_operation(op.operation_id)
-        assert failed is not None and failed.state == OperationState.FAILED
+        assert failed is not None and failed.state == OperationState.DIVERGENT
 
         docker.status.side_effect = None
         docker.status.return_value = {"state": "running", "online": True}
@@ -1031,7 +1031,7 @@ class TestRecoveryAndReconciliation:
         op = service.apply_restart_required({"MAX_PLAYERS": "20"}, lambda: None)
         wait_for_terminal(service, op.operation_id)
         original = service.get_operation(op.operation_id)
-        assert original is not None and original.state == OperationState.FAILED
+        assert original is not None and original.state == OperationState.DIVERGENT
 
         docker.execute.side_effect = None
         docker.status.return_value = {"state": "running", "online": True}
@@ -1070,7 +1070,7 @@ class TestRecoveryAndReconciliation:
         op = service.apply_restart_required({"MAX_PLAYERS": "20"}, lambda: None)
         wait_for_terminal(service, op.operation_id)
         original = service.get_operation(op.operation_id)
-        assert original is not None and original.state == OperationState.FAILED
+        assert original is not None and original.state == OperationState.DIVERGENT
 
         # Create another active operation directly
         active = ServerOperation.create("test-server", {})

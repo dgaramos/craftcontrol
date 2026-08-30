@@ -477,6 +477,13 @@ dialog.drawer { position: fixed; inset: auto 0 0; width: min(100%, 680px); max-h
   .telemetry-pack-actions button { width: 100%; }
   .op-stage { width: 100%; }
   .operation-indicator { bottom: max(76px, calc(64px + env(safe-area-inset-bottom))); }
+  dialog.operation-drawer { inset: auto max(0px, env(safe-area-inset-right)) max(0px, env(safe-area-inset-bottom)) max(0px, env(safe-area-inset-left)); width: auto; max-width: none; max-height: min(88dvh, 720px); padding: 10px 11px calc(12px + env(safe-area-inset-bottom)); box-sizing: border-box; }
+  .operation-drawer .drawer-header { align-items: flex-start; }
+  .operation-drawer .drawer-header > div { min-width: 0; }
+  .operation-drawer .drawer-header h2, .operation-drawer .op-error-text, .operation-drawer .op-evidence dd { overflow-wrap: anywhere; }
+  .operation-drawer .operation-progress-card { padding: .8rem; }
+  .operation-drawer .op-stage-bar { display: grid; grid-template-columns: 1fr; }
+  .operation-drawer .op-stage { width: auto; min-width: 0; }
 }
 
 @media (min-width: 760px) {

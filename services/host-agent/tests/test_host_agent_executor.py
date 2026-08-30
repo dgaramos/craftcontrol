@@ -377,17 +377,21 @@ class TestBedrockFileSystemMerge:
 # ---------------------------------------------------------------------------
 
 class TestBedrockFileSystemWriteErrors:
-    def test_preserves_existing_file_mode(self) -> None:
-        """When the file already exists its mode must be used for the new write."""
+    def test_preserves_existing_file_identity_and_mode(self) -> None:
+        """Updates must retain the Bedrock runtime's inode and file mode."""
         with tempfile.TemporaryDirectory() as tmp:
             data_dir = Path(tmp)
             props = data_dir / "server.properties"
             props.write_text("server-name=Old\n")
             props.chmod(0o600)
+            original_stat = props.stat()
             fs = BedrockFileSystem(str(data_dir))
             fs.write_server_properties({"server-name": "New"})
             assert "server-name=New" in props.read_text()
             assert oct(props.stat().st_mode)[-3:] == "600"
+            assert props.stat().st_ino == original_stat.st_ino
+            assert props.stat().st_uid == original_stat.st_uid
+            assert props.stat().st_gid == original_stat.st_gid
 
     def test_write_oserror_raises_runtime_error(self) -> None:
         """An OSError during the tmp-file write must surface as RuntimeError."""

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
 
@@ -15,8 +16,9 @@ class BedrockFileSystem:
 
     Reads the existing file (if present), updates only the keys supplied in
     ``updates``, and preserves all other lines (comments, blank lines, unknown
-    keys) in their original order.  The write is made atomic via a ``.tmp``
-    rename so a crash mid-write never corrupts the original file.
+    keys) in their original order. Existing files are updated in place so the
+    Bedrock runtime retains their ownership, ACLs, and inode-based access
+    contract. A new file is created atomically when none exists yet.
     """
 
     def __init__(
@@ -69,11 +71,28 @@ class BedrockFileSystem:
             if k not in written:
                 merged.append(f"{k}={v}\n")
 
+        rendered = "".join(merged)
+        if props_file.exists():
+            try:
+                # The host agent normally runs under a different OS user than
+                # the Bedrock container. Replacing this file would create a
+                # new inode owned by the agent and can revoke the container's
+                # write access. Keep the existing inode and its ACLs instead.
+                with props_file.open("r+", encoding="utf-8") as handle:
+                    handle.seek(0)
+                    handle.write(rendered)
+                    handle.truncate()
+                    handle.flush()
+                    os.fsync(handle.fileno())
+            except OSError as exc:
+                raise RuntimeError(f"Failed to write server.properties: {exc}") from exc
+
+            logger.info("Wrote/updated %d properties in %s", len(updates), props_file)
+            return
+
         tmp_file = props_file.with_suffix(".tmp")
-        original_mode = props_file.stat().st_mode if props_file.exists() else 0o644
         try:
-            tmp_file.write_text("".join(merged), encoding="utf-8")
-            tmp_file.chmod(original_mode)
+            tmp_file.write_text(rendered, encoding="utf-8")
             tmp_file.replace(props_file)
         except OSError as exc:
             try:

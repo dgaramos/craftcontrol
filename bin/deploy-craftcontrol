@@ -33,7 +33,7 @@ fail() {
 mount_source() {
   local destination="$1"
   docker inspect craftcontrol --format '{{range .Mounts}}{{println .Source "|" .Destination}}{{end}}' \
-    | awk -F ' \| ' -v destination="$destination" '$2 == destination {print $1}'
+    | awk -F ' [|] ' -v destination="$destination" '$2 == destination {print $1}'
 }
 
 validate_mounts() {

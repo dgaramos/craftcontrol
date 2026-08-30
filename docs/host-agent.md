@@ -215,6 +215,11 @@ The agent needs only three kinds of access to run a lifecycle operation:
 - write the configured Bedrock data directory during `PREPARATION`;
 - use a private Docker CLI configuration directory.
 
+The Bedrock runtime must retain write access to an existing
+`server.properties` file. The agent updates that file in place specifically to
+preserve its owner, mode, ACLs, and inode. Do not delete and recreate it as an
+operational repair; restore its ownership from the Bedrock runtime instead.
+
 Do not change ownership of the Bedrock project or make it world-writable.
 Keep the project owned by its existing operator and grant the agent narrowly
 scoped ACLs instead. Substitute the paths and service account for your host:

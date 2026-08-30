@@ -220,16 +220,21 @@ Keep the project owned by its existing operator and grant the agent narrowly
 scoped ACLs instead. Substitute the paths and service account for your host:
 
 ```bash
-BEDROCK_ROOT=/srv/minecraft-bedrock
-BEDROCK_DATA="$BEDROCK_ROOT/data"
 AGENT_USER=craftcontrol-agent
+HOST_AGENT_COMPOSE_PROJECT=minecraft-bedrock
+HOST_AGENT_COMPOSE_FILE=/opt/craftcontrol/docker-compose.yml
+HOST_AGENT_BEDROCK_DATA=/opt/minecraft-bedrock
+HOST_AGENT_DB=/var/lib/craftcontrol/host-agent.db
+BEDROCK_ROOT=$(dirname "$HOST_AGENT_COMPOSE_FILE")
+AGENT_STATE_DIR=$(dirname "$HOST_AGENT_DB")
+DOCKER_CONFIG="$AGENT_STATE_DIR/docker"
 
 # The agent can traverse the project, read Compose variables, and modify only
 # the Bedrock data directory.
 sudo setfacl -m "u:$AGENT_USER:--x" "$BEDROCK_ROOT"
 sudo setfacl -m "u:$AGENT_USER:r--" "$BEDROCK_ROOT/.env"
-sudo setfacl -R -m "u:$AGENT_USER:rwX" "$BEDROCK_DATA"
-sudo find "$BEDROCK_DATA" -type d \
+sudo setfacl -R -m "u:$AGENT_USER:rwX" "$HOST_AGENT_BEDROCK_DATA"
+sudo find "$HOST_AGENT_BEDROCK_DATA" -type d \
   -exec setfacl -m "d:u:$AGENT_USER:rwX" {} +
 ```
 
@@ -243,17 +248,16 @@ The supplied unit uses `ProtectSystem=strict`. Add a drop-in that grants the
 same narrow paths to systemd and provides a writable Docker CLI directory:
 
 ```bash
-sudo install -d -o craftcontrol-agent -g craftcontrol-agent -m 0700 \
-  /var/lib/craftcontrol/docker
+sudo install -d -o "$AGENT_USER" -g "$AGENT_USER" -m 0700 "$DOCKER_CONFIG"
 sudo mkdir -p /etc/systemd/system/craftcontrol-host-agent.service.d
 cat <<EOF | sudo tee \
   /etc/systemd/system/craftcontrol-host-agent.service.d/runtime-paths.conf
 [Service]
 ReadWritePaths=
-ReadWritePaths=$BEDROCK_DATA /var/lib/craftcontrol
+ReadWritePaths=$HOST_AGENT_BEDROCK_DATA $AGENT_STATE_DIR
 ReadOnlyPaths=
 ReadOnlyPaths=/etc/craftcontrol $BEDROCK_ROOT
-Environment=DOCKER_CONFIG=/var/lib/craftcontrol/docker
+Environment=DOCKER_CONFIG=$DOCKER_CONFIG
 EOF
 sudo systemctl daemon-reload
 sudo systemctl restart craftcontrol-host-agent
@@ -263,16 +267,37 @@ Resetting `ReadWritePaths` and `ReadOnlyPaths` in the drop-in is intentional:
 it replaces the unit defaults with the explicitly reviewed paths above. Do not
 grant the whole storage mount or the Docker socket path as writable access.
 
-Verify the agent account and its Compose invocation without restarting the
-Bedrock container:
+First verify the host ACLs without restarting the Bedrock container:
 
 ```bash
 sudo -u "$AGENT_USER" test -r "$BEDROCK_ROOT/.env"
-sudo -u "$AGENT_USER" test -w "$BEDROCK_DATA"
-sudo -u "$AGENT_USER" env DOCKER_CONFIG=/var/lib/craftcontrol/docker \
-  docker compose --project-name minecraft-bedrock \
-  --file "$BEDROCK_ROOT/docker-compose.yml" config --quiet
+sudo -u "$AGENT_USER" test -w "$HOST_AGENT_BEDROCK_DATA"
+sudo -u "$AGENT_USER" env DOCKER_CONFIG="$DOCKER_CONFIG" \
+  docker compose --project-name "$HOST_AGENT_COMPOSE_PROJECT" \
+  --file "$HOST_AGENT_COMPOSE_FILE" config --quiet
 sudo systemctl is-active --quiet craftcontrol-host-agent
+```
+
+Those commands do not apply the systemd filesystem sandbox. Run this second,
+non-mutating preflight to validate the same relevant sandbox constraints used
+by the service:
+
+```bash
+sudo systemd-run --wait --collect --pipe --quiet \
+  --property="User=$AGENT_USER" \
+  --property="Group=$AGENT_USER" \
+  --property=NoNewPrivileges=yes \
+  --property=PrivateTmp=yes \
+  --property=ProtectSystem=strict \
+  --property="ReadWritePaths=$HOST_AGENT_BEDROCK_DATA $AGENT_STATE_DIR" \
+  --property="ReadOnlyPaths=/etc/craftcontrol $BEDROCK_ROOT" \
+  --setenv="DOCKER_CONFIG=$DOCKER_CONFIG" \
+  /bin/sh -ceu '
+    compose_root=$(dirname "$1")
+    test -r "$compose_root/.env"
+    test -w "$2"
+    docker compose --project-name "$3" --file "$1" config --quiet
+  ' sh "$HOST_AGENT_COMPOSE_FILE" "$HOST_AGENT_BEDROCK_DATA" "$HOST_AGENT_COMPOSE_PROJECT"
 ```
 
 If a lifecycle operation reports `preparation_write_failed`, restore the data

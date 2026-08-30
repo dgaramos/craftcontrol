@@ -2572,13 +2572,13 @@
             }
           },
           "created_at": {
-            "type": "number"
+            "type": "string", "format": "date-time", "description": "UTC ISO 8601 timestamp"
           },
           "updated_at": {
-            "type": "number"
+            "type": "string", "format": "date-time", "description": "UTC ISO 8601 timestamp"
           },
           "completed_at": {
-            "type": "number",
+            "type": "string", "format": "date-time",
             "nullable": true
           },
           "terminal_error": {
@@ -2616,11 +2616,11 @@
             ]
           },
           "started_at": {
-            "type": "number",
+            "type": "string", "format": "date-time",
             "nullable": true
           },
           "completed_at": {
-            "type": "number",
+            "type": "string", "format": "date-time",
             "nullable": true
           },
           "evidence": {

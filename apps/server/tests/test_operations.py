@@ -122,6 +122,13 @@ def make_service(
 
 
 class TestServerOperationContract:
+    def test_serializes_timestamps_as_utc_iso_strings(self) -> None:
+        op = ServerOperation.create("srv", {})
+        op.created_at = 1_700_000_000
+        op.updated_at = 1_700_000_001_000
+        payload = op.as_dict()
+        assert payload["created_at"] == "2023-11-14T22:13:20Z"
+        assert payload["updated_at"] == "2023-11-14T22:13:21Z"
     def test_create_produces_pending_operation(self):
         op = ServerOperation.create("srv", {"MAX_PLAYERS": "20"})
         assert op.state == OperationState.PENDING

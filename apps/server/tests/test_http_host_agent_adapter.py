@@ -729,5 +729,6 @@ class TestIntendedStateKeyTranslation:
         assert set(translated) <= agent_fields
         assert set(translated) <= set(agent_field_map)
         for schema_field, property_name in PROPERTY_NAMES.items():
-            agent_field = translated[schema_field]
+            agent_field = property_name.replace("-", "_")
+            assert _translate_intended_state({schema_field: "value"}) == {agent_field: "value"}
             assert agent_field_map[agent_field] == property_name

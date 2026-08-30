@@ -110,6 +110,11 @@ out of a terminal state is valid.
 
 ## Evidence fields
 
+All operation timestamps in API and SSE payloads are UTC ISO 8601 strings
+(`YYYY-MM-DDTHH:mm:ss.sssZ`), or `null` when the event has not occurred.
+Persistence may retain legacy epoch-second values; CraftControl converts them
+at the API boundary without changing operation ordering.
+
 The following fields are recorded on the operation record. All timestamps are
 UTC ISO 8601.
 

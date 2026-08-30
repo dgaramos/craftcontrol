@@ -555,6 +555,9 @@ class TestGamemodeIntendedState:
             record = store.create(_op_id())
             assert record is not None
             executor.run(record, store, {"force_gamemode": True}, 10, 30)
+            completed = store.get(record.operation_id)
+            assert completed is not None
+            assert completed.outcome == "ok"
             content = (Path(tmp) / "server.properties").read_text()
         assert "force-gamemode=true" in content
 

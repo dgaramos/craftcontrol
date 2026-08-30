@@ -161,6 +161,33 @@ describe("createServerFeature", () => {
     expect(deps.elements["#operation-indicator-label"].textContent).toBe("opState_pending");
   });
 
+  test("opens the drawer for a new active SSE operation after it was dismissed", async () => {
+    const savedEventSource = global.EventSource;
+    const listeners = {};
+    const eventSource = { addEventListener: jest.fn((type, listener) => { listeners[type] = listener; }), onerror: null };
+    global.EventSource = jest.fn(() => eventSource);
+    localStorage.clear();
+    try {
+      const deps = makeDeps();
+      deps.elements["#operation-progress-container"] = makeEl();
+      deps.elements["#operation-indicator"] = makeEl();
+      deps.elements["#operation-indicator-label"] = makeEl();
+      deps.elements["#operation-drawer"] = makeEl({ open: false });
+      deps.api = jest.fn().mockResolvedValue({ operation: null });
+      const feature = createServerFeature(deps);
+      await feature.initializeOperationProgress();
+
+      listeners.operation({ data: JSON.stringify({ operation_id: "op-4", state: "running", stages: [] }) });
+
+      expect(deps.state.operationActive).toBe(true);
+      expect(deps.elements["#operation-drawer"].showModal).toHaveBeenCalledTimes(1);
+      expect(deps.elements["#operation-indicator"].hidden).toBe(false);
+    } finally {
+      global.EventSource = savedEventSource;
+      localStorage.clear();
+    }
+  });
+
   test("keeps terminal operation details available from the persistent indicator", async () => {
     const deps = makeDeps();
     deps.elements["#operation-progress-container"] = makeEl();

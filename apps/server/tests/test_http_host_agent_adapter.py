@@ -25,6 +25,7 @@ Covers:
 """
 from __future__ import annotations
 
+import ast
 import io
 import json
 import tempfile
@@ -697,16 +698,36 @@ class TestIntendedStateKeyTranslation:
         assert result == {"gamemode": "survival"}
 
     def test_every_restart_required_setting_has_a_host_agent_field(self) -> None:
-        """The UI schema must not gain a setting that is forwarded as an uppercase key."""
+        """Every UI setting must translate to the host agent's canonical contract."""
         from minecraft_manager.host_agent import _translate_intended_state
-        from minecraft_manager.schema import SETTINGS
+        from minecraft_manager.schema import PROPERTY_NAMES, SETTINGS
 
         translated = _translate_intended_state({key: "value" for key in SETTINGS})
+        agent_operations = Path(__file__).parents[3] / "services" / "host-agent" / "operations.py"
+        module = ast.parse(agent_operations.read_text())
+        values = {}
+        for node in module.body:
+            if isinstance(node, ast.Assign):
+                targets = node.targets
+            elif isinstance(node, ast.AnnAssign):
+                targets = [node.target]
+            else:
+                continue
+            for target in targets:
+                if isinstance(target, ast.Name) and target.id in {"_INTENDED_STATE_FIELDS", "_FIELD_MAP"}:
+                    value = node.value
+                    if (
+                        isinstance(value, ast.Call)
+                        and isinstance(value.func, ast.Name)
+                        and value.func.id == "frozenset"
+                    ):
+                        value = value.args[0]
+                    values[target.id] = ast.literal_eval(value)
+        agent_fields = values["_INTENDED_STATE_FIELDS"]
+        agent_field_map = values["_FIELD_MAP"]
 
-        assert set(translated) == {
-            "server_name", "gamemode", "difficulty", "allow_cheats", "max_players",
-            "view_distance", "tick_distance", "level_name", "level_seed", "level_type",
-            "force_gamemode", "player_idle_timeout", "default_player_permission_level",
-            "allow_list", "online_mode", "texturepack_required", "enable_lan_visibility",
-            "server_port", "server_portv6", "max_threads", "compression_threshold",
-        }
+        assert set(translated) <= agent_fields
+        assert set(translated) <= set(agent_field_map)
+        for schema_field, property_name in PROPERTY_NAMES.items():
+            agent_field = translated[schema_field]
+            assert agent_field_map[agent_field] == property_name

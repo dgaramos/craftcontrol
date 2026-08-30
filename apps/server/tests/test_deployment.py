@@ -252,10 +252,43 @@ def test_deploy_command_anchors_compose_and_protects_state() -> None:
 
 
 def test_deploy_mount_guards_use_a_portable_separator() -> None:
+    mount_output = "\n".join(
+        (
+            "/srv/craftcontrol/data | /data",
+            "/srv/minecraft | /minecraft-project",
+            "/other | /other",
+        )
+    ) + "\n"
+    awk_commands = [["awk"]]
+    if shutil.which("busybox"):
+        awk_commands.append(["busybox", "awk"])
+
     for script_name in ("deploy-craftcontrol", "deploy-craftcontrol-backend"):
         script = (ROOT / "bin" / script_name).read_text()
         assert "awk -F ' [|] '" in script
         assert "awk -F ' \\| '" not in script
+        for awk_command in awk_commands:
+            for destination, expected_source in (
+                ("/data", "/srv/craftcontrol/data"),
+                ("/minecraft-project", "/srv/minecraft"),
+                ("/missing", ""),
+            ):
+                result = subprocess.run(
+                    [
+                        *awk_command,
+                        "-F",
+                        " [|] ",
+                        "-v",
+                        f"destination={destination}",
+                        "$2 == destination {print $1}",
+                    ],
+                    input=mount_output,
+                    text=True,
+                    capture_output=True,
+                    check=True,
+                )
+                expected_output = f"{expected_source}\n" if expected_source else ""
+                assert result.stdout == expected_output
 
 
 def test_reviewer_publishers_support_thread_replies_without_creating_a_review() -> None:

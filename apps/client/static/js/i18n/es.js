@@ -86,6 +86,7 @@ export const es = {
   opStage_confirm: "Confirmar",
   operationLocked: "Los cambios están bloqueados durante una operación del servidor.",
   serverRestarting: "Servidor reiniciando",
+  operationDrawerHelp: "Esta operación continúa en segundo plano mientras navegas.",
   opReconcile: "Reconciliar",
     opReconcileHelp: "Volver a observar el servidor y actualizar el resultado de esta operación.",
     opObservedState: "Estado observado del servidor",

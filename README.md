@@ -57,6 +57,10 @@ reconciled read-only against Bedrock's effective `server.properties` before the
 panel refreshes its settings: requested values are never shown as applied until
 they are observed. See [Operation lifecycle](docs/operation-lifecycle.md).
 
+An operation opens in a global drawer. It can be dismissed without interrupting
+the server work; a persistent indicator keeps its live status and reopens the
+same drawer from any area of the application.
+
 The Host Agent probes Bedrock immediately after restart and then uses capped
 exponential backoff (1–10 seconds) while waiting for health. The configured
 operation deadline remains authoritative; status updates remain independent of

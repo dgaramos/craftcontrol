@@ -354,6 +354,10 @@ dialog.drawer { position: fixed; inset: auto 0 0; width: min(100%, 680px); max-h
 .remove-change .cc-icon { width: 27px; height: 27px; margin: 0; }
 .drawer-actions { position: sticky; bottom: -1px; display: grid; grid-template-columns: 1fr 1.5fr; gap: 7px; margin-top: 14px; padding-top: 10px; background: var(--stone); }
 .drawer-actions button:disabled { cursor: wait; filter: grayscale(1); opacity: .6; }
+.operation-indicator { position: fixed; z-index: 25; right: max(14px, env(safe-area-inset-right)); bottom: max(82px, calc(70px + env(safe-area-inset-bottom))); display: flex; align-items: center; gap: .5rem; max-width: min(300px, calc(100vw - 28px)); min-height: 44px; padding: .55rem .75rem; color: #d8f7ff; background: #102631; border: 2px solid #82c8ed; box-shadow: 4px 5px 0 #000; font-size: .74rem; font-weight: 900; }
+.operation-indicator .cc-icon { width: 1.1rem; height: 1.1rem; flex: 0 0 auto; }
+.operation-indicator.op-indicator-terminal { color: #f9dfa0; border-color: #f4c95d; }
+.operation-drawer .operation-progress-card { margin-bottom: 0; }
 
 #toast { position: fixed; z-index: 30; left: 50%; bottom: 104px; width: max-content; max-width: calc(100vw - 26px); padding: 12px 16px; color: #10200e; font-weight: 900; background: #dff7d1; border: 3px solid #0a1008; border-radius: 0; box-shadow: 4px 5px 0 #000; opacity: 0; pointer-events: none; transform: translate(-50%, 16px); transition: .18s; }
 #toast.show { opacity: 1; transform: translate(-50%, 0); }
@@ -472,6 +476,7 @@ dialog.drawer { position: fixed; inset: auto 0 0; width: min(100%, 680px); max-h
   .telemetry-pack-actions { display: grid; grid-template-columns: 1fr; }
   .telemetry-pack-actions button { width: 100%; }
   .op-stage { width: 100%; }
+  .operation-indicator { bottom: max(76px, calc(64px + env(safe-area-inset-bottom))); }
 }
 
 @media (min-width: 760px) {

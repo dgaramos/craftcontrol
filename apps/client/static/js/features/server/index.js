@@ -1,4 +1,4 @@
-import { createOperationFeature } from "./operation.js";
+import { createOperationFeature } from "./operation.js?v=8";
 
 export function createServerFeature({ state, content, t, api, $, escapeHtml, uiIcon, formatDate, toast, getSettingsFeature }) {
 function telemetryPackMarkup() {
@@ -142,22 +142,30 @@ const operationFeature = createOperationFeature({ api, t, formatDate, uiIcon, to
 
 function refreshOperationPanel() {
   const container = $("#operation-progress-container");
-  if (!container) return;
+  const indicator = $("#operation-indicator");
+  const indicatorLabel = $("#operation-indicator-label");
   const op = operationFeature.getOperation();
+  if (indicator) {
+    indicator.hidden = !op;
+    indicator.classList?.toggle("op-indicator-terminal", !!op && !["pending", "running"].includes(op.state));
+  }
+  if (indicatorLabel) indicatorLabel.textContent = op ? (t(`opState_${op.state}`) || op.state) : "";
+  if (!container) return;
   const frag = op ? operationFeature.renderOperation(op) : null;
   container.replaceChildren(...(frag ? [frag] : []));
   operationFeature.bindRecoveryActions(container);
 }
 
 operationFeature.setUpdateCallback((op) => {
+  const wasActive = state.operationActive;
   state.operationActive = !!(op && (op.state === "pending" || op.state === "running"));
   refreshOperationPanel();
+  if (state.operationActive && !wasActive) openOperationDrawer();
 });
 
-function operationProgressMarkup() {
-  // The container starts empty; refreshOperationPanel populates it after
-  // initializeOperationProgress resolves.
-  return `<div id="operation-progress-container"></div>`;
+function openOperationDrawer() {
+  const drawer = $("#operation-drawer");
+  if (drawer && !drawer.open) drawer.showModal();
 }
 
 async function initializeOperationProgress() {
@@ -165,12 +173,12 @@ async function initializeOperationProgress() {
   const op = operationFeature.getOperation();
   state.operationActive = !!(op && (op.state === "pending" || op.state === "running"));
   refreshOperationPanel();
+  if (state.operationActive) openOperationDrawer();
 }
 
   const renderServer = () => {
-    getSettingsFeature().renderSettingsGroups(["Packs", "Rede", "Avançado"], operationProgressMarkup() + telemetryPackMarkup());
+    getSettingsFeature().renderSettingsGroups(["Packs", "Rede", "Avançado"], telemetryPackMarkup());
     loadTelemetryPack();
-    initializeOperationProgress();
   };
-  return { renderServer, renderReleaseTags, loadFrontendVersion, initializeOperationProgress, loadDiagnostics };
+  return { renderServer, renderReleaseTags, loadFrontendVersion, initializeOperationProgress, loadDiagnostics, openOperationDrawer, refreshOperationPanel };
 }

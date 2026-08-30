@@ -11,7 +11,7 @@ import { createAnalyticsFeature } from "./features/analytics/index.js?v=8";
 import { createPlayersFeature } from "./features/players/index.js?v=7";
 import { createWorldFeature } from "./features/world/index.js?v=7";
 import { createRulesFeature } from "./features/rules/index.js?v=7";
-import { createServerFeature } from "./features/server/index.js?v=7";
+import { createServerFeature } from "./features/server/index.js?v=8";
 import { startAuthenticatedApplication } from "./features/auth/bootstrap.js?v=7";
 import { createSettingsFeature } from "./features/settings/index.js?v=7";
 import { createI18n } from "./i18n/index.js?v=8";
@@ -283,6 +283,8 @@ export function startApplication() {
   };
 
   $("#close-changes").onclick = () => $("#changes-drawer").close();
+  $("#operation-indicator").onclick = () => getServerFeature().openOperationDrawer();
+  $("#close-operation-drawer").onclick = () => $("#operation-drawer").close();
   $("#discard-all").onclick = () => {
     state.changes = {};
     $("#changes-drawer").close();

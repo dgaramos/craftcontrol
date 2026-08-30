@@ -1,6 +1,7 @@
 """Tests for the production composition root (composition.py)."""
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -51,6 +52,13 @@ def test_compose_manager_uses_bootstrap_operator(tmp_path: Path) -> None:
     settings = _minimal_settings(tmp_path, bootstrap_operator="Steve")
     manager = compose_manager(settings, **_fake_deps())
     assert manager.bootstrap_operator == "Steve"
+
+
+def test_compose_manager_passes_health_timeout_to_operation_service(tmp_path: Path) -> None:
+    settings = replace(_minimal_settings(tmp_path), host_agent_health_timeout_seconds=420)
+    manager = compose_manager(settings, **_fake_deps())
+    assert manager.operation_service is not None
+    assert manager.operation_service._health_timeout == 420
 
 
 def test_compose_manager_preserves_falsy_injected_runtime(tmp_path: Path) -> None:

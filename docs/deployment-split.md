@@ -107,6 +107,7 @@ of which adapter is selected.
 |---|---|---|
 | `HOST_AGENT_URL` | backend environment | Base URL the backend uses to reach the agent, e.g. `http://host-gateway:7890`. |
 | `HOST_AGENT_TOKEN_FILE` | backend environment | Path to the shared-secret file inside the container, e.g. `/run/host-agent-token`. |
+| `HOST_AGENT_HEALTH_TIMEOUT_SECONDS` | backend environment | Health-wait deadline sent to the agent for each lifecycle operation. Default `300`; accepted range: 10–600. |
 
 The token file is mounted from the host via a bind mount or Docker secret. Its
 value must match the secret file read by the agent on the host side. See

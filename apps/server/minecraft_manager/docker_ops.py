@@ -37,7 +37,7 @@ class DockerOperations:
         *,
         operation_id: str | None = None,
         intended_state: dict | None = None,
-        health_timeout_seconds: int = 120,
+        health_timeout_seconds: int = 300,
         restart_timeout_seconds: int = 60,
     ) -> None:
         if action == "start":

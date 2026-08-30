@@ -247,7 +247,7 @@ class HostAgentContainerOperations:
         *,
         operation_id: str | None = None,
         intended_state: dict[str, Any] | None = None,
-        health_timeout_seconds: int = 120,
+        health_timeout_seconds: int = 300,
         restart_timeout_seconds: int = 60,
     ) -> None:
         """Execute a server operation via the host agent.

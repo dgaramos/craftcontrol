@@ -225,11 +225,12 @@ layout, configuration, cutover, access, post-install checks, and troubleshooting
 | `RECONCILE_SECONDS` | `900` | Full safety-reconciliation interval |
 | `AUTH_MODE` | `local` | Built-in authentication; `disabled` is recovery compatibility only |
 | `AUTH_COOKIE_SECURE` | `true` | Restrict session cookies to HTTPS |
+| `HOST_AGENT_HEALTH_TIMEOUT_SECONDS` | `300` | Bedrock health-wait deadline for a lifecycle operation; valid range: 10–600 |
 | `TZ` | `America/Sao_Paulo` | Runtime and analytics timezone |
 
 The running frontend and backend versions come from `versions.env`. Old service names, database filenames, package paths, and environment variables remain supported as compatibility overlays; persistent paths are not renamed destructively.
 
-The host agent is optional. When it is enabled, configure `HOST_AGENT_URL` and `HOST_AGENT_TOKEN_FILE` for the backend; see [Host agent](docs/host-agent.md) for the shared-secret, systemd, and path configuration.
+The host agent is optional. When it is enabled, configure `HOST_AGENT_URL` and `HOST_AGENT_TOKEN_FILE` for the backend. Lifecycle operations wait up to 300 seconds for Bedrock by default; `HOST_AGENT_HEALTH_TIMEOUT_SECONDS` can set a reviewed 10–600 second deadline. See [Host agent](docs/host-agent.md) for the shared-secret, systemd, path, and timeout configuration.
 
 ## Authentication and access
 

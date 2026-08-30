@@ -373,6 +373,8 @@ services:
     environment:
       HOST_AGENT_URL: "http://host-gateway:7890"
       HOST_AGENT_TOKEN_FILE: "/run/host-agent-token"
+      # Optional: defaults to 300 seconds; the agent accepts 10–600.
+      HOST_AGENT_HEALTH_TIMEOUT_SECONDS: "300"
     extra_hosts:
       - "host-gateway:host-gateway"
     volumes:
@@ -395,6 +397,21 @@ During `HEALTH_WAIT`, the agent probes Bedrock immediately, then waits 1s, 2s,
 backoff reduces unnecessary UDP traffic during long world loads; it does not
 slow the operation status shown in CraftControl or extend the configured health
 deadline.
+
+### Lifecycle health deadline
+
+The backend sends `HOST_AGENT_HEALTH_TIMEOUT_SECONDS` with every lifecycle
+request. It defaults to **300 seconds** and is constrained to **10–600
+seconds**, the same range enforced by the host agent. Set it only in the
+CraftControl Server environment; no agent restart is needed when changing the
+backend value, but the backend container must be recreated to load it.
+
+Bedrock can legitimately remain in `HEALTH_WAIT` while it opens a large world,
+loads packs, or recovers after a clean restart. That stage is observable and
+does not block read-only server data in CraftControl. Do not retry an operation
+solely because it is still in `HEALTH_WAIT`; retrying can create competing
+lifecycle requests. Treat a timeout as actionable only after checking the
+operation evidence and the host-agent journal.
 
 ---
 
@@ -460,4 +477,5 @@ All three checks must pass before considering the deployment healthy.
 | `no such service` during restart | `HOST_AGENT_COMPOSE_SERVICE` does not match `docker compose config --services` — correct Step 6 and restart only the agent |
 | Bedrock reports `server.properties: Permission denied` | Restore ownership to the Bedrock runtime user; do not delete or replace the file, then let the container restart policy recover it |
 | Docker warns that its config is unreadable | Create the agent-owned `DOCKER_CONFIG` directory from Step 7, then restart only the agent |
+| `health_probe_timeout` after a slow restart | The operation is terminal (`done` with outcome `error`); check its evidence and the agent journal first. Recreating the backend only loads a new `HOST_AGENT_HEALTH_TIMEOUT_SECONDS` value — it does not resume the failed operation. If the observed server state still requires it, start a new operation after choosing a value up to 600 seconds. |
 | Agent does not restart after reboot | `systemctl is-enabled craftcontrol-host-agent` — run `systemctl enable` if disabled |

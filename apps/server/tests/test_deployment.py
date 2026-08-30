@@ -251,6 +251,13 @@ def test_deploy_command_anchors_compose_and_protects_state() -> None:
     assert "| grep -q" not in script
 
 
+def test_deploy_mount_guards_use_a_portable_separator() -> None:
+    for script_name in ("deploy-craftcontrol", "deploy-craftcontrol-backend"):
+        script = (ROOT / "bin" / script_name).read_text()
+        assert "awk -F ' [|] '" in script
+        assert "awk -F ' \\| '" not in script
+
+
 def test_reviewer_publishers_support_thread_replies_without_creating_a_review() -> None:
     publisher = (ROOT / ".github" / "scripts" / "publish-review.sh").read_text()
     for name, reviewer in (

@@ -581,6 +581,15 @@ class TestGamemodeField:
         assert body.get("error") == "bad_request"
         assert "gamemode" in body.get("message", "").lower()
 
+    def test_force_gamemode_boolean_is_accepted(self) -> None:
+        status, _ = self._execute({"force_gamemode": True})
+        assert status == 202
+
+    def test_force_gamemode_non_boolean_is_rejected(self) -> None:
+        status, body = self._execute({"force_gamemode": "true"})
+        assert status == 400
+        assert "boolean" in body.get("message", "").lower()
+
     def test_uppercase_gamemode_key_rejected_as_unrecognised(self) -> None:
         """The host agent contract uses lowercase keys; GAMEMODE must be rejected."""
         status, body = self._execute({"GAMEMODE": "survival"})

@@ -25,6 +25,7 @@ Covers:
 """
 from __future__ import annotations
 
+import ast
 import io
 import json
 import tempfile
@@ -695,3 +696,39 @@ class TestIntendedStateKeyTranslation:
         from minecraft_manager.host_agent import _translate_intended_state
         result = _translate_intended_state({"GAMEMODE": "survival", "gamemode": "survival"})
         assert result == {"gamemode": "survival"}
+
+    def test_every_restart_required_setting_has_a_host_agent_field(self) -> None:
+        """Every UI setting must translate to the host agent's canonical contract."""
+        from minecraft_manager.host_agent import _translate_intended_state
+        from minecraft_manager.schema import PROPERTY_NAMES, SETTINGS
+
+        translated = _translate_intended_state({key: "value" for key in SETTINGS})
+        agent_operations = Path(__file__).parents[3] / "services" / "host-agent" / "operations.py"
+        module = ast.parse(agent_operations.read_text())
+        values = {}
+        for node in module.body:
+            if isinstance(node, ast.Assign):
+                targets = node.targets
+            elif isinstance(node, ast.AnnAssign):
+                targets = [node.target]
+            else:
+                continue
+            for target in targets:
+                if isinstance(target, ast.Name) and target.id in {"_INTENDED_STATE_FIELDS", "_FIELD_MAP"}:
+                    value = node.value
+                    if (
+                        isinstance(value, ast.Call)
+                        and isinstance(value.func, ast.Name)
+                        and value.func.id == "frozenset"
+                    ):
+                        value = value.args[0]
+                    values[target.id] = ast.literal_eval(value)
+        agent_fields = values["_INTENDED_STATE_FIELDS"]
+        agent_field_map = values["_FIELD_MAP"]
+
+        assert set(translated) <= agent_fields
+        assert set(translated) <= set(agent_field_map)
+        for schema_field, property_name in PROPERTY_NAMES.items():
+            agent_field = property_name.replace("-", "_")
+            assert _translate_intended_state({schema_field: "value"}) == {agent_field: "value"}
+            assert agent_field_map[agent_field] == property_name

@@ -256,7 +256,18 @@ export function createOperationFeature({ api, t, formatDate, uiIcon, toast }) {
       div.appendChild(p);
     }
 
-    const observation = Object.entries(op.observation || {});
+    const reconciliation = op.observation?.reconciliation_result;
+    if (reconciliation?.state) {
+      const status = document.createElement("p");
+      status.className = `op-reconciliation op-reconciliation-${reconciliation.state}`;
+      const label = document.createElement("strong");
+      label.textContent = t("opObservedState");
+      status.appendChild(label);
+      status.appendChild(document.createTextNode(`: ${t(`opReconciliation_${reconciliation.state}`) || reconciliation.state}`));
+      div.appendChild(status);
+    }
+
+    const observation = Object.entries(op.observation || {}).filter(([key]) => key !== "reconciliation_result");
     if (observation.length) {
       const dl = document.createElement("dl");
       dl.className = "op-evidence";

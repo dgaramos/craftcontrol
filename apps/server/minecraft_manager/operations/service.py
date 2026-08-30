@@ -11,6 +11,7 @@ import logging
 import sqlite3
 import threading
 import time
+from collections.abc import Callable
 from datetime import datetime, timezone
 from typing import Any
 
@@ -61,6 +62,7 @@ class ServerOperationService:
         thread_factory: ThreadFactory,
         server_id: str = "default",
         health_timeout: int = DEFAULT_HEALTH_TIMEOUT_SECONDS,
+        refresh_observed_settings: Callable[[], None] | None = None,
     ) -> None:
         self._repo = operation_repository
         self._docker = docker
@@ -68,6 +70,7 @@ class ServerOperationService:
         self._configuration = configuration
         self._server_id = server_id
         self._health_timeout = health_timeout
+        self._refresh_observed_settings = refresh_observed_settings
         self._thread_factory = thread_factory
         # Protects the check-then-create sequence on this process.
         self._lock = threading.Lock()
@@ -433,12 +436,57 @@ class ServerOperationService:
         evidence: dict[str, Any] | None = None,
     ) -> None:
         operation.fail_stage(stage, error, evidence)
+        self._reconcile_failed_operation(operation)
         self._repo.save(operation)
         self._publish(operation)
         LOGGER.warning(
             "server_operation failed operation_id=%s stage=%s error=%s",
             operation.operation_id, stage.value, error,
         )
+
+    def _reconcile_failed_operation(self, operation: ServerOperation) -> None:
+        """Attach read-only observed configuration to a failed operation.
+
+        A lifecycle failure must not leave the requested `.env` value looking
+        like an applied Bedrock setting.  This never retries, restarts, or
+        writes Bedrock; it only inspects the running server's properties.
+        """
+        observation = self._observe_container()
+        operation.update_observation(observation)
+        result: dict[str, Any] = {
+            "reconciled_at": _now(),
+            "state": "unknown",
+            "evidence": observation,
+        }
+        if observation.get("online"):
+            try:
+                verified, evidence = self._verify_configuration(operation)
+                operation.update_observation(evidence)
+                if evidence.get("online"):
+                    result = {
+                        "reconciled_at": _now(),
+                        "state": "applied" if verified else "diverged",
+                        "evidence": evidence,
+                    }
+                    if not verified:
+                        # The failed stage remains failed, while the terminal
+                        # state makes the observed mismatch unambiguous to API
+                        # consumers and the UI.
+                        operation.state = OperationState.DIVERGENT
+                else:
+                    result = {"reconciled_at": _now(), "state": "unknown", "evidence": evidence}
+            except Exception as exc:
+                result = {
+                    "reconciled_at": _now(),
+                    "state": "unknown",
+                    "evidence": {"verification_error": str(exc)},
+                }
+        operation.observation["reconciliation_result"] = result
+        if result["state"] != "unknown" and self._refresh_observed_settings is not None:
+            try:
+                self._refresh_observed_settings()
+            except Exception:
+                LOGGER.warning("failed to refresh observed settings after operation failure", exc_info=True)
 
     # ------------------------------------------------------------------
     # Reconciliation helpers (issue #189)

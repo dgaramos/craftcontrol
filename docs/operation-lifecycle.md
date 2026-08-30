@@ -71,6 +71,15 @@ automatically. Corrective action — whether a new operation, a manual restore, 
 an operator intervention — is outside the scope of this contract and must be
 initiated explicitly by the operator.
 
+Before a failed operation is published, CraftControl performs a read-only
+configuration reconciliation when the server is reachable. The requested
+`.env` value is never proof that Bedrock applied it: `server.properties` is
+authoritative for the effective value. Evidence includes expected settings,
+observed settings, differences, and a `reconciliation_result` of `applied`,
+`diverged`, or `unknown`. A divergent result must display the observed value;
+an unknown result must never display the requested value as applied. This check
+never restarts, recreates, or writes to Bedrock.
+
 ---
 
 ## Transitions

@@ -85,7 +85,7 @@ class ReconciliationService:
             _, env_values = self.files.read_env()
             properties = self.files.read_properties()
             settings = {
-                key: env_values.get(key) or properties.get(PROPERTY_NAMES.get(key, ""), "")
+                key: properties.get(PROPERTY_NAMES.get(key, "")) or env_values.get(key, "")
                 for key in SETTINGS
             }
             self.repository.store("settings", settings, "env+server.properties")
@@ -125,6 +125,22 @@ class ReconciliationService:
 
     def refresh_async(self, reason: str = "manual") -> None:
         self._thread_factory(target=self.refresh, args=(reason,), name="state-refresh", daemon=True).start()
+
+    def refresh_settings_from_properties(self, reason: str = "operation-failure") -> None:
+        """Refresh settings from Bedrock's effective configuration without mutation.
+
+        ``.env`` is the requested startup input and can diverge from a running
+        server after a failed lifecycle operation.  ``server.properties`` is
+        therefore authoritative whenever it contains a value.
+        """
+        _, env_values = self.files.read_env()
+        properties = self.files.read_properties()
+        settings = {
+            key: properties.get(PROPERTY_NAMES.get(key, "")) or env_values.get(key, "")
+            for key in SETTINGS
+        }
+        self.repository.store("settings", settings, "server.properties")
+        self.broker.publish("state.changed", reason, {"domains": ["settings"]})
 
     # ------------------------------------------------------------------
     # Targeted gamerule refresh

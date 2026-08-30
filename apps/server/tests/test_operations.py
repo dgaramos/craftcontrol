@@ -93,6 +93,7 @@ def make_service(
     configuration: MagicMock | None = None,
     health_timeout: int = 1,
     thread_factory=threading.Thread,
+    refresh_observed_settings=None,
 ) -> ServerOperationService:
     if docker is None:
         docker = MagicMock()
@@ -111,6 +112,7 @@ def make_service(
         thread_factory=thread_factory,
         server_id="test-server",
         health_timeout=health_timeout,
+        refresh_observed_settings=refresh_observed_settings,
     )
 
 
@@ -614,6 +616,54 @@ class TestServerOperationService:
         refreshed = service.get_operation(op.operation_id)
         assert refreshed is not None
         assert refreshed.state == OperationState.FAILED
+
+    def test_failed_operation_records_divergent_observed_configuration(self, tmp_path: Path):
+        docker = MagicMock()
+        docker.status.return_value = {"state": "running", "online": True}
+        docker.execute.side_effect = RuntimeError("restart failed")
+        configuration = MagicMock()
+        configuration.read_properties.return_value = {"gamemode": "survival"}
+        refresh_observed_settings = MagicMock()
+        service = make_service(
+            tmp_path,
+            docker=docker,
+            configuration=configuration,
+            thread_factory=InlineThread,
+            refresh_observed_settings=refresh_observed_settings,
+        )
+
+        op = service.apply_restart_required({"GAMEMODE": "creative"}, lambda: None)
+
+        refreshed = service.get_operation(op.operation_id)
+        assert refreshed is not None
+        assert refreshed.state == OperationState.DIVERGENT
+        result = refreshed.observation["reconciliation_result"]
+        assert result["state"] == "diverged"
+        assert result["evidence"]["observed_settings"] == {"gamemode": "survival"}
+        assert result["evidence"]["differences"] == [
+            {"property": "gamemode", "expected": "creative", "observed": "survival"}
+        ]
+        refresh_observed_settings.assert_called_once_with()
+
+    def test_failed_operation_marks_observation_unknown_when_server_is_offline(self, tmp_path: Path):
+        docker = MagicMock()
+        docker.status.return_value = {"state": "stopped", "online": False}
+        docker.execute.side_effect = RuntimeError("restart failed")
+        refresh_observed_settings = MagicMock()
+        service = make_service(
+            tmp_path,
+            docker=docker,
+            thread_factory=InlineThread,
+            refresh_observed_settings=refresh_observed_settings,
+        )
+
+        op = service.apply_restart_required({"GAMEMODE": "creative"}, lambda: None)
+
+        refreshed = service.get_operation(op.operation_id)
+        assert refreshed is not None
+        assert refreshed.state == OperationState.FAILED
+        assert refreshed.observation["reconciliation_result"]["state"] == "unknown"
+        refresh_observed_settings.assert_not_called()
 
     def test_operation_fails_when_health_wait_times_out(self, tmp_path: Path):
         docker = MagicMock()

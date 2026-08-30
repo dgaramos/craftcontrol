@@ -37,6 +37,16 @@ def test_gamerule_worker_queries_and_persists_result(tmp_path: Path) -> None:
     assert svc.state()["gamerules"]["keepinventory"] == "true"
 
 
+def test_refresh_settings_from_properties_prefers_effective_bedrock_values(tmp_path: Path) -> None:
+    svc, reconciliation = _reconciliation(tmp_path)
+    (tmp_path / ".env").write_text("GAMEMODE=creative\n")
+    (tmp_path / "server.properties").write_text("gamemode=survival\n")
+
+    reconciliation.refresh_settings_from_properties()
+
+    assert svc.state()["settings"]["GAMEMODE"] == "survival"
+
+
 def test_gamerule_worker_exits_when_no_pending_rules_remain(tmp_path: Path) -> None:
     bedrock = FakeBedrock()
     bedrock.gamerule_result = {}

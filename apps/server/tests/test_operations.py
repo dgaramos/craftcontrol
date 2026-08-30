@@ -1031,7 +1031,8 @@ class TestRecoveryAndReconciliation:
         op = service.apply_restart_required({"MAX_PLAYERS": "20"}, lambda: None)
         wait_for_terminal(service, op.operation_id)
         original = service.get_operation(op.operation_id)
-        assert original is not None and original.state == OperationState.DIVERGENT
+        assert original is not None and original.state == OperationState.FAILED
+        assert original.observation["reconciliation_result"]["state"] == "applied"
 
         docker.execute.side_effect = None
         docker.status.return_value = {"state": "running", "online": True}
@@ -1042,7 +1043,7 @@ class TestRecoveryAndReconciliation:
         # Original must be untouched
         still_original = service.get_operation(op.operation_id)
         assert still_original is not None
-        assert still_original.state == OperationState.DIVERGENT
+        assert still_original.state == OperationState.FAILED
 
     def test_retry_raises_for_unknown_operation(self, tmp_path: Path):
         service = make_service(tmp_path)

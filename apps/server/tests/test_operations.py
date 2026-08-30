@@ -1042,7 +1042,7 @@ class TestRecoveryAndReconciliation:
         # Original must be untouched
         still_original = service.get_operation(op.operation_id)
         assert still_original is not None
-        assert still_original.state == OperationState.FAILED
+        assert still_original.state == OperationState.DIVERGENT
 
     def test_retry_raises_for_unknown_operation(self, tmp_path: Path):
         service = make_service(tmp_path)

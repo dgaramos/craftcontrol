@@ -14,6 +14,12 @@
 const STAGE_ORDER = ["review", "backup_verify", "prepare", "restart", "health_wait", "verify", "confirm"];
 const STORAGE_KEY = "craftcontrol-operation-id";
 
+function operationDate(value, formatDate) {
+  if (!value) return "";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "" : formatDate(date.getTime());
+}
+
 export function createOperationFeature({ api, t, formatDate, uiIcon, toast }) {
   let currentOperation = null;
   let eventSource = null;
@@ -106,11 +112,7 @@ export function createOperationFeature({ api, t, formatDate, uiIcon, toast }) {
     stages.forEach((record) => {
       const cls = stageClass(record);
       const label = stageLabel(record.stage);
-      const timestamp = record.completed_at
-        ? formatDate(record.completed_at * 1000)
-        : record.started_at
-          ? formatDate(record.started_at * 1000)
-          : "";
+      const timestamp = operationDate(record.completed_at || record.started_at, formatDate);
       const title = timestamp ? `${label} · ${timestamp}` : label;
 
       const div = document.createElement("div");
@@ -174,7 +176,7 @@ export function createOperationFeature({ api, t, formatDate, uiIcon, toast }) {
     if (!active) return null;
 
     const label = stageLabel(active.stage);
-    const started = active.started_at ? formatDate(active.started_at * 1000) : null;
+    const started = operationDate(active.started_at, formatDate) || null;
 
     const div = document.createElement("div");
     div.className = "op-active-stage";
@@ -237,7 +239,7 @@ export function createOperationFeature({ api, t, formatDate, uiIcon, toast }) {
 
     if (op.completed_at) {
       const small = document.createElement("small");
-      small.textContent = formatDate(op.completed_at * 1000);
+      small.textContent = operationDate(op.completed_at, formatDate);
       div.appendChild(small);
     }
 

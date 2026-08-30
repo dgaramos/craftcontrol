@@ -18,6 +18,18 @@ from enum import Enum
 from typing import Any
 
 
+def _timestamp(value: float | int | str | None) -> str | None:
+    """Return an API timestamp as an ISO 8601 UTC string, preserving null."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value
+    seconds = float(value)
+    if seconds > 10_000_000_000:
+        seconds /= 1000
+    return datetime.fromtimestamp(seconds, timezone.utc).isoformat().replace("+00:00", "Z")
+
+
 # ---------------------------------------------------------------------------
 # States and stages
 # ---------------------------------------------------------------------------
@@ -97,8 +109,8 @@ class StageRecord:
         return {
             "stage": self.stage.value,
             "result": self.result.value,
-            "started_at": self.started_at,
-            "completed_at": self.completed_at,
+            "started_at": _timestamp(self.started_at),
+            "completed_at": _timestamp(self.completed_at),
             "evidence": self.evidence,
             "error": self.error,
         }
@@ -261,9 +273,9 @@ class ServerOperation:
             "requested_changes": self.requested_changes,
             "state": self.state.value,
             "stages": [s.as_dict() for s in self.stages],
-            "created_at": self.created_at,
-            "updated_at": self.updated_at,
-            "completed_at": self.completed_at,
+            "created_at": _timestamp(self.created_at),
+            "updated_at": _timestamp(self.updated_at),
+            "completed_at": _timestamp(self.completed_at),
             "terminal_error": self.terminal_error,
             "observation": self.observation,
             "correlation_id": self.correlation_id,

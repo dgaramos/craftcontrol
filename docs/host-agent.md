@@ -207,7 +207,84 @@ sudo systemctl restart craftcontrol-host-agent
 
 ---
 
-## Step 7 — Configure the backend
+## Step 7 — Grant runtime access to the Bedrock project
+
+The agent needs only three kinds of access to run a lifecycle operation:
+
+- traverse the Bedrock project directory and read its Compose `.env` file;
+- write the configured Bedrock data directory during `PREPARATION`;
+- use a private Docker CLI configuration directory.
+
+Do not change ownership of the Bedrock project or make it world-writable.
+Keep the project owned by its existing operator and grant the agent narrowly
+scoped ACLs instead. Substitute the paths and service account for your host:
+
+```bash
+BEDROCK_ROOT=/srv/minecraft-bedrock
+BEDROCK_DATA="$BEDROCK_ROOT/data"
+AGENT_USER=craftcontrol-agent
+
+# The agent can traverse the project, read Compose variables, and modify only
+# the Bedrock data directory.
+sudo setfacl -m "u:$AGENT_USER:--x" "$BEDROCK_ROOT"
+sudo setfacl -m "u:$AGENT_USER:r--" "$BEDROCK_ROOT/.env"
+sudo setfacl -R -m "u:$AGENT_USER:rwX" "$BEDROCK_DATA"
+sudo find "$BEDROCK_DATA" -type d \
+  -exec setfacl -m "d:u:$AGENT_USER:rwX" {} +
+```
+
+The default ACL applies to new files and directories created beneath `data`.
+It does not apply to a replacement `.env` file. Reapply the `.env` ACL after
+recreating that file, and run the verification commands below before retrying
+an operation. Issue #371 tracks an idempotent installer that performs these
+checks and repairs automatically.
+
+The supplied unit uses `ProtectSystem=strict`. Add a drop-in that grants the
+same narrow paths to systemd and provides a writable Docker CLI directory:
+
+```bash
+sudo install -d -o craftcontrol-agent -g craftcontrol-agent -m 0700 \
+  /var/lib/craftcontrol/docker
+sudo mkdir -p /etc/systemd/system/craftcontrol-host-agent.service.d
+cat <<EOF | sudo tee \
+  /etc/systemd/system/craftcontrol-host-agent.service.d/runtime-paths.conf
+[Service]
+ReadWritePaths=
+ReadWritePaths=$BEDROCK_DATA /var/lib/craftcontrol
+ReadOnlyPaths=
+ReadOnlyPaths=/etc/craftcontrol $BEDROCK_ROOT
+Environment=DOCKER_CONFIG=/var/lib/craftcontrol/docker
+EOF
+sudo systemctl daemon-reload
+sudo systemctl restart craftcontrol-host-agent
+```
+
+Resetting `ReadWritePaths` and `ReadOnlyPaths` in the drop-in is intentional:
+it replaces the unit defaults with the explicitly reviewed paths above. Do not
+grant the whole storage mount or the Docker socket path as writable access.
+
+Verify the agent account and its Compose invocation without restarting the
+Bedrock container:
+
+```bash
+sudo -u "$AGENT_USER" test -r "$BEDROCK_ROOT/.env"
+sudo -u "$AGENT_USER" test -w "$BEDROCK_DATA"
+sudo -u "$AGENT_USER" env DOCKER_CONFIG=/var/lib/craftcontrol/docker \
+  docker compose --project-name minecraft-bedrock \
+  --file "$BEDROCK_ROOT/docker-compose.yml" config --quiet
+sudo systemctl is-active --quiet craftcontrol-host-agent
+```
+
+If a lifecycle operation reports `preparation_write_failed`, restore the data
+directory ACL. If it reports that Compose cannot open `.env`, restore that
+file's read ACL and check the systemd drop-in. Restarting only the host agent
+is safe; do not restart or recreate the Bedrock container as part of this
+recovery. Inspect `journalctl -u craftcontrol-host-agent` and rerun the
+non-mutating verification commands before retrying from CraftControl.
+
+---
+
+## Step 8 — Configure the backend
 
 In `docker-compose.split.yml`, set the host-agent URL and token file path, and
 remove the Docker socket mount:
@@ -292,4 +369,7 @@ All three checks must pass before considering the deployment healthy.
 | `401 Unauthorized` | Token mismatch — verify both sides read the same file |
 | `Cannot read secret file` in logs | File permissions — must be readable by `craftcontrol-agent` |
 | `docker compose restart` fails | `craftcontrol-agent` may not be in the `docker` group — run `groups craftcontrol-agent` |
+| `preparation_write_failed` | The data directory ACL or systemd `ReadWritePaths` entry is missing — repeat Step 7 |
+| Compose cannot open `.env` | The agent needs the file read ACL and the project root in systemd `ReadOnlyPaths` — repeat Step 7 |
+| Docker warns that its config is unreadable | Create the agent-owned `DOCKER_CONFIG` directory from Step 7, then restart only the agent |
 | Agent does not restart after reboot | `systemctl is-enabled craftcontrol-host-agent` — run `systemctl enable` if disabled |

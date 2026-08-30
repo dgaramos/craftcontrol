@@ -52,6 +52,11 @@ The six primary areas are task-oriented:
 
 Navigation is encoded in the URL, so refreshing a browser preserves the active area. Persistent setting changes enter a review drawer; lightning-marked gamerules apply immediately.
 
+Restart-required changes are tracked as server operations. A failed operation is
+reconciled read-only against Bedrock's effective `server.properties` before the
+panel refreshes its settings: requested values are never shown as applied until
+they are observed. See [Operation lifecycle](docs/operation-lifecycle.md).
+
 ## Architecture
 
 CraftControl is a monorepo with two independently deployable containerized application services, not a set of microservices. The backend remains a modular monolith; an optional systemd host agent is a separate host-level execution boundary.

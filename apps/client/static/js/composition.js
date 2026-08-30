@@ -301,12 +301,9 @@ export function startApplication() {
       $("#apply-changes").disabled = true;
       await api("/api/config", { method: "PUT", body: JSON.stringify(state.changes) });
       toast(t("saved"));
-      const appliedChanges = state.changes;
       state.changes = {};
-      state.config = { ...state.config, ...appliedChanges };
       $("#changes-drawer").close();
       getSettingsFeature().updateSaveLabel();
-      toast(t("serverUpdated"));
     } catch (error) { toast(error.message, true); }
     finally { $("#apply-changes").disabled = false; }
   };

@@ -135,6 +135,21 @@ describe("createOperationFeature — renderOperation", () => {
     expect(dts).toContain("observed value");
   });
 
+  test("renders the reconciled observed state instead of raw reconciliation data", () => {
+    const feature = createOperationFeature(makeDeps({
+      t: (key) => ({
+        opObservedState: "Observed server state",
+        opReconciliation_diverged: "differs from the requested configuration",
+      })[key] || key,
+    }));
+    const el = mount(feature, makeOperation({
+      state: "divergent",
+      observation: { reconciliation_result: { state: "diverged" } },
+    }));
+    expect(el.querySelector(".op-reconciliation").textContent).toContain("differs from the requested configuration");
+    expect(el.querySelector(".op-terminal").textContent).not.toContain("[object Object]");
+  });
+
   test("renders skipped stages", () => {
     const feature = createOperationFeature(makeDeps());
     const op = makeOperation({

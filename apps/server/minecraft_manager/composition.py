@@ -85,6 +85,7 @@ def compose_manager(
         configuration=files,
         thread_factory=threading.Thread,
         server_id=settings.container,
+        refresh_observed_settings=reconciliation.refresh_settings_from_properties,
     )
     manager = ManagerService(
         repository=repository,

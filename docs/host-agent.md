@@ -192,6 +192,18 @@ HOST_AGENT_COMPOSE_SERVICE=minecraft-bedrock
 HOST_AGENT_BEDROCK_DATA=/opt/minecraft-bedrock
 ```
 
+`HOST_AGENT_COMPOSE_SERVICE` is the Compose **service** name, not the Docker
+container name. Obtain the available names from the configured Compose file
+and set the exact value before enabling lifecycle operations:
+
+```bash
+docker compose --file /opt/craftcontrol/docker-compose.yml config --services
+```
+
+For example, a project may use `minecraft-bedrock` as its service while its
+container has a generated name. The legacy default is `minecraft-server`; do
+not rely on it when your Compose file declares a different service.
+
 If you override `HOST_AGENT_BEDROCK_DATA`, add a matching `ReadWritePaths=`
 line in a systemd drop-in so `ProtectSystem=strict` does not block the write:
 
@@ -248,6 +260,42 @@ It does not apply to a replacement `.env` file. Reapply the `.env` ACL after
 recreating that file, and run the verification commands below before retrying
 an operation. Issue #371 tracks an idempotent installer that performs these
 checks and repairs automatically.
+
+CraftControl Server writes `.env` atomically when a setting changes. An atomic
+replacement creates a new file and its restrictive creation mode can mask a
+directory default ACL. Until the installer is available, use a narrow systemd
+path unit to restore only the agent's read access after each replacement:
+
+```bash
+sudo tee /etc/systemd/system/craftcontrol-host-agent-env-acl.service >/dev/null <<EOF
+[Unit]
+Description=Restore Host Agent read access to the Bedrock Compose environment
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/setfacl -m u:$AGENT_USER:r-- $BEDROCK_ROOT/.env
+EOF
+
+sudo tee /etc/systemd/system/craftcontrol-host-agent-env-acl.path >/dev/null <<EOF
+[Unit]
+Description=Watch the Bedrock Compose environment for replacements
+
+[Path]
+PathChanged=$BEDROCK_ROOT/.env
+Unit=craftcontrol-host-agent-env-acl.service
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now craftcontrol-host-agent-env-acl.path
+sudo systemctl start craftcontrol-host-agent-env-acl.service
+```
+
+The watcher does not restart the Bedrock container and never grants write
+access to `.env`. Confirm it is active with
+`systemctl is-active craftcontrol-host-agent-env-acl.path`.
 
 The supplied unit uses `ProtectSystem=strict`. Add a drop-in that grants the
 same narrow paths to systemd and provides a writable Docker CLI directory:
@@ -401,5 +449,7 @@ All three checks must pass before considering the deployment healthy.
 | `docker compose restart` fails | `craftcontrol-agent` may not be in the `docker` group — run `groups craftcontrol-agent` |
 | `preparation_write_failed` | The data directory ACL or systemd `ReadWritePaths` entry is missing — repeat Step 7 |
 | Compose cannot open `.env` | The agent needs the file read ACL and the project root in systemd `ReadOnlyPaths` — repeat Step 7 |
+| `no such service` during restart | `HOST_AGENT_COMPOSE_SERVICE` does not match `docker compose config --services` — correct Step 6 and restart only the agent |
+| Bedrock reports `server.properties: Permission denied` | Restore ownership to the Bedrock runtime user; do not delete or replace the file, then let the container restart policy recover it |
 | Docker warns that its config is unreadable | Create the agent-owned `DOCKER_CONFIG` directory from Step 7, then restart only the agent |
 | Agent does not restart after reboot | `systemctl is-enabled craftcontrol-host-agent` — run `systemctl enable` if disabled |

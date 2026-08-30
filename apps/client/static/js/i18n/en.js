@@ -97,6 +97,7 @@ export const en = {
     opStage_confirm: "Confirm",
     operationLocked: "Changes are locked while a server operation is in progress.",
     serverRestarting: "Server restarting",
+    operationDrawerHelp: "This operation keeps running while you navigate.",
     opReconcile: "Reconcile",
     opReconcileHelp: "Re-observe the server and update this operation's outcome.",
     opObservedState: "Observed server state",

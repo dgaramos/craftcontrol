@@ -101,9 +101,8 @@ describe("createServerFeature", () => {
     deps.elements["#telemetry-pack-state"] = makeEl({ querySelectorAll: jest.fn(() => [install, disable, rollback]) });
     deps.elements["#release-tags"] = makeEl();
     deps.api = jest.fn()
-      // Initial telemetry pack load and operations/latest.
+      // Initial telemetry pack load.
       .mockResolvedValueOnce({ installed: false, enabled: false, health: "", storage_status: "not-required", capabilities: {}, application: {}, installed_version: "", runtime_version: "", source_version: "1" })
-      .mockResolvedValueOnce({ operation: null })
       // install button click: restart_required; then telemetry reload; then rollback error
       .mockResolvedValueOnce({ restart_required: true })
       .mockResolvedValueOnce({ installed: false, enabled: false, health: "", storage_status: "not-required", capabilities: {}, application: {}, installed_version: "", runtime_version: "", source_version: "1" })
@@ -116,8 +115,9 @@ describe("createServerFeature", () => {
       await new Promise((resolve) => queueMicrotask(resolve));
       expect(deps.elements["#telemetry-pack-state"].innerHTML).toContain("installPack");
       await install.onclick();
-      // confirm returns false — install was skipped; telemetry + operations = 2 initial calls.
-      expect(deps.api).toHaveBeenCalledTimes(2);
+      // confirm returns false — install was skipped; operation initialization is
+      // owned by application bootstrap rather than the Server area.
+      expect(deps.api).toHaveBeenCalledTimes(1);
       await disable.onclick();
       expect(deps.toast).toHaveBeenCalledWith("restartPackNotice");
       await rollback.onclick();
@@ -128,33 +128,24 @@ describe("createServerFeature", () => {
     }
   });
 
-  test("sets state.operationActive true for running/pending operations and false for terminal", async () => {
+  test("sets state.operationActive true for running/pending operations", async () => {
     const deps = makeDeps();
-    deps.elements["#telemetry-pack-state"] = makeEl();
-    deps.elements["#release-tags"] = makeEl();
     deps.elements["#operation-progress-container"] = makeEl();
-    // renderServer fires loadTelemetryPack first, then initializeOperationProgress
-    deps.api = jest.fn()
-      .mockResolvedValueOnce({ installed: false, enabled: false, health: "", capabilities: {}, application: {}, source_version: "1" })
-      .mockResolvedValueOnce({ operation: { operation_id: "op-1", state: "running", stages: [] } });
+    deps.api = jest.fn().mockResolvedValue({ operation: { operation_id: "op-1", state: "running", stages: [] } });
     const feature = createServerFeature(deps);
-    feature.renderServer();
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    await feature.initializeOperationProgress();
     expect(deps.state.operationActive).toBe(true);
   });
 
-  test("sets state.operationActive false when operation is in terminal state", async () => {
+  test("does not reopen a dismissed drawer when the Server area renders", async () => {
     const deps = makeDeps();
     deps.elements["#telemetry-pack-state"] = makeEl();
-    deps.elements["#release-tags"] = makeEl();
-    deps.elements["#operation-progress-container"] = makeEl();
-    deps.api = jest.fn()
-      .mockResolvedValueOnce({ installed: false, enabled: false, health: "", capabilities: {}, application: {}, source_version: "1" })
-      .mockResolvedValueOnce({ operation: { operation_id: "op-1", state: "confirmed", stages: [] } });
+    deps.elements["#operation-drawer"] = makeEl({ open: false });
+    deps.api = jest.fn().mockResolvedValue({ operation: { operation_id: "op-1", state: "confirmed", stages: [] } });
     const feature = createServerFeature(deps);
+    await feature.initializeOperationProgress();
     feature.renderServer();
-    await new Promise((resolve) => setTimeout(resolve, 10));
-    expect(deps.state.operationActive).toBe(false);
+    expect(deps.elements["#operation-drawer"].showModal).not.toHaveBeenCalled();
   });
 
   test("initializeOperationProgress sets operationActive without requiring renderServer", async () => {
@@ -165,6 +156,54 @@ describe("createServerFeature", () => {
     const feature = createServerFeature(deps);
     await feature.initializeOperationProgress();
     expect(deps.state.operationActive).toBe(true);
+    expect(deps.elements["#operation-drawer"].showModal).toHaveBeenCalledTimes(1);
+    expect(deps.elements["#operation-indicator"].hidden).toBe(false);
+    expect(deps.elements["#operation-indicator-label"].textContent).toBe("opState_pending");
+  });
+
+  test("opens the drawer for a new active SSE operation after it was dismissed", async () => {
+    const savedEventSource = global.EventSource;
+    const listeners = {};
+    const eventSource = { addEventListener: jest.fn((type, listener) => { listeners[type] = listener; }), onerror: null };
+    global.EventSource = jest.fn(() => eventSource);
+    localStorage.clear();
+    try {
+      const deps = makeDeps();
+      deps.elements["#operation-progress-container"] = makeEl();
+      deps.elements["#operation-indicator"] = makeEl();
+      deps.elements["#operation-indicator-label"] = makeEl();
+      deps.elements["#operation-drawer"] = makeEl({ open: false });
+      deps.api = jest.fn().mockResolvedValue({ operation: null });
+      const feature = createServerFeature(deps);
+      await feature.initializeOperationProgress();
+
+      listeners.operation({ data: JSON.stringify({ operation_id: "op-4", state: "running", stages: [] }) });
+
+      expect(deps.state.operationActive).toBe(true);
+      expect(deps.elements["#operation-drawer"].showModal).toHaveBeenCalledTimes(1);
+      expect(deps.elements["#operation-indicator"].hidden).toBe(false);
+    } finally {
+      global.EventSource = savedEventSource;
+      localStorage.clear();
+    }
+  });
+
+  test("keeps terminal operation details available from the persistent indicator", async () => {
+    const deps = makeDeps();
+    deps.elements["#operation-progress-container"] = makeEl();
+    deps.elements["#operation-indicator"] = makeEl();
+    deps.elements["#operation-indicator-label"] = makeEl();
+    deps.elements["#operation-drawer"] = makeEl({ open: false });
+    deps.api = jest.fn().mockResolvedValue({ operation: { operation_id: "op-3", state: "failed", stages: [], terminal_error: "restart failed" } });
+
+    const feature = createServerFeature(deps);
+    await feature.initializeOperationProgress();
+
+    expect(deps.state.operationActive).toBe(false);
+    expect(deps.elements["#operation-indicator"].hidden).toBe(false);
+    expect(deps.elements["#operation-indicator-label"].textContent).toBe("opState_failed");
+    feature.openOperationDrawer();
+    expect(deps.elements["#operation-drawer"].showModal).toHaveBeenCalledTimes(1);
   });
 
   test("returns early without DOM targets and accepts only valid frontend releases", async () => {

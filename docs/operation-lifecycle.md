@@ -14,6 +14,14 @@ An **operation** is any change to server configuration or state that requires
 a controlled restart sequence. The contract does not cover backup-only flows or
 gamerule changes that apply at runtime without a restart.
 
+## Operator experience
+
+The browser presents an operation in an application-level drawer, rather than
+inside the Server area. Closing that drawer never cancels, pauses, or hides the
+operation: the SSE subscription continues and a persistent indicator reopens
+the drawer from any page. The drawer remains the single surface for stages,
+evidence, recovery actions, and the latest completed outcome.
+
 ---
 
 ## Correlation identifier

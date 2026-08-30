@@ -5,6 +5,7 @@ import socket
 import struct
 import time
 import uuid
+from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from ports import HealthProbe
@@ -15,7 +16,8 @@ RAKNET_MAGIC = bytes([
     0xFD, 0xFD, 0xFD, 0xFD, 0x12, 0x34, 0x56, 0x78,
 ])
 PROBE_READ_TIMEOUT_SECONDS = 2
-PROBE_INTERVAL_SECONDS = 5
+PROBE_INITIAL_INTERVAL_SECONDS = 1
+PROBE_MAX_INTERVAL_SECONDS = 10
 
 
 def _build_unconnected_ping() -> bytes:
@@ -53,19 +55,42 @@ def _probe_bedrock(host: str, port: int, timeout: float) -> bool:
         return False
 
 
-def _wait_for_health(host: str, port: int, timeout_seconds: int) -> bool:
-    """Poll the Bedrock health probe. Returns True if healthy within timeout."""
-    deadline = time.monotonic() + timeout_seconds
+def _next_probe_delay(previous_delay: float) -> float:
+    """Return the capped exponential delay before the next health probe."""
+    return min(previous_delay * 2, PROBE_MAX_INTERVAL_SECONDS)
+
+
+def _wait_for_health(
+    host: str,
+    port: int,
+    timeout_seconds: int,
+    *,
+    probe: Callable[[str, int, float], bool] | None = None,
+    monotonic: Callable[[], float] | None = None,
+    sleep: Callable[[float], None] | None = None,
+) -> bool:
+    """Poll Bedrock with capped exponential backoff until the deadline.
+
+    The first probe is immediate. Failed probes wait 1s, 2s, 4s, 8s, then at
+    most 10s between attempts. The requested operation deadline remains the
+    authority; neither a probe nor a sleep can extend it.
+    """
+    probe = probe or _probe_bedrock
+    monotonic = monotonic or time.monotonic
+    sleep = sleep or time.sleep
+    deadline = monotonic() + timeout_seconds
+    delay = PROBE_INITIAL_INTERVAL_SECONDS
     while True:
-        remaining = deadline - time.monotonic()
+        remaining = deadline - monotonic()
         if remaining <= 0:
             break
-        if _probe_bedrock(host, port, min(PROBE_READ_TIMEOUT_SECONDS, remaining)):
+        if probe(host, port, min(PROBE_READ_TIMEOUT_SECONDS, remaining)):
             return True
-        remaining = deadline - time.monotonic()
+        remaining = deadline - monotonic()
         if remaining <= 0:
             break
-        time.sleep(min(PROBE_INTERVAL_SECONDS, remaining))
+        sleep(min(delay, remaining))
+        delay = _next_probe_delay(delay)
     return False
 
 

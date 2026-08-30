@@ -290,13 +290,15 @@ sent to the target port and a validated `ID_UNCONNECTED_PONG` response (minimum 
 | Protocol | UDP |
 | Datagram | A complete RakNet unconnected ping (33 bytes): `0x01` (packet ID) + 8-byte timestamp (uint64 BE) + 16-byte magic (`00 ff ff 00 fe fe fe fe fd fd fd fd 12 34 56 78`) + 8-byte client GUID (uint64 BE) |
 | Per-attempt read timeout | 2 s |
-| Polling interval | 5 s |
+| Probe cadence | Immediate first probe; failed probes wait 1 s, 2 s, 4 s, 8 s, then at most 10 s between attempts |
 | Success condition | A UDP response of at least 35 bytes whose first byte is `0x1c` (`ID_UNCONNECTED_PONG`) and whose bytes 17–32 match the RakNet magic sequence |
 | Failure condition | No response, a response that fails the pong validation above, or an OS error within 2 s |
 
 `health_reached` is set to `true` only when the probe succeeds at least once
 within `health_timeout_seconds`. Any implementation must use these exact
 parameters so that `health_reached` values are comparable across adapters.
+The backoff never delays a probe beyond `health_timeout_seconds`, and affects
+only UDP probes — CraftControl operation status updates continue independently.
 
 #### Response — `404 Not Found`
 

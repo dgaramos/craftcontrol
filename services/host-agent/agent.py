@@ -57,7 +57,8 @@ from operations import (  # noqa: F401
 )
 from adapters.raknet import (  # noqa: F401
     RAKNET_MAGIC,
-    PROBE_INTERVAL_SECONDS,
+    PROBE_INITIAL_INTERVAL_SECONDS,
+    PROBE_MAX_INTERVAL_SECONDS,
     PROBE_READ_TIMEOUT_SECONDS,
     _build_unconnected_ping,
     _validate_pong,

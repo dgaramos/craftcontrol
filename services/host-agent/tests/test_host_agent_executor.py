@@ -21,6 +21,7 @@ from adapters.docker import DockerComposeRunner, DockerContainerStatus
 from adapters.filesystem import BedrockFileSystem
 from adapters.raknet import (
     _build_unconnected_ping,
+    _next_probe_delay,
     _probe_bedrock,
     _validate_pong,
     _wait_for_health,
@@ -440,10 +441,17 @@ class TestBedrockFileSystemWriteErrors:
 # ---------------------------------------------------------------------------
 
 class TestWaitForHealth:
+    def test_backoff_doubles_and_stops_at_ten_seconds(self) -> None:
+        delay = 1.0
+        delays = []
+        for _ in range(6):
+            delays.append(delay)
+            delay = _next_probe_delay(delay)
+        assert delays == [1.0, 2.0, 4.0, 8.0, 10, 10]
+
     def test_returns_true_immediately_on_first_probe(self) -> None:
         """If the first probe succeeds _wait_for_health returns True."""
-        with patch("adapters.raknet._probe_bedrock", return_value=True):
-            result = _wait_for_health("127.0.0.1", 19132, 5)
+        result = _wait_for_health("127.0.0.1", 19132, 5, probe=lambda *_: True)
         assert result is True
 
     def test_returns_false_when_timeout_expires(self) -> None:
@@ -452,18 +460,37 @@ class TestWaitForHealth:
         assert result is False
 
     def test_sleeps_and_retries(self) -> None:
-        """The loop sleeps between probes; second attempt returns True."""
+        """The loop uses the first backoff delay before the second probe."""
         call_count = [0]
+        sleeps: list[float] = []
 
         def _probe(host: str, port: int, timeout: float) -> bool:
             call_count[0] += 1
             return call_count[0] >= 2
 
-        with patch("adapters.raknet._probe_bedrock", side_effect=_probe):
-            with patch("adapters.raknet.PROBE_INTERVAL_SECONDS", 0):
-                result = _wait_for_health("127.0.0.1", 19132, 5)
+        result = _wait_for_health("127.0.0.1", 19132, 5, probe=_probe, sleep=sleeps.append)
         assert result is True
         assert call_count[0] == 2
+        assert sleeps == [1]
+
+    def test_backoff_never_sleeps_past_health_deadline(self) -> None:
+        now = [0.0]
+        sleeps: list[float] = []
+
+        def _sleep(delay: float) -> None:
+            sleeps.append(delay)
+            now[0] += delay
+
+        result = _wait_for_health(
+            "127.0.0.1", 19132, 5,
+            probe=lambda *_: False,
+            monotonic=lambda: now[0],
+            sleep=_sleep,
+        )
+
+        assert result is False
+        assert sleeps == [1, 2, 2]
+        assert now[0] == 5
 
     def test_raknet_health_probe_wait_delegates(self) -> None:
         """RakNetHealthProbe.wait must delegate to _wait_for_health."""

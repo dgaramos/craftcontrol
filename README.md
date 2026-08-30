@@ -57,6 +57,11 @@ reconciled read-only against Bedrock's effective `server.properties` before the
 panel refreshes its settings: requested values are never shown as applied until
 they are observed. See [Operation lifecycle](docs/operation-lifecycle.md).
 
+The Host Agent probes Bedrock immediately after restart and then uses capped
+exponential backoff (1–10 seconds) while waiting for health. The configured
+operation deadline remains authoritative; status updates remain independent of
+the probe cadence.
+
 ## Architecture
 
 CraftControl is a monorepo with two independently deployable containerized application services, not a set of microservices. The backend remains a modular monolith; an optional systemd host agent is a separate host-level execution boundary.

@@ -388,6 +388,14 @@ services:
 The `host-gateway` special value resolves to the Docker host IP at container
 startup. The backend reaches the agent through that address on port 7890.
 
+### Health-probe cadence
+
+During `HEALTH_WAIT`, the agent probes Bedrock immediately, then waits 1s, 2s,
+4s, 8s, and at most 10s between later failed probes. This capped exponential
+backoff reduces unnecessary UDP traffic during long world loads; it does not
+slow the operation status shown in CraftControl or extend the configured health
+deadline.
+
 ---
 
 ## Token rotation

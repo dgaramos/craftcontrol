@@ -92,7 +92,7 @@ def test_flask_compatibility_serves_frontend_from_the_application_boundary(tmp_p
     assert index_status == 200
     assert b"CraftControl" in index_data
     assert script_status == 200
-    assert b'import { startApplication } from "./js/composition.js?v=10"' in script_data
+    assert b'import { startApplication } from "./js/composition.js?v=12"' in script_data
     assert composition_status == 200
     assert b'import { state } from "./core/state.js?v=7"' in composition_data
     assert state_status == 200

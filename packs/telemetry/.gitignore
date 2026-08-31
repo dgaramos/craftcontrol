@@ -3,3 +3,5 @@ dist/
 *.mcpack
 .DS_Store
 roadmap/
+coverage/
+junit.xml

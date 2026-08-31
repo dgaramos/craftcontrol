@@ -121,7 +121,9 @@ return async function renderPlayerDetail(player, account, back = renderPlayersPa
       catch (error) { toast(error.message, true); renderPlayerDetail(player, account, back); }
     };
 
-    // Game mode section
+    // Game mode section — only available while the player is online
+    const gameModeSection = $("#detail-gamemode-card");
+    if (gameModeSection) gameModeSection.hidden = !profile.online;
     $("#detail-gamemode-title").textContent = t("gameModeTitle");
     $("#detail-gamemode-help").textContent = t("gameModeHelp");
     $("#detail-gamemode-label").textContent = t("gameModeLabel");
@@ -129,12 +131,6 @@ return async function renderPlayerDetail(player, account, back = renderPlayersPa
     $("#detail-gamemode-creative").textContent = t("creative");
     $("#detail-gamemode-adventure").textContent = t("adventure");
     $("#detail-gamemode-apply").textContent = t("gameModeLabel");
-
-    const validModes = new Set(["survival", "creative", "adventure"]);
-    const gameModeSelect = $("#detail-gamemode-select");
-    if (gameModeSelect && validModes.has(profile.game_mode)) {
-      gameModeSelect.value = profile.game_mode;
-    }
 
     // Show FORCE_GAMEMODE notice when the setting is enabled
     const serverState = state.server || {};

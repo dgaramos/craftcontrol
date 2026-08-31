@@ -344,6 +344,12 @@ def test_player_gamemode_requires_authentication(service: MagicMock) -> None:
     assert resp.status_code == 401
 
 
+def test_player_gamemode_offline_player_returns_409(client, service: MagicMock) -> None:
+    service.set_player_game_mode.side_effect = LookupError("jogador não está online")
+    resp = client.put("/api/players/VonCrush/gamemode", json={"mode": "survival"})
+    assert resp.status_code == 409
+
+
 def test_player_gamemode_malformed_json_returns_400(client) -> None:
     resp = client.put(
         "/api/players/VonCrush/gamemode",

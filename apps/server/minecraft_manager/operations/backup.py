@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from contextlib import contextmanager
 import hashlib
 import json
 import os
@@ -11,8 +12,9 @@ import subprocess
 import tarfile
 import tempfile
 import time
-from typing import Callable
+from typing import Callable, Iterator
 
+from .._db import _record_connection_wait, _record_contention_failure
 from ..ports import ServerConsole
 
 
@@ -35,12 +37,14 @@ class BackupService:
         backup_root: Path,
         console: ServerConsole,
         server_running: Callable[[], bool],
+        sqlite_connect: Callable[[Path], sqlite3.Connection] | None = None,
     ) -> None:
         self.database = database.resolve()
         self.project = project.resolve()
         self.backup_root = backup_root.resolve()
         self.console = console
         self.server_running = server_running
+        self._sqlite_connect = sqlite_connect or self._default_sqlite_connect
 
     def create(self, world: str | None = None) -> dict[str, object]:
         world_dir = self._world_directory(world)
@@ -101,7 +105,7 @@ class BackupService:
             path = directory / name
             if not path.is_file() or path.stat().st_size != metadata["size"] or self._sha256(path) != metadata["sha256"]:
                 raise ValueError(f"backup checksum mismatch: {name}")
-        with sqlite3.connect(directory / "manager.db") as connection:
+        with self._connect_database(directory / "manager.db") as connection:
             integrity = connection.execute("PRAGMA integrity_check").fetchone()[0]
         if integrity != "ok":
             raise ValueError(f"backup database integrity failed: {integrity}")
@@ -196,7 +200,7 @@ class BackupService:
 
     def _backup_database(self, destination: Path) -> None:
         destination.parent.mkdir(parents=True, exist_ok=True)
-        with sqlite3.connect(self.database) as source, sqlite3.connect(destination) as target:
+        with self._connect_database(self.database) as source, self._connect_database(destination) as target:
             source.backup(target)
             if target.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
                 raise RuntimeError("SQLite backup integrity check failed")
@@ -217,7 +221,7 @@ class BackupService:
         for name in ("manager.db", "world.tar.gz", "configuration.tar.gz"):
             path = staging / name
             files[name] = {"size": path.stat().st_size, "sha256": self._sha256(path)}
-        with sqlite3.connect(staging / "manager.db") as connection:
+        with self._connect_database(staging / "manager.db") as connection:
             schema = int(connection.execute("PRAGMA user_version").fetchone()[0])
         return {
             "format": self.FORMAT_VERSION,
@@ -235,6 +239,29 @@ class BackupService:
         if directory.parent != self.backup_root or not directory.is_dir():
             raise FileNotFoundError(identifier)
         return directory
+
+    @staticmethod
+    def _default_sqlite_connect(path: Path) -> sqlite3.Connection:
+        return sqlite3.connect(path, timeout=30)
+
+    @contextmanager
+    def _connect_database(self, path: Path) -> Iterator[sqlite3.Connection]:
+        started = time.perf_counter()
+        try:
+            connection = self._sqlite_connect(path)
+        except sqlite3.OperationalError as error:
+            if "locked" in str(error).lower() or "busy" in str(error).lower():
+                _record_contention_failure()
+            raise
+        _record_connection_wait((time.perf_counter() - started) * 1000)
+        try:
+            yield connection
+        except sqlite3.OperationalError as error:
+            if "locked" in str(error).lower() or "busy" in str(error).lower():
+                _record_contention_failure()
+            raise
+        finally:
+            connection.close()
 
     @staticmethod
     def _sha256(path: Path) -> str:

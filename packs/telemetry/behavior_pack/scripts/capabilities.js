@@ -51,6 +51,11 @@ export function readGameMode(player) {
   }
 }
 
+export function probeGameModeReading(players) {
+  const supported = players.some((p) => typeof p?.getGameMode === "function");
+  return record("gameModeReading", supported);
+}
+
 export function capabilitySnapshot() {
   return Object.fromEntries(Object.entries(capabilities).sort(([left], [right]) => left.localeCompare(right)));
 }

@@ -33,6 +33,11 @@ const envelopes = () => output
   .filter((line) => line.includes("[BEDROCK_TELEMETRY]"))
   .map(parse);
 
+// gameModeReading capability must be registered in telemetry.started
+const startedEnv = envelopes().find((e) => e.type === "telemetry.started");
+assert.ok(startedEnv, "telemetry.started envelope must exist");
+assert.ok("gameModeReading" in (startedEnv.data.capabilities || {}), "gameModeReading must appear in capabilities map");
+
 // snapshot.player must include gameMode === "survival" (happy path)
 const snapshot1 = envelopes().findLast((e) => e.type === "snapshot.player" && e.player?.name === "TestPlayer");
 assert.ok(snapshot1, "snapshot.player envelope must exist");

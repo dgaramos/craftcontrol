@@ -32,8 +32,9 @@ from ..schema import PROPERTY_NAMES, SETTINGS, validate_value
 
 LOGGER = logging.getLogger(__name__)
 
-# Maximum seconds to wait for Bedrock to become healthy after restart.
-DEFAULT_HEALTH_TIMEOUT_SECONDS = 120
+# Default seconds to wait for Bedrock to become healthy after restart. Backend
+# configuration accepts 10–600 seconds; 600 is the host agent's hard limit.
+DEFAULT_HEALTH_TIMEOUT_SECONDS = 300
 # Polling interval while waiting for health.
 HEALTH_POLL_INTERVAL_SECONDS = 5
 

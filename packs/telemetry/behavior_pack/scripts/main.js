@@ -2,9 +2,10 @@ import { system, world } from "@minecraft/server";
 import { ensurePlayer, horizontalDistance, incrementMap, observeDimension, round } from "./model.js";
 import { flush, loadState, mutatePlayer, storageStatus } from "./store.js";
 import { publish, publishBlockChanges, publishSnapshot, queueBlockChange } from "./transport.js";
-import { capabilitySnapshot, startMovementSampling, subscribeScriptEvents, subscribeWorldEvent } from "./capabilities.js";
+import { capabilitySnapshot, readGameMode, startMovementSampling, subscribeScriptEvents, subscribeWorldEvent } from "./capabilities.js";
 
 const positions = new Map();
+const gameModes = new Map();
 
 function playerName(entity) {
   return entity?.typeId === "minecraft:player" ? entity.name : null;
@@ -21,6 +22,7 @@ subscribeWorldEvent("playerJoin", "playerJoins", (event) => {
 
 subscribeWorldEvent("playerLeave", "playerLeaves", (event) => {
   positions.delete(event.playerId);
+  gameModes.delete(event.playerId);
   update(event.playerName, () => {});
   publish("player.left", event.playerName);
 });
@@ -105,12 +107,22 @@ startMovementSampling(() => {
       observeDimension(stats, current.dimension, Date.now());
     });
   }
+  for (const player of world.getAllPlayers()) {
+    const current = readGameMode(player);
+    if (current !== null) {
+      const previous = gameModes.get(player.id);
+      if (previous !== undefined && previous !== current) {
+        publish("player.gamemode.changed", player.name, { previous, current });
+      }
+      gameModes.set(player.id, current);
+    }
+  }
   publishBlockChanges();
   flush();
 }, 100);
 
 system.runTimeout(() => {
   loadState();
-  publish("telemetry.started", null, { version: "0.3.1", product: "CraftControl Telemetry Pack", storage: storageStatus(), capabilities: capabilitySnapshot() });
+  publish("telemetry.started", null, { version: "0.3.2", product: "CraftControl Telemetry Pack", storage: storageStatus(), capabilities: capabilitySnapshot() });
   publishSnapshot();
 }, 1);

@@ -63,7 +63,7 @@ wait_healthy "$BACKEND_CONTAINER"
 wait_healthy "$FRONTEND_CONTAINER"
 docker exec "$FRONTEND_CONTAINER" wget -q -O - http://127.0.0.1:8080/ | grep -q '<title>CraftControl'
 app_script="$(docker exec "$FRONTEND_CONTAINER" wget -q -O - http://127.0.0.1:8080/static/app.js)"
-grep -q 'import { startApplication } from "./js/composition.js?v=13"' <<<"$app_script"
+grep -q 'import { startApplication } from "./js/composition.js?v=15"' <<<"$app_script"
 composition_script="$(docker exec "$FRONTEND_CONTAINER" wget -q -O - http://127.0.0.1:8080/static/js/composition.js)"
 grep -q 'import { state } from "./core/state.js?v=7"' <<<"$composition_script"
 state_module="$(docker exec "$FRONTEND_CONTAINER" wget -q -O - http://127.0.0.1:8080/static/js/core/state.js)"

@@ -18,11 +18,17 @@ function operationDate(value, formatDate) {
   return value ? formatDate(value) : "";
 }
 
-function displayOperationValue(value) {
+function displayOperationValue(value, formatDate, key = "") {
   if (value === null || value === undefined) return "";
-  if (typeof value !== "object") return String(value);
+  const formatTimestamp = (property, candidate) => {
+    const normalizedProperty = property.replace(/([a-z])([A-Z])/g, "$1_$2").toLowerCase();
+    if (!/(?:_at|timestamp|time|date)$/.test(normalizedProperty) || candidate === null || typeof candidate === "object") return candidate;
+    const formatted = formatDate(candidate);
+    return formatted === "—" ? candidate : formatted;
+  };
+  if (typeof value !== "object") return String(formatTimestamp(key, value));
   try {
-    return JSON.stringify(value, null, 2);
+    return JSON.stringify(value, formatTimestamp, 2);
   } catch (_) {
     return "Unable to display structured value";
   }
@@ -162,7 +168,7 @@ export function createOperationFeature({ api, t, formatDate, uiIcon, toast }) {
       const dt = document.createElement("dt");
       dt.textContent = k.replace(/_/g, " ");
       const dd = document.createElement("dd");
-      dd.textContent = displayOperationValue(v);
+      dd.textContent = displayOperationValue(v, formatDate, k);
       item.appendChild(dt);
       item.appendChild(dd);
       dl.appendChild(item);
@@ -286,7 +292,7 @@ export function createOperationFeature({ api, t, formatDate, uiIcon, toast }) {
         const dt = document.createElement("dt");
         dt.textContent = k.replace(/_/g, " ");
         const dd = document.createElement("dd");
-        dd.textContent = displayOperationValue(v);
+        dd.textContent = displayOperationValue(v, formatDate, k);
         item.appendChild(dt);
         item.appendChild(dd);
         dl.appendChild(item);
@@ -354,7 +360,7 @@ export function createOperationFeature({ api, t, formatDate, uiIcon, toast }) {
       const strong = document.createElement("strong");
       strong.textContent = k;
       li.appendChild(strong);
-      li.appendChild(document.createTextNode(": " + displayOperationValue(v)));
+      li.appendChild(document.createTextNode(": " + displayOperationValue(v, formatDate, k)));
       ul.appendChild(li);
     });
     details.appendChild(ul);

@@ -279,6 +279,21 @@ describe("publishSnapshot", () => {
     warn.mockRestore();
   });
 
+  test("logs snapshot.player without gameMode for an online player on an unsupported runtime", () => {
+    world.players = [{ name: "Alice" }];
+    mockReadGameMode.mockReturnValue(null);
+    mockLoadState.mockReturnValue({ sequence: 1, players: { alice: { name: "Alice", deaths: 0 } } });
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    expect(() => publishSnapshot()).not.toThrow();
+    const logged = warn.mock.calls.map(([msg]) =>
+      JSON.parse(msg.replace(/^\[BEDROCK_TELEMETRY\] /, ""))
+    );
+    const playerMsg = logged.find((c) => c.type === "snapshot.player");
+    expect(playerMsg).toBeDefined();
+    expect(playerMsg.data).not.toHaveProperty("gameMode");
+    warn.mockRestore();
+  });
+
   test("logs snapshot.finished with empty data and null player", () => {
     const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
     publishSnapshot();

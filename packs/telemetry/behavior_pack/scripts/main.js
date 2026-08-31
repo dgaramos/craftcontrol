@@ -1,8 +1,9 @@
 import { system, world } from "@minecraft/server";
-import { ensurePlayer, horizontalDistance, incrementMap, observeDimension, round } from "./model.js";
+import { ensurePlayer, incrementMap, observeDimension, round } from "./model.js";
 import { flush, loadState, mutatePlayer, storageStatus } from "./adapters/store.js";
 import { publish, publishBlockChanges, publishSnapshot, queueBlockChange } from "./adapters/transport.js";
 import { capabilitySnapshot, probeGameModeReading, readGameMode, startMovementSampling, subscribeScriptEvents, subscribeWorldEvent } from "./adapters/capabilities.js";
+import { samplePlayerMovement } from "./domain/movement.js";
 
 const positions = new Map();
 const gameModes = new Map();
@@ -94,18 +95,14 @@ subscribeScriptEvents((event) => {
 startMovementSampling(() => {
   const livePlayers = world.getAllPlayers();
   for (const player of livePlayers) {
-    const previous = positions.get(player.id);
-    const current = { ...player.location, dimension: player.dimension.id };
-    positions.set(player.id, current);
-    if (!previous || previous.dimension !== current.dimension) continue;
-    const distance = horizontalDistance(previous, current);
-    if (distance <= 0 || distance > 128) continue;
-    update(player.name, (stats) => {
-      stats.distance = round(stats.distance + distance);
-      incrementMap(stats.distanceByDimension, current.dimension, distance, 8);
-      stats.distanceByDimension[current.dimension] = round(stats.distanceByDimension[current.dimension]);
-      incrementMap(stats.activeTimeByDimension, current.dimension, 5, 8);
-      observeDimension(stats, current.dimension, Date.now());
+    samplePlayerMovement(positions, player, (dim, distance) => {
+      update(player.name, (stats) => {
+        stats.distance = round(stats.distance + distance);
+        incrementMap(stats.distanceByDimension, dim, distance, 8);
+        stats.distanceByDimension[dim] = round(stats.distanceByDimension[dim]);
+        incrementMap(stats.activeTimeByDimension, dim, 5, 8);
+        observeDimension(stats, dim, Date.now());
+      });
     });
   }
   probeGameModeReading(livePlayers);

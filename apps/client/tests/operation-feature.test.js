@@ -382,6 +382,37 @@ describe("createOperationFeature — initialize and SSE", () => {
       global.localStorage = savedLocalStorage;
     }
   });
+
+  test("initialize prefers the latest API operation over a stored historical id", async () => {
+    const latest = makeOperation({ operation_id: "op-latest" });
+    const api = jest.fn().mockResolvedValue({ operation: latest });
+    const feature = createOperationFeature(makeDeps({ api }));
+    const savedLocalStorage = global.localStorage;
+    global.localStorage = { getItem: jest.fn(() => "123e4567-e89b-42d3-a456-426614174000"), setItem: jest.fn(), removeItem: jest.fn() };
+    try {
+      await feature.initialize();
+      expect(feature.getOperation()).toBe(latest);
+      expect(api).toHaveBeenCalledWith("/api/operations/latest");
+      expect(api).toHaveBeenCalledTimes(1);
+    } finally {
+      global.localStorage = savedLocalStorage;
+    }
+  });
+
+  test("initialize clears a stored historical id when the API has no operation", async () => {
+    const api = jest.fn().mockResolvedValue({ operation: null });
+    const feature = createOperationFeature(makeDeps({ api }));
+    const savedLocalStorage = global.localStorage;
+    const storage = { getItem: jest.fn(() => "123e4567-e89b-42d3-a456-426614174000"), setItem: jest.fn(), removeItem: jest.fn() };
+    global.localStorage = storage;
+    try {
+      await feature.initialize();
+      expect(feature.getOperation()).toBeNull();
+      expect(storage.removeItem).toHaveBeenCalledWith("craftcontrol-operation-id");
+    } finally {
+      global.localStorage = savedLocalStorage;
+    }
+  });
 });
 
 describe("createOperationFeature — recovery actions (issue #194)", () => {

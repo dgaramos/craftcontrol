@@ -10,7 +10,7 @@ setMockDynamicProperty(playerStateKey("voncrush"), JSON.stringify({
   player: { name: "VonCrush", deaths: 5, blocksBroken: 20 },
 }));
 
-const { flush, loadState, storageStatus } = await import("../behavior_pack/scripts/store.js");
+const { flush, loadState, storageStatus } = await import("../behavior_pack/scripts/adapters/store.js");
 const state = loadState();
 assert.equal(state.sequence, 9);
 assert.equal(state.players.voncrush.deaths, 5);

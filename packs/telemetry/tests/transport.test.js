@@ -18,14 +18,14 @@ const mockStorageStatus = jest.fn(() => ({ persistenceBlocked: false }));
 const mockCapabilitySnapshot = jest.fn(() => ({}));
 const mockReadGameMode = jest.fn(() => null);
 
-jest.unstable_mockModule("../behavior_pack/scripts/store.js", () => ({
+jest.unstable_mockModule("../behavior_pack/scripts/adapters/store.js", () => ({
   nextSequence: mockNextSequence,
   loadState: mockLoadState,
   flush: mockFlush,
   storageStatus: mockStorageStatus,
 }));
 
-jest.unstable_mockModule("../behavior_pack/scripts/capabilities.js", () => ({
+jest.unstable_mockModule("../behavior_pack/scripts/adapters/capabilities.js", () => ({
   capabilitySnapshot: mockCapabilitySnapshot,
   readGameMode: mockReadGameMode,
 }));
@@ -35,7 +35,7 @@ jest.unstable_mockModule("../behavior_pack/scripts/capabilities.js", () => ({
 // single Jest worker run (no resetModules).
 const { world } = await import("@minecraft/server");
 const { publish, queueBlockChange, publishBlockChanges, publishSnapshot } =
-  await import("../behavior_pack/scripts/transport.js");
+  await import("../behavior_pack/scripts/adapters/transport.js");
 
 beforeEach(() => {
   jest.clearAllMocks();

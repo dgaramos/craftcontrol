@@ -1,5 +1,5 @@
 import { world } from "@minecraft/server";
-import { LOG_PREFIX, SCHEMA_VERSION } from "./model.js";
+import { LOG_PREFIX, SCHEMA_VERSION } from "../model.js";
 import { flush, loadState, nextSequence, storageStatus } from "./store.js";
 import { capabilitySnapshot, readGameMode } from "./capabilities.js";
 

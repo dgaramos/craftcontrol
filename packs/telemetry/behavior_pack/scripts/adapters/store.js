@@ -1,7 +1,7 @@
 import { world } from "@minecraft/server";
-import { PLAYER_BACKUP_V2_PREFIX, PLAYER_STATE_PREFIX, STATE_BACKUP_KEY, STATE_BACKUP_V1_KEY, STATE_BACKUP_V2_KEY, STATE_KEY, emptyState, playerKey, playerStateKey } from "./model.js";
-import { migrateShardedV2, migrateState, validateMeta, validatePlayerShard } from "./migrations.js";
-import { STORAGE_VERSION } from "./versions.js";
+import { PLAYER_BACKUP_V2_PREFIX, PLAYER_STATE_PREFIX, STATE_BACKUP_KEY, STATE_BACKUP_V1_KEY, STATE_BACKUP_V2_KEY, STATE_KEY, emptyState, playerKey, playerStateKey } from "../model.js";
+import { migrateShardedV2, migrateState, validateMeta, validatePlayerShard } from "../migrations.js";
+import { STORAGE_VERSION } from "../versions.js";
 
 let state;
 let metaDirty = false;

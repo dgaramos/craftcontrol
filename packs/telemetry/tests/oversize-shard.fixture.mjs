@@ -9,7 +9,7 @@ setMockDynamicProperty(shardKey, original);
 const errors = [];
 console.error = (line) => errors.push(String(line));
 
-const { flush, mutatePlayer } = await import("../behavior_pack/scripts/store.js");
+const { flush, mutatePlayer } = await import("../behavior_pack/scripts/adapters/store.js");
 mutatePlayer("VonCrush", (state) => { state.players.voncrush.oversized = "x".repeat(31000); });
 flush();
 

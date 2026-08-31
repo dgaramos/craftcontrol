@@ -255,7 +255,8 @@ class BackupService:
             raise
         _record_connection_wait((time.perf_counter() - started) * 1000)
         try:
-            yield connection
+            with connection:
+                yield connection
         except sqlite3.OperationalError as error:
             if "locked" in str(error).lower() or "busy" in str(error).lower():
                 _record_contention_failure()

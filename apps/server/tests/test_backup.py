@@ -110,6 +110,50 @@ def test_backup_records_locked_database_failures(backup_env) -> None:
     assert int(sqlite_diagnostics()["contention_failures"]) == before + 1
 
 
+def test_backup_records_locked_database_operation_failures(backup_env) -> None:
+    """A lock raised after connection setup is counted and closes the connection."""
+    from minecraft_manager._db import sqlite_diagnostics
+
+    env = backup_env
+    identifier = str(env["service"].create()["id"])
+    before = int(sqlite_diagnostics()["contention_failures"])
+
+    class LockedConnection:
+        closed = False
+
+        def __enter__(self) -> "LockedConnection":
+            return self
+
+        def __exit__(self, *_: object) -> bool:
+            return False
+
+        def execute(self, _: str) -> None:
+            raise sqlite3.OperationalError("database is locked")
+
+        def close(self) -> None:
+            self.closed = True
+
+    connection = LockedConnection()
+
+    def connect(_: Path) -> sqlite3.Connection:
+        return connection  # type: ignore[return-value]
+
+    service = BackupService(
+        env["database"],
+        env["project"],
+        env["root"] / "backups",
+        env["console"],  # type: ignore[arg-type]
+        lambda: env["running"][0],
+        sqlite_connect=connect,
+    )
+
+    with pytest.raises(sqlite3.OperationalError, match="locked"):
+        service.verify(identifier)
+
+    assert connection.closed
+    assert int(sqlite_diagnostics()["contention_failures"]) == before + 1
+
+
 def test_detects_corrupted_artifact(backup_env) -> None:
     env = backup_env
     identifier = str(env["service"].create()["id"])

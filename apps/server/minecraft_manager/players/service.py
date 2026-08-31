@@ -138,5 +138,8 @@ class PlayerService:
     def set_game_mode(self, player: str, mode: str) -> None:
         if mode not in self._VALID_GAME_MODES:
             raise ValueError("modo de jogo inválido")
+        online = {name.casefold() for name in self.repository.snapshot().get("players", [])}
+        if player.casefold() not in online:
+            raise LookupError("jogador não está online")
         self.console.set_game_mode(player, mode)
         self.events.publish("state.changed", "manager", {"domains": ["players"], "player": player, "game_mode": mode})

@@ -49,6 +49,8 @@ def player_gamemode(player: str):
         manager().set_player_game_mode(player, mode)
     except BadRequest as error:
         return jsonify(error=str(error.description)), 400
+    except LookupError as error:
+        return jsonify(error=str(error)), 409
     except (AttributeError, TypeError, ValueError) as error:
         return jsonify(error=str(error)), 400
     except Exception as error:

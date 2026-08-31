@@ -11,7 +11,7 @@ from minecraft_manager.players.service import PlayerService
 @pytest.fixture
 def repo() -> MagicMock:
     mock = MagicMock()
-    mock.snapshot.return_value = {"players": {}, "known_players": {}, "bootstrap": {}}
+    mock.snapshot.return_value = {"players": [], "known_players": {}, "bootstrap": {}}
     return mock
 
 
@@ -259,12 +259,14 @@ def test_periods_delegates_valid_params(service: PlayerService, repo: MagicMock)
 # set_game_mode
 # ---------------------------------------------------------------------------
 
-def test_set_game_mode_delegates_to_console(service: PlayerService, console: MagicMock) -> None:
+def test_set_game_mode_delegates_to_console(service: PlayerService, repo: MagicMock, console: MagicMock) -> None:
+    repo.snapshot.return_value = {"players": ["VonCrush"], "known_players": {}, "bootstrap": {}}
     service.set_game_mode("VonCrush", "survival")
     console.set_game_mode.assert_called_once_with("VonCrush", "survival")
 
 
-def test_set_game_mode_publishes_audit_event(service: PlayerService, events: MagicMock) -> None:
+def test_set_game_mode_publishes_audit_event(service: PlayerService, repo: MagicMock, events: MagicMock) -> None:
+    repo.snapshot.return_value = {"players": ["VonCrush"], "known_players": {}, "bootstrap": {}}
     service.set_game_mode("VonCrush", "creative")
     events.publish.assert_called_once_with(
         "state.changed",
@@ -279,6 +281,14 @@ def test_set_game_mode_invalid_mode_raises_before_console(service: PlayerService
     console.set_game_mode.assert_not_called()
 
 
-def test_set_game_mode_player_name_with_spaces(service: PlayerService, console: MagicMock) -> None:
+def test_set_game_mode_offline_player_raises_lookup_error(service: PlayerService, repo: MagicMock, console: MagicMock) -> None:
+    repo.snapshot.return_value = {"players": [], "known_players": {}, "bootstrap": {}}
+    with pytest.raises(LookupError, match="não está online"):
+        service.set_game_mode("VonCrush", "survival")
+    console.set_game_mode.assert_not_called()
+
+
+def test_set_game_mode_player_name_with_spaces(service: PlayerService, repo: MagicMock, console: MagicMock) -> None:
+    repo.snapshot.return_value = {"players": ["Von Crush"], "known_players": {}, "bootstrap": {}}
     service.set_game_mode("Von Crush", "adventure")
     console.set_game_mode.assert_called_once_with("Von Crush", "adventure")

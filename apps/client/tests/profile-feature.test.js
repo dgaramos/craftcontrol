@@ -122,28 +122,29 @@ describe("createPlayerProfile", () => {
     expect(applyBtn.disabled).toBe(false);
   });
 
-  test("pre-selects game mode from profile.game_mode when valid", async () => {
+  test("hides game mode section when player is offline", async () => {
     const deps = makeDeps();
-    const modeSelect = makeEl();
-    deps.api = jest.fn().mockResolvedValue({ profile: { name: "Alice", history: [], online: true, connected_at: 100, operator: false, game_mode: "creative" } });
+    const gameModeCard = makeEl();
+    gameModeCard.hidden = false;
+    deps.api = jest.fn().mockResolvedValue({ profile: { name: "Alice", history: [], online: false, operator: false } });
     deps.$ = jest.fn((selector) => {
-      if (selector === "#detail-gamemode-select") return modeSelect;
+      if (selector === "#detail-gamemode-card") return gameModeCard;
       return deps.elements[selector] ||= makeEl();
     });
     await createPlayerProfile(deps)({ id: "player-1" }, {});
-    expect(modeSelect.value).toBe("creative");
+    expect(gameModeCard.hidden).toBe(true);
   });
 
-  test("does not pre-select game mode when profile.game_mode is invalid", async () => {
+  test("shows game mode section when player is online", async () => {
     const deps = makeDeps();
-    const modeSelect = makeEl();
-    deps.api = jest.fn().mockResolvedValue({ profile: { name: "Alice", history: [], online: true, connected_at: 100, operator: false, game_mode: "spectator" } });
+    const gameModeCard = makeEl();
+    gameModeCard.hidden = true;
     deps.$ = jest.fn((selector) => {
-      if (selector === "#detail-gamemode-select") return modeSelect;
+      if (selector === "#detail-gamemode-card") return gameModeCard;
       return deps.elements[selector] ||= makeEl();
     });
     await createPlayerProfile(deps)({ id: "player-1" }, {});
-    expect(modeSelect.value).toBe("");
+    expect(gameModeCard.hidden).toBe(false);
   });
 
   test("apply game mode button does nothing when select is missing", async () => {

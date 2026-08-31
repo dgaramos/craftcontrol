@@ -54,6 +54,14 @@ jest.unstable_mockModule("../behavior_pack/scripts/domain/movement.js", () => ({
   samplePlayerMovement: mockSamplePlayerMovement,
 }));
 
+const mockTrackGameModes = jest.fn();
+const mockRemovePlayer = jest.fn();
+
+jest.unstable_mockModule("../behavior_pack/scripts/domain/gamemode.js", () => ({
+  trackGameModes: mockTrackGameModes,
+  removePlayer: mockRemovePlayer,
+}));
+
 const { world } = await import("@minecraft/server");
 
 // Import main.js to trigger module-level subscriptions and startMovementSampling.

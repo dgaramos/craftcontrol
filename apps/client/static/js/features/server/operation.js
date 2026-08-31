@@ -21,17 +21,13 @@ function operationDate(value, formatDate) {
 function displayOperationValue(value, formatDate, key = "") {
   if (value === null || value === undefined) return "";
   const formatTimestamp = (property, candidate) => {
-    const normalizedProperty = property.replace(/([a-z])([A-Z])/g, "$1_$2").toLowerCase();
+    const normalizedProperty = String(property).replace(/([a-z])([A-Z])/g, "$1_$2").toLowerCase();
     if (!/(?:_at|timestamp|time|date)$/.test(normalizedProperty) || candidate === null || typeof candidate === "object") return candidate;
     const formatted = formatDate(candidate);
     return formatted === "—" ? candidate : formatted;
   };
   if (typeof value !== "object") return String(formatTimestamp(key, value));
-  try {
-    return JSON.stringify(value, formatTimestamp, 2);
-  } catch (_) {
-    return "Unable to display structured value";
-  }
+  return "";
 }
 
 export function createOperationFeature({ api, t, formatDate, uiIcon, toast }) {
@@ -151,14 +147,58 @@ export function createOperationFeature({ api, t, formatDate, uiIcon, toast }) {
     });
   }
 
+  function displayFieldName(key) {
+    return String(key).replace(/_/g, " ");
+  }
+
+  /** Appends scalar or structured API data without serialising it as JSON. */
+  function appendOperationValue(container, value, key = "") {
+    if (value === null || value === undefined || value === "") return;
+    if (typeof value !== "object") {
+      container.textContent = displayOperationValue(value, formatDate, key);
+      return;
+    }
+
+    const entries = Array.isArray(value) ? value.map((item, index) => [index + 1, item]) : Object.entries(value);
+    if (!entries.length) {
+      container.textContent = "—";
+      return;
+    }
+
+    const details = document.createElement("details");
+    details.className = "op-structured-value";
+    const summary = document.createElement("summary");
+    summary.textContent = Array.isArray(value) ? t("opItems") : t("opFields");
+    details.appendChild(summary);
+
+    const list = document.createElement("dl");
+    list.className = "op-evidence op-evidence-nested";
+    entries.forEach(([nestedKey, nestedValue]) => {
+      const item = document.createElement("div");
+      const dt = document.createElement("dt");
+      dt.textContent = displayFieldName(nestedKey);
+      const dd = document.createElement("dd");
+      appendOperationValue(dd, nestedValue, nestedKey);
+      item.append(dt, dd);
+      list.appendChild(item);
+    });
+    details.appendChild(list);
+    container.appendChild(details);
+  }
+
   /**
-   * Builds a <dl class="op-evidence"> element from an evidence object.
+   * Builds a collapsible evidence section from an evidence object.
    * Returns null when the object is empty or has no displayable entries.
-   * All keys and values are set via textContent.
    */
-  function renderEvidence(evidence) {
+  function renderEvidence(evidence, label = t("opEvidence")) {
     const entries = Object.entries(evidence || {}).filter(([, v]) => v !== null && v !== undefined && v !== "");
     if (!entries.length) return null;
+
+    const details = document.createElement("details");
+    details.className = "op-evidence-details";
+    const summary = document.createElement("summary");
+    summary.textContent = label;
+    details.appendChild(summary);
 
     const dl = document.createElement("dl");
     dl.className = "op-evidence";
@@ -166,15 +206,15 @@ export function createOperationFeature({ api, t, formatDate, uiIcon, toast }) {
     entries.forEach(([k, v]) => {
       const item = document.createElement("div");
       const dt = document.createElement("dt");
-      dt.textContent = k.replace(/_/g, " ");
+      dt.textContent = displayFieldName(k);
       const dd = document.createElement("dd");
-      dd.textContent = displayOperationValue(v, formatDate, k);
-      item.appendChild(dt);
-      item.appendChild(dd);
+      appendOperationValue(dd, v, k);
+      item.append(dt, dd);
       dl.appendChild(item);
     });
 
-    return dl;
+    details.appendChild(dl);
+    return details;
   }
 
   /**
@@ -283,22 +323,9 @@ export function createOperationFeature({ api, t, formatDate, uiIcon, toast }) {
       div.appendChild(status);
     }
 
-    const observation = Object.entries(op.observation || {}).filter(([key]) => key !== "reconciliation_result");
-    if (observation.length) {
-      const dl = document.createElement("dl");
-      dl.className = "op-evidence";
-      observation.forEach(([k, v]) => {
-        const item = document.createElement("div");
-        const dt = document.createElement("dt");
-        dt.textContent = k.replace(/_/g, " ");
-        const dd = document.createElement("dd");
-        dd.textContent = displayOperationValue(v, formatDate, k);
-        item.appendChild(dt);
-        item.appendChild(dd);
-        dl.appendChild(item);
-      });
-      div.appendChild(dl);
-    }
+    const observation = Object.fromEntries(Object.entries(op.observation || {}).filter(([key]) => key !== "reconciliation_result"));
+    const observationNode = renderEvidence(observation, t("opObservation"));
+    if (observationNode) div.appendChild(observationNode);
 
     if (op.parent_operation_id) {
       const p = document.createElement("p");
@@ -360,7 +387,10 @@ export function createOperationFeature({ api, t, formatDate, uiIcon, toast }) {
       const strong = document.createElement("strong");
       strong.textContent = k;
       li.appendChild(strong);
-      li.appendChild(document.createTextNode(": " + displayOperationValue(v, formatDate, k)));
+      li.appendChild(document.createTextNode(": "));
+      const value = document.createElement("span");
+      appendOperationValue(value, v, k);
+      li.appendChild(value);
       ul.appendChild(li);
     });
     details.appendChild(ul);

@@ -165,8 +165,9 @@ describe("createOperationFeature — renderOperation", () => {
     }));
 
     expect(el.textContent).not.toContain("[object Object]");
-    expect(el.textContent).toContain('"verified": true');
-    expect(el.textContent).toContain('"gamemode": "survival"');
+    expect(el.textContent).toContain("verified");
+    expect(el.textContent).toContain("survival");
+    expect(el.querySelectorAll(".op-structured-value").length).toBeGreaterThan(0);
     expect(el.textContent).not.toContain("1700000000000");
     expect(el.textContent).not.toContain("1700000000");
     expect(el.textContent).toContain("2024-01-01 14:30");
@@ -212,6 +213,7 @@ describe("createOperationFeature — renderOperation", () => {
     expect(dds).toContain("/backups/world");
     const dts = Array.from(el.querySelectorAll(".op-active-stage dt")).map((dt) => dt.textContent);
     expect(dts).toContain("backup path");
+    expect(el.querySelector(".op-active-stage .op-evidence-details > summary").textContent).toBe("opEvidence");
   });
 
   test("returns null for null operation", () => {

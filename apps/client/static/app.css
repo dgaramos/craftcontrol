@@ -445,27 +445,32 @@ dialog.drawer { position: fixed; inset: auto 0 0; width: min(100%, 680px); max-h
 .op-headline { display: flex; align-items: baseline; gap: .65rem; }
 .op-headline h3 { margin: 0; }
 .op-counter { color: var(--muted); font-size: .8rem; font-weight: 700; }
-.op-stage-bar { display: flex; flex-wrap: wrap; gap: .4rem; }
-.op-stage { display: flex; align-items: center; gap: .3rem; padding: .35rem .55rem; font-size: .72rem; font-weight: 800; background: rgba(0,0,0,.15); }
+.op-stage-bar { display: flex; flex-wrap: wrap; gap: .4rem; padding: .65rem; background: rgba(0,0,0,.12); border: 1px solid rgba(130,200,237,.16); }
+.op-stage { display: flex; flex: 1 1 7.5rem; align-items: center; gap: .3rem; padding: .42rem .6rem; font-size: .72rem; font-weight: 800; background: rgba(0,0,0,.15); }
 .op-stage svg { width: .8rem; height: .8rem; flex-shrink: 0; }
 .op-stage-completed { background: #1c3320; color: #8bd66f; }
 .op-stage-skipped { background: #1c2d2d; color: #82c8ed; }
 .op-stage-running { background: #162636; color: #bcefff; outline: 1px solid #82c8ed; }
 .op-stage-failed { background: #3d1212; color: #ff8c78; }
 .op-stage-divergent { background: #2d1f0a; color: #ffb86c; }
-.op-active-stage { display: grid; gap: .35rem; padding: .75rem; background: rgba(0,0,0,.18); }
+.op-active-stage, .op-terminal { display: grid; gap: .55rem; padding: .85rem; background: rgba(0,0,0,.18); border: 1px solid rgba(130,200,237,.16); }
 .op-active-stage strong { font-size: .95rem; }
 .op-active-stage small { color: var(--muted); font-size: .75rem; }
-.op-terminal { display: grid; gap: .35rem; }
 .op-terminal small { color: var(--muted); font-size: .75rem; }
 .op-error { display: flex; align-items: flex-start; gap: .4rem; margin: 0; padding: .55rem .7rem; background: rgba(120,20,20,.35); color: #ffd2cf; border-left: 3px solid #ff8c78; font-size: .85rem; }
-.op-evidence { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: .45rem; margin: 0; }
+.op-evidence-details, .op-changes { font-size: .82rem; border: 1px solid rgba(130,200,237,.16); background: rgba(0,0,0,.1); }
+.op-evidence-details summary, .op-changes summary, .op-structured-value summary { cursor: pointer; color: var(--muted); font-weight: 800; }
+.op-evidence-details > summary, .op-changes > summary { padding: .65rem .75rem; }
+.op-evidence-details[open] > summary, .op-changes[open] > summary { border-bottom: 1px solid rgba(130,200,237,.16); color: #bcefff; }
+.op-evidence { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: .45rem; margin: 0; padding: .7rem; }
 .op-evidence div { padding: .5rem .65rem; background: rgba(0,0,0,.12); }
 .op-evidence dt { color: var(--muted); font-size: .68rem; font-weight: 700; text-transform: uppercase; }
 .op-evidence dd { margin: .2rem 0 0; font-size: .82rem; font-weight: 700; overflow-wrap: anywhere; }
-.op-changes { font-size: .82rem; }
-.op-changes summary { cursor: pointer; color: var(--muted); padding: .2rem 0; }
-.op-changes ul { margin: .4rem 0 0; padding-left: 1rem; display: grid; gap: .25rem; }
+.op-structured-value { margin-top: .35rem; }
+.op-structured-value summary { font-size: .76rem; }
+.op-evidence-nested { grid-template-columns: 1fr; margin-top: .45rem; padding: .45rem 0 0; }
+.op-evidence-nested div { background: rgba(0,0,0,.16); }
+.op-changes ul { margin: 0; padding: .7rem .75rem .7rem 1.8rem; display: grid; gap: .4rem; }
 
 @media (max-width: 520px) {
   /* Server diagnostics can contain versions, errors and timestamps. Keep every
@@ -475,7 +480,7 @@ dialog.drawer { position: fixed; inset: auto 0 0; width: min(100%, 680px); max-h
   .capability-panel > div, .op-headline { align-items: flex-start; flex-direction: column; gap: .35rem; }
   .telemetry-pack-actions { display: grid; grid-template-columns: 1fr; }
   .telemetry-pack-actions button { width: 100%; }
-  .op-stage { width: 100%; }
+  .op-stage { width: 100%; flex-basis: 100%; }
   .operation-indicator { bottom: max(76px, calc(64px + env(safe-area-inset-bottom))); }
   dialog.operation-drawer { inset: auto max(0px, env(safe-area-inset-right)) max(0px, env(safe-area-inset-bottom)) max(0px, env(safe-area-inset-left)); width: auto; max-width: none; max-height: min(88dvh, 720px); padding: 10px 11px calc(12px + env(safe-area-inset-bottom)); box-sizing: border-box; }
   .operation-drawer .drawer-header { align-items: flex-start; }

@@ -1,0 +1,4 @@
+# Copy this file to /etc/udev/rules.d/ and replace EXTERNAL_STORAGE_MODEL with
+# the exact value from /sys/block/<device>/device/model before enabling it.
+# It applies only to an explicitly identified USB storage device.
+ACTION=="add|change", SUBSYSTEM=="block", KERNEL=="sd[a-z]", ENV{ID_BUS}=="usb", ATTRS{model}=="EXTERNAL_STORAGE_MODEL", ATTR{queue/nr_requests}="64"

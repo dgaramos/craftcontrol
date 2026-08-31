@@ -375,6 +375,8 @@ services:
       HOST_AGENT_TOKEN_FILE: "/run/host-agent-token"
       # Optional: defaults to 300 seconds; the agent accepts 10–600.
       HOST_AGENT_HEALTH_TIMEOUT_SECONDS: "300"
+      # Optional: defaults to 180 seconds; the agent accepts 10–300.
+      HOST_AGENT_RESTART_TIMEOUT_SECONDS: "180"
     extra_hosts:
       - "host-gateway:host-gateway"
     volumes:
@@ -400,11 +402,13 @@ deadline.
 
 ### Lifecycle health deadline
 
-The backend sends `HOST_AGENT_HEALTH_TIMEOUT_SECONDS` with every lifecycle
-request. It defaults to **300 seconds** and is constrained to **10–600
-seconds**, the same range enforced by the host agent. Set it only in the
-CraftControl Server environment; no agent restart is needed when changing the
-backend value, but the backend container must be recreated to load it.
+The backend sends `HOST_AGENT_RESTART_TIMEOUT_SECONDS` and
+`HOST_AGENT_HEALTH_TIMEOUT_SECONDS` with every lifecycle request. The restart
+deadline defaults to **180 seconds** and is constrained to **10–300 seconds**;
+the health deadline defaults to **300 seconds** and is constrained to
+**10–600 seconds**. Set them only in the CraftControl Server environment; no
+agent restart is needed when changing either value, but the backend container
+must be recreated to load it.
 
 Bedrock can legitimately remain in `HEALTH_WAIT` while it opens a large world,
 loads packs, or recovers after a clean restart. That stage is observable and

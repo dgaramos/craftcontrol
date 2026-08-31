@@ -226,11 +226,12 @@ layout, configuration, cutover, access, post-install checks, and troubleshooting
 | `AUTH_MODE` | `local` | Built-in authentication; `disabled` is recovery compatibility only |
 | `AUTH_COOKIE_SECURE` | `true` | Restrict session cookies to HTTPS |
 | `HOST_AGENT_HEALTH_TIMEOUT_SECONDS` | `300` | Bedrock health-wait deadline for a lifecycle operation; valid range: 10–600 |
+| `HOST_AGENT_RESTART_TIMEOUT_SECONDS` | `180` | Compose restart-command deadline for a lifecycle operation; valid range: 10–300 |
 | `TZ` | `America/Sao_Paulo` | Runtime and analytics timezone |
 
 The running frontend and backend versions come from `versions.env`. Old service names, database filenames, package paths, and environment variables remain supported as compatibility overlays; persistent paths are not renamed destructively.
 
-The host agent is optional. When it is enabled, configure `HOST_AGENT_URL` and `HOST_AGENT_TOKEN_FILE` for the backend. Lifecycle operations wait up to 300 seconds for Bedrock by default; `HOST_AGENT_HEALTH_TIMEOUT_SECONDS` can set a reviewed 10–600 second deadline. See [Host agent](docs/host-agent.md) for the shared-secret, systemd, path, and timeout configuration.
+The host agent is optional. When it is enabled, configure `HOST_AGENT_URL` and `HOST_AGENT_TOKEN_FILE` for the backend. `HOST_AGENT_RESTART_TIMEOUT_SECONDS` gives Docker Compose up to 180 seconds to stop and restart Bedrock; after that, `HOST_AGENT_HEALTH_TIMEOUT_SECONDS` gives Bedrock up to 300 seconds to become healthy. See [Host agent](docs/host-agent.md) for the shared-secret, systemd, path, and timeout configuration.
 
 ## Authentication and access
 

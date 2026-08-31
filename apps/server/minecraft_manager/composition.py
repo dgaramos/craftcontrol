@@ -87,6 +87,7 @@ def compose_manager(
         server_id=settings.container,
         refresh_observed_settings=reconciliation.refresh_settings_from_properties,
         health_timeout=settings.host_agent_health_timeout_seconds,
+        restart_timeout=settings.host_agent_restart_timeout_seconds,
     )
     manager = ManagerService(
         repository=repository,

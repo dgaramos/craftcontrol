@@ -134,16 +134,13 @@ function snapshotsFor(name) {
   system.afterEvents.scriptEventReceive.emit({ id: "bedrock_telemetry:sync", message: "full" });
 
   const snapshots = snapshotsFor("FirstTickPlayer");
-  // The player may or may not have a snapshot; if one exists, distance must be 0.
-  if (snapshots.length > 0) {
-    const last = snapshots.at(-1);
-    assert.equal(
-      last.data.distanceByDimension?.[overworld] ?? 0,
-      0,
-      "first-tick player must not accumulate distance on the initial sample",
-    );
-  }
-  // No assertion error if no snapshot: the player may not have any state yet.
+  assert.ok(snapshots.length > 0, "snapshot.player must exist for FirstTickPlayer");
+  const last = snapshots.at(-1);
+  assert.equal(
+    last.data.distanceByDimension?.[overworld] ?? 0,
+    0,
+    "first-tick player must not accumulate distance on the initial sample",
+  );
 }
 
 // ── 4. Standing still (displacement == 0) ───────────────────────────────────

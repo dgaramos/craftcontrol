@@ -130,6 +130,12 @@ return async function renderPlayerDetail(player, account, back = renderPlayersPa
     $("#detail-gamemode-adventure").textContent = t("adventure");
     $("#detail-gamemode-apply").textContent = t("gameModeLabel");
 
+    const validModes = new Set(["survival", "creative", "adventure"]);
+    const gameModeSelect = $("#detail-gamemode-select");
+    if (gameModeSelect && validModes.has(profile.game_mode)) {
+      gameModeSelect.value = profile.game_mode;
+    }
+
     // Show FORCE_GAMEMODE notice when the setting is enabled
     const serverState = state.server || {};
     const forceGameMode = (serverState.settings || {})["FORCE_GAMEMODE"];

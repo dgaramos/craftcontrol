@@ -344,6 +344,15 @@ def test_player_gamemode_requires_authentication(service: MagicMock) -> None:
     assert resp.status_code == 401
 
 
+def test_player_gamemode_malformed_json_returns_400(client) -> None:
+    resp = client.put(
+        "/api/players/VonCrush/gamemode",
+        data=b'{"mode": ',
+        content_type="application/json",
+    )
+    assert resp.status_code == 400
+
+
 # ---------------------------------------------------------------------------
 # analytics_api
 # ---------------------------------------------------------------------------

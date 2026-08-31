@@ -9,4 +9,7 @@ export default {
     "default",
     ["jest-junit", { outputDirectory: ".", outputName: "junit.xml" }],
   ],
+  moduleNameMapper: {
+    "^@minecraft/server$": "<rootDir>/tests/minecraft-server.mock.js",
+  },
 };

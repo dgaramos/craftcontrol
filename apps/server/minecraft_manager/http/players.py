@@ -35,3 +35,19 @@ def player_operator(player: str):
     except Exception as error:
         return jsonify(error=str(error)), 500
     return jsonify(ok=True, player=player, operator=enabled)
+
+
+@players_api.put("/api/players/<player>/gamemode")
+@require("players.manage_permissions")
+def player_gamemode(player: str):
+    try:
+        payload = request.get_json(force=True)
+        mode = payload.get("mode") if payload else None
+        if not isinstance(mode, str) or not mode:
+            raise ValueError("modo de jogo ausente ou inválido")
+        manager().set_player_game_mode(player, mode)
+    except (AttributeError, TypeError, ValueError) as error:
+        return jsonify(error=str(error)), 400
+    except Exception as error:
+        return jsonify(error=str(error)), 500
+    return jsonify(ok=True, player=player, mode=mode)

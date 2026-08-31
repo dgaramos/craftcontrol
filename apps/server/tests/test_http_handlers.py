@@ -309,6 +309,41 @@ def test_player_operator_service_error_returns_500(client, service: MagicMock) -
     assert resp.status_code == 500
 
 
+def test_player_gamemode_set_returns_ok(client, service: MagicMock) -> None:
+    resp = client.put("/api/players/VonCrush/gamemode", json={"mode": "survival"})
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["ok"] is True
+    assert data["player"] == "VonCrush"
+    assert data["mode"] == "survival"
+    service.set_player_game_mode.assert_called_once_with("VonCrush", "survival")
+
+
+def test_player_gamemode_missing_mode_returns_400(client) -> None:
+    resp = client.put("/api/players/VonCrush/gamemode", json={})
+    assert resp.status_code == 400
+
+
+def test_player_gamemode_invalid_mode_returns_400(client, service: MagicMock) -> None:
+    service.set_player_game_mode.side_effect = ValueError("modo de jogo inválido")
+    resp = client.put("/api/players/VonCrush/gamemode", json={"mode": "spectator"})
+    assert resp.status_code == 400
+
+
+def test_player_gamemode_service_error_returns_500(client, service: MagicMock) -> None:
+    service.set_player_game_mode.side_effect = Exception("console unavailable")
+    resp = client.put("/api/players/VonCrush/gamemode", json={"mode": "creative"})
+    assert resp.status_code == 500
+
+
+def test_player_gamemode_requires_authentication(service: MagicMock) -> None:
+    app = _make_app(service, auth_mode="local")
+    auth = app.extensions["auth_service"]
+    auth.authenticate.return_value = None
+    resp = app.test_client().put("/api/players/VonCrush/gamemode", json={"mode": "survival"})
+    assert resp.status_code == 401
+
+
 # ---------------------------------------------------------------------------
 # analytics_api
 # ---------------------------------------------------------------------------

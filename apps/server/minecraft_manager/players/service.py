@@ -126,9 +126,17 @@ class PlayerService:
             raise ValueError("invalid period analytics limit")
         return self.repository.period_analytics(days, limit)
 
+    _VALID_GAME_MODES = {"survival", "creative", "adventure"}
+
     def set_operator(self, player: str, enabled: bool) -> None:
         self.console.set_operator(player, enabled)
         permission = "operator" if enabled else "member"
         self.repository.store("permissions", {player.casefold(): permission}, "manager")
         self.repository.set_player_permission(player, permission, "manager")
         self.events.publish("state.changed", "manager", {"domains": ["permissions"], "player": player})
+
+    def set_game_mode(self, player: str, mode: str) -> None:
+        if mode not in self._VALID_GAME_MODES:
+            raise ValueError("modo de jogo inválido")
+        self.console.set_game_mode(player, mode)
+        self.events.publish("state.changed", "manager", {"domains": ["players"], "player": player, "game_mode": mode})

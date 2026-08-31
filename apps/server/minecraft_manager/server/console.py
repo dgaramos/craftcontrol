@@ -46,6 +46,8 @@ class BedrockClient:
         finally:
             client.close()
 
+    _VALID_GAME_MODES = {"survival", "creative", "adventure"}
+
     def set_operator(self, player: str, enabled: bool) -> None:
         if not re.fullmatch(r"[a-z0-9 _-]{1,32}", player, re.IGNORECASE):
             raise ValueError("Jogador inválido")
@@ -53,6 +55,18 @@ class BedrockClient:
         try:
             container = client.containers.get(self.container_name)
             self._write(container, f'{"op" if enabled else "deop"} "{player}"\n')
+        finally:
+            client.close()
+
+    def set_game_mode(self, player: str, mode: str) -> None:
+        if not re.fullmatch(r"[a-z0-9 _-]{1,32}", player, re.IGNORECASE):
+            raise ValueError("Jogador inválido")
+        if mode not in self._VALID_GAME_MODES:
+            raise ValueError("modo de jogo inválido")
+        client = self._docker_factory()
+        try:
+            container = client.containers.get(self.container_name)
+            self._write(container, f'gamemode {mode} "{player}"\n')
         finally:
             client.close()
 

@@ -1,7 +1,7 @@
 import { persistTab } from "../../core/route.js?v=7";
 import { renderMarkup } from "../../core/render.js";
 
-export function createPlayerProfile({ state, content, t, localized, api, $, formatDate, formatDuration, playerDataMarkup, profileMarkup, getSettingsFeature, panelAccessDetailMarkup, renderPlayersPanel, renderAnalyticsPanel, getNavigation, toast, bindPlayerAccess }) {
+export function createPlayerProfile({ state, content, t, localized, api, $, formatDate, formatDuration, playerDataMarkup, profileMarkup, getSettingsFeature, panelAccessDetailMarkup, renderPlayersPanel, renderAnalyticsPanel, getNavigation, toast, bindPlayerAccess, escapeHtml }) {
 return async function renderPlayerDetail(player, account, back = renderPlayersPanel) {
   renderMarkup(content, `<div class="player-detail-loading">${t("checking")}</div>`);
   try {
@@ -38,6 +38,21 @@ return async function renderPlayerDetail(player, account, back = renderPlayersPa
       `</div>`,
       `<div id="detail-operator-control"></div>`,
       `</div>`,
+      `</section>`,
+      `<section class="player-admin-card block-panel" id="detail-gamemode-card">`,
+      `<span class="admin-scope game-scope">MINECRAFT</span>`,
+      `<h3 id="detail-gamemode-title"></h3>`,
+      `<p id="detail-gamemode-help"></p>`,
+      `<div id="detail-gamemode-force-notice" hidden></div>`,
+      `<div class="permission-choice">`,
+      `<label for="detail-gamemode-select" id="detail-gamemode-label"></label>`,
+      `<select id="detail-gamemode-select">`,
+      `<option value="survival" id="detail-gamemode-survival"></option>`,
+      `<option value="creative" id="detail-gamemode-creative"></option>`,
+      `<option value="adventure" id="detail-gamemode-adventure"></option>`,
+      `</select>`,
+      `</div>`,
+      `<button id="detail-gamemode-apply" class="primary" type="button"></button>`,
       `</section>`,
       `<div id="detail-panel-access"></div>`,
       `</div>`,
@@ -105,6 +120,43 @@ return async function renderPlayerDetail(player, account, back = renderPlayersPa
       try { await api(`/api/players/${encodeURIComponent(profile.name)}/operator`, { method: "PUT", body: JSON.stringify({ enabled: event.target.checked }) }); toast(t("permissionUpdated")); }
       catch (error) { toast(error.message, true); renderPlayerDetail(player, account, back); }
     };
+
+    // Game mode section
+    $("#detail-gamemode-title").textContent = t("gameModeTitle");
+    $("#detail-gamemode-help").textContent = t("gameModeHelp");
+    $("#detail-gamemode-label").textContent = t("gameModeLabel");
+    $("#detail-gamemode-survival").textContent = t("survival");
+    $("#detail-gamemode-creative").textContent = t("creative");
+    $("#detail-gamemode-adventure").textContent = t("adventure");
+    $("#detail-gamemode-apply").textContent = t("gameModeLabel");
+
+    // Show FORCE_GAMEMODE notice when the setting is enabled
+    const serverState = state.server || {};
+    const forceGameMode = (serverState.settings || {})["FORCE_GAMEMODE"];
+    const forceNotice = $("#detail-gamemode-force-notice");
+    if (forceNotice && (forceGameMode === "true" || forceGameMode === true)) {
+      forceNotice.hidden = false;
+      forceNotice.innerHTML = `<p class="gamemode-force-notice">${escapeHtml ? escapeHtml(t("forcedGameModeNotice")) : t("forcedGameModeNotice")}</p><button id="detail-gamemode-settings-link" class="secondary" type="button">${t("forcedGameModeLink")}</button>`;
+      const settingsLink = $("#detail-gamemode-settings-link");
+      if (settingsLink) settingsLink.onclick = () => { state.tab = "settings"; getNavigation().renderTabs(); };
+    }
+
+    const applyBtn = $("#detail-gamemode-apply");
+    if (applyBtn) applyBtn.onclick = async () => {
+      const sel = $("#detail-gamemode-select");
+      if (!sel) return;
+      const mode = sel.value;
+      applyBtn.disabled = true;
+      try {
+        await api(`/api/players/${encodeURIComponent(profile.name)}/gamemode`, { method: "PUT", body: JSON.stringify({ mode }) });
+        toast(t("gameModeUpdated"));
+      } catch (error) {
+        toast(error.message || t("gameModeError"), true);
+      } finally {
+        applyBtn.disabled = false;
+      }
+    };
+
     bindPlayerAccess(profile, account);
   } catch (error) {
     const p = typeof document !== "undefined" ? document.createElement("p") : null;

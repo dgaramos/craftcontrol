@@ -4,6 +4,7 @@ import { flush, loadState, mutatePlayer, storageStatus } from "./adapters/store.
 import { publish, publishBlockChanges, publishSnapshot, queueBlockChange } from "./adapters/transport.js";
 import { capabilitySnapshot, probeGameModeReading, readGameMode, startMovementSampling, subscribeScriptEvents, subscribeWorldEvent } from "./adapters/capabilities.js";
 import { samplePlayerMovement } from "./domain/movement.js";
+import { trackGameModes, removePlayer } from "./domain/gamemode.js";
 
 const positions = new Map();
 const gameModes = new Map();
@@ -23,7 +24,7 @@ subscribeWorldEvent("playerJoin", "playerJoins", (event) => {
 
 subscribeWorldEvent("playerLeave", "playerLeaves", (event) => {
   positions.delete(event.playerId);
-  gameModes.delete(event.playerId);
+  removePlayer(gameModes, event.playerId);
   update(event.playerName, () => {});
   publish("player.left", event.playerName);
 });
@@ -106,16 +107,7 @@ startMovementSampling(() => {
     });
   }
   probeGameModeReading(livePlayers);
-  for (const player of livePlayers) {
-    const current = readGameMode(player);
-    if (current !== null) {
-      const previous = gameModes.get(player.id);
-      if (previous !== undefined && previous !== current) {
-        publish("player.gamemode.changed", player.name, { previous, current });
-      }
-      gameModes.set(player.id, current);
-    }
-  }
+  trackGameModes(gameModes, livePlayers, readGameMode, publish);
   publishBlockChanges();
   flush();
 }, 100);

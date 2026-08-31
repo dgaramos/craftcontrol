@@ -54,10 +54,23 @@ jest.unstable_mockModule("../behavior_pack/scripts/domain/movement.js", () => ({
   samplePlayerMovement: mockSamplePlayerMovement,
 }));
 
+const mockTrackGameModes = jest.fn();
+const mockRemovePlayer = jest.fn();
+
+jest.unstable_mockModule("../behavior_pack/scripts/domain/gamemode.js", () => ({
+  trackGameModes: mockTrackGameModes,
+  removePlayer: mockRemovePlayer,
+}));
+
 const { world } = await import("@minecraft/server");
 
 // Import main.js to trigger module-level subscriptions and startMovementSampling.
 await import("../behavior_pack/scripts/main.js");
+
+// Capture event handlers before beforeEach clears mock call records.
+const worldEventHandlers = Object.fromEntries(
+  mockSubscribeWorldEvent.mock.calls.map(([signal, , handler]) => [signal, handler])
+);
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -82,6 +95,11 @@ test("movement sampling callback updates distance stats for each live player", (
   );
   // mutatePlayer is called to persist the distance update
   expect(mockMutatePlayer).toHaveBeenCalledWith("VonCrush", expect.any(Function));
+});
+
+test("playerLeave handler calls removePlayer to clean up game mode state", () => {
+  worldEventHandlers.playerLeave({ playerId: "p1", playerName: "VonCrush" });
+  expect(mockRemovePlayer).toHaveBeenCalledWith(expect.any(Map), "p1");
 });
 
 test("movement sampling callback skips stats update when samplePlayerMovement yields no distance", () => {

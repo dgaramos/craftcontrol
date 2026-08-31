@@ -40,6 +40,17 @@ export function startMovementSampling(handler, interval) {
   }
 }
 
+export function readGameMode(player) {
+  try {
+    if (typeof player?.getGameMode !== "function") return null;
+    const mode = player.getGameMode();
+    if (mode === "survival" || mode === "creative" || mode === "adventure") return mode;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export function capabilitySnapshot() {
   return Object.fromEntries(Object.entries(capabilities).sort(([left], [right]) => left.localeCompare(right)));
 }

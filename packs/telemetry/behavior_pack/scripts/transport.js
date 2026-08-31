@@ -1,6 +1,7 @@
+import { world } from "@minecraft/server";
 import { LOG_PREFIX, SCHEMA_VERSION } from "./model.js";
 import { flush, loadState, nextSequence, storageStatus } from "./store.js";
-import { capabilitySnapshot } from "./capabilities.js";
+import { capabilitySnapshot, readGameMode } from "./capabilities.js";
 
 const pendingBlocks = new Map();
 
@@ -38,8 +39,12 @@ export function publishSnapshot() {
   flush(true);
   const state = loadState();
   console.warn(`${LOG_PREFIX} ${JSON.stringify({ schema: SCHEMA_VERSION, sequence: state.sequence, type: "snapshot.started", timestamp: Date.now(), player: null, data: { players: Object.keys(state.players).length, storage: storageStatus(), capabilities: capabilitySnapshot() } })}`);
+  const livePlayers = new Map(world.getAllPlayers().map((p) => [p.name, p]));
   for (const player of Object.values(state.players)) {
-    console.warn(`${LOG_PREFIX} ${JSON.stringify({ schema: SCHEMA_VERSION, sequence: state.sequence, type: "snapshot.player", timestamp: Date.now(), player: { name: player.name }, data: player })}`);
+    const live = livePlayers.get(player.name);
+    const gameMode = live ? readGameMode(live) : null;
+    const data = gameMode !== null ? { ...player, gameMode } : { ...player };
+    console.warn(`${LOG_PREFIX} ${JSON.stringify({ schema: SCHEMA_VERSION, sequence: state.sequence, type: "snapshot.player", timestamp: Date.now(), player: { name: player.name }, data })}`);
   }
   console.warn(`${LOG_PREFIX} ${JSON.stringify({ schema: SCHEMA_VERSION, sequence: state.sequence, type: "snapshot.finished", timestamp: Date.now(), player: null, data: {} })}`);
 }

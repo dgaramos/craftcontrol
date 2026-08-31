@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() { echo "usage: $0 --device sdX [--queue-depth 64]" >&2; exit 2; }
+
+device=""
+queue_depth="64"
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --device) device="${2:-}"; shift 2 ;;
+    --queue-depth) queue_depth="${2:-}"; shift 2 ;;
+    *) usage ;;
+  esac
+done
+
+[[ "$device" =~ ^sd[a-z]+$ ]] || usage
+[[ "$queue_depth" =~ ^[1-9][0-9]*$ ]] || usage
+[[ -r "/sys/block/$device/device/model" ]] || { echo "storage device not found: $device" >&2; exit 1; }
+[[ "$(udevadm info --query=property --path="/sys/block/$device" | grep '^ID_BUS=usb$' || true)" == "ID_BUS=usb" ]] || { echo "refusing non-USB storage device: $device" >&2; exit 1; }
+
+model="$(tr -d '[:space:]' < "/sys/block/$device/device/model")"
+[[ -n "$model" ]] || { echo "storage model is empty: $device" >&2; exit 1; }
+
+rule="/etc/udev/rules.d/60-craftcontrol-${device}-io-queue.rules"
+printf 'ACTION=="add|change", SUBSYSTEM=="block", KERNEL=="%s", ENV{ID_BUS}=="usb", ATTRS{model}=="%s", ATTR{queue/nr_requests}="%s"\n' "$device" "$model" "$queue_depth" | sudo tee "$rule" >/dev/null
+sudo udevadm control --reload-rules
+sudo udevadm trigger --subsystem-match=block --sysname-match="$device"
+actual="$(cat "/sys/block/$device/queue/nr_requests")"
+[[ "$actual" == "$queue_depth" ]] || { echo "queue depth was not applied (got $actual)" >&2; exit 1; }
+echo "storage I/O queue configured: device=$device depth=$actual"

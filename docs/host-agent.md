@@ -56,6 +56,28 @@ flowchart LR
 - The CraftControl repository checked out at `/opt/craftcontrol/` (or the path
   you configure via environment variables).
 
+### Optional: protect coordinated backups on constrained USB storage
+
+If `craftcontrol backup create` remains in `D (disk sleep)` while the server,
+SQLite database, and backup archive share a USB disk, inspect its queue depth:
+
+```bash
+cat /sys/block/sdX/queue/nr_requests
+```
+
+For an explicitly identified USB disk, install the checked-in rule with:
+
+```bash
+sudo deploy/host-agent/bin/install-craftcontrol-storage-io-queue --device sdX
+```
+
+The installer refuses non-USB devices, records the disk model in a dedicated
+udev rule, applies a queue depth of `64`, and verifies the effective value.
+Use `--queue-depth` only when the host has been measured to need a different
+value. Remove `/etc/udev/rules.d/60-craftcontrol-sdX-io-queue.rules`, reload
+udev rules, and reboot or reattach the device to roll back. This is a queue
+tuning measure, not a substitute for disk health monitoring.
+
 ---
 
 ## Step 1 — Create the OS user

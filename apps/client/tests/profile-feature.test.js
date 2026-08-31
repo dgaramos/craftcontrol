@@ -69,4 +69,70 @@ describe("createPlayerProfile", () => {
     await createPlayerProfile(deps)({ id: "player-1" }, {});
     expect(deps.content.innerHTML).toContain("player-detail-screen");
   });
+
+  test("shows FORCE_GAMEMODE notice and wires settings link when forceGameMode is true", async () => {
+    const deps = makeDeps();
+    deps.state.server = { settings: { FORCE_GAMEMODE: "true" } };
+    const forceNotice = makeEl();
+    forceNotice.hidden = true;
+    const settingsLink = makeEl();
+    deps.elements["#detail-gamemode-force-notice"] = forceNotice;
+    deps.$ = jest.fn((selector) => {
+      if (selector === "#detail-gamemode-force-notice") return forceNotice;
+      if (selector === "#detail-gamemode-settings-link") return settingsLink;
+      return deps.elements[selector] ||= makeEl();
+    });
+    await createPlayerProfile(deps)({ id: "player-1" }, {});
+    expect(forceNotice.hidden).toBe(false);
+    settingsLink.onclick();
+    expect(deps.state.tab).toBe("settings");
+  });
+
+  test("apply game mode button calls API and shows toast on success", async () => {
+    const deps = makeDeps();
+    const applyBtn = makeEl();
+    const modeSelect = { value: "creative" };
+    deps.elements["#detail-gamemode-apply"] = applyBtn;
+    deps.elements["#detail-gamemode-select"] = modeSelect;
+    deps.api = jest.fn()
+      .mockResolvedValueOnce({ profile: { name: "Alice", history: [], online: true, connected_at: 100, operator: false } })
+      .mockResolvedValueOnce({ ok: true });
+    await createPlayerProfile(deps)({ id: "player-1" }, {});
+    await applyBtn.onclick();
+    expect(deps.api).toHaveBeenCalledWith(
+      "/api/players/Alice/gamemode",
+      expect.objectContaining({ method: "PUT" })
+    );
+    expect(deps.toast).toHaveBeenCalledWith("gameModeUpdated");
+    expect(applyBtn.disabled).toBe(false);
+  });
+
+  test("apply game mode button shows error toast on API failure", async () => {
+    const deps = makeDeps();
+    const applyBtn = makeEl();
+    const modeSelect = { value: "survival" };
+    deps.elements["#detail-gamemode-apply"] = applyBtn;
+    deps.elements["#detail-gamemode-select"] = modeSelect;
+    deps.api = jest.fn()
+      .mockResolvedValueOnce({ profile: { name: "Alice", history: [], online: true, connected_at: 100, operator: false } })
+      .mockRejectedValueOnce(new Error("server error"));
+    await createPlayerProfile(deps)({ id: "player-1" }, {});
+    await applyBtn.onclick();
+    expect(deps.toast).toHaveBeenCalledWith("server error", true);
+    expect(applyBtn.disabled).toBe(false);
+  });
+
+  test("apply game mode button does nothing when select is missing", async () => {
+    const deps = makeDeps();
+    const applyBtn = makeEl();
+    deps.elements["#detail-gamemode-apply"] = applyBtn;
+    deps.$ = jest.fn((selector) => {
+      if (selector === "#detail-gamemode-select") return null;
+      return deps.elements[selector] ||= makeEl();
+    });
+    deps.api = jest.fn().mockResolvedValue({ profile: { name: "Alice", history: [], online: true, connected_at: 100, operator: false } });
+    await createPlayerProfile(deps)({ id: "player-1" }, {});
+    await applyBtn.onclick();
+    expect(deps.api).toHaveBeenCalledTimes(1);
+  });
 });

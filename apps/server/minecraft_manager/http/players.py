@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from flask import Blueprint, jsonify, request
+from werkzeug.exceptions import BadRequest
 
 from .dependencies import manager
 from ..auth.http import require
@@ -41,11 +42,13 @@ def player_operator(player: str):
 @require("players.manage_permissions")
 def player_gamemode(player: str):
     try:
-        payload = request.get_json(force=True)
+        payload = request.get_json(force=True, silent=False)
         mode = payload.get("mode") if payload else None
         if not isinstance(mode, str) or not mode:
             raise ValueError("modo de jogo ausente ou inválido")
         manager().set_player_game_mode(player, mode)
+    except BadRequest as error:
+        return jsonify(error=str(error.description)), 400
     except (AttributeError, TypeError, ValueError) as error:
         return jsonify(error=str(error)), 400
     except Exception as error:

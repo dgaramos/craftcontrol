@@ -122,6 +122,30 @@ describe("createPlayerProfile", () => {
     expect(applyBtn.disabled).toBe(false);
   });
 
+  test("pre-selects game mode from profile.game_mode when valid", async () => {
+    const deps = makeDeps();
+    const modeSelect = makeEl();
+    deps.api = jest.fn().mockResolvedValue({ profile: { name: "Alice", history: [], online: true, connected_at: 100, operator: false, game_mode: "creative" } });
+    deps.$ = jest.fn((selector) => {
+      if (selector === "#detail-gamemode-select") return modeSelect;
+      return deps.elements[selector] ||= makeEl();
+    });
+    await createPlayerProfile(deps)({ id: "player-1" }, {});
+    expect(modeSelect.value).toBe("creative");
+  });
+
+  test("does not pre-select game mode when profile.game_mode is invalid", async () => {
+    const deps = makeDeps();
+    const modeSelect = makeEl();
+    deps.api = jest.fn().mockResolvedValue({ profile: { name: "Alice", history: [], online: true, connected_at: 100, operator: false, game_mode: "spectator" } });
+    deps.$ = jest.fn((selector) => {
+      if (selector === "#detail-gamemode-select") return modeSelect;
+      return deps.elements[selector] ||= makeEl();
+    });
+    await createPlayerProfile(deps)({ id: "player-1" }, {});
+    expect(modeSelect.value).toBe("");
+  });
+
   test("apply game mode button does nothing when select is missing", async () => {
     const deps = makeDeps();
     const applyBtn = makeEl();

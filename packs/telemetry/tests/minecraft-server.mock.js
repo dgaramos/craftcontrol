@@ -26,6 +26,7 @@ export const world = {
 
 export function setMockDynamicProperty(key, value) { properties.set(key, value); }
 export function getMockDynamicProperty(key) { return properties.get(key); }
+export function clearMockDynamicProperties() { properties.clear(); }
 
 export const system = {
   afterEvents: { scriptEventReceive: new Signal() },

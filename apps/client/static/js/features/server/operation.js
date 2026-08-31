@@ -15,9 +15,7 @@ const STAGE_ORDER = ["review", "backup_verify", "prepare", "restart", "health_wa
 const STORAGE_KEY = "craftcontrol-operation-id";
 
 function operationDate(value, formatDate) {
-  if (!value) return "";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "" : formatDate(date.getTime());
+  return value ? formatDate(value) : "";
 }
 
 export function createOperationFeature({ api, t, formatDate, uiIcon, toast }) {

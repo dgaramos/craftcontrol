@@ -94,9 +94,9 @@ describe("brand contracts — mobile scroll behaviour", () => {
     expect(template).toContain("/static/app.css?v=28");
   });
 
-  test("index.html references app.js?v=65", () => {
+  test("index.html references app.js?v=67", () => {
     const template = readFileSync(join(FRONTEND, "templates", "index.html"), "utf8");
-    expect(template).toContain("/static/app.js?v=65");
+    expect(template).toContain("/static/app.js?v=67");
   });
 });
 
@@ -138,9 +138,9 @@ describe("brand contracts — component module ownership (feedback and time)", (
     expect(script).toContain('from "./components/feedback.js?v=7"');
   });
 
-  test("composition.js imports from components/time.js?v=7", () => {
+  test("composition.js imports from components/time.js?v=9", () => {
     const script = compositionScript();
-    expect(script).toContain('from "./components/time.js?v=7"');
+    expect(script).toContain('from "./components/time.js?v=9"');
   });
 
   test("components/feedback.js exports toast", () => {

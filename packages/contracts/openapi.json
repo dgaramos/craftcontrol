@@ -1242,6 +1242,62 @@
         }
       }
     },
+    "/api/players/{player}/gamemode": {
+      "put": {
+        "tags": [
+          "Players"
+        ],
+        "operationId": "setPlayerGameMode",
+        "summary": "Change individual player game mode at runtime",
+        "description": "Sends a gamemode console command to Bedrock for a single player without restarting the server. When FORCE_GAMEMODE is enabled, Bedrock may restore the server default on rejoin.",
+        "x-craftcontrol-capability": "players.manage_permissions",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlayerPath"
+          },
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "mode"
+                ],
+                "properties": {
+                  "mode": {
+                    "type": "string",
+                    "enum": ["survival", "creative", "adventure"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Game mode applied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameModeResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
     "/api/refresh": {
       "post": {
         "tags": [
@@ -2327,6 +2383,27 @@
           "status": {
             "type": "string",
             "const": "suspended"
+          }
+        }
+      },
+      "GameModeResult": {
+        "type": "object",
+        "required": [
+          "ok",
+          "player",
+          "mode"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          },
+          "player": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string",
+            "enum": ["survival", "creative", "adventure"]
           }
         }
       },

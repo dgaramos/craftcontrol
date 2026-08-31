@@ -253,3 +253,32 @@ def test_periods_delegates_valid_params(service: PlayerService, repo: MagicMock)
     result = service.periods(days=7, limit=5)
     repo.period_analytics.assert_called_once_with(7, 5)
     assert result == {"sessions": 12}
+
+
+# ---------------------------------------------------------------------------
+# set_game_mode
+# ---------------------------------------------------------------------------
+
+def test_set_game_mode_delegates_to_console(service: PlayerService, console: MagicMock) -> None:
+    service.set_game_mode("VonCrush", "survival")
+    console.set_game_mode.assert_called_once_with("VonCrush", "survival")
+
+
+def test_set_game_mode_publishes_audit_event(service: PlayerService, events: MagicMock) -> None:
+    service.set_game_mode("VonCrush", "creative")
+    events.publish.assert_called_once_with(
+        "state.changed",
+        "manager",
+        {"domains": ["players"], "player": "VonCrush", "game_mode": "creative"},
+    )
+
+
+def test_set_game_mode_invalid_mode_raises_before_console(service: PlayerService, console: MagicMock) -> None:
+    with pytest.raises(ValueError, match="modo de jogo inválido"):
+        service.set_game_mode("VonCrush", "spectator")
+    console.set_game_mode.assert_not_called()
+
+
+def test_set_game_mode_player_name_with_spaces(service: PlayerService, console: MagicMock) -> None:
+    service.set_game_mode("Von Crush", "adventure")
+    console.set_game_mode.assert_called_once_with("Von Crush", "adventure")

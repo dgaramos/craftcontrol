@@ -33,6 +33,7 @@ export type AccessEntry = { id: string; name: string; role?: string | null; stat
 export type AccessList = { players: Array<AccessEntry>; };
 export type InvitationResult = { player: string; role: "viewer" | "operator" | "owner"; token: string; expires_in: number; };
 export type SuspendResult = { ok: true; player: string; status: "suspended"; };
+export type GameModeResult = { ok: true; player: string; mode: "survival" | "creative" | "adventure"; };
 export type OperatorResult = { ok: true; player: string; operator: boolean; };
 export type ActionResult = { ok: true; action: string; };
 export type GameruleResult = { ok: true; rule: string; value: string; };

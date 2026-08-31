@@ -182,3 +182,48 @@ def test_write_uses_channel_directly_when_no_sock_attribute() -> None:
     BedrockClient._write(container, "list\n")
     channel.sendall.assert_called_once_with(b"list\n")
     channel.close.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# set_game_mode
+# ---------------------------------------------------------------------------
+
+def test_set_game_mode_sends_correct_command() -> None:
+    factory, _, container = _fake_docker()
+    _client(factory).set_game_mode("VonCrush", "survival")
+    sent = container.attach_socket.return_value._sock.sendall.call_args[0][0]
+    assert b'gamemode survival "VonCrush"' in sent
+
+
+def test_set_game_mode_creative_sends_correct_command() -> None:
+    factory, _, container = _fake_docker()
+    _client(factory).set_game_mode("VonCrush", "creative")
+    sent = container.attach_socket.return_value._sock.sendall.call_args[0][0]
+    assert b'gamemode creative "VonCrush"' in sent
+
+
+def test_set_game_mode_adventure_sends_correct_command() -> None:
+    factory, _, container = _fake_docker()
+    _client(factory).set_game_mode("VonCrush", "adventure")
+    sent = container.attach_socket.return_value._sock.sendall.call_args[0][0]
+    assert b'gamemode adventure "VonCrush"' in sent
+
+
+def test_set_game_mode_invalid_mode_raises_before_docker() -> None:
+    factory, docker_client, _ = _fake_docker()
+    with pytest.raises(ValueError, match="modo de jogo inválido"):
+        _client(factory).set_game_mode("VonCrush", "spectator")
+    docker_client.containers.get.assert_not_called()
+
+
+def test_set_game_mode_invalid_player_raises_before_docker() -> None:
+    factory, docker_client, _ = _fake_docker()
+    with pytest.raises(ValueError, match="Jogador inválido"):
+        _client(factory).set_game_mode("", "survival")
+    docker_client.containers.get.assert_not_called()
+
+
+def test_set_game_mode_closes_client_after_write() -> None:
+    factory, docker_client, _ = _fake_docker()
+    _client(factory).set_game_mode("VonCrush", "creative")
+    docker_client.close.assert_called_once()

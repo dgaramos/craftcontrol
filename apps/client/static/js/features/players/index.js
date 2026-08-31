@@ -13,7 +13,7 @@ export function createPlayersFeature(deps) {
   const { panelAccessDetailMarkup, bindPlayerAccess } = createPlayerAccess({ state, t, $, escapeHtml, api, toast, renderPlayersPanel: (...args) => renderPlayersPanel(...args) });
   const { historyMarkup, sessionsMarkup, profileMarkup, deathHistoryMarkup } = history;
   const { sortedTelemetryEntries, playerBreakdownMarkup, playerDataMarkup } = telemetry;
-  renderPlayerDetail = createPlayerProfile({ state, content, t, localized, api, $, formatDate, formatDuration, playerDataMarkup, profileMarkup, getSettingsFeature, panelAccessDetailMarkup, renderPlayersPanel: (...args) => renderPlayersPanel(...args), renderAnalyticsPanel, getNavigation, toast, bindPlayerAccess });
+  renderPlayerDetail = createPlayerProfile({ state, content, t, localized, api, $, escapeHtml, formatDate, formatDuration, playerDataMarkup, profileMarkup, getSettingsFeature, panelAccessDetailMarkup, renderPlayersPanel: (...args) => renderPlayersPanel(...args), renderAnalyticsPanel, getNavigation, toast, bindPlayerAccess });
   renderPlayersPanel = createPlayersWorkspace({ state, content, t, localized, api, $, escapeHtml, toast, getSettingsFeature, formatDuration, formatDate, renderPlayerDetail: (...args) => renderPlayerDetail(...args) });
   return { renderPlayersPanel, renderPlayerDetail };
 }

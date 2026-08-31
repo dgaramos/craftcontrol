@@ -228,6 +228,13 @@
       "owner": "backend"
     },
     {
+      "path": "/api/players/<player>/gamemode",
+      "methods": [
+        "PUT"
+      ],
+      "owner": "backend"
+    },
+    {
       "path": "/api/players/<player>/operator",
       "methods": [
         "PUT"

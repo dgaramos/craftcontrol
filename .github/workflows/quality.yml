@@ -145,6 +145,11 @@ jobs:
         with:
           files: packs/telemetry/coverage/lcov.info
           flags: telemetry
+      - name: Upload telemetry test results
+        uses: codecov/test-results-action@v1.1.1
+        with:
+          files: packs/telemetry/junit.xml
+          flags: telemetry
 
   integration:
     name: integration

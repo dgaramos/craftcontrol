@@ -101,7 +101,7 @@ The runtime integration test loads the production `main.js` through a determinis
 The package command creates:
 
 ```text
-dist/craftcontrol-telemetry-0.3.1.mcpack
+dist/craftcontrol-telemetry-0.3.2.mcpack
 ```
 
 Packaging uses sorted paths, normalized timestamps, and stripped ZIP metadata so the standalone repository and CraftControl subtree produce byte-equivalent artifacts from the same commit.
@@ -152,6 +152,12 @@ Release `0.2.2` introduces sharded storage schema version `2`, independently fro
 On normal writes, player shards are persisted before metadata. Startup discovers every shard and promotes metadata to the highest shard sequence when recovering from an interrupted write, preventing sequence reuse. One large roster can therefore no longer exhaust a single dynamic-property value.
 
 Migration failures never fall back to writable empty state. Persistence is blocked for that runtime, the original dynamic property remains untouched, and startup/snapshot envelopes report the blocked storage status for the manager. Unknown future storage versions are treated the same way, preventing an older pack from downgrading a newer world's data.
+
+## Per-player game mode
+
+Release `0.3.2` reads `Player.getGameMode()` during the movement sampling cycle. When the observed game mode changes between cycles, the pack emits `player.gamemode.changed` with `previous` and `current` fields. The effective game mode for each online player is also injected into `snapshot.player` data as a `gameMode` field when the `gameModeReading` capability is supported. A missing field means unknown — either the player is offline during the snapshot or the runtime does not expose `getGameMode()`. Consumers must treat a missing field as unknown rather than defaulting to any specific mode.
+
+The `gameModeReading` capability is probed at startup and reported in every `telemetry.started` and `snapshot.started` envelope.
 
 ## Runtime capabilities
 

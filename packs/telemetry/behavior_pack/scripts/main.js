@@ -2,7 +2,7 @@ import { system, world } from "@minecraft/server";
 import { ensurePlayer, horizontalDistance, incrementMap, observeDimension, round } from "./model.js";
 import { flush, loadState, mutatePlayer, storageStatus } from "./store.js";
 import { publish, publishBlockChanges, publishSnapshot, queueBlockChange } from "./transport.js";
-import { capabilitySnapshot, readGameMode, startMovementSampling, subscribeScriptEvents, subscribeWorldEvent } from "./capabilities.js";
+import { capabilitySnapshot, probeGameModeReading, readGameMode, startMovementSampling, subscribeScriptEvents, subscribeWorldEvent } from "./capabilities.js";
 
 const positions = new Map();
 const gameModes = new Map();
@@ -123,6 +123,7 @@ startMovementSampling(() => {
 
 system.runTimeout(() => {
   loadState();
+  probeGameModeReading(world.getAllPlayers());
   publish("telemetry.started", null, { version: "0.3.2", product: "CraftControl Telemetry Pack", storage: storageStatus(), capabilities: capabilitySnapshot() });
   publishSnapshot();
 }, 1);

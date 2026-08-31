@@ -5,4 +5,7 @@ export default {
   ],
   coverageDirectory: "coverage",
   coverageReporters: ["lcov", "text-summary"],
+  moduleNameMapper: {
+    "^@minecraft/server$": "<rootDir>/tests/minecraft-server.mock.js",
+  },
 };

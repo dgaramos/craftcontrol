@@ -18,6 +18,16 @@ function operationDate(value, formatDate) {
   return value ? formatDate(value) : "";
 }
 
+function displayOperationValue(value) {
+  if (value === null || value === undefined) return "";
+  if (typeof value !== "object") return String(value);
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch (_) {
+    return "Unable to display structured value";
+  }
+}
+
 export function createOperationFeature({ api, t, formatDate, uiIcon, toast }) {
   let currentOperation = null;
   let eventSource = null;
@@ -152,7 +162,7 @@ export function createOperationFeature({ api, t, formatDate, uiIcon, toast }) {
       const dt = document.createElement("dt");
       dt.textContent = k.replace(/_/g, " ");
       const dd = document.createElement("dd");
-      dd.textContent = String(v);
+      dd.textContent = displayOperationValue(v);
       item.appendChild(dt);
       item.appendChild(dd);
       dl.appendChild(item);
@@ -276,7 +286,7 @@ export function createOperationFeature({ api, t, formatDate, uiIcon, toast }) {
         const dt = document.createElement("dt");
         dt.textContent = k.replace(/_/g, " ");
         const dd = document.createElement("dd");
-        dd.textContent = String(v);
+        dd.textContent = displayOperationValue(v);
         item.appendChild(dt);
         item.appendChild(dd);
         dl.appendChild(item);
@@ -344,7 +354,7 @@ export function createOperationFeature({ api, t, formatDate, uiIcon, toast }) {
       const strong = document.createElement("strong");
       strong.textContent = k;
       li.appendChild(strong);
-      li.appendChild(document.createTextNode(": " + String(v)));
+      li.appendChild(document.createTextNode(": " + displayOperationValue(v)));
       ul.appendChild(li);
     });
     details.appendChild(ul);

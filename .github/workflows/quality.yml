@@ -129,10 +129,27 @@ jobs:
           files: test-results/dr-agents.xml
           flags: dr-agents
 
+  telemetry:
+    name: telemetry
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4.4.0
+        with:
+          node-version: "22"
+      - run: bin/check-telemetry
+      - name: Upload telemetry coverage
+        uses: codecov/codecov-action@v5.4.3
+        with:
+          files: packs/telemetry/coverage/lcov.info
+          flags: telemetry
+
   integration:
     name: integration
     runs-on: ubuntu-latest
-    needs: [backend, contracts-backend, contracts-frontend, frontend, host-agent, dr-agents]
+    needs: [backend, contracts-backend, contracts-frontend, frontend, host-agent, dr-agents, telemetry]
     steps:
       - uses: actions/checkout@v4.2.2
         with:

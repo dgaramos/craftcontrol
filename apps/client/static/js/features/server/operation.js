@@ -77,8 +77,14 @@ export function createOperationFeature({ api, t, formatDate, uiIcon, toast }) {
       if (response.operation && currentOperation === snapshotBefore) {
         currentOperation = response.operation;
         try { localStorage.setItem(STORAGE_KEY, response.operation.operation_id); } catch (_) { /* storage unavailable */ }
+      } else if (!response.operation && currentOperation === snapshotBefore) {
+        currentOperation = null;
+        try { localStorage.removeItem(STORAGE_KEY); } catch (_) { /* storage unavailable */ }
       }
-    } catch (_) { /* silently skip — the panel renders without an operation */ }
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -537,8 +543,9 @@ export function createOperationFeature({ api, t, formatDate, uiIcon, toast }) {
   }
 
   async function initialize() {
-    await loadFromStorage();
-    if (!currentOperation) await loadLatest();
+    // The API is authoritative. Browser storage is only an offline fallback.
+    const loadedLatest = await loadLatest();
+    if (!loadedLatest && !currentOperation) await loadFromStorage();
     connectStream();
   }
 

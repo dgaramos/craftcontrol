@@ -22,6 +22,11 @@ operation: the SSE subscription continues and a persistent indicator reopens
 the drawer from any page. The drawer remains the single surface for stages,
 evidence, recovery actions, and the latest completed outcome.
 
+The browser may retain an operation identifier only as an offline fallback.
+`/api/operations/latest` is authoritative on initialization and reconnection:
+an explicit empty response clears the local reference and must not reopen a
+historical terminal operation.
+
 ---
 
 ## Correlation identifier

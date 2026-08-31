@@ -230,13 +230,13 @@ def test_refresh_stores_settings_and_server_info(tmp_path: Path) -> None:
     assert state["gamerules"]["keepInventory"] == "false"
 
 
-def test_refresh_max_players_falls_back_to_env(tmp_path: Path) -> None:
+def test_refresh_max_players_does_not_read_deployment_env(tmp_path: Path) -> None:
     bedrock = FakeBedrock()
     service = _make_service(tmp_path, bedrock)
     (tmp_path / ".env").write_text("MAX_PLAYERS=20\n")
     bedrock.query_state_result = ({}, [], 0, 0, {})
     service.refresh("test")
-    assert service.state()["max_players"] == 20
+    assert service.state()["max_players"] == 0
 
 
 def test_refresh_error_publishes_failed_event_and_reraises(tmp_path: Path) -> None:
@@ -345,13 +345,13 @@ def test_attach_runtime_twice_raises(tmp_path: Path) -> None:
 # Save settings tests
 # ---------------------------------------------------------------------------
 
-def test_save_known_setting_persists_and_returns_keys(tmp_path: Path) -> None:
+def test_save_known_setting_persists_to_bedrock_properties_and_returns_keys(tmp_path: Path) -> None:
     service = _make_service(tmp_path)
     changed, operation_id = service.save_settings({"SERVER_NAME": "TestServer"})
     assert changed == ["SERVER_NAME"]
     assert operation_id is None  # no operation_service wired in this fixture
-    _, env_values = ServerFiles(tmp_path / ".env", tmp_path / "server.properties").read_env()
-    assert env_values.get("SERVER_NAME") == "TestServer"
+    properties = ServerFiles(tmp_path / ".env", tmp_path / "server.properties").read_properties()
+    assert properties.get("server-name") == "TestServer"
 
 
 def test_save_settings_rejects_non_dict(tmp_path: Path) -> None:

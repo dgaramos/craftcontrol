@@ -231,6 +231,22 @@ layout, configuration, cutover, access, post-install checks, and troubleshooting
 
 The running frontend and backend versions come from `versions.env`. Old service names, database filenames, package paths, and environment variables remain supported as compatibility overlays; persistent paths are not renamed destructively.
 
+### Bedrock configuration authority
+
+CraftControl treats Bedrock as the source of truth: managed boot-time settings
+live in `data/server.properties`, while gamerules live in the loaded world.
+The Bedrock Compose `.env` is reserved for deployment concerns such as the EULA,
+image version, paths, and observability. Do not pass managed server-property
+variables through the Bedrock service environment, because the container image
+would overwrite the effective configuration at startup.
+
+The upstream image defines non-empty defaults for `SERVER_PORT` and
+`SERVER_PORT_V6`. A Compose deployment that delegates those settings to
+CraftControl must explicitly set both environment variables to empty strings;
+the image then leaves the persisted `server-port` and `server-portv6` values
+unchanged. The exporter may read the port from deployment configuration, but it
+must not feed it back into the Bedrock service environment.
+
 The host agent is optional. When it is enabled, configure `HOST_AGENT_URL` and `HOST_AGENT_TOKEN_FILE` for the backend. `HOST_AGENT_RESTART_TIMEOUT_SECONDS` gives Docker Compose up to 180 seconds to stop and restart Bedrock; after that, `HOST_AGENT_HEALTH_TIMEOUT_SECONDS` gives Bedrock up to 300 seconds to become healthy. See [Host agent](docs/host-agent.md) for the shared-secret, systemd, path, and timeout configuration.
 
 ## Authentication and access

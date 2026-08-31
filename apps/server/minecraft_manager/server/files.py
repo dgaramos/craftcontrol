@@ -55,6 +55,37 @@ class ServerFiles:
             if os.path.exists(temporary):
                 os.unlink(temporary)
 
+    def write_properties(self, changes: dict[str, str]) -> None:
+        """Atomically merge canonical Bedrock property updates.
+
+        The Bedrock project ``.env`` is deployment-only. Server settings are
+        persisted in ``server.properties`` so they are not overwritten by a
+        stale Compose environment on the next boot.
+        """
+        lines = self.properties_file.read_text(encoding="utf-8").splitlines() if self.properties_file.exists() else []
+        found: set[str] = set()
+        output: list[str] = []
+        for line in lines:
+            if line and not line.lstrip().startswith("#") and "=" in line:
+                key = line.split("=", 1)[0].strip()
+                if key in changes:
+                    output.append(f"{key}={changes[key]}")
+                    found.add(key)
+                    continue
+            output.append(line)
+        output.extend(f"{key}={value}" for key, value in changes.items() if key not in found)
+        self.properties_file.parent.mkdir(parents=True, exist_ok=True)
+        descriptor, temporary = tempfile.mkstemp(prefix=".server.properties.", dir=self.properties_file.parent, text=True)
+        try:
+            with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+                handle.write("\n".join(output).rstrip() + "\n")
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary, self.properties_file)
+        finally:
+            if os.path.exists(temporary):
+                os.unlink(temporary)
+
     def read_permissions(self) -> list[dict[str, str]]:
         if not self.permissions_file.exists():
             return []

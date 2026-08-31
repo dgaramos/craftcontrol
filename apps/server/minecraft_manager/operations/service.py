@@ -562,10 +562,9 @@ class ServerOperationService:
     def _verify_configuration(self, operation: ServerOperation) -> tuple[bool, dict[str, Any]]:
         """Compare requested settings with Bedrock's generated server.properties.
 
-        The Compose environment is only the requested input.  Bedrock writes its
-        effective startup configuration to ``server.properties``; comparing the
-        mapped properties after the health probe avoids treating a successful
-        container command as confirmation.
+        ``server.properties`` is the canonical Bedrock configuration. Comparing
+        it after the health probe avoids treating a successful container command
+        as confirmation before the server has applied the requested change.
         """
         properties = self._configuration.read_properties()
         expected = {

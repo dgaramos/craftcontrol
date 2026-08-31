@@ -44,3 +44,48 @@ test("rejects unknown and future storage versions", () => {
   assert.throws(() => migrateState({ storageVersion: 4, sequence: 0, players: {} }), /unsupported storage version/);
   assert.throws(() => migrateState({ schema: 99, sequence: 0, players: {} }), /unrecognized legacy/);
 });
+
+import { validatePlayerShard } from "../behavior_pack/scripts/migrations.js";
+import { STORAGE_VERSION } from "../behavior_pack/scripts/versions.js";
+
+test("validatePlayerShard rejects wrong storageVersion", () => {
+  assert.throws(() => validatePlayerShard({ storageVersion: STORAGE_VERSION - 1, key: "voncrush", sequence: 1, player: {} }), /unsupported player shard version/);
+  assert.throws(() => validatePlayerShard(null), /unsupported player shard version/);
+});
+
+test("validatePlayerShard rejects missing or empty key", () => {
+  assert.throws(() => validatePlayerShard({ storageVersion: STORAGE_VERSION, key: "", sequence: 1, player: { name: "VonCrush" } }), /invalid player shard key/);
+  assert.throws(() => validatePlayerShard({ storageVersion: STORAGE_VERSION, sequence: 1, player: { name: "VonCrush" } }), /invalid player shard key/);
+});
+
+test("validatePlayerShard rejects non-integer sequence", () => {
+  assert.throws(() => validatePlayerShard({ storageVersion: STORAGE_VERSION, key: "voncrush", sequence: -1, player: { name: "VonCrush" } }), /invalid player shard sequence/);
+  assert.throws(() => validatePlayerShard({ storageVersion: STORAGE_VERSION, key: "voncrush", sequence: 1.5, player: { name: "VonCrush" } }), /invalid player shard sequence/);
+});
+
+test("migrateShardedV2 rejects invalid metadata", () => {
+  assert.throws(() => migrateShardedV2(null, []), /invalid storage v2 metadata/);
+  assert.throws(() => migrateShardedV2({ storageVersion: 1, sequence: 0 }, []), /invalid storage v2 metadata/);
+  assert.throws(() => migrateShardedV2({ storageVersion: 2, sequence: -1 }, []), /invalid storage v2 metadata/);
+});
+
+test("migrateShardedV2 rejects shard with wrong storageVersion", () => {
+  const shard = JSON.stringify({ storageVersion: 1, key: "voncrush", sequence: 1, player: { name: "VonCrush" } });
+  assert.throws(() => migrateShardedV2({ storageVersion: 2, sequence: 0 }, [["bedrock_telemetry:player:voncrush", shard]]), /invalid storage v2 player shard/);
+});
+
+test("migrateShardedV2 rejects shard with non-integer sequence", () => {
+  const shard = JSON.stringify({ storageVersion: 2, key: "voncrush", sequence: -5, player: { name: "VonCrush" } });
+  assert.throws(() => migrateShardedV2({ storageVersion: 2, sequence: 0 }, [["bedrock_telemetry:player:voncrush", shard]]), /invalid storage v2 player shard/);
+});
+
+test("migrateShardedV2 rejects duplicate player key across shards", () => {
+  const shard = JSON.stringify({ storageVersion: 2, key: "voncrush", sequence: 1, player: { name: "VonCrush" } });
+  assert.throws(
+    () => migrateShardedV2({ storageVersion: 2, sequence: 0 }, [
+      ["bedrock_telemetry:player:voncrush", shard],
+      ["bedrock_telemetry:player:voncrush2", shard],
+    ]),
+    /invalid storage v2 player shard/
+  );
+});

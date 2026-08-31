@@ -369,17 +369,15 @@ describe("createOperationFeature — initialize and SSE", () => {
   });
 
   test("loadFromStorage rejects a non-UUID stored id without calling api", async () => {
-    const api = jest.fn().mockResolvedValue({ operation: null });
+    const api = jest.fn().mockRejectedValue(new Error("offline"));
     const feature = createOperationFeature(makeDeps({ api }));
-
-    const savedLocalStorage = global.localStorage;
-    global.localStorage = { getItem: jest.fn(() => "../../etc/passwd"), setItem: jest.fn(), removeItem: jest.fn() };
+    localStorage.setItem("craftcontrol-operation-id", "../../etc/passwd");
     try {
       await feature.initialize();
       const storageCall = api.mock.calls.find((c) => c[0].includes("etc"));
       expect(storageCall).toBeUndefined();
     } finally {
-      global.localStorage = savedLocalStorage;
+      localStorage.removeItem("craftcontrol-operation-id");
     }
   });
 
@@ -387,30 +385,29 @@ describe("createOperationFeature — initialize and SSE", () => {
     const latest = makeOperation({ operation_id: "op-latest" });
     const api = jest.fn().mockResolvedValue({ operation: latest });
     const feature = createOperationFeature(makeDeps({ api }));
-    const savedLocalStorage = global.localStorage;
-    global.localStorage = { getItem: jest.fn(() => "123e4567-e89b-42d3-a456-426614174000"), setItem: jest.fn(), removeItem: jest.fn() };
+    localStorage.setItem("craftcontrol-operation-id", "123e4567-e89b-42d3-a456-426614174000");
     try {
       await feature.initialize();
       expect(feature.getOperation()).toBe(latest);
       expect(api).toHaveBeenCalledWith("/api/operations/latest");
       expect(api).toHaveBeenCalledTimes(1);
     } finally {
-      global.localStorage = savedLocalStorage;
+      localStorage.removeItem("craftcontrol-operation-id");
     }
   });
 
   test("initialize clears a stored historical id when the API has no operation", async () => {
     const api = jest.fn().mockResolvedValue({ operation: null });
     const feature = createOperationFeature(makeDeps({ api }));
-    const savedLocalStorage = global.localStorage;
-    const storage = { getItem: jest.fn(() => "123e4567-e89b-42d3-a456-426614174000"), setItem: jest.fn(), removeItem: jest.fn() };
-    global.localStorage = storage;
+    const removeItem = jest.spyOn(Storage.prototype, "removeItem");
+    localStorage.setItem("craftcontrol-operation-id", "123e4567-e89b-42d3-a456-426614174000");
     try {
       await feature.initialize();
       expect(feature.getOperation()).toBeNull();
-      expect(storage.removeItem).toHaveBeenCalledWith("craftcontrol-operation-id");
+      expect(removeItem).toHaveBeenCalledWith("craftcontrol-operation-id");
     } finally {
-      global.localStorage = savedLocalStorage;
+      removeItem.mockRestore();
+      localStorage.removeItem("craftcontrol-operation-id");
     }
   });
 });

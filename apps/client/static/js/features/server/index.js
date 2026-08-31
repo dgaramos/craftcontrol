@@ -1,4 +1,4 @@
-import { createOperationFeature } from "./operation.js?v=10";
+import { createOperationFeature } from "./operation.js?v=12";
 
 export function createServerFeature({ state, content, t, api, $, escapeHtml, uiIcon, formatDate, toast, getSettingsFeature }) {
 function telemetryPackMarkup() {

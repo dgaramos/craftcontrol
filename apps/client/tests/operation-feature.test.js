@@ -158,12 +158,18 @@ describe("createOperationFeature — renderOperation", () => {
         { stage: "review", result: "completed", started_at: 1700000000, completed_at: 1700000001, evidence: {}, error: null },
         { stage: "backup_verify", result: "running", started_at: 1700000002, completed_at: null, evidence: { backup: { verified: true, files: ["world.zip"] } }, error: null },
       ],
-      observation: { observed_settings: { gamemode: "survival" } },
+      observation: {
+        observed_at: 1700000000000,
+        observed_settings: { gamemode: "survival", configuration_checked_at: 1700000000, observedAt: 1700000000, checkedTime: 1700000000 },
+      },
     }));
 
     expect(el.textContent).not.toContain("[object Object]");
     expect(el.textContent).toContain('"verified": true');
     expect(el.textContent).toContain('"gamemode": "survival"');
+    expect(el.textContent).not.toContain("1700000000000");
+    expect(el.textContent).not.toContain("1700000000");
+    expect(el.textContent).toContain("2024-01-01 14:30");
   });
 
   test("renders skipped stages", () => {

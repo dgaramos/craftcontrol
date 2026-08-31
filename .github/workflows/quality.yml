@@ -154,7 +154,7 @@ jobs:
   integration:
     name: integration
     runs-on: ubuntu-latest
-    needs: [backend, contracts-backend, contracts-frontend, frontend, host-agent, dr-agents, telemetry]
+    needs: [backend, contracts-backend, contracts-frontend, frontend, host-agent, dr-agents]
     steps:
       - uses: actions/checkout@v4.2.2
         with:

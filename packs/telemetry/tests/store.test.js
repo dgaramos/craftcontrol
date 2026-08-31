@@ -92,23 +92,29 @@ describe("storageStatus", () => {
     const status = store.storageStatus();
     expect(status.status).toBe("migrated");
     expect(status.migratedFrom).toBe(0);
-    expect(typeof mock.getMockDynamicProperty(STATE_BACKUP_KEY)).toBe("string");
+    const backup0 = mock.getMockDynamicProperty(STATE_BACKUP_KEY);
+    expect(typeof backup0).toBe("string");
+    expect(backup0).toBe(legacy); // backup preserves exact original raw state
   });
 
   test("reports migrated after a v1 migration", async () => {
     const { mock, store } = await loadStore();
-    mock.setMockDynamicProperty(STATE_KEY, JSON.stringify({ storageVersion: 1, sequence: 3, players: {} }));
+    const raw1 = JSON.stringify({ storageVersion: 1, sequence: 3, players: {} });
+    mock.setMockDynamicProperty(STATE_KEY, raw1);
 
     const status = store.storageStatus();
     expect(status.status).toBe("migrated");
     expect(status.migratedFrom).toBe(1);
-    expect(typeof mock.getMockDynamicProperty(STATE_BACKUP_V1_KEY)).toBe("string");
+    const backup1 = mock.getMockDynamicProperty(STATE_BACKUP_V1_KEY);
+    expect(typeof backup1).toBe("string");
+    expect(backup1).toBe(raw1); // backup preserves exact original raw state
   });
 
   test("reports migrated after a sharded v2 migration", async () => {
     const { mock, store } = await loadStore();
     const key = playerKey("VonCrush");
-    mock.setMockDynamicProperty(STATE_KEY, JSON.stringify({ storageVersion: 2, sequence: 7 }));
+    const raw2Meta = JSON.stringify({ storageVersion: 2, sequence: 7 });
+    mock.setMockDynamicProperty(STATE_KEY, raw2Meta);
     mock.setMockDynamicProperty(
       `${PLAYER_STATE_PREFIX}${encodeURIComponent(key)}`,
       JSON.stringify({ storageVersion: 2, sequence: 7, key, player: { name: "VonCrush", mobKills: 5 } }),
@@ -117,7 +123,9 @@ describe("storageStatus", () => {
     const status = store.storageStatus();
     expect(status.status).toBe("migrated");
     expect(status.migratedFrom).toBe(2);
-    expect(typeof mock.getMockDynamicProperty(STATE_BACKUP_V2_KEY)).toBe("string");
+    const backup2 = mock.getMockDynamicProperty(STATE_BACKUP_V2_KEY);
+    expect(typeof backup2).toBe("string");
+    expect(backup2).toBe(raw2Meta); // backup preserves exact original meta
   });
 });
 
@@ -216,6 +224,19 @@ describe("flush", () => {
     expect(mock.getMockDynamicProperty(STATE_KEY)).toBe("{bad");
     expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining("persistence blocked"));
     consoleSpy.mockRestore();
+  });
+
+  test("logs error when setDynamicProperty throws during flush", async () => {
+    const { mock, store } = await loadStore();
+    store.loadState();
+    // Intercept setDynamicProperty to throw after loadState succeeds (not blocked)
+    const original = mock.world.setDynamicProperty.bind(mock.world);
+    mock.world.setDynamicProperty = () => { throw new Error("quota exceeded"); };
+    const consoleSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    store.flush(true);
+    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining("quota exceeded"));
+    consoleSpy.mockRestore();
+    mock.world.setDynamicProperty = original;
   });
 
   test("clears dirtyPlayers after a successful flush", async () => {

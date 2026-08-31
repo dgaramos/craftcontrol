@@ -40,13 +40,20 @@ export function startMovementSampling(handler, interval) {
   }
 }
 
+let gameModeProbed = false;
+
 export function readGameMode(player) {
   try {
-    if (typeof player?.getGameMode !== "function") return null;
+    if (typeof player?.getGameMode !== "function") {
+      if (!gameModeProbed) { gameModeProbed = true; record("gameModeReading", false); }
+      return null;
+    }
     const mode = player.getGameMode();
+    if (!gameModeProbed) { gameModeProbed = true; record("gameModeReading", true); }
     if (mode === "survival" || mode === "creative" || mode === "adventure") return mode;
     return null;
-  } catch {
+  } catch (error) {
+    if (!gameModeProbed) { gameModeProbed = true; record("gameModeReading", false, error); }
     return null;
   }
 }

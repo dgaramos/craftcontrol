@@ -33,6 +33,16 @@ const envelopes = () => output
   .filter((line) => line.includes("[BEDROCK_TELEMETRY]"))
   .map(parse);
 
+// gameModeReading capability must be registered after the first sampling cycle
+const started = envelopes().find((e) => e.type === "snapshot.started");
+// capability may appear in snapshot.started (emitted after first interval) or telemetry.started
+const allStarted = envelopes().filter((e) => e.type === "telemetry.started" || e.type === "snapshot.started");
+const lastStarted = allStarted.at(-1);
+// gameModeReading is lazily registered on first readGameMode call (in the sampling interval)
+// so it appears in capabilities after the first interval, which is before snapshot.started
+assert.ok(lastStarted?.data?.capabilities?.gameModeReading?.supported === true,
+  "gameModeReading capability must be registered as supported");
+
 // snapshot.player must include gameMode === "survival" (happy path)
 const snapshot1 = envelopes().findLast((e) => e.type === "snapshot.player" && e.player?.name === "TestPlayer");
 assert.ok(snapshot1, "snapshot.player envelope must exist");

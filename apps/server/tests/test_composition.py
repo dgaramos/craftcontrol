@@ -61,6 +61,13 @@ def test_compose_manager_passes_health_timeout_to_operation_service(tmp_path: Pa
     assert manager.operation_service._health_timeout == 420
 
 
+def test_compose_manager_passes_restart_timeout_to_operation_service(tmp_path: Path) -> None:
+    settings = replace(_minimal_settings(tmp_path), host_agent_restart_timeout_seconds=240)
+    manager = compose_manager(settings, **_fake_deps())
+    assert manager.operation_service is not None
+    assert manager.operation_service._restart_timeout == 240
+
+
 def test_compose_manager_preserves_falsy_injected_runtime(tmp_path: Path) -> None:
     settings = _minimal_settings(tmp_path)
     fake_runtime = MagicMock()

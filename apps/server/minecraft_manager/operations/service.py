@@ -63,6 +63,7 @@ class ServerOperationService:
         thread_factory: ThreadFactory,
         server_id: str = "default",
         health_timeout: int = DEFAULT_HEALTH_TIMEOUT_SECONDS,
+        restart_timeout: int = 180,
         refresh_observed_settings: Callable[[], None] | None = None,
     ) -> None:
         self._repo = operation_repository
@@ -71,6 +72,7 @@ class ServerOperationService:
         self._configuration = configuration
         self._server_id = server_id
         self._health_timeout = health_timeout
+        self._restart_timeout = restart_timeout
         self._refresh_observed_settings = refresh_observed_settings
         self._thread_factory = thread_factory
         # Protects the check-then-create sequence on this process.
@@ -336,6 +338,7 @@ class ServerOperationService:
                     operation_id=operation.operation_id,
                     intended_state=operation.requested_changes,
                     health_timeout_seconds=self._health_timeout,
+                    restart_timeout_seconds=self._restart_timeout,
                 )
             except Exception as exc:
                 obs = self._observe_container()

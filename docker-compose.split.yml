@@ -31,6 +31,7 @@ services:
       # reach the Docker daemon directly from inside the backend container.
       HOST_AGENT_URL: http://host-gateway:7890
       HOST_AGENT_TOKEN_FILE: /run/host-agent-token
+      HOST_AGENT_RESTART_TIMEOUT_SECONDS: "${HOST_AGENT_RESTART_TIMEOUT_SECONDS:-180}"
     extra_hosts:
       - "host-gateway:host-gateway"
     expose:

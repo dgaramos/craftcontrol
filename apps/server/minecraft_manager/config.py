@@ -11,6 +11,9 @@ HOST_AGENT_URL_PATTERN = re.compile(r"^https?://[^\s/]+(/.*)?$")
 HOST_AGENT_HEALTH_TIMEOUT_MIN = 10
 HOST_AGENT_HEALTH_TIMEOUT_MAX = 600
 HOST_AGENT_HEALTH_TIMEOUT_DEFAULT = 300
+HOST_AGENT_RESTART_TIMEOUT_MIN = 10
+HOST_AGENT_RESTART_TIMEOUT_MAX = 300
+HOST_AGENT_RESTART_TIMEOUT_DEFAULT = 180
 
 
 @dataclass(frozen=True)
@@ -28,6 +31,7 @@ class Settings:
     host_agent_url: str = ""
     host_agent_token_file: str = "/run/secrets/host_agent_token"  # noqa: S105
     host_agent_health_timeout_seconds: int = HOST_AGENT_HEALTH_TIMEOUT_DEFAULT
+    host_agent_restart_timeout_seconds: int = HOST_AGENT_RESTART_TIMEOUT_DEFAULT
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -48,6 +52,17 @@ class Settings:
                 "HOST_AGENT_HEALTH_TIMEOUT_SECONDS must be between "
                 f"{HOST_AGENT_HEALTH_TIMEOUT_MIN} and {HOST_AGENT_HEALTH_TIMEOUT_MAX}"
             )
+        try:
+            host_agent_restart_timeout_seconds = int(
+                os.getenv("HOST_AGENT_RESTART_TIMEOUT_SECONDS", str(HOST_AGENT_RESTART_TIMEOUT_DEFAULT))
+            )
+        except ValueError as exc:
+            raise ValueError("HOST_AGENT_RESTART_TIMEOUT_SECONDS must be an integer") from exc
+        if not HOST_AGENT_RESTART_TIMEOUT_MIN <= host_agent_restart_timeout_seconds <= HOST_AGENT_RESTART_TIMEOUT_MAX:
+            raise ValueError(
+                "HOST_AGENT_RESTART_TIMEOUT_SECONDS must be between "
+                f"{HOST_AGENT_RESTART_TIMEOUT_MIN} and {HOST_AGENT_RESTART_TIMEOUT_MAX}"
+            )
         return cls(
             container=os.getenv("MINECRAFT_CONTAINER", "minecraft-bedrock"),
             project=Path(os.getenv("MINECRAFT_PROJECT", "/minecraft-project")),
@@ -62,6 +77,7 @@ class Settings:
             host_agent_url=host_agent_url,
             host_agent_token_file=os.getenv("HOST_AGENT_TOKEN_FILE", "/run/secrets/host_agent_token"),
             host_agent_health_timeout_seconds=host_agent_health_timeout_seconds,
+            host_agent_restart_timeout_seconds=host_agent_restart_timeout_seconds,
         )
 
     @property

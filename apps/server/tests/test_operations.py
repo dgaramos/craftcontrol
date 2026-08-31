@@ -92,6 +92,7 @@ def make_service(
     broker: MagicMock | None = None,
     configuration: MagicMock | None = None,
     health_timeout: int = 1,
+    restart_timeout: int = 180,
     thread_factory=threading.Thread,
     refresh_observed_settings=None,
 ) -> ServerOperationService:
@@ -112,6 +113,7 @@ def make_service(
         thread_factory=thread_factory,
         server_id="test-server",
         health_timeout=health_timeout,
+        restart_timeout=restart_timeout,
         refresh_observed_settings=refresh_observed_settings,
     )
 
@@ -482,6 +484,23 @@ class TestServerOperationService:
         verify = next(stage for stage in operation.stages if stage.stage == OperationStage.VERIFY)
         assert verify.evidence["differences"] == []
         assert operation.observation["observed_settings"] == {"max-players": "20"}
+
+    def test_operation_sends_configured_restart_timeout_to_host_agent(self, tmp_path: Path):
+        docker = MagicMock()
+        docker.status.return_value = {"state": "running", "online": True}
+        configuration = MagicMock()
+        configuration.read_properties.return_value = {"max-players": "20"}
+        service = make_service(
+            tmp_path,
+            docker=docker,
+            configuration=configuration,
+            restart_timeout=240,
+            thread_factory=InlineThread,
+        )
+
+        service.apply_restart_required({"MAX_PLAYERS": "20"}, lambda: None)
+
+        assert docker.execute.call_args.kwargs["restart_timeout_seconds"] == 240
 
     def test_operation_becomes_divergent_when_effective_configuration_differs(self, tmp_path: Path):
         docker = MagicMock()

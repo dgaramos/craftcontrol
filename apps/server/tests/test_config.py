@@ -20,12 +20,31 @@ def test_settings_accepts_host_agent_health_timeout_override(monkeypatch: pytest
     assert Settings.from_env().host_agent_health_timeout_seconds == 420
 
 
+def test_settings_uses_three_minute_host_agent_restart_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("HOST_AGENT_RESTART_TIMEOUT_SECONDS", raising=False)
+    assert Settings.from_env().host_agent_restart_timeout_seconds == 180
+
+
+def test_settings_accepts_host_agent_restart_timeout_override(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("HOST_AGENT_RESTART_TIMEOUT_SECONDS", "240")
+    assert Settings.from_env().host_agent_restart_timeout_seconds == 240
+
+
 @pytest.mark.parametrize("value", ["not-a-number", "9", "601"])
 def test_settings_rejects_invalid_host_agent_health_timeout(
     monkeypatch: pytest.MonkeyPatch, value: str
 ) -> None:
     monkeypatch.setenv("HOST_AGENT_HEALTH_TIMEOUT_SECONDS", value)
     with pytest.raises(ValueError, match="HOST_AGENT_HEALTH_TIMEOUT_SECONDS"):
+        Settings.from_env()
+
+
+@pytest.mark.parametrize("value", ["not-a-number", "9", "301"])
+def test_settings_rejects_invalid_host_agent_restart_timeout(
+    monkeypatch: pytest.MonkeyPatch, value: str
+) -> None:
+    monkeypatch.setenv("HOST_AGENT_RESTART_TIMEOUT_SECONDS", value)
+    with pytest.raises(ValueError, match="HOST_AGENT_RESTART_TIMEOUT_SECONDS"):
         Settings.from_env()
 
 

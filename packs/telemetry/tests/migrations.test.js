@@ -1,4 +1,4 @@
-import test from "node:test";
+import { test } from "@jest/globals";
 import assert from "node:assert/strict";
 import { migrateShardedV2, migrateState } from "../behavior_pack/scripts/migrations.js";
 

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import test from "node:test";
+import { test } from "@jest/globals";
 
 test("captures a real runtime join, block break, leave, and snapshot flow", () => {
   const result = spawnSync(process.execPath, [

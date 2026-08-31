@@ -1,13 +1,16 @@
-import test from "node:test";
+import { test } from "@jest/globals";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 test("installer publishes readable pack files and associates the world", () => {
   const temporary = fs.mkdtempSync(path.join(os.tmpdir(), "craftcontrol-telemetry-"));
-  const project = path.resolve(import.meta.dirname, "..");
+  const project = path.resolve(__dirname, "..");
   const world = path.join(temporary, "worlds", "TestWorld");
   const legacy = path.join(temporary, "behavior_packs", "minecraft-bedrock-telemetry");
   fs.mkdirSync(world, { recursive: true });

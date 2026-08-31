@@ -36,8 +36,8 @@ Protocol `schema` and pack `storageVersion` are intentionally independent. Stora
 - `snapshot.started`
 - `snapshot.player`
 - `snapshot.finished`
-- `block.broken` *(deprecated since 0.3.1 — use `blocks.changed`)*
-- `block.placed` *(deprecated since 0.3.1 — use `blocks.changed`)*
+- `block.broken` *(deprecated since 0.3.1 — use `blocks.changed`; planned for removal in 0.4.0)*
+- `block.placed` *(deprecated since 0.3.1 — use `blocks.changed`; planned for removal in 0.4.0)*
 
 Send `/scriptevent bedrock_telemetry:sync full` from the dedicated-server console to request a full snapshot. The message body is reserved for future filters.
 

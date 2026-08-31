@@ -24,5 +24,5 @@ test("installer publishes readable pack files and associates the world", () => {
   assert.equal(fs.existsSync(legacy), false);
   const packs = JSON.parse(fs.readFileSync(path.join(world, "world_behavior_packs.json"), "utf8"));
   assert.equal(packs[0].pack_id, "8c916948-76c6-4aa5-91e0-97671dfd3830");
-  assert.deepEqual(packs[0].version, [0, 3, 1]);
+  assert.deepEqual(packs[0].version, [0, 3, 2]);
 });

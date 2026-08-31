@@ -181,6 +181,35 @@ Active time means sampled movement time, not total online time: a player contrib
 
 The pack has no network module, no HTTP client, no player-facing commands, and no generic remote execution path. Snapshot requests use the namespaced `scriptevent` channel and only cause read-only telemetry output. Consumers must strictly validate the prefix, schema, topic, size, and field types before persistence.
 
+## Changelog
+
+### 0.3.2
+
+- Reads `Player.getGameMode()` during each movement sampling cycle.
+- Emits `player.gamemode.changed` when the observed mode changes between cycles.
+- Adds `gameMode` field to `snapshot.player` data when the `gameModeReading` capability is supported and the player is online during the snapshot.
+- Registers the `gameModeReading` capability, probed at startup and included in every `telemetry.started` and `snapshot.started` envelope.
+
+### 0.3.1
+
+- Coalesces per-player block activity into `blocks.changed` once per five-second persistence cycle.
+- Deprecates `block.broken` and `block.placed`; consumers should migrate to `blocks.changed`. Removal is planned for 0.4.0.
+
+### 0.3.0
+
+- Adds bounded `killsByType`, `distanceByDimension`, `activeTimeByDimension`, `firstDimensionVisitAt`, and `lastDimensionVisitAt` maps to `snapshot.player` data.
+- Introduces storage schema version 3; migrates v2 shards independently without resetting existing counters.
+
+### 0.2.3
+
+- Probes every optional Bedrock event signal before subscribing.
+- Reports individual capability status in `telemetry.started` and `snapshot.started`.
+
+### 0.2.2
+
+- Introduces sharded storage schema version 2; each player is persisted under a separate `bedrock_telemetry:player:*` property.
+- Migrates legacy monolithic storage without data loss, preserving the original under `bedrock_telemetry:state_backup_v0` or `bedrock_telemetry:state_backup_v1`.
+
 ## License
 
 MIT. This project is independent and is not affiliated with Mojang Studios or Microsoft. Minecraft is a trademark of Microsoft Corporation.

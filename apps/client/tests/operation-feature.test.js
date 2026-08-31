@@ -150,6 +150,22 @@ describe("createOperationFeature — renderOperation", () => {
     expect(el.querySelector(".op-terminal").textContent).not.toContain("[object Object]");
   });
 
+  test("renders structured evidence and observations without object coercion", () => {
+    const feature = createOperationFeature(makeDeps());
+    const el = mount(feature, makeOperation({
+      state: "divergent",
+      stages: [
+        { stage: "review", result: "completed", started_at: 1700000000, completed_at: 1700000001, evidence: {}, error: null },
+        { stage: "backup_verify", result: "running", started_at: 1700000002, completed_at: null, evidence: { backup: { verified: true, files: ["world.zip"] } }, error: null },
+      ],
+      observation: { observed_settings: { gamemode: "survival" } },
+    }));
+
+    expect(el.textContent).not.toContain("[object Object]");
+    expect(el.textContent).toContain('"verified": true');
+    expect(el.textContent).toContain('"gamemode": "survival"');
+  });
+
   test("renders skipped stages", () => {
     const feature = createOperationFeature(makeDeps());
     const op = makeOperation({

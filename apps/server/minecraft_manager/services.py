@@ -176,19 +176,19 @@ class ManagerService:
 
         if self.operation_service is not None:
             # Route through the durable operation lifecycle (issue #190).
-            # The apply_fn performs the actual disk write inside the operation.
+            # The host agent writes server.properties in its PREPARE stage.
+            # The backend stores only observed state after verification.
             def _apply() -> None:
-                self.files.write_env(changes)
-                self.repository.store("settings", changes, "manager")
-                self.broker.publish("state.changed", "manager", {"domains": ["settings"], "keys": list(changes)})
+                return None
 
             operation = self.operation_service.apply_restart_required(changes, _apply)
             return list(changes), operation.operation_id
         else:
             # Fallback for contexts where operation tracking is not wired in
             # (e.g. existing tests that compose ManagerService directly).
-            self.files.write_env(changes)
-            self.repository.store("settings", changes, "manager")
+            from .schema import PROPERTY_NAMES
+            self.files.write_properties({PROPERTY_NAMES[key]: value for key, value in changes.items()})
+            self.repository.store("settings", changes, "server.properties")
             self.broker.publish("state.changed", "manager", {"domains": ["settings"], "keys": list(changes)})
 
         return list(changes), None
@@ -211,9 +211,7 @@ class ManagerService:
         changes = origin.requested_changes
 
         def _apply() -> None:
-            self.files.write_env(changes)
-            self.repository.store("settings", changes, "manager")
-            self.broker.publish("state.changed", "manager", {"domains": ["settings"], "keys": list(changes)})
+            return None
 
         retry = self.operation_service.retry_operation(operation_id, _apply)
         return retry.operation_id

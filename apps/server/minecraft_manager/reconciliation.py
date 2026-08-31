@@ -82,18 +82,17 @@ class ReconciliationService:
         trigger_telemetry = False
         try:
             self.broker.publish("state.reconciliation.started", reason, {"scope": "full"})
-            _, env_values = self.files.read_env()
             properties = self.files.read_properties()
             settings = {
-                key: properties.get(PROPERTY_NAMES.get(key, "")) or env_values.get(key, "")
+                key: properties.get(PROPERTY_NAMES.get(key, ""), "")
                 for key in SETTINGS
             }
-            self.repository.store("settings", settings, "env+server.properties")
+            self.repository.store("settings", settings, "server.properties")
             gamerules, players, online, maximum, xuids = self.bedrock.query_state()
             if gamerules:
                 self.repository.store("gamerules", gamerules, "bedrock-console")
             if maximum == 0:
-                maximum = int(env_values.get("MAX_PLAYERS") or properties.get("max-players") or 0)
+                maximum = int(properties.get("max-players") or 0)
             if xuids:
                 self.repository.store("known_players", xuids, "bedrock-log")
             self.player_service.reconcile_online_players(players, xuids, "bedrock-console")
@@ -129,14 +128,13 @@ class ReconciliationService:
     def refresh_settings_from_properties(self, reason: str = "operation-failure") -> None:
         """Refresh settings from Bedrock's effective configuration without mutation.
 
-        ``.env`` is the requested startup input and can diverge from a running
-        server after a failed lifecycle operation.  ``server.properties`` is
-        therefore authoritative whenever it contains a value.
+        ``server.properties`` is the canonical Bedrock configuration. The
+        deployment ``.env`` intentionally does not participate in settings
+        reconciliation, preventing stale Compose inputs from masking reality.
         """
-        _, env_values = self.files.read_env()
         properties = self.files.read_properties()
         settings = {
-            key: properties.get(PROPERTY_NAMES.get(key, "")) or env_values.get(key, "")
+            key: properties.get(PROPERTY_NAMES.get(key, ""), "")
             for key in SETTINGS
         }
         self.repository.store("settings", settings, "server.properties")

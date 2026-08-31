@@ -43,7 +43,7 @@ represents a discrete unit of work with a defined owner and observable outcome.
 |---|---|---|
 | 1 | `REVIEW` | Application validates the requested change against current configuration and RBAC. |
 | 2 | `BACKUP_VERIFICATION` | A backup is confirmed as current and healthy before any destructive step proceeds. |
-| 3 | `PREPARATION` | Configuration files and environment variables are written. The Compose project is staged. |
+| 3 | `PREPARATION` | Canonical Bedrock configuration files are written. The Compose project is staged without duplicating managed server settings. |
 | 4 | `RESTART` | The executor (Compose adapter or host agent) issues the restart command. |
 | 5 | `HEALTH_WAIT` | The health probe polls until the server reports ready or the deadline elapses. |
 | 6 | `VERIFICATION` | The application reads server state and compares it to the intended post-change state. |
@@ -81,7 +81,7 @@ initiated explicitly by the operator.
 
 Before a failed operation is published, CraftControl performs a read-only
 configuration reconciliation when the server is reachable. The requested
-`.env` value is never proof that Bedrock applied it: `server.properties` is
+The requested value is never proof that Bedrock applied it: `server.properties` is
 authoritative for the effective value. Evidence includes expected settings,
 observed settings, differences, and a `reconciliation_result` of `applied`,
 `diverged`, or `unknown`. A divergent result must display the observed value;

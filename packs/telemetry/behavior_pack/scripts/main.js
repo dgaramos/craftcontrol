@@ -92,7 +92,8 @@ subscribeScriptEvents((event) => {
 });
 
 startMovementSampling(() => {
-  for (const player of world.getAllPlayers()) {
+  const livePlayers = world.getAllPlayers();
+  for (const player of livePlayers) {
     const previous = positions.get(player.id);
     const current = { ...player.location, dimension: player.dimension.id };
     positions.set(player.id, current);
@@ -107,7 +108,8 @@ startMovementSampling(() => {
       observeDimension(stats, current.dimension, Date.now());
     });
   }
-  for (const player of world.getAllPlayers()) {
+  probeGameModeReading(livePlayers);
+  for (const player of livePlayers) {
     const current = readGameMode(player);
     if (current !== null) {
       const previous = gameModes.get(player.id);

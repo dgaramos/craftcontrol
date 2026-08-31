@@ -51,9 +51,12 @@ export function readGameMode(player) {
   }
 }
 
+let gameModeProbed = false;
+
 export function probeGameModeReading(players) {
-  const supported = players.some((p) => typeof p?.getGameMode === "function");
-  return record("gameModeReading", supported);
+  if (gameModeProbed || players.length === 0) return;
+  gameModeProbed = true;
+  record("gameModeReading", players.some((p) => typeof p?.getGameMode === "function"));
 }
 
 export function capabilitySnapshot() {

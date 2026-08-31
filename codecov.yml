@@ -21,6 +21,11 @@ coverage:
           - dr-agents
         target: 90%
         threshold: 2%
+      telemetry:
+        flags:
+          - telemetry
+        target: 80%
+        threshold: 2%
     patch:
       backend:
         flags:
@@ -42,6 +47,11 @@ coverage:
           - dr-agents
         target: 90%
         threshold: 5%
+      telemetry:
+        flags:
+          - telemetry
+        target: 70%
+        threshold: 5%
 
 flags:
   backend:
@@ -56,6 +66,9 @@ flags:
   dr-agents:
     paths:
       - apps/server/tests/test_agent_workflows.py
+  telemetry:
+    paths:
+      - packs/telemetry/behavior_pack/scripts/
 
 component_management:
   individual_components:

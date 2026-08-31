@@ -32,12 +32,12 @@ Protocol `schema` and pack `storageVersion` are intentionally independent. Stora
 - `player.dimension.changed`
 - `player.gamemode.changed`
 - `entity.died`
-- `block.broken`
-- `block.placed`
 - `blocks.changed`
 - `snapshot.started`
 - `snapshot.player`
 - `snapshot.finished`
+- `block.broken` *(deprecated since 0.3.1 — use `blocks.changed`)*
+- `block.placed` *(deprecated since 0.3.1 — use `blocks.changed`)*
 
 Send `/scriptevent bedrock_telemetry:sync full` from the dedicated-server console to request a full snapshot. The message body is reserved for future filters.
 
@@ -50,3 +50,31 @@ Pack `0.3.2` publishes the effective game mode of each online player. `snapshot.
 Pack `0.3.1` coalesces block activity per player and five-second persistence cycle into `blocks.changed`. Its `broken` and `placed` objects contain a `total` and bounded `byType` counts. Consumers continue accepting the legacy per-block topics during rolling upgrades.
 
 Snapshot player data in pack `0.3.0` adds `killsByType`, `distanceByDimension`, `activeTimeByDimension`, `firstDimensionVisitAt`, and `lastDimensionVisitAt`. Type and dimension maps are bounded. Visit timestamps are Unix epoch milliseconds as produced by the Bedrock JavaScript runtime.
+
+## Version history
+
+| Pack | Storage | Key additions |
+| --- | --- | --- |
+| 0.3.0 | 3 | `killsByType`, `distanceByDimension`, `activeTimeByDimension`, `firstDimensionVisitAt`, `lastDimensionVisitAt` in snapshot player data; bounded type and dimension maps |
+| 0.3.1 | 3 | `blocks.changed` coalesces per-player block activity per five-second cycle; `block.broken` and `block.placed` deprecated |
+| 0.3.2 | 3 | `player.gamemode.changed` emitted when game mode changes between cycles; `gameMode` field in `snapshot.player` when `gameModeReading` capability is supported and the player is online |
+
+Protocol schema `1` is unchanged across all pack versions listed above. Storage version `3` is unchanged from 0.3.0. Per-player dynamic properties are bounded to 30 KB per shard; writes that would exceed that limit are caught and logged as errors rather than silently corrupting state.
+
+## Capabilities
+
+The `capabilities` map in `telemetry.started` and `snapshot.started` lists the runtime availability of each optional feature. A capability object contains `supported: true | false` and, when false, may include a bounded startup `error` string.
+
+| Capability | Feature |
+| --- | --- |
+| `blocksBroken` | `playerBreakBlock` event subscription |
+| `blocksPlaced` | `playerPlaceBlock` event subscription |
+| `damageAggregates` | `entityHurt` event subscription |
+| `deathsAndKills` | `entityDie` event subscription |
+| `dimensionChanges` | `playerDimensionChange` event subscription |
+| `gameModeReading` | `Player.getGameMode()` — present from pack 0.3.2 |
+| `movementSampling` | `system.runInterval` + `world.getAllPlayers` |
+| `playerJoins` | `playerJoin` event subscription |
+| `playerLeaves` | `playerLeave` event subscription |
+| `playerRespawns` | `playerSpawn` event subscription |
+| `snapshotRequests` | `system.afterEvents.scriptEventReceive` subscription |

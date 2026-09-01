@@ -10,6 +10,7 @@ from minecraft_manager.players.repository import SQLitePlayerRepository
 from minecraft_manager.players.service import PlayerService
 from minecraft_manager.migrations import run_migrations
 from minecraft_manager.repository import StateRepository
+from minecraft_manager.services import ManagerService
 
 import sqlite3
 
@@ -168,3 +169,22 @@ def test_observed_game_mode_unchanged(
     assert detail["observed_game_mode"] is None
     # But preferred_game_mode must reflect what was set.
     assert detail["preferred_game_mode"] == "creative"
+
+
+# ---------------------------------------------------------------------------
+# test_manager_service_set_player_game_mode_returns_value
+# ---------------------------------------------------------------------------
+
+
+def test_manager_service_set_player_game_mode_returns_value() -> None:
+    """ManagerService.set_player_game_mode forwards the return value from PlayerService."""
+    player_service = MagicMock()
+    player_service.set_game_mode.return_value = "survival"
+
+    manager = ManagerService.__new__(ManagerService)
+    manager.player_service = player_service
+
+    result = manager.set_player_game_mode("VonCrush", "survival")
+
+    player_service.set_game_mode.assert_called_once_with("VonCrush", "survival")
+    assert result == "survival"

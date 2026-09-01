@@ -41,6 +41,19 @@ class PlayerService:
             self.repository.store("known_players", {player: xuid}, "bedrock-log")
         self.repository.observe_player(player, connected, xuid, "bedrock-log")
         self.repository.store("server", {"online": str(len(players))}, "bedrock-log")
+        if connected:
+            mode = self.repository.get_preferred_game_mode(player)
+            if mode is not None:
+                try:
+                    self.console.set_game_mode(player, mode)
+                except Exception:
+                    pass
+                else:
+                    self.events.publish(
+                        "player.game_mode.reapplied",
+                        "bedrock-log",
+                        {"player": player, "mode": mode, "origin": "auto-reapply"},
+                    )
         self.events.publish("state.changed", "bedrock-log", {"domains": ["players", "server"]})
 
     def record_derived_death(self, player: str, cause: str, raw: str) -> bool:

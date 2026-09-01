@@ -292,6 +292,15 @@ class SQLitePlayerRepository:
                 (mode, identity),
             )
 
+    def get_preferred_game_mode(self, name: str) -> str | None:
+        """Return the panel-managed preferred game mode for a player, or None."""
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT preferred_game_mode FROM player_profiles WHERE identity=?",
+                (player_identity(connection, name),),
+            ).fetchone()
+            return row[0] if row else None
+
     def player_profiles(self) -> list[dict[str, Any]]:
         with self._connect() as connection:
             rows = connection.execute(

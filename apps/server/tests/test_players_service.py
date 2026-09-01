@@ -294,3 +294,95 @@ def test_set_game_mode_player_name_with_spaces(service: PlayerService, repo: Mag
     repo.snapshot.return_value = {"players": ["Von Crush"], "known_players": {}, "bootstrap": {}}
     service.set_game_mode("Von Crush", "adventure")
     console.set_game_mode.assert_called_once_with("Von Crush", "adventure")
+
+
+# ---------------------------------------------------------------------------
+# observe_presence — auto-reapply preferred game mode (issue #409)
+# ---------------------------------------------------------------------------
+
+def test_observe_presence_reapplies_preferred_game_mode_on_connect(
+    service: PlayerService, repo: MagicMock, console: MagicMock
+) -> None:
+    """H1: connect + preferred_game_mode → console.set_game_mode called."""
+    repo.snapshot.return_value = {"players": [], "known_players": {}, "bootstrap": {}}
+    repo.get_preferred_game_mode.return_value = "survival"
+    service.observe_presence("VonCrush", connected=True)
+    console.set_game_mode.assert_called_once_with("VonCrush", "survival")
+
+
+def test_observe_presence_publishes_reapplied_event_on_connect(
+    service: PlayerService, repo: MagicMock, events: MagicMock
+) -> None:
+    """H2: reapply event published with origin='auto-reapply'."""
+    repo.snapshot.return_value = {"players": [], "known_players": {}, "bootstrap": {}}
+    repo.get_preferred_game_mode.return_value = "survival"
+    service.observe_presence("VonCrush", connected=True)
+    calls = [c for c in events.publish.call_args_list if c.args[0] == "player.game_mode.reapplied"]
+    assert len(calls) == 1
+    payload = calls[0].args[2]
+    assert payload["player"] == "VonCrush"
+    assert payload["mode"] == "survival"
+    assert payload["origin"] == "auto-reapply"
+
+
+def test_observe_presence_no_console_when_no_preferred_game_mode(
+    service: PlayerService, repo: MagicMock, console: MagicMock
+) -> None:
+    """F1: preferred_game_mode=None → console.set_game_mode not called."""
+    repo.snapshot.return_value = {"players": [], "known_players": {}, "bootstrap": {}}
+    repo.get_preferred_game_mode.return_value = None
+    service.observe_presence("VonCrush", connected=True)
+    console.set_game_mode.assert_not_called()
+
+
+def test_observe_presence_no_console_when_disconnecting(
+    service: PlayerService, repo: MagicMock, console: MagicMock
+) -> None:
+    """F2: connected=False → console.set_game_mode not called regardless of preference."""
+    repo.snapshot.return_value = {"players": ["VonCrush"], "known_players": {}, "bootstrap": {}}
+    repo.get_preferred_game_mode.return_value = "survival"
+    service.observe_presence("VonCrush", connected=False)
+    console.set_game_mode.assert_not_called()
+
+
+def test_observe_presence_state_changed_published_even_when_console_raises(
+    service: PlayerService, repo: MagicMock, console: MagicMock, events: MagicMock
+) -> None:
+    """F3: console.set_game_mode raises → state.changed still published, reapplied not published."""
+    repo.snapshot.return_value = {"players": [], "known_players": {}, "bootstrap": {}}
+    repo.get_preferred_game_mode.return_value = "survival"
+    console.set_game_mode.side_effect = RuntimeError("container offline")
+    service.observe_presence("VonCrush", connected=True)
+    state_calls = [c for c in events.publish.call_args_list if c.args[0] == "state.changed"]
+    assert len(state_calls) >= 1
+    reapplied_calls = [c for c in events.publish.call_args_list if c.args[0] == "player.game_mode.reapplied"]
+    assert len(reapplied_calls) == 0
+
+
+def test_observe_presence_player_name_with_spaces(
+    service: PlayerService, repo: MagicMock, console: MagicMock
+) -> None:
+    """E1: player name with spaces sent correctly to console."""
+    repo.snapshot.return_value = {"players": [], "known_players": {}, "bootstrap": {}}
+    repo.get_preferred_game_mode.return_value = "creative"
+    service.observe_presence("Von Crush", connected=True)
+    console.set_game_mode.assert_called_once_with("Von Crush", "creative")
+
+
+def test_observe_presence_no_error_when_repo_returns_none_profile(
+    service: PlayerService, repo: MagicMock, console: MagicMock
+) -> None:
+    """E2: repository returns None (no profile yet) → no error."""
+    repo.snapshot.return_value = {"players": [], "known_players": {}, "bootstrap": {}}
+    repo.get_preferred_game_mode.return_value = None
+    service.observe_presence("NewPlayer", connected=True)
+    console.set_game_mode.assert_not_called()
+
+
+def test_set_game_mode_offline_player_not_called_via_observe_presence(
+    service: PlayerService, repo: MagicMock, console: MagicMock
+) -> None:
+    """R1: set_game_mode with offline player → console.set_game_mode not called (regression)."""
+    repo.snapshot.return_value = {"players": [], "known_players": {}, "bootstrap": {}}
+    service.set_game_mode("VonCrush", "survival")
+    console.set_game_mode.assert_not_called()

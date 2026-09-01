@@ -231,6 +231,8 @@ As versões em execução do frontend e backend vêm de `versions.env`. Nomes an
 
 O host agent é opcional. Quando estiver habilitado, configure `HOST_AGENT_URL` e `HOST_AGENT_TOKEN_FILE` para o backend; veja [Host agent](docs/host-agent.md) para a configuração do segredo compartilhado, systemd e caminhos.
 
+O Host Agent opcional possui um instalador idempotente de pré-requisitos. Execute-o como root depois de instalar o serviço systemd; ele verifica a conta do agente, o acesso ao Docker, ACLs restritas, o observador de ACL do `.env` e o sandbox systemd sem reiniciar o Bedrock. Veja [Host Agent](docs/host-agent.md#preferred-idempotent-installer).
+
 ## Autenticação e acesso
 
 Contas do painel se vinculam a jogadores que o Bedrock já observou. A identidade privada baseada em XUID sobrevive a mudanças de Gamertag; XUIDs nunca aparecem em respostas públicas da API ou na interface.

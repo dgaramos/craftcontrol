@@ -5,8 +5,9 @@ All infrastructure dependencies are injected; no stdlib patching.
 from __future__ import annotations
 
 import sys
+from runpy import run_path
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 _AGENT_DIR = Path(__file__).resolve().parents[1]
 if str(_AGENT_DIR) not in sys.path:  # pragma: no cover
@@ -66,6 +67,8 @@ def _make_preflight(
     runner: FakeRunner | None = None,
     fs: FakeFilesystem | None = None,
     dry_run: bool = False,
+    agent_state_dir: str = _DEFAULT_AGENT_STATE_DIR,
+    docker_config: str = _DEFAULT_DOCKER_CONFIG,
 ) -> Preflight:
     return Preflight(
         project_root=project_root,
@@ -87,6 +90,8 @@ def _make_preflight(
             sandbox_ok=True,
         ),
         dry_run=dry_run,
+        agent_state_dir=agent_state_dir,
+        docker_config=docker_config,
     )
 
 
@@ -335,6 +340,25 @@ def test_preflight_path_not_absolute():
     assert runner.calls == []
 
 
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("compose_file", "docker-compose.yml"),
+        ("agent_state_dir", "var/lib/craftcontrol"),
+        ("docker_config", "var/lib/craftcontrol/docker"),
+    ],
+)
+def test_preflight_rejects_every_relative_runtime_path(field: str, value: str):
+    """All runtime paths are rejected before any mutation."""
+    runner = FakeRunner()
+    kwargs: dict[str, Any] = {field: value, "runner": runner}
+    result = _make_preflight(**kwargs).run()
+
+    assert not result.success
+    assert field in result.error
+    assert runner.calls == []
+
+
 def test_dry_run_reports_failures():
     """dry-run with inconsistent state exits 1 listing missing actions."""
     sysinfo = SystemInfo(
@@ -435,9 +459,14 @@ def test_preflight_fails_if_setfacl_missing():
     assert "setfacl" in result.error.lower()
 
 
-def test_preflight_plans_path_unit_when_inactive():
-    """Inactive path unit is added to planned actions."""
-    fs = FakeFilesystem(
+def test_preflight_installs_and_verifies_inactive_path_unit():
+    """An inactive watcher is written, enabled, started, and verified."""
+    class ActivatingFilesystem(FakeFilesystem):
+        def path_unit_active(self, unit: str) -> bool:
+            return bool(self.written_paths)
+
+    runner = FakeRunner()
+    fs = ActivatingFilesystem(
         acls={
             "/opt/craftcontrol": "u:craftcontrol-agent:--x",
             "/opt/craftcontrol/.env": "u:craftcontrol-agent:r--",
@@ -449,11 +478,62 @@ def test_preflight_plans_path_unit_when_inactive():
         sandbox_ok=True,
         path_unit_active=False,
     )
-    pf = _make_preflight(fs=fs)
+    pf = _make_preflight(fs=fs, runner=runner)
     result = pf.run()
 
     assert result.success
-    assert any("env-acl" in a for a in result.planned_actions)
+    assert any("env-acl.service" in path for path in fs.written_paths)
+    assert any("env-acl.path" in path for path in fs.written_paths)
+    assert ["systemctl", "enable", "--now", "craftcontrol-host-agent-env-acl.path"] in runner.calls
+    assert ["systemctl", "start", "craftcontrol-host-agent-env-acl.service"] in runner.calls
+
+
+def test_preflight_fails_when_path_unit_cannot_be_started():
+    """A systemd failure cannot be reported as a successful preflight."""
+    class FailingRunner(FakeRunner):
+        def run(self, cmd: Sequence[str], *, check: bool = True) -> int:
+            super().run(cmd, check=check)
+            if cmd[:2] == ["systemctl", "enable"]:
+                raise RuntimeError("systemctl enable failed")
+            return 0
+
+    runner = FailingRunner()
+    fs = FakeFilesystem(
+        acls={}, dropin_content=None, dropin_exists=False,
+        sandbox_ok=True, path_unit_active=False,
+    )
+    result = _make_preflight(runner=runner, fs=fs).run()
+
+    assert not result.success
+    assert "systemctl enable failed" in result.error
+
+
+def test_preflight_fails_when_path_unit_stays_inactive():
+    """Successful systemd commands are insufficient until the watcher is active."""
+    fs = FakeFilesystem(
+        acls={}, dropin_content=None, dropin_exists=False,
+        sandbox_ok=True, path_unit_active=False,
+    )
+
+    result = _make_preflight(fs=fs).run()
+
+    assert not result.success
+    assert "did not become active" in result.error
+
+
+def test_dry_run_does_not_install_path_unit():
+    """Dry-run reports watcher work without writing files or invoking systemd."""
+    runner = FakeRunner()
+    fs = FakeFilesystem(
+        acls={}, dropin_content=None, dropin_exists=False,
+        sandbox_ok=True, path_unit_active=False,
+    )
+    result = _make_preflight(runner=runner, fs=fs, dry_run=True).run()
+
+    assert result.success
+    assert fs.written_paths == []
+    assert runner.calls == []
+    assert any("env-acl" in action for action in result.planned_actions)
 
 
 def test_fake_filesystem_write_file_records_path():
@@ -482,3 +562,28 @@ def test_fake_runner_returns_nonzero_on_sandbox_fail_without_check():
     runner = FakeRunner(sandbox_ok=False)
     rc = runner.run(["systemd-run", "--wait", "test"], check=False)
     assert rc == 1
+
+
+def test_docker_membership_uses_configured_agent_not_invoking_process():
+    """Only the configured agent primary/supplementary groups grant Docker access."""
+    class Group:
+        def __init__(self, gid: int, members: list[str]) -> None:
+            self.gr_gid = gid
+            self.gr_mem = members
+
+    installer = run_path(str(Path(__file__).parents[3] / "deploy/host-agent/bin/install-craftcontrol-host-agent-runtime"))
+    is_group_member = installer["_is_group_member"]
+    docker_gid = 999
+
+    assert not is_group_member(
+        agent_user="craftcontrol-agent", primary_gid=1000, target_gid=docker_gid,
+        groups=[Group(docker_gid, ["root"])],
+    )
+    assert is_group_member(
+        agent_user="craftcontrol-agent", primary_gid=docker_gid, target_gid=docker_gid,
+        groups=[],
+    )
+    assert is_group_member(
+        agent_user="craftcontrol-agent", primary_gid=1000, target_gid=docker_gid,
+        groups=[Group(docker_gid, ["craftcontrol-agent"])],
+    )

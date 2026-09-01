@@ -1,5 +1,6 @@
 import { jest } from "@jest/globals";
 import { createPlayerProfile } from "../static/js/features/players/profile.js";
+import { createI18n } from "../static/js/i18n/index.js";
 import { makeEl } from "./helpers.js";
 
 function makeDeps() {
@@ -155,6 +156,26 @@ describe("createPlayerProfile", () => {
     await createPlayerProfile(deps)({ id: "player-1" }, {});
     expect(observedEl.hidden).toBe(false);
     expect(observedEl.textContent).toContain("creative");
+  });
+
+  test.each([
+    ["pt", "Modo observado (agora): Criativo"],
+    ["en", "Observed mode (now): Creative"],
+    ["es", "Modo observado (ahora): Creativo"],
+  ])("localizes the read-only observed game mode in %s", async (locale, expected) => {
+    const deps = makeDeps();
+    deps.state.locale = locale;
+    ({ t: deps.t, localized: deps.localized } = createI18n(() => deps.state.locale));
+    deps.api = jest.fn().mockResolvedValue({ profile: { name: "Alice", history: [], online: true, connected_at: 100, operator: false, observed_game_mode: "creative", preferred_game_mode: "survival" } });
+    const observedEl = makeEl();
+    const preferredStatusEl = makeEl();
+    deps.elements["#detail-observed-gamemode"] = observedEl;
+    deps.elements["#detail-preferred-gamemode-status"] = preferredStatusEl;
+
+    await createPlayerProfile(deps)({ id: "player-1" }, {});
+
+    expect(observedEl.textContent).toBe(expected);
+    expect(preferredStatusEl.textContent).not.toBe(observedEl.textContent);
   });
 
   test("hides observed game mode section when field is null", async () => {

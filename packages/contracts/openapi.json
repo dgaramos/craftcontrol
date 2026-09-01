@@ -1380,7 +1380,8 @@
                     "enum": [
                       "survival",
                       "creative",
-                      "adventure"
+                      "adventure",
+                      "server_default"
                     ]
                   }
                 }
@@ -2495,6 +2496,17 @@
               }
             ],
             "description": "Game mode last observed by the Telemetry Pack. Null when the pack is absent or the player has no snapshot."
+          },
+          "preferred_game_mode": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Game mode preference configured by the panel operator. Null means no preference \u2014 the server default applies. Managed exclusively by the panel, never inferred from telemetry."
           }
         }
       },
@@ -2898,8 +2910,20 @@
             "enum": [
               "survival",
               "creative",
-              "adventure"
+              "adventure",
+              "server_default"
             ]
+          },
+          "preferred_game_mode": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The persisted preference after this operation. Null means the preference was cleared."
           }
         }
       },

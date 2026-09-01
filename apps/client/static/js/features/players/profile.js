@@ -47,11 +47,13 @@ return async function renderPlayerDetail(player, account, back = renderPlayersPa
       `<div class="permission-choice">`,
       `<label for="detail-gamemode-select" id="detail-gamemode-label"></label>`,
       `<select id="detail-gamemode-select">`,
+      `<option value="server_default" id="detail-gamemode-server-default"></option>`,
       `<option value="survival" id="detail-gamemode-survival"></option>`,
       `<option value="creative" id="detail-gamemode-creative"></option>`,
       `<option value="adventure" id="detail-gamemode-adventure"></option>`,
       `</select>`,
       `</div>`,
+      `<div id="detail-preferred-gamemode-status" class="gamemode-status-line"></div>`,
       `<button id="detail-gamemode-apply" class="primary" type="button"></button>`,
       `</section>`,
       `<div id="detail-observed-gamemode" class="player-admin-card block-panel" hidden></div>`,
@@ -122,16 +124,29 @@ return async function renderPlayerDetail(player, account, back = renderPlayersPa
       catch (error) { toast(error.message, true); renderPlayerDetail(player, account, back); }
     };
 
-    // Game mode section — only available while the player is online
+    // Game mode section — always visible; applies immediately when online
     const gameModeSection = $("#detail-gamemode-card");
-    if (gameModeSection) gameModeSection.hidden = !profile.online;
+    if (gameModeSection) gameModeSection.hidden = false;
     $("#detail-gamemode-title").textContent = t("gameModeTitle");
     $("#detail-gamemode-help").textContent = t("gameModeHelp");
     $("#detail-gamemode-label").textContent = t("gameModeLabel");
+    $("#detail-gamemode-server-default").textContent = t("serverDefault");
     $("#detail-gamemode-survival").textContent = t("survival");
     $("#detail-gamemode-creative").textContent = t("creative");
     $("#detail-gamemode-adventure").textContent = t("adventure");
     $("#detail-gamemode-apply").textContent = t("gameModeLabel");
+
+    // Pre-select the persisted preference (or server_default when null)
+    const gameModeSelect = $("#detail-gamemode-select");
+    if (gameModeSelect) gameModeSelect.value = profile.preferred_game_mode || "server_default";
+
+    // Show the current preferred_game_mode state as a read-only label
+    const preferredStatus = $("#detail-preferred-gamemode-status");
+    if (preferredStatus) {
+      preferredStatus.textContent = profile.preferred_game_mode
+        ? `${t("preferredGameModeLabel")}: ${t(profile.preferred_game_mode) || profile.preferred_game_mode}`
+        : t("preferredGameModeNone");
+    }
 
     // Show FORCE_GAMEMODE notice when the setting is enabled
     const serverState = state.server || {};
@@ -161,6 +176,7 @@ return async function renderPlayerDetail(player, account, back = renderPlayersPa
     };
 
     // Observed game mode — read-only, sourced from Telemetry Pack snapshot
+    // Distinct from preferred_game_mode which is the panel-configured preference.
     const observedGameModeEl = $("#detail-observed-gamemode");
     if (observedGameModeEl) {
       const observedMode = profile.observed_game_mode;

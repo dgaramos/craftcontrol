@@ -122,17 +122,17 @@ describe("createPlayerProfile", () => {
     expect(applyBtn.disabled).toBe(false);
   });
 
-  test("hides game mode section when player is offline", async () => {
+  test("shows game mode section even when player is offline", async () => {
     const deps = makeDeps();
     const gameModeCard = makeEl();
-    gameModeCard.hidden = false;
+    gameModeCard.hidden = true;
     deps.api = jest.fn().mockResolvedValue({ profile: { name: "Alice", history: [], online: false, operator: false } });
     deps.$ = jest.fn((selector) => {
       if (selector === "#detail-gamemode-card") return gameModeCard;
       return deps.elements[selector] ||= makeEl();
     });
     await createPlayerProfile(deps)({ id: "player-1" }, {});
-    expect(gameModeCard.hidden).toBe(true);
+    expect(gameModeCard.hidden).toBe(false);
   });
 
   test("shows game mode section when player is online", async () => {
@@ -165,6 +165,50 @@ describe("createPlayerProfile", () => {
     deps.elements["#detail-observed-gamemode"] = observedEl;
     await createPlayerProfile(deps)({ id: "player-1" }, {});
     expect(observedEl.hidden).toBe(true);
+  });
+
+  test("selector contains server_default option", async () => {
+    const deps = makeDeps();
+    await createPlayerProfile(deps)({ id: "player-1" }, {});
+    expect(deps.content.innerHTML).toContain("detail-gamemode-server-default");
+  });
+
+  test("apply button sends server_default body when that option is selected", async () => {
+    const deps = makeDeps();
+    const applyBtn = makeEl();
+    const modeSelect = { value: "server_default" };
+    deps.elements["#detail-gamemode-apply"] = applyBtn;
+    deps.elements["#detail-gamemode-select"] = modeSelect;
+    deps.api = jest.fn()
+      .mockResolvedValueOnce({ profile: { name: "Alice", history: [], online: true, connected_at: 100, operator: false } })
+      .mockResolvedValueOnce({ ok: true });
+    await createPlayerProfile(deps)({ id: "player-1" }, {});
+    await applyBtn.onclick();
+    expect(deps.api).toHaveBeenCalledWith(
+      "/api/players/Alice/gamemode",
+      expect.objectContaining({ body: JSON.stringify({ mode: "server_default" }) })
+    );
+  });
+
+  test("shows distinct observed and preferred game mode labels", async () => {
+    const deps = makeDeps();
+    const observedEl = makeEl();
+    const preferredStatusEl = makeEl();
+    deps.api = jest.fn().mockResolvedValue({ profile: { name: "Alice", history: [], online: true, connected_at: 100, operator: false, observed_game_mode: "survival", preferred_game_mode: "creative" } });
+    deps.elements["#detail-observed-gamemode"] = observedEl;
+    deps.elements["#detail-preferred-gamemode-status"] = preferredStatusEl;
+    await createPlayerProfile(deps)({ id: "player-1" }, {});
+    expect(observedEl.textContent).toContain("observedGameModeLabel");
+    expect(preferredStatusEl.textContent).toContain("preferredGameModeLabel");
+  });
+
+  test("preferred_game_mode null shows neutral state", async () => {
+    const deps = makeDeps();
+    const preferredStatusEl = makeEl();
+    deps.api = jest.fn().mockResolvedValue({ profile: { name: "Alice", history: [], online: true, connected_at: 100, operator: false, preferred_game_mode: null } });
+    deps.elements["#detail-preferred-gamemode-status"] = preferredStatusEl;
+    await createPlayerProfile(deps)({ id: "player-1" }, {});
+    expect(preferredStatusEl.textContent).toBe("preferredGameModeNone");
   });
 
   test("apply game mode button does nothing when select is missing", async () => {

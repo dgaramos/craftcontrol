@@ -127,6 +127,7 @@ class PlayerService:
         return self.repository.period_analytics(days, limit)
 
     _VALID_GAME_MODES = {"survival", "creative", "adventure"}
+    _GAME_MODE_SENTINEL = "server_default"
 
     def set_operator(self, player: str, enabled: bool) -> None:
         self.console.set_operator(player, enabled)
@@ -135,11 +136,25 @@ class PlayerService:
         self.repository.set_player_permission(player, permission, "manager")
         self.events.publish("state.changed", "manager", {"domains": ["permissions"], "player": player})
 
-    def set_game_mode(self, player: str, mode: str) -> None:
-        if mode not in self._VALID_GAME_MODES:
+    def set_game_mode(self, player: str, mode: str) -> str | None:
+        """Persist game mode preference and (when online) send console command.
+
+        Returns the persisted preferred_game_mode value (None for server_default).
+        Raises ValueError for unknown modes; never raises for offline players.
+        """
+        if mode not in self._VALID_GAME_MODES and mode != self._GAME_MODE_SENTINEL:
             raise ValueError("modo de jogo inválido")
-        online = {name.casefold() for name in self.repository.snapshot().get("players", [])}
-        if player.casefold() not in online:
-            raise LookupError("jogador não está online")
-        self.console.set_game_mode(player, mode)
-        self.events.publish("state.changed", "manager", {"domains": ["players"], "player": player, "game_mode": mode})
+        # Persist the preference (NULL for server_default).
+        preferred: str | None = None if mode == self._GAME_MODE_SENTINEL else mode
+        self.repository.set_preferred_game_mode(player, preferred)
+        # Send the console command only when the player is currently online
+        # and a concrete mode was requested (not server_default).
+        if preferred is not None:
+            online = {name.casefold() for name in self.repository.snapshot().get("players", [])}
+            if player.casefold() in online:
+                self.console.set_game_mode(player, mode)
+        self.events.publish(
+            "state.changed", "manager",
+            {"domains": ["players"], "player": player, "game_mode": mode},
+        )
+        return preferred

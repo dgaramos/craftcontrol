@@ -263,6 +263,7 @@ def test_set_game_mode_delegates_to_console(service: PlayerService, repo: MagicM
     repo.snapshot.return_value = {"players": ["VonCrush"], "known_players": {}, "bootstrap": {}}
     service.set_game_mode("VonCrush", "survival")
     console.set_game_mode.assert_called_once_with("VonCrush", "survival")
+    repo.set_preferred_game_mode.assert_called_once_with("VonCrush", "survival")
 
 
 def test_set_game_mode_publishes_audit_event(service: PlayerService, repo: MagicMock, events: MagicMock) -> None:
@@ -281,11 +282,12 @@ def test_set_game_mode_invalid_mode_raises_before_console(service: PlayerService
     console.set_game_mode.assert_not_called()
 
 
-def test_set_game_mode_offline_player_raises_lookup_error(service: PlayerService, repo: MagicMock, console: MagicMock) -> None:
+def test_set_game_mode_offline_player_skips_console(service: PlayerService, repo: MagicMock, console: MagicMock) -> None:
+    """Offline player: preference persisted but no console command sent (issue #408)."""
     repo.snapshot.return_value = {"players": [], "known_players": {}, "bootstrap": {}}
-    with pytest.raises(LookupError, match="não está online"):
-        service.set_game_mode("VonCrush", "survival")
+    service.set_game_mode("VonCrush", "survival")
     console.set_game_mode.assert_not_called()
+    repo.set_preferred_game_mode.assert_called_once_with("VonCrush", "survival")
 
 
 def test_set_game_mode_player_name_with_spaces(service: PlayerService, repo: MagicMock, console: MagicMock) -> None:

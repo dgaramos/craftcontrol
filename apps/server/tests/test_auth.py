@@ -376,3 +376,120 @@ def test_expired_session_is_rejected_before_csrf_validation(auth_db) -> None:
     response = client.post("/api/mutation", headers={"X-CSRF-Token": claim.get_json()["csrf_token"]})
     assert response.status_code == 401
     assert response.get_json()["error"] == "authentication required"
+
+
+# ---------------------------------------------------------------------------
+# Audit trail tests for change_password, revoke_session, revoke_other_sessions
+# ---------------------------------------------------------------------------
+
+def _audit_rows(db_path: Path) -> list[tuple]:
+    with sqlite3.connect(db_path) as conn:
+        return conn.execute(
+            "SELECT actor_identity, action, target, result FROM audit_log ORDER BY occurred_at"
+        ).fetchall()
+
+
+def test_change_password_emits_audit_on_success(auth_db) -> None:
+    path, auth = auth_db
+    invitation = auth.create_invitation("Nicole", "operator")
+    session, _ = auth.claim("Nicole", invitation, "a sufficiently long password")
+    before = len(_audit_rows(path))
+
+    auth.change_password(session, "a sufficiently long password", "a different secure password")
+
+    rows = _audit_rows(path)
+    new_rows = rows[before:]
+    assert len(new_rows) == 1
+    actor, action, target, result = new_rows[0]
+    assert action == "auth.password.changed"
+    assert result == "success"
+    assert actor == target  # actor is the identity who changed password
+
+
+def test_change_password_emits_denied_audit_on_wrong_password(auth_db) -> None:
+    path, auth = auth_db
+    invitation = auth.create_invitation("Nicole", "operator")
+    session, _ = auth.claim("Nicole", invitation, "a sufficiently long password")
+    before = len(_audit_rows(path))
+
+    with pytest.raises(ValueError):
+        auth.change_password(session, "wrong password123", "a different secure password")
+
+    rows = _audit_rows(path)
+    new_rows = rows[before:]
+    assert len(new_rows) == 1
+    _, action, _, result = new_rows[0]
+    assert action == "auth.password.changed"
+    assert result == "denied"
+
+
+def test_revoke_session_emits_audit_on_success(auth_db) -> None:
+    path, auth = auth_db
+    invitation = auth.create_invitation("Nicole", "viewer")
+    current, _ = auth.claim("Nicole", invitation, "a sufficiently long password")
+    auth.login("Nicole", "a sufficiently long password")
+    sessions = auth.sessions(current)
+    other_id = next(s["id"] for s in sessions if not s["current"])
+    before = len(_audit_rows(path))
+
+    auth.revoke_session(current, other_id)
+
+    rows = _audit_rows(path)
+    new_rows = rows[before:]
+    assert len(new_rows) == 1
+    _, action, target, result = new_rows[0]
+    assert action == "auth.session.revoked"
+    assert result == "success"
+    assert target == other_id  # sanitized 24-hex session id, not raw token_hash
+
+
+def test_revoke_session_emits_denied_audit_on_invalid_target(auth_db) -> None:
+    path, auth = auth_db
+    invitation = auth.create_invitation("Nicole", "viewer")
+    current, _ = auth.claim("Nicole", invitation, "a sufficiently long password")
+    before = len(_audit_rows(path))
+
+    with pytest.raises(ValueError):
+        auth.revoke_session(current, "nonexistentsessionid12345")
+
+    rows = _audit_rows(path)
+    new_rows = rows[before:]
+    assert len(new_rows) == 1
+    _, action, _, result = new_rows[0]
+    assert action == "auth.session.revoked"
+    assert result == "denied"
+
+
+def test_revoke_other_sessions_emits_audit(auth_db) -> None:
+    path, auth = auth_db
+    invitation = auth.create_invitation("Nicole", "viewer")
+    current, _ = auth.claim("Nicole", invitation, "a sufficiently long password")
+    auth.login("Nicole", "a sufficiently long password")
+    before = len(_audit_rows(path))
+
+    auth.revoke_other_sessions(current)
+
+    rows = _audit_rows(path)
+    new_rows = rows[before:]
+    assert len(new_rows) == 1
+    _, action, _, result = new_rows[0]
+    assert action == "auth.sessions.revoked_all"
+    assert result == "success"
+
+
+def test_audit_details_never_contain_secrets(auth_db) -> None:
+    import json as _json
+    path, auth = auth_db
+    invitation = auth.create_invitation("Nicole", "operator")
+    session, _ = auth.claim("Nicole", invitation, "a sufficiently long password")
+    auth.change_password(session, "a sufficiently long password", "a different secure password")
+
+    with sqlite3.connect(path) as conn:
+        rows = conn.execute("SELECT details FROM audit_log WHERE action='auth.password.changed'").fetchall()
+
+    forbidden = {"token", "token_hash", "password", "password_hash", "123", "456"}
+    for (details_str,) in rows:
+        details = _json.loads(details_str)
+        details_text = _json.dumps(details).lower()
+        for bad in forbidden:
+            assert bad not in details_text, f"Secret '{bad}' found in audit details: {details_str}"

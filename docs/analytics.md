@@ -39,7 +39,7 @@ Snapshot-backed rankings remain lifetime aggregates. Durable daily evidence now 
 
 `GET /api/analytics/blocks` derives a bounded lifetime view from each player's Telemetry Pack snapshot. It returns global broken/placed totals, the most frequent broken and placed block types, each player's favorite type, and separate miner and builder leaderboards. A curated ore classifier combines normal and deepslate variants for diamond, iron, gold, copper, coal, redstone, lapis, and emerald, plus Nether quartz, Nether gold, and ancient debris where appropriate.
 
-Incremental `block.broken` and `block.placed` events update both the lifetime counter and the corresponding bounded per-type map. The next authoritative snapshot reconciles those values after downtime or a detected sequence gap. The repository limits each type map to 128 entries and the public endpoint emits only top lists, favorites, aggregate ore totals, opaque player IDs, Gamertags, and observation timestamps; it never exposes XUIDs or the complete persistence envelope.
+Incremental `blocks.changed` events update both lifetime counters and their corresponding bounded per-type maps. The next authoritative snapshot reconciles those values after downtime or a detected sequence gap. The repository limits each type map to 128 entries and the public endpoint emits only top lists, favorites, aggregate ore totals, opaque player IDs, Gamertags, and observation timestamps; it never exposes XUIDs or the complete persistence envelope.
 
 The responsive Blocks view offers two task-focused modes. Mining presents ore cards and a selected per-ore leaderboard, while Building emphasizes placed block types and builders. All values remain explicitly lifetime-only because the pack does not yet persist time buckets.
 

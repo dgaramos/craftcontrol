@@ -105,7 +105,7 @@ def test_diagnostics_summarize_telemetry_and_broker_counters(tmp_path: Path) -> 
     assert diagnostics["telemetry"]["old"] == 1
     assert diagnostics["telemetry"]["by_topic"]["block.broken"] == {
         "accepted": 1, "rejected": 2, "duplicates": 1, "old": 1,
-        "lost": 0, "gaps": 0, "resets": 0,
+        "gaps": 0, "resets": 0,
     }
     assert diagnostics["telemetry"]["ingestion_duration_ms_max"] >= 0
     assert diagnostics["broker"]["events_by_topic"]["telemetry.sequence.rejected"] == 2
@@ -158,7 +158,7 @@ def test_sequence_gap_degrades_and_requests_reconciliation(tmp_path: Path) -> No
     assert telemetry["missing_events"] == "2"
     assert telemetry["last_gap"] == "11-12"
     assert requested == ["sequence-gap"]
-    assert service.diagnostics()["telemetry"]["by_topic"]["block.broken"]["lost"] == 2
+    assert service.diagnostics()["telemetry"]["sequence"]["lost"] == 2
     assert service.diagnostics()["telemetry"]["by_topic"]["block.broken"]["gaps"] == 1
 
 
@@ -188,6 +188,19 @@ def test_pack_sequence_reset_requests_snapshot(tmp_path: Path) -> None:
     assert telemetry["reset_count"] == "1"
     assert requested == ["pack-started"]
     assert service.diagnostics()["telemetry"]["by_topic"]["telemetry.started"]["resets"] == 1
+    assert service.diagnostics()["telemetry"]["sequence"]["resets"] == 1
+
+
+def test_sequence_losses_are_global_when_a_different_topic_detects_the_gap(tmp_path: Path) -> None:
+    service = _make_service(tmp_path)
+    service.request_telemetry_snapshot_async = lambda reason: None  # type: ignore[method-assign]
+    service.telemetry_event({"schema": 1, "sequence": 10, "type": "player.joined", "timestamp": 1, "player": {"name": "VonCrush"}, "data": {}})
+    service.telemetry_event({"schema": 1, "sequence": 13, "type": "blocks.changed", "timestamp": 2, "player": {"name": "VonCrush"}, "data": {}})
+
+    telemetry = service.diagnostics()["telemetry"]
+    assert telemetry["sequence"] == {"lost": 2, "gaps": 1, "resets": 0}
+    assert telemetry["by_topic"]["player.joined"]["gaps"] == 0
+    assert telemetry["by_topic"]["blocks.changed"]["gaps"] == 1
 
 
 def test_blocked_pack_storage_stays_degraded_after_snapshot(tmp_path: Path) -> None:

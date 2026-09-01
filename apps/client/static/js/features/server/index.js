@@ -35,6 +35,10 @@ async function loadDiagnostics() {
     add(t("telemetryRejected"), telemetry.rejected || 0);
     add(t("telemetryDuplicates"), telemetry.duplicates || 0);
     add(t("telemetryOld"), telemetry.old || 0);
+    const sequence = telemetry.sequence || {};
+    add(t("telemetryLost"), sequence.lost || 0);
+    add(t("detectedGaps"), sequence.gaps || 0);
+    add(t("resetCount"), sequence.resets || 0);
     const topicMetrics = Object.entries(telemetry.by_topic || {});
     if (topicMetrics.length) {
       const topicGroup = document.createElement("div");
@@ -43,7 +47,7 @@ async function loadDiagnostics() {
       topicGroup.append(label);
       topicMetrics.forEach(([topic, values]) => {
         const item = document.createElement("small");
-        item.textContent = `${topic}: ${t("telemetryAccepted")} ${values.accepted}, ${t("telemetryRejected")} ${values.rejected}, ${t("telemetryDuplicates")} ${values.duplicates}, ${t("telemetryOld")} ${values.old}, ${t("telemetryLost")} ${values.lost}, ${t("detectedGaps")} ${values.gaps}, ${t("resetCount")} ${values.resets}`;
+        item.textContent = `${topic}: ${t("telemetryAccepted")} ${values.accepted}, ${t("telemetryRejected")} ${values.rejected}, ${t("telemetryDuplicates")} ${values.duplicates}, ${t("telemetryOld")} ${values.old}, ${t("detectedGaps")} ${values.gaps}, ${t("resetCount")} ${values.resets}`;
         topicGroup.append(item);
       });
       groups.push(topicGroup);

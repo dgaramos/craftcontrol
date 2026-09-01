@@ -22,11 +22,12 @@ class TelemetryService:
         self._lock = threading.RLock()
         self._diagnostics: dict[str, float | int] = {"accepted": 0, "rejected": 0, "duplicates": 0, "old": 0, "attempted": 0, "duration_total_ms": 0.0, "duration_max_ms": 0.0}
         self._topic_diagnostics: dict[str, dict[str, int]] = {}
+        self._sequence_diagnostics = {"lost": 0, "gaps": 0, "resets": 0}
 
     def _topic_metrics(self, topic: str) -> dict[str, int]:
         return self._topic_diagnostics.setdefault(topic, {
             "accepted": 0, "rejected": 0, "duplicates": 0, "old": 0,
-            "lost": 0, "gaps": 0, "resets": 0,
+            "gaps": 0, "resets": 0,
         })
 
     def diagnostics(self) -> dict[str, float | int]:
@@ -39,6 +40,7 @@ class TelemetryService:
                 "duplicates": int(self._diagnostics["duplicates"]),
                 "old": int(self._diagnostics["old"]),
                 "by_topic": {topic: dict(values) for topic, values in sorted(self._topic_diagnostics.items())},
+                "sequence": dict(self._sequence_diagnostics),
                 "ingestion_duration_ms_average": round(float(self._diagnostics["duration_total_ms"]) / attempted, 2) if attempted else 0,
                 "ingestion_duration_ms_max": round(float(self._diagnostics["duration_max_ms"]), 2),
             }
@@ -114,7 +116,8 @@ class TelemetryService:
             elif last_sequence is not None and sequence > last_sequence + 1:
                 missing = sequence - last_sequence - 1
                 topic_metrics["gaps"] += 1
-                topic_metrics["lost"] += missing
+                self._sequence_diagnostics["gaps"] += 1
+                self._sequence_diagnostics["lost"] += missing
                 updates.update(
                     status="degraded",
                     gap_count=str(int(telemetry.get("gap_count", "0")) + 1),
@@ -127,6 +130,7 @@ class TelemetryService:
                 updates["status"] = "syncing"
                 if pack_reset:
                     topic_metrics["resets"] += 1
+                    self._sequence_diagnostics["resets"] += 1
                     updates.update(
                         reset_count=str(int(telemetry.get("reset_count", "0")) + 1),
                         last_error=f"pack sequence reset: {last_sequence} -> {sequence}",

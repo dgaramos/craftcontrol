@@ -1811,7 +1811,7 @@
         "properties": {
           "telemetry": {
             "type": "object",
-            "required": ["accepted", "rejected", "duplicates", "old", "by_topic", "ingestion_duration_ms_average", "ingestion_duration_ms_max"],
+            "required": ["accepted", "rejected", "duplicates", "old", "by_topic", "sequence", "ingestion_duration_ms_average", "ingestion_duration_ms_max"],
             "properties": {
               "accepted": {"type": "integer", "minimum": 0},
               "rejected": {"type": "integer", "minimum": 0},
@@ -1821,16 +1821,24 @@
                 "type": "object",
                 "additionalProperties": {
                   "type": "object",
-                  "required": ["accepted", "rejected", "duplicates", "old", "lost", "gaps", "resets"],
+                  "required": ["accepted", "rejected", "duplicates", "old", "gaps", "resets"],
                   "properties": {
                     "accepted": {"type": "integer", "minimum": 0},
                     "rejected": {"type": "integer", "minimum": 0},
                     "duplicates": {"type": "integer", "minimum": 0},
                     "old": {"type": "integer", "minimum": 0},
-                    "lost": {"type": "integer", "minimum": 0},
                     "gaps": {"type": "integer", "minimum": 0},
                     "resets": {"type": "integer", "minimum": 0}
                   }
+                }
+              },
+              "sequence": {
+                "type": "object",
+                "required": ["lost", "gaps", "resets"],
+                "properties": {
+                  "lost": {"type": "integer", "minimum": 0},
+                  "gaps": {"type": "integer", "minimum": 0},
+                  "resets": {"type": "integer", "minimum": 0}
                 }
               },
               "ingestion_duration_ms_average": {"type": "number", "minimum": 0},

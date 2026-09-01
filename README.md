@@ -195,10 +195,11 @@ flowchart LR
 
 Cached values retain observation and change timestamps. Stale information remains visible and marked instead of being replaced by false empty data.
 
-Owner diagnostics include process-lifetime telemetry ingestion counters by topic:
-accepted, rejected, duplicate, old, inferred-lost envelopes, sequence gaps, and
-pack resets. A lost count records the size of an observed sequence gap; it does
-not reconstruct missing events or their details.
+Owner diagnostics include process-lifetime ingestion counters by topic:
+accepted, rejected, duplicate, old, detected gaps, and pack resets. Separate
+process-lifetime sequence health reports inferred-lost envelopes, gaps, and
+resets. A lost count records the size of an observed sequence gap; it does not
+reconstruct missing events or their details.
 
 The optional CraftControl Telemetry Pack currently ships as `0.3.1`. It emits schema-versioned JSON and supports authoritative snapshots plus incremental events. Block changes are coalesced into five-second batches. Sequence gaps, resets, missing ranges, blocked storage, and partial Bedrock capabilities degrade health and request a coalesced snapshot. Stale deltas are rejected; health returns to healthy only after complete reconciliation.
 

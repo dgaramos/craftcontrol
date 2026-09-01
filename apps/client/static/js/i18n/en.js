@@ -31,6 +31,7 @@ export const en = {
     gameModeTitle: "Apply game mode", gameModeHelp: "Sends a game mode command to this player now. Only available while the player is online. This is an immediate action; the result after reconnect or restart depends on Bedrock and FORCE_GAMEMODE.",
     gameModeLabel: "Apply game mode", survival: "Survival", creative: "Creative", adventure: "Adventure",
     gameModeUpdated: "Game mode command sent", gameModeError: "Could not send game mode command",
+    observedGameModeLabel: "Current mode", observedGameModeAbsent: "Mode not observed",
     forcedGameModeNotice: "FORCE_GAMEMODE is enabled. Bedrock may restore the server default when this player rejoins.",
     forcedGameModeLink: "Go to Server settings",
     allPlayers: "All players", playerHistoryHelp: "Permanent profile for everyone who has joined the server.", playersEyebrow: "PLAYERS", selectPlayerPrompt: "Select a person to open their profile, history, and permissions.",

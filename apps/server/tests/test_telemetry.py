@@ -159,6 +159,65 @@ def test_parse_telemetry_line_returns_none_when_prefix_absent() -> None:
     assert parse_telemetry_line("no prefix here") is None
 
 
+def test_snapshot_player_gamemode_is_stored_in_stats(
+    player_repo: SQLitePlayerRepository,
+    telemetry_repo: SQLiteTelemetryRepository,
+) -> None:
+    event = {
+        "schema": 1, "sequence": 10, "type": "snapshot.player", "timestamp": 1,
+        "player": {"name": "VonCrush"},
+        "data": {"deaths": 0, "gameMode": "survival"},
+    }
+    telemetry_repo.ingest_telemetry(event)
+    profile = player_repo.player_profiles()[0]
+    assert profile["telemetry"]["gameMode"] == "survival"
+
+
+def test_snapshot_player_without_gamemode_leaves_field_absent(
+    player_repo: SQLitePlayerRepository,
+    telemetry_repo: SQLiteTelemetryRepository,
+) -> None:
+    event = {
+        "schema": 1, "sequence": 11, "type": "snapshot.player", "timestamp": 1,
+        "player": {"name": "VonCrush"},
+        "data": {"deaths": 0},
+    }
+    telemetry_repo.ingest_telemetry(event)
+    profile = player_repo.player_profiles()[0]
+    assert "gameMode" not in profile["telemetry"]
+
+
+def test_observed_game_mode_exposed_in_player_profile(
+    player_repo: SQLitePlayerRepository,
+    telemetry_repo: SQLiteTelemetryRepository,
+    db_path: Path,
+) -> None:
+    player_repo.observe_player("VonCrush", True, "99")
+    event = {
+        "schema": 1, "sequence": 12, "type": "snapshot.player", "timestamp": 1,
+        "player": {"name": "VonCrush"},
+        "data": {"deaths": 0, "gameMode": "creative"},
+    }
+    telemetry_repo.ingest_telemetry(event)
+    profiles = player_repo.player_profiles()
+    profile_id = profiles[0]["id"]
+    detail = player_repo.player_profile(profile_id)
+    assert detail is not None
+    assert detail["observed_game_mode"] == "creative"
+
+
+def test_observed_game_mode_is_null_without_telemetry(
+    player_repo: SQLitePlayerRepository,
+    db_path: Path,
+) -> None:
+    player_repo.observe_player("VonCrush", True, "99")
+    profiles = player_repo.player_profiles()
+    profile_id = profiles[0]["id"]
+    detail = player_repo.player_profile(profile_id)
+    assert detail is not None
+    assert detail["observed_game_mode"] is None
+
+
 def test_batched_block_deltas_update_totals_maps_and_daily_buckets(
     player_repo: SQLitePlayerRepository,
     telemetry_repo: SQLiteTelemetryRepository,

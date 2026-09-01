@@ -31,6 +31,7 @@ export const pt = {
     gameModeTitle: "Aplicar modo de jogo", gameModeHelp: "Envia um comando de modo de jogo para este jogador agora. Disponível apenas enquanto o jogador estiver online. Esta é uma ação imediata; o resultado após reconexão ou reinício depende do Bedrock e do FORCE_GAMEMODE.",
     gameModeLabel: "Aplicar modo de jogo", survival: "Sobrevivência", creative: "Criativo", adventure: "Aventura",
     gameModeUpdated: "Comando de modo de jogo enviado", gameModeError: "Não foi possível enviar o comando de modo de jogo",
+    observedGameModeLabel: "Modo atual", observedGameModeAbsent: "Modo não observado",
     forcedGameModeNotice: "FORCE_GAMEMODE está ativo. O Bedrock pode restaurar o modo padrão do servidor quando este jogador entrar novamente.",
     forcedGameModeLink: "Ir para configurações do servidor",
     allPlayers: "Todos os jogadores", playerHistoryHelp: "Ficha permanente de todos que já passaram pelo servidor.", playersEyebrow: "JOGADORES", selectPlayerPrompt: "Selecione uma pessoa para abrir sua ficha, histórico e permissões.",

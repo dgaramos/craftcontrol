@@ -493,11 +493,90 @@
       }
     },
     "/api/auth/sessions": {
-      "get": {"tags": ["Authentication"], "operationId": "listSessions", "summary": "List safe evidence for active account sessions", "responses": {"200": {"description": "Active sessions", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SessionList"}}}}, "401": {"$ref": "#/components/responses/Unauthorized"}}},
-      "post": {"tags": ["Authentication"], "operationId": "revokeOtherSessions", "summary": "Revoke all sessions except the current one", "parameters": [{"$ref": "#/components/parameters/CsrfToken"}], "responses": {"200": {"$ref": "#/components/responses/Ok"}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}}}
+      "get": {
+        "tags": [
+          "Authentication"
+        ],
+        "operationId": "listSessions",
+        "summary": "List safe evidence for active account sessions",
+        "responses": {
+          "200": {
+            "description": "Active sessions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionList"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "operationId": "revokeOtherSessions",
+        "summary": "Revoke all sessions except the current one",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
     },
     "/api/auth/sessions/{session_id}": {
-      "delete": {"tags": ["Authentication"], "operationId": "revokeSession", "summary": "Revoke one other active session", "parameters": [{"name": "session_id", "in": "path", "required": true, "schema": {"type": "string"}}, {"$ref": "#/components/parameters/CsrfToken"}], "responses": {"200": {"$ref": "#/components/responses/Ok"}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthorized"}, "403": {"$ref": "#/components/responses/Forbidden"}}}
+      "delete": {
+        "tags": [
+          "Authentication"
+        ],
+        "operationId": "revokeSession",
+        "summary": "Revoke one other active session",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Ok"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
     },
     "/api/auth/me": {
       "get": {
@@ -761,13 +840,22 @@
             "name": "page",
             "in": "query",
             "description": "One-based page number.",
-            "schema": {"type": "integer", "minimum": 1, "default": 1}
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
           },
           {
             "name": "limit",
             "in": "query",
             "description": "Maximum operations per page.",
-            "schema": {"type": "integer", "minimum": 1, "maximum": 100, "default": 10}
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10
+            }
           }
         ],
         "responses": {
@@ -784,12 +872,30 @@
                         "$ref": "#/components/schemas/ServerOperation"
                       }
                     },
-                    "page": {"type": "integer", "minimum": 1},
-                    "page_size": {"type": "integer", "minimum": 1},
-                    "total": {"type": "integer", "minimum": 0},
-                    "pages": {"type": "integer", "minimum": 1}
+                    "page": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "page_size": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "total": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "pages": {
+                      "type": "integer",
+                      "minimum": 1
+                    }
                   },
-                  "required": ["operations", "page", "page_size", "total", "pages"]
+                  "required": [
+                    "operations",
+                    "page",
+                    "page_size",
+                    "total",
+                    "pages"
+                  ]
                 }
               }
             }
@@ -1271,7 +1377,11 @@
                 "properties": {
                   "mode": {
                     "type": "string",
-                    "enum": ["survival", "creative", "adventure"]
+                    "enum": [
+                      "survival",
+                      "creative",
+                      "adventure"
+                    ]
                   }
                 }
               }
@@ -1779,14 +1889,41 @@
       "AccountSession": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "created_at", "last_seen_at", "current"],
-        "properties": {"id": {"type": "string"}, "created_at": {"type": "number"}, "last_seen_at": {"type": "number"}, "current": {"type": "boolean"}}
+        "required": [
+          "id",
+          "created_at",
+          "last_seen_at",
+          "current"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "number"
+          },
+          "last_seen_at": {
+            "type": "number"
+          },
+          "current": {
+            "type": "boolean"
+          }
+        }
       },
       "SessionList": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["sessions"],
-        "properties": {"sessions": {"type": "array", "items": {"$ref": "#/components/schemas/AccountSession"}}}
+        "required": [
+          "sessions"
+        ],
+        "properties": {
+          "sessions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccountSession"
+            }
+          }
+        }
       },
       "Health": {
         "type": "object",
@@ -1807,59 +1944,165 @@
       },
       "Diagnostics": {
         "type": "object",
-        "required": ["domains", "telemetry", "broker", "runtime_refreshing", "persistence", "runtime", "telemetry_state"],
+        "required": [
+          "domains",
+          "telemetry",
+          "broker",
+          "runtime_refreshing",
+          "persistence",
+          "runtime",
+          "telemetry_state"
+        ],
         "properties": {
           "telemetry": {
             "type": "object",
-            "required": ["accepted", "rejected", "duplicates", "old", "by_topic", "sequence", "ingestion_duration_ms_average", "ingestion_duration_ms_max", "blocks", "snapshots"],
+            "required": [
+              "accepted",
+              "rejected",
+              "duplicates",
+              "old",
+              "by_topic",
+              "sequence",
+              "ingestion_duration_ms_average",
+              "ingestion_duration_ms_max",
+              "blocks",
+              "snapshots"
+            ],
             "properties": {
-              "accepted": {"type": "integer", "minimum": 0},
-              "rejected": {"type": "integer", "minimum": 0},
-              "duplicates": {"type": "integer", "minimum": 0},
-              "old": {"type": "integer", "minimum": 0},
+              "accepted": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "rejected": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "duplicates": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "old": {
+                "type": "integer",
+                "minimum": 0
+              },
               "by_topic": {
                 "type": "object",
                 "additionalProperties": {
                   "type": "object",
-                  "required": ["accepted", "rejected", "duplicates", "old", "gaps", "resets"],
+                  "required": [
+                    "accepted",
+                    "rejected",
+                    "duplicates",
+                    "old",
+                    "gaps",
+                    "resets"
+                  ],
                   "properties": {
-                    "accepted": {"type": "integer", "minimum": 0},
-                    "rejected": {"type": "integer", "minimum": 0},
-                    "duplicates": {"type": "integer", "minimum": 0},
-                    "old": {"type": "integer", "minimum": 0},
-                    "gaps": {"type": "integer", "minimum": 0},
-                    "resets": {"type": "integer", "minimum": 0}
+                    "accepted": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "rejected": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "duplicates": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "old": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "gaps": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "resets": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
                   }
                 }
               },
               "sequence": {
                 "type": "object",
-                "required": ["lost", "gaps", "resets"],
+                "required": [
+                  "lost",
+                  "gaps",
+                  "resets"
+                ],
                 "properties": {
-                  "lost": {"type": "integer", "minimum": 0},
-                  "gaps": {"type": "integer", "minimum": 0},
-                  "resets": {"type": "integer", "minimum": 0}
+                  "lost": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "gaps": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "resets": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
                 }
               },
-              "ingestion_duration_ms_average": {"type": "number", "minimum": 0},
-              "ingestion_duration_ms_max": {"type": "number", "minimum": 0},
+              "ingestion_duration_ms_average": {
+                "type": "number",
+                "minimum": 0
+              },
+              "ingestion_duration_ms_max": {
+                "type": "number",
+                "minimum": 0
+              },
               "blocks": {
                 "type": "object",
-                "required": ["count", "total_blocks_declared", "max_blocks_declared"],
+                "required": [
+                  "count",
+                  "total_blocks_declared",
+                  "max_blocks_declared"
+                ],
                 "properties": {
-                  "count": {"type": "integer", "minimum": 0},
-                  "total_blocks_declared": {"type": "integer", "minimum": 0},
-                  "max_blocks_declared": {"type": "integer", "minimum": 0}
+                  "count": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "total_blocks_declared": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "max_blocks_declared": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
                 }
               },
               "snapshots": {
                 "type": "object",
-                "required": ["count", "duration_ms_total", "duration_ms_max", "last_player_count"],
+                "required": [
+                  "count",
+                  "duration_ms_total",
+                  "duration_ms_max",
+                  "last_player_count"
+                ],
                 "properties": {
-                  "count": {"type": "integer", "minimum": 0},
-                  "duration_ms_total": {"type": "number", "minimum": 0},
-                  "duration_ms_max": {"type": "number", "minimum": 0},
-                  "last_player_count": {"type": "integer", "minimum": 0, "nullable": true}
+                  "count": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "duration_ms_total": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "duration_ms_max": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "last_player_count": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "nullable": true
+                  }
                 }
               }
             }
@@ -1868,69 +2111,216 @@
             "type": "object",
             "additionalProperties": {
               "type": "object",
-              "required": ["observed_at", "age_seconds", "stale"],
+              "required": [
+                "observed_at",
+                "age_seconds",
+                "stale"
+              ],
               "properties": {
-                "observed_at": {"type": ["number", "null"]},
-                "age_seconds": {"type": ["number", "null"]},
-                "stale": {"type": "boolean"}
+                "observed_at": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "age_seconds": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "stale": {
+                  "type": "boolean"
+                }
               }
             }
           },
           "broker": {
             "type": "object",
-            "required": ["events_by_topic", "sse_connections", "sse_connections_total", "sse_reconnections"],
+            "required": [
+              "events_by_topic",
+              "sse_connections",
+              "sse_connections_total",
+              "sse_reconnections"
+            ],
             "properties": {
-              "events_by_topic": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
-              "sse_connections": {"type": "integer", "minimum": 0},
-              "sse_connections_total": {"type": "integer", "minimum": 0},
-              "sse_reconnections": {"type": "integer", "minimum": 0}
+              "events_by_topic": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "sse_connections": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "sse_connections_total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "sse_reconnections": {
+                "type": "integer",
+                "minimum": 0
+              }
             }
           },
-          "runtime_refreshing": {"type": "boolean"},
+          "runtime_refreshing": {
+            "type": "boolean"
+          },
           "persistence": {
             "type": "object",
-            "required": ["connections", "wait_ms_average", "wait_ms_max", "contention_failures", "retries", "database_size_bytes"],
+            "required": [
+              "connections",
+              "wait_ms_average",
+              "wait_ms_max",
+              "contention_failures",
+              "retries",
+              "database_size_bytes"
+            ],
             "properties": {
-              "connections": {"type": "integer", "minimum": 0},
-              "wait_ms_average": {"type": "number", "minimum": 0},
-              "wait_ms_max": {"type": "number", "minimum": 0},
-              "contention_failures": {"type": "integer", "minimum": 0},
-              "retries": {"type": "integer", "minimum": 0},
-              "database_size_bytes": {"type": ["integer", "null"], "minimum": 0}
+              "connections": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "wait_ms_average": {
+                "type": "number",
+                "minimum": 0
+              },
+              "wait_ms_max": {
+                "type": "number",
+                "minimum": 0
+              },
+              "contention_failures": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "retries": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "database_size_bytes": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 0
+              }
             }
           },
           "runtime": {
             "type": "object",
-            "required": ["refreshing", "pending_gamerule_refreshes", "gamerule_worker_running", "snapshot_running", "reconciliation"],
+            "required": [
+              "refreshing",
+              "pending_gamerule_refreshes",
+              "gamerule_worker_running",
+              "snapshot_running",
+              "reconciliation"
+            ],
             "properties": {
-              "refreshing": {"type": "boolean"},
-              "pending_gamerule_refreshes": {"type": "integer", "minimum": 0},
-              "gamerule_worker_running": {"type": "boolean"},
-              "snapshot_running": {"type": "boolean"},
+              "refreshing": {
+                "type": "boolean"
+              },
+              "pending_gamerule_refreshes": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "gamerule_worker_running": {
+                "type": "boolean"
+              },
+              "snapshot_running": {
+                "type": "boolean"
+              },
               "reconciliation": {
                 "type": "object",
-                "required": ["count", "duration_ms_total", "duration_ms_max", "duration_ms_last"],
+                "required": [
+                  "count",
+                  "duration_ms_total",
+                  "duration_ms_max",
+                  "duration_ms_last"
+                ],
                 "properties": {
-                  "count":             {"type": "integer", "minimum": 0},
-                  "duration_ms_total": {"type": "number",  "minimum": 0},
-                  "duration_ms_max":   {"type": "number",  "minimum": 0},
-                  "duration_ms_last":  {"type": "number",  "minimum": 0}
+                  "count": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "duration_ms_total": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "duration_ms_max": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "duration_ms_last": {
+                    "type": "number",
+                    "minimum": 0
+                  }
                 }
               }
             }
           },
           "telemetry_state": {
             "type": "object",
-            "required": ["status", "sequence", "expected_sequence", "gap_count", "missing_events", "reset_count", "last_snapshot_at", "last_event_at"],
+            "required": [
+              "status",
+              "sequence",
+              "expected_sequence",
+              "gap_count",
+              "missing_events",
+              "reset_count",
+              "last_snapshot_at",
+              "last_event_at"
+            ],
             "properties": {
-              "status": {"type": ["string", "null"]},
-              "sequence": {"type": ["string", "null"]},
-              "expected_sequence": {"type": ["string", "null"]},
-              "gap_count": {"type": ["string", "null"]},
-              "missing_events": {"type": ["string", "null"]},
-              "reset_count": {"type": ["string", "null"]},
-              "last_snapshot_at": {"type": ["string", "null"]},
-              "last_event_at": {"type": ["string", "null"]}
+              "status": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "sequence": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "expected_sequence": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "gap_count": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "missing_events": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "reset_count": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "last_snapshot_at": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "last_event_at": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
             }
           }
         }
@@ -2094,6 +2484,17 @@
           },
           "telemetry_updated_at": {
             "$ref": "#/components/schemas/NullableTimestamp"
+          },
+          "observed_game_mode": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Game mode last observed by the Telemetry Pack. Null when the pack is absent or the player has no snapshot."
           }
         }
       },
@@ -2494,7 +2895,11 @@
           },
           "mode": {
             "type": "string",
-            "enum": ["survival", "creative", "adventure"]
+            "enum": [
+              "survival",
+              "creative",
+              "adventure"
+            ]
           }
         }
       },
@@ -2740,13 +3145,18 @@
             }
           },
           "created_at": {
-            "type": "string", "format": "date-time", "description": "UTC ISO 8601 timestamp"
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC ISO 8601 timestamp"
           },
           "updated_at": {
-            "type": "string", "format": "date-time", "description": "UTC ISO 8601 timestamp"
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC ISO 8601 timestamp"
           },
           "completed_at": {
-            "type": "string", "format": "date-time",
+            "type": "string",
+            "format": "date-time",
             "nullable": true
           },
           "terminal_error": {
@@ -2784,11 +3194,13 @@
             ]
           },
           "started_at": {
-            "type": "string", "format": "date-time",
+            "type": "string",
+            "format": "date-time",
             "nullable": true
           },
           "completed_at": {
-            "type": "string", "format": "date-time",
+            "type": "string",
+            "format": "date-time",
             "nullable": true
           },
           "evidence": {

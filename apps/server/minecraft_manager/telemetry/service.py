@@ -21,6 +21,13 @@ class TelemetryService:
         self.events = events
         self._lock = threading.RLock()
         self._diagnostics: dict[str, float | int] = {"accepted": 0, "rejected": 0, "duplicates": 0, "old": 0, "attempted": 0, "duration_total_ms": 0.0, "duration_max_ms": 0.0}
+        self._topic_diagnostics: dict[str, dict[str, int]] = {}
+
+    def _topic_metrics(self, topic: str) -> dict[str, int]:
+        return self._topic_diagnostics.setdefault(topic, {
+            "accepted": 0, "rejected": 0, "duplicates": 0, "old": 0,
+            "lost": 0, "gaps": 0, "resets": 0,
+        })
 
     def diagnostics(self) -> dict[str, float | int]:
         with self._lock:
@@ -31,6 +38,7 @@ class TelemetryService:
                 "rejected": int(self._diagnostics["rejected"]),
                 "duplicates": int(self._diagnostics["duplicates"]),
                 "old": int(self._diagnostics["old"]),
+                "by_topic": {topic: dict(values) for topic, values in sorted(self._topic_diagnostics.items())},
                 "ingestion_duration_ms_average": round(float(self._diagnostics["duration_total_ms"]) / attempted, 2) if attempted else 0,
                 "ingestion_duration_ms_max": round(float(self._diagnostics["duration_max_ms"]), 2),
             }
@@ -49,6 +57,7 @@ class TelemetryService:
                 raise ValueError(f"sequence must be an integer, got bool: {_raw_seq!r}")
             sequence = int(_raw_seq)
             snapshot_topic = topic.startswith("snapshot.")
+            topic_metrics = self._topic_metrics(topic)
             telemetry = self.repository.snapshot().get("telemetry", {})
             last_sequence = int(telemetry["sequence"]) if telemetry.get("sequence", "").isdigit() else None
             status = telemetry.get("status", "waiting")
@@ -64,6 +73,8 @@ class TelemetryService:
             if not snapshot_topic and last_sequence is not None and sequence <= last_sequence and not pack_reset:
                 self._diagnostics["rejected"] += 1
                 self._diagnostics["duplicates" if sequence == last_sequence else "old"] += 1
+                topic_metrics["rejected"] += 1
+                topic_metrics["duplicates" if sequence == last_sequence else "old"] += 1
                 record_duration()
                 self.events.publish("telemetry.sequence.rejected", "behavior-pack", {
                     "sequence": sequence, "last_sequence": last_sequence, "topic": topic,
@@ -102,6 +113,8 @@ class TelemetryService:
                         updates.update(status="healthy", last_snapshot_at=str(time.time()), last_error="")
             elif last_sequence is not None and sequence > last_sequence + 1:
                 missing = sequence - last_sequence - 1
+                topic_metrics["gaps"] += 1
+                topic_metrics["lost"] += missing
                 updates.update(
                     status="degraded",
                     gap_count=str(int(telemetry.get("gap_count", "0")) + 1),
@@ -113,6 +126,7 @@ class TelemetryService:
             elif topic == "telemetry.started":
                 updates["status"] = "syncing"
                 if pack_reset:
+                    topic_metrics["resets"] += 1
                     updates.update(
                         reset_count=str(int(telemetry.get("reset_count", "0")) + 1),
                         last_error=f"pack sequence reset: {last_sequence} -> {sequence}",
@@ -127,10 +141,12 @@ class TelemetryService:
             accepted, players = self.repository.ingest_telemetry(envelope)
             if not accepted:
                 self._diagnostics["rejected"] += 1
+                topic_metrics["rejected"] += 1
                 record_duration()
                 return
             self.repository.store("telemetry", updates, "behavior-pack")
             self._diagnostics["accepted"] += 1
+            topic_metrics["accepted"] += 1
             record_duration()
 
         self.events.publish(f"telemetry.{topic}", "behavior-pack", {"players": players, "sequence": envelope["sequence"]})

@@ -35,6 +35,19 @@ async function loadDiagnostics() {
     add(t("telemetryRejected"), telemetry.rejected || 0);
     add(t("telemetryDuplicates"), telemetry.duplicates || 0);
     add(t("telemetryOld"), telemetry.old || 0);
+    const topicMetrics = Object.entries(telemetry.by_topic || {});
+    if (topicMetrics.length) {
+      const topicGroup = document.createElement("div");
+      const label = document.createElement("strong");
+      label.textContent = t("telemetryTopicDiagnostics");
+      topicGroup.append(label);
+      topicMetrics.forEach(([topic, values]) => {
+        const item = document.createElement("small");
+        item.textContent = `${topic}: ${t("telemetryAccepted")} ${values.accepted}, ${t("telemetryRejected")} ${values.rejected}, ${t("telemetryDuplicates")} ${values.duplicates}, ${t("telemetryOld")} ${values.old}, ${t("telemetryLost")} ${values.lost}, ${t("detectedGaps")} ${values.gaps}, ${t("resetCount")} ${values.resets}`;
+        topicGroup.append(item);
+      });
+      groups.push(topicGroup);
+    }
     add(t("ingestionDuration"), `${telemetry.ingestion_duration_ms_average || 0} ms`);
     add(t("ingestionDurationMax"), `${telemetry.ingestion_duration_ms_max || 0} ms`);
     add(t("sseConnections"), broker.sse_connections || 0);

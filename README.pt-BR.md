@@ -182,6 +182,12 @@ flowchart LR
 
 Valores em cache mantêm timestamps de observação e mudança. Informações obsoletas permanecem visíveis e marcadas em vez de serem substituídas por valores vazios falsos.
 
+Os diagnósticos de owner incluem contadores de ingestão de telemetria por tópico
+durante a vida do processo: envelopes aceitos, rejeitados, duplicados, antigos,
+perdidos por inferência, lacunas de sequência e reinicializações do pack. Um
+contador de perdas registra o tamanho de uma lacuna observada; não reconstrói
+eventos ou detalhes ausentes.
+
 O CraftControl Telemetry Pack opcional atualmente é distribuído como `0.3.1`. Ele emite JSON versionado por schema e suporta snapshots autoritativos e eventos incrementais. Mudanças de blocos são agrupadas em lotes de cinco segundos. Lacunas de sequência, reinícios, intervalos ausentes, armazenamento bloqueado e capacidades Bedrock parciais degradam a saúde e solicitam um snapshot coalescido. Deltas obsoletos são rejeitados; a saúde volta a saudável somente após reconciliação completa.
 
 Snapshots podem recuperar agregados de toda a vida após indisponibilidade. Eles não podem recriar cada evento histórico perdido, timestamp, causa ou coordenada, e o CraftControl nunca inventa esses detalhes.

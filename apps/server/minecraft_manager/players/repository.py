@@ -357,6 +357,9 @@ class SQLitePlayerRepository:
         if profile is None:
             return None
         profile["aliases"] = aliases
+        telemetry_stats = profile.get("telemetry") or {}
+        raw_game_mode = telemetry_stats.get("gameMode")
+        profile["observed_game_mode"] = raw_game_mode if isinstance(raw_game_mode, str) and raw_game_mode else None
         profile["history"] = [
             {
                 "id": row[0], "topic": row[1], "timestamp": row[2],

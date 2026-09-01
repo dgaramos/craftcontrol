@@ -54,6 +54,7 @@ return async function renderPlayerDetail(player, account, back = renderPlayersPa
       `</div>`,
       `<button id="detail-gamemode-apply" class="primary" type="button"></button>`,
       `</section>`,
+      `<div id="detail-observed-gamemode" class="player-admin-card block-panel" hidden></div>`,
       `<div id="detail-panel-access"></div>`,
       `</div>`,
       `</div>`,
@@ -158,6 +159,19 @@ return async function renderPlayerDetail(player, account, back = renderPlayersPa
         applyBtn.disabled = false;
       }
     };
+
+    // Observed game mode — read-only, sourced from Telemetry Pack snapshot
+    const observedGameModeEl = $("#detail-observed-gamemode");
+    if (observedGameModeEl) {
+      const observedMode = profile.observed_game_mode;
+      if (observedMode) {
+        observedGameModeEl.hidden = false;
+        observedGameModeEl.textContent = `${t("observedGameModeLabel")}: ${t(observedMode) || observedMode}`;
+      } else {
+        observedGameModeEl.hidden = true;
+        observedGameModeEl.textContent = t("observedGameModeAbsent");
+      }
+    }
 
     bindPlayerAccess(profile, account);
   } catch (error) {

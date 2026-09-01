@@ -147,6 +147,26 @@ describe("createPlayerProfile", () => {
     expect(gameModeCard.hidden).toBe(false);
   });
 
+  test("shows observed game mode when telemetry provides it", async () => {
+    const deps = makeDeps();
+    deps.api = jest.fn().mockResolvedValue({ profile: { name: "Alice", history: [], online: true, connected_at: 100, operator: false, observed_game_mode: "creative" } });
+    const observedEl = makeEl();
+    deps.elements["#detail-observed-gamemode"] = observedEl;
+    await createPlayerProfile(deps)({ id: "player-1" }, {});
+    expect(observedEl.hidden).toBe(false);
+    expect(observedEl.textContent).toContain("creative");
+  });
+
+  test("hides observed game mode section when field is null", async () => {
+    const deps = makeDeps();
+    deps.api = jest.fn().mockResolvedValue({ profile: { name: "Alice", history: [], online: true, connected_at: 100, operator: false, observed_game_mode: null } });
+    const observedEl = makeEl();
+    observedEl.hidden = false;
+    deps.elements["#detail-observed-gamemode"] = observedEl;
+    await createPlayerProfile(deps)({ id: "player-1" }, {});
+    expect(observedEl.hidden).toBe(true);
+  });
+
   test("apply game mode button does nothing when select is missing", async () => {
     const deps = makeDeps();
     const applyBtn = makeEl();

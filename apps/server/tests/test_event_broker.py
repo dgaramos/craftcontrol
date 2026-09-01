@@ -160,8 +160,12 @@ def test_stream_reconnection_counter_starts_at_zero(broker: EventBroker) -> None
     assert diag["sse_reconnections"] == 0
 
 
-def test_stream_reconnection_not_incremented_on_first_connection(broker: EventBroker) -> None:
+_FAKE_EVENT = {"id": 1, "topic": "ping", "timestamp": 0.0, "source": "test", "payload": {}}
+
+
+def test_stream_reconnection_not_incremented_on_first_connection(broker: EventBroker, store: MagicMock) -> None:
     """after_id=0 is a fresh connection, not a reconnection."""
+    store.events_after.return_value = [_FAKE_EVENT]
     gen = broker.stream(after_id=0)
     next(gen)
     gen.close()
@@ -169,8 +173,9 @@ def test_stream_reconnection_not_incremented_on_first_connection(broker: EventBr
     assert diag["sse_reconnections"] == 0
 
 
-def test_stream_reconnection_incremented_when_after_id_positive(broker: EventBroker) -> None:
+def test_stream_reconnection_incremented_when_after_id_positive(broker: EventBroker, store: MagicMock) -> None:
     """after_id > 0 signals a client reconnection; counter must increment."""
+    store.events_after.return_value = [_FAKE_EVENT]
     gen = broker.stream(after_id=5)
     next(gen)
     gen.close()
@@ -178,8 +183,9 @@ def test_stream_reconnection_incremented_when_after_id_positive(broker: EventBro
     assert diag["sse_reconnections"] == 1
 
 
-def test_stream_reconnection_counts_multiple_reconnections(broker: EventBroker) -> None:
+def test_stream_reconnection_counts_multiple_reconnections(broker: EventBroker, store: MagicMock) -> None:
     """Each reconnection increments the counter independently."""
+    store.events_after.return_value = [_FAKE_EVENT]
     for after in (3, 7, 11):
         gen = broker.stream(after_id=after)
         next(gen)

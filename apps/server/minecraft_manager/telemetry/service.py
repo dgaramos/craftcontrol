@@ -23,6 +23,9 @@ class TelemetryService:
         self._diagnostics: dict[str, float | int] = {"accepted": 0, "rejected": 0, "duplicates": 0, "old": 0, "attempted": 0, "duration_total_ms": 0.0, "duration_max_ms": 0.0}
         self._topic_diagnostics: dict[str, dict[str, int]] = {}
         self._sequence_diagnostics = {"lost": 0, "gaps": 0, "resets": 0}
+        self._batch_diagnostics: dict[str, int] = {"count": 0, "total_blocks_declared": 0, "max_blocks_declared": 0}
+        self._snapshot_diagnostics: dict[str, int | float | None] = {"count": 0, "duration_ms_total": 0.0, "duration_ms_max": 0.0, "last_player_count": None}
+        self._pending_snapshot_started_at: float | None = None
 
     def _topic_metrics(self, topic: str) -> dict[str, int]:
         return self._topic_diagnostics.setdefault(topic, {
@@ -43,6 +46,8 @@ class TelemetryService:
                 "sequence": dict(self._sequence_diagnostics),
                 "ingestion_duration_ms_average": round(float(self._diagnostics["duration_total_ms"]) / attempted, 2) if attempted else 0,
                 "ingestion_duration_ms_max": round(float(self._diagnostics["duration_max_ms"]), 2),
+                "blocks": dict(self._batch_diagnostics),
+                "snapshots": dict(self._snapshot_diagnostics),
             }
 
     def ingest(self, envelope: dict[str, Any], request_snapshot: Callable[[str], None]) -> None:
@@ -108,6 +113,7 @@ class TelemetryService:
             if snapshot_topic:
                 if topic == "snapshot.started":
                     updates.update(status="degraded" if storage_blocked else "syncing", snapshot_started_at=str(time.time()))
+                    self._pending_snapshot_started_at = time.perf_counter()
                 elif topic == "snapshot.finished":
                     if known_storage_blocked:
                         updates.update(status="degraded", last_error="telemetry pack persistence is blocked")
@@ -151,6 +157,24 @@ class TelemetryService:
             self.repository.store("telemetry", updates, "behavior-pack")
             self._diagnostics["accepted"] += 1
             topic_metrics["accepted"] += 1
+            if topic == "blocks.changed":
+                data = envelope.get("data") or {}
+                broken_total = int((data.get("broken") or {}).get("total") or 0)
+                placed_total = int((data.get("placed") or {}).get("total") or 0)
+                batch_total = broken_total + placed_total
+                self._batch_diagnostics["count"] += 1
+                self._batch_diagnostics["total_blocks_declared"] += batch_total
+                self._batch_diagnostics["max_blocks_declared"] = max(int(self._batch_diagnostics["max_blocks_declared"]), batch_total)
+            elif topic == "snapshot.finished":
+                pending = self._pending_snapshot_started_at
+                self._pending_snapshot_started_at = None
+                if pending is not None:
+                    duration_ms = (time.perf_counter() - pending) * 1000
+                    self._snapshot_diagnostics["count"] = int(self._snapshot_diagnostics["count"]) + 1
+                    self._snapshot_diagnostics["duration_ms_total"] = float(self._snapshot_diagnostics["duration_ms_total"]) + duration_ms
+                    self._snapshot_diagnostics["duration_ms_max"] = max(float(self._snapshot_diagnostics["duration_ms_max"]), duration_ms)
+                players_field = (envelope.get("data") or {}).get("players")
+                self._snapshot_diagnostics["last_player_count"] = len(players_field) if isinstance(players_field, list) else None
             record_duration()
 
         self.events.publish(f"telemetry.{topic}", "behavior-pack", {"players": players, "sequence": envelope["sequence"]})

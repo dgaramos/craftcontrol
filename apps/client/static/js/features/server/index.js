@@ -96,6 +96,17 @@ async function loadDiagnostics() {
       { key: "gamerule_worker_running", label: "gameruleWorkerRunning", format: (value) => value ? t("yes") : t("no") },
       { key: "snapshot_running", label: "snapshotRunning", format: (value) => value ? t("yes") : t("no") },
     ]);
+    addGroup(t("batchDiagnostics"), telemetry.blocks, [
+      { key: "count", label: "batchCount" },
+      { key: "total_blocks_declared", label: "batchTotalBlocks" },
+      { key: "max_blocks_declared", label: "batchMaxBlocks" },
+    ]);
+    addGroup(t("snapshotDiagnostics"), telemetry.snapshots, [
+      { key: "count", label: "snapshotCount" },
+      { key: "duration_ms_total", label: "snapshotDurationTotal" },
+      { key: "duration_ms_max", label: "snapshotDurationMax" },
+      { key: "last_player_count", label: "snapshotLastPlayerCount" },
+    ]);
     section.append(heading, metrics, ...groups);
     const topics = Object.entries(broker.events_by_topic || {});
     if (topics.length) {

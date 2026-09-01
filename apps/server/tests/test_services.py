@@ -953,3 +953,146 @@ def test_save_settings_raises_conflicting_operation_on_concurrent_request(tmp_pa
     repo.save(blocking_op)
     with pytest.raises(ConflictingOperationError):
         service.save_settings({"SERVER_NAME": "Conflict"})
+
+
+# ---------------------------------------------------------------------------
+# Batch and snapshot diagnostics — issue #276
+# ---------------------------------------------------------------------------
+
+def _blocks_changed(sequence: int, broken_total: int = 0, placed_total: int = 0) -> dict:
+    return {
+        "schema": 1, "sequence": sequence, "type": "blocks.changed", "timestamp": sequence,
+        "player": {"name": "VonCrush"},
+        "data": {
+            "broken": {"total": broken_total, "byType": {}},
+            "placed": {"total": placed_total, "byType": {}},
+        },
+    }
+
+
+def _snapshot_started(sequence: int) -> dict:
+    return {
+        "schema": 1, "sequence": sequence, "type": "snapshot.started",
+        "timestamp": sequence, "player": None, "data": {},
+    }
+
+
+def _snapshot_finished(sequence: int, players: list | None = None) -> dict:
+    data: dict = {}
+    if players is not None:
+        data["players"] = players
+    return {
+        "schema": 1, "sequence": sequence, "type": "snapshot.finished",
+        "timestamp": sequence, "player": None, "data": data,
+    }
+
+
+def test_batch_diagnostics_start_empty(tmp_path: Path) -> None:
+    service = _make_service(tmp_path)
+    blocks = service.diagnostics()["telemetry"]["blocks"]
+    assert blocks == {"count": 0, "total_blocks_declared": 0, "max_blocks_declared": 0}
+
+
+def test_batch_diagnostics_single_batch(tmp_path: Path) -> None:
+    service = _make_service(tmp_path)
+    service.telemetry_event(_blocks_changed(10, broken_total=3, placed_total=2))
+    blocks = service.diagnostics()["telemetry"]["blocks"]
+    assert blocks["count"] == 1
+    assert blocks["total_blocks_declared"] == 5
+    assert blocks["max_blocks_declared"] == 5
+
+
+def test_batch_diagnostics_multiple_batches(tmp_path: Path) -> None:
+    service = _make_service(tmp_path)
+    service.telemetry_event(_blocks_changed(10, broken_total=2, placed_total=1))   # 3
+    service.telemetry_event(_blocks_changed(11, broken_total=5, placed_total=2))   # 7
+    service.telemetry_event(_blocks_changed(12, broken_total=1, placed_total=1))   # 2
+    blocks = service.diagnostics()["telemetry"]["blocks"]
+    assert blocks["count"] == 3
+    assert blocks["total_blocks_declared"] == 12
+    assert blocks["max_blocks_declared"] == 7
+
+
+def test_batch_diagnostics_missing_total(tmp_path: Path) -> None:
+    service = _make_service(tmp_path)
+    envelope = {
+        "schema": 1, "sequence": 10, "type": "blocks.changed", "timestamp": 10,
+        "player": {"name": "VonCrush"}, "data": {},
+    }
+    service.telemetry_event(envelope)
+    blocks = service.diagnostics()["telemetry"]["blocks"]
+    assert blocks["count"] == 1
+    assert blocks["total_blocks_declared"] == 0
+    assert blocks["max_blocks_declared"] == 0
+
+
+def test_batch_rejected_does_not_count(tmp_path: Path) -> None:
+    service = _make_service(tmp_path)
+    service.telemetry_event(_blocks_changed(10, broken_total=3, placed_total=2))
+    # duplicate — should be rejected
+    service.telemetry_event(_blocks_changed(10, broken_total=3, placed_total=2))
+    blocks = service.diagnostics()["telemetry"]["blocks"]
+    assert blocks["count"] == 1
+
+
+def test_snapshot_diagnostics_empty(tmp_path: Path) -> None:
+    service = _make_service(tmp_path)
+    snapshots = service.diagnostics()["telemetry"]["snapshots"]
+    assert snapshots["count"] == 0
+    assert snapshots["duration_ms_total"] == 0
+    assert snapshots["duration_ms_max"] == 0
+    assert snapshots["last_player_count"] is None
+
+
+def test_snapshot_diagnostics_complete(tmp_path: Path) -> None:
+    service = _make_service(tmp_path)
+    service.telemetry_event(_snapshot_started(1))
+    service.telemetry_event(_snapshot_finished(2))
+    snapshots = service.diagnostics()["telemetry"]["snapshots"]
+    assert snapshots["count"] == 1
+    assert snapshots["duration_ms_total"] >= 0
+    assert snapshots["duration_ms_max"] >= 0
+
+
+def test_snapshot_diagnostics_multiple(tmp_path: Path) -> None:
+    service = _make_service(tmp_path)
+    service.telemetry_event(_snapshot_started(1))
+    service.telemetry_event(_snapshot_finished(2))
+    service.telemetry_event(_snapshot_started(3))
+    service.telemetry_event(_snapshot_finished(4))
+    snapshots = service.diagnostics()["telemetry"]["snapshots"]
+    assert snapshots["count"] == 2
+    assert snapshots["duration_ms_total"] >= snapshots["duration_ms_max"]
+
+
+def test_snapshot_last_player_count(tmp_path: Path) -> None:
+    service = _make_service(tmp_path)
+    service.telemetry_event(_snapshot_started(1))
+    service.telemetry_event(_snapshot_finished(2, players=["p1", "p2"]))
+    assert service.diagnostics()["telemetry"]["snapshots"]["last_player_count"] == 2
+
+
+def test_snapshot_no_players_field(tmp_path: Path) -> None:
+    service = _make_service(tmp_path)
+    service.telemetry_event(_snapshot_started(1))
+    service.telemetry_event(_snapshot_finished(2))
+    assert service.diagnostics()["telemetry"]["snapshots"]["last_player_count"] is None
+
+
+def test_snapshot_started_without_finished(tmp_path: Path) -> None:
+    service = _make_service(tmp_path)
+    service.telemetry_event(_snapshot_started(1))
+    assert service.diagnostics()["telemetry"]["snapshots"]["count"] == 0
+
+
+def test_mixed_ingest_no_cross_contamination(tmp_path: Path) -> None:
+    service = _make_service(tmp_path)
+    service.telemetry_event(_blocks_changed(10, broken_total=5, placed_total=0))
+    service.telemetry_event(_snapshot_started(11))
+    service.telemetry_event(_snapshot_finished(12, players=["VonCrush"]))
+    blocks = service.diagnostics()["telemetry"]["blocks"]
+    snapshots = service.diagnostics()["telemetry"]["snapshots"]
+    assert blocks["count"] == 1
+    assert blocks["total_blocks_declared"] == 5
+    assert snapshots["count"] == 1
+    assert snapshots["last_player_count"] == 1

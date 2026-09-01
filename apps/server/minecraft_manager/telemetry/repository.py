@@ -78,7 +78,7 @@ class SQLiteTelemetryRepository:
             domain["source"] = source
         now = time.time()
         for domain in domains.values():
-            domain["freshness"] = "fresh" if now - domain["observed_at"] < 1200 else "stale"
+            domain["freshness"] = "fresh" if now - domain["observed_at"] < STALE_THRESHOLD_SECONDS else "stale"
         result["domains"] = domains
         return result
 
@@ -108,7 +108,7 @@ class SQLiteTelemetryRepository:
                 result[name] = {
                     "observed_at": observed_at,
                     "age_seconds": age,
-                    "stale": age > STALE_THRESHOLD_SECONDS,
+                    "stale": age >= STALE_THRESHOLD_SECONDS,
                 }
         return result
 

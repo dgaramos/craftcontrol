@@ -46,13 +46,14 @@ class PlayerService:
             if mode is not None:
                 try:
                     self.console.set_game_mode(player, mode)
+                except Exception:
+                    pass
+                else:
                     self.events.publish(
                         "player.game_mode.reapplied",
                         "bedrock-log",
                         {"player": player, "mode": mode, "origin": "auto-reapply"},
                     )
-                except Exception:
-                    pass
         self.events.publish("state.changed", "bedrock-log", {"domains": ["players", "server"]})
 
     def record_derived_death(self, player: str, cause: str, raw: str) -> bool:

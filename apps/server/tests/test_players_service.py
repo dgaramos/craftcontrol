@@ -348,13 +348,15 @@ def test_observe_presence_no_console_when_disconnecting(
 def test_observe_presence_state_changed_published_even_when_console_raises(
     service: PlayerService, repo: MagicMock, console: MagicMock, events: MagicMock
 ) -> None:
-    """F3: console.set_game_mode raises → state.changed still published."""
+    """F3: console.set_game_mode raises → state.changed still published, reapplied not published."""
     repo.snapshot.return_value = {"players": [], "known_players": {}, "bootstrap": {}}
     repo.get_preferred_game_mode.return_value = "survival"
     console.set_game_mode.side_effect = RuntimeError("container offline")
     service.observe_presence("VonCrush", connected=True)
     state_calls = [c for c in events.publish.call_args_list if c.args[0] == "state.changed"]
     assert len(state_calls) >= 1
+    reapplied_calls = [c for c in events.publish.call_args_list if c.args[0] == "player.game_mode.reapplied"]
+    assert len(reapplied_calls) == 0
 
 
 def test_observe_presence_player_name_with_spaces(

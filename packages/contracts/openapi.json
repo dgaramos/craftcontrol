@@ -1888,12 +1888,22 @@
           },
           "runtime": {
             "type": "object",
-            "required": ["refreshing", "pending_gamerule_refreshes", "gamerule_worker_running", "snapshot_running"],
+            "required": ["refreshing", "pending_gamerule_refreshes", "gamerule_worker_running", "snapshot_running", "reconciliation"],
             "properties": {
               "refreshing": {"type": "boolean"},
               "pending_gamerule_refreshes": {"type": "integer", "minimum": 0},
               "gamerule_worker_running": {"type": "boolean"},
-              "snapshot_running": {"type": "boolean"}
+              "snapshot_running": {"type": "boolean"},
+              "reconciliation": {
+                "type": "object",
+                "required": ["count", "duration_ms_total", "duration_ms_max", "duration_ms_last"],
+                "properties": {
+                  "count":             {"type": "integer", "minimum": 0},
+                  "duration_ms_total": {"type": "number",  "minimum": 0},
+                  "duration_ms_max":   {"type": "number",  "minimum": 0},
+                  "duration_ms_last":  {"type": "number",  "minimum": 0}
+                }
+              }
             }
           },
           "telemetry_state": {

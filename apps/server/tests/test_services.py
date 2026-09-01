@@ -110,7 +110,7 @@ def test_diagnostics_summarize_telemetry_and_broker_counters(tmp_path: Path) -> 
     assert diagnostics["telemetry"]["ingestion_duration_ms_max"] >= 0
     assert diagnostics["broker"]["events_by_topic"]["telemetry.sequence.rejected"] == 2
     assert diagnostics["persistence"].keys() == {"connections", "wait_ms_average", "wait_ms_max", "contention_failures", "retries", "database_size_bytes"}
-    assert diagnostics["runtime"].keys() == {"refreshing", "pending_gamerule_refreshes", "gamerule_worker_running", "snapshot_running"}
+    assert diagnostics["runtime"].keys() == {"refreshing", "pending_gamerule_refreshes", "gamerule_worker_running", "snapshot_running", "reconciliation"}
     assert diagnostics["telemetry_state"].keys() == {"status", "sequence", "expected_sequence", "gap_count", "missing_events", "reset_count", "last_snapshot_at", "last_event_at"}
 
 

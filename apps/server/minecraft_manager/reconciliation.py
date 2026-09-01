@@ -47,6 +47,7 @@ class ReconciliationService:
             telemetry_snapshot_fn or self.request_telemetry_snapshot_async
         )
         self._thread_factory = thread_factory or threading.Thread
+        self._time_fn: Callable[[], float] = time.time
 
         self._refresh_lock = threading.Lock()
         self._refreshing = False
@@ -56,18 +57,25 @@ class ReconciliationService:
         self._telemetry_sync_lock = threading.Lock()
         self._telemetry_sync_running = False
         self._telemetry_last_request = 0.0
+        self._reconciliation_diagnostics: dict[str, int | float] = {
+            "count": 0,
+            "duration_ms_total": 0.0,
+            "duration_ms_max": 0.0,
+            "duration_ms_last": 0.0,
+        }
 
     @property
     def refreshing(self) -> bool:
         return self._refreshing
 
-    def diagnostics(self) -> dict[str, int | bool]:
+    def diagnostics(self) -> dict[str, int | bool | dict[str, int | float]]:
         with self._pending_rules_lock, self._telemetry_sync_lock:
             return {
                 "refreshing": self._refreshing,
                 "pending_gamerule_refreshes": len(self._pending_rules),
                 "gamerule_worker_running": self._gamerule_worker_running,
                 "snapshot_running": self._telemetry_sync_running,
+                "reconciliation": dict(self._reconciliation_diagnostics),
             }
 
     # ------------------------------------------------------------------
@@ -78,7 +86,7 @@ class ReconciliationService:
         if not self._refresh_lock.acquire(blocking=False):
             return
         self._refreshing = True
-        started = time.time()
+        started = self._time_fn()
         trigger_telemetry = False
         try:
             self.broker.publish("state.reconciliation.started", reason, {"scope": "full"})
@@ -106,11 +114,19 @@ class ReconciliationService:
             self.broker.publish("state.reconciliation.failed", reason, {"error": str(error)[:240]})
             raise
         finally:
+            elapsed_s = self._time_fn() - started
+            elapsed_ms = elapsed_s * 1000
             try:
                 self.broker.publish(
-                    "state.reconciliation.finished", reason, {"duration_seconds": time.time() - started}
+                    "state.reconciliation.finished", reason, {"duration_seconds": elapsed_s}
                 )
             finally:
+                if trigger_telemetry:
+                    self._reconciliation_diagnostics["count"] = int(self._reconciliation_diagnostics["count"]) + 1
+                    self._reconciliation_diagnostics["duration_ms_total"] = float(self._reconciliation_diagnostics["duration_ms_total"]) + elapsed_ms
+                    self._reconciliation_diagnostics["duration_ms_last"] = elapsed_ms
+                    if elapsed_ms > float(self._reconciliation_diagnostics["duration_ms_max"]):
+                        self._reconciliation_diagnostics["duration_ms_max"] = elapsed_ms
                 self._refreshing = False
                 self._refresh_lock.release()
 

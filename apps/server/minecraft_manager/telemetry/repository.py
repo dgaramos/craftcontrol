@@ -129,8 +129,7 @@ class SQLiteTelemetryRepository:
                 )
                 changed.append(player)
             elif topic in {
-                "block.broken", "block.placed", "blocks.changed",
-                "player.respawned", "player.dimension.changed", "entity.died",
+                "blocks.changed", "player.respawned", "player.dimension.changed", "entity.died",
             }:
                 changed.extend(self._apply_telemetry_delta(connection, envelope, now))
         return True, changed
@@ -184,14 +183,6 @@ class SQLiteTelemetryRepository:
                 ).fetchone()
             if row:
                 stats = json.loads(row[0])
-                if topic == "block.broken" and name == names[0]:
-                    stats["blocksBroken"] = int(stats.get("blocksBroken", 0)) + 1
-                    self._increment_block_map(stats, "brokenByType", data.get("blockType"))
-                    add_daily(connection, identity, now, blocks_broken=1)
-                if topic == "block.placed" and name == names[0]:
-                    stats["blocksPlaced"] = int(stats.get("blocksPlaced", 0)) + 1
-                    self._increment_block_map(stats, "placedByType", data.get("blockType"))
-                    add_daily(connection, identity, now, blocks_placed=1)
                 if topic == "blocks.changed" and name == names[0]:
                     broken = data.get("broken") if isinstance(data.get("broken"), dict) else {}
                     placed = data.get("placed") if isinstance(data.get("placed"), dict) else {}

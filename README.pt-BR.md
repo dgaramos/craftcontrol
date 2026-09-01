@@ -189,7 +189,7 @@ vida do processo informa envelopes perdidos por inferência, lacunas e
 reinicializações. Um contador de perdas registra o tamanho de uma lacuna
 observada; não reconstrói eventos ou detalhes ausentes.
 
-O CraftControl Telemetry Pack opcional atualmente é distribuído como `0.3.1`. Ele emite JSON versionado por schema e suporta snapshots autoritativos e eventos incrementais. Mudanças de blocos são agrupadas em lotes de cinco segundos. Lacunas de sequência, reinícios, intervalos ausentes, armazenamento bloqueado e capacidades Bedrock parciais degradam a saúde e solicitam um snapshot coalescido. Deltas obsoletos são rejeitados; a saúde volta a saudável somente após reconciliação completa.
+O CraftControl Telemetry Pack opcional atualmente é distribuído como `0.4.0`. Ele emite JSON versionado por schema e suporta snapshots autoritativos e eventos incrementais. Mudanças de blocos são agrupadas em lotes `blocks.changed` de cinco segundos. Lacunas de sequência, reinícios, intervalos ausentes, armazenamento bloqueado e capacidades Bedrock parciais degradam a saúde e solicitam um snapshot coalescido. Deltas obsoletos são rejeitados; a saúde volta a saudável somente após reconciliação completa.
 
 Snapshots podem recuperar agregados de toda a vida após indisponibilidade. Eles não podem recriar cada evento histórico perdido, timestamp, causa ou coordenada, e o CraftControl nunca inventa esses detalhes.
 

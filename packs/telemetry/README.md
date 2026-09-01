@@ -101,7 +101,7 @@ The runtime integration test loads the production `main.js` through a determinis
 The package command creates:
 
 ```text
-dist/craftcontrol-telemetry-0.3.2.mcpack
+dist/craftcontrol-telemetry-0.4.0.mcpack
 ```
 
 Packaging uses sorted paths, normalized timestamps, and stripped ZIP metadata so the standalone repository and CraftControl subtree produce byte-equivalent artifacts from the same commit.
@@ -182,6 +182,11 @@ Active time means sampled movement time, not total online time: a player contrib
 The pack has no network module, no HTTP client, no player-facing commands, and no generic remote execution path. Snapshot requests use the namespaced `scriptevent` channel and only cause read-only telemetry output. Consumers must strictly validate the prefix, schema, topic, size, and field types before persistence.
 
 ## Changelog
+
+### 0.4.0
+
+- Removes the deprecated `block.broken` and `block.placed` protocol topics.
+- Publishes `blocks.changed` as the sole incremental block-activity topic.
 
 ### 0.3.2
 

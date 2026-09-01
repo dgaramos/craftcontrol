@@ -135,27 +135,6 @@ def test_new_snapshot_at_same_sequence_replaces_authoritative_totals(
     assert player_repo.player_profiles()[0]["telemetry"]["blocksBroken"] == 15
 
 
-def test_block_deltas_update_bounded_type_maps_and_are_idempotent(
-    player_repo: SQLitePlayerRepository,
-    telemetry_repo: SQLiteTelemetryRepository,
-) -> None:
-    telemetry_repo.ingest_telemetry({
-        "schema": 1, "sequence": 1, "type": "snapshot.player", "timestamp": 1,
-        "player": {"name": "VonCrush"},
-        "data": {"blocksBroken": 4, "blocksPlaced": 2, "brokenByType": {"minecraft:stone": 4}, "placedByType": {}},
-    })
-    broken = {"schema": 1, "sequence": 2, "type": "block.broken", "timestamp": 2, "player": {"name": "VonCrush"}, "data": {"blockType": "minecraft:diamond_ore"}}
-    placed = {"schema": 1, "sequence": 3, "type": "block.placed", "timestamp": 3, "player": {"name": "VonCrush"}, "data": {"blockType": "minecraft:oak_planks"}}
-    assert telemetry_repo.ingest_telemetry(broken)[0]
-    assert not telemetry_repo.ingest_telemetry(broken)[0]
-    assert telemetry_repo.ingest_telemetry(placed)[0]
-    stats = player_repo.player_profiles()[0]["telemetry"]
-    assert stats["blocksBroken"] == 5
-    assert stats["brokenByType"]["minecraft:diamond_ore"] == 1
-    assert stats["blocksPlaced"] == 3
-    assert stats["placedByType"]["minecraft:oak_planks"] == 1
-
-
 @pytest.mark.parametrize("raw_suffix,match", [
     ("X" * 65537, "too large"),
     ('{"schema":2,"sequence":1,"type":"snapshot.finished","player":null,"data":{}}', "schema"),
@@ -167,6 +146,8 @@ def test_block_deltas_update_bounded_type_maps_and_are_idempotent(
     ('{"schema":1,"sequence":1,"type":"snapshot.finished","player":{"name":""},"data":{}}', "player"),
     ('{"schema":1,"sequence":1,"type":"snapshot.finished","player":{"name":"' + "a" * 33 + '"},"data":{}}', "player"),
     ('{"schema":1,"sequence":1,"type":"snapshot.finished","player":null,"data":"notadict"}', "data"),
+    ('{"schema":1,"sequence":1,"type":"block.broken","player":null,"data":{}}', "topic"),
+    ('{"schema":1,"sequence":1,"type":"block.placed","player":null,"data":{}}', "topic"),
 ])
 def test_parse_telemetry_line_raises_on_invalid_payload(raw_suffix: str, match: str) -> None:
     line = f"[BEDROCK_TELEMETRY] {raw_suffix}"

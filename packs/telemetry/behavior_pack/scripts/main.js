@@ -118,6 +118,6 @@ startMovementSampling(() => {
 system.runTimeout(() => {
   loadState();
   probeGameModeReading(world.getAllPlayers());
-  publish("telemetry.started", null, { version: "0.3.2", product: "CraftControl Telemetry Pack", storage: storageStatus(), capabilities: capabilitySnapshot() });
+  publish("telemetry.started", null, { version: "0.4.0", product: "CraftControl Telemetry Pack", storage: storageStatus(), capabilities: capabilitySnapshot() });
   publishSnapshot();
 }, 1);

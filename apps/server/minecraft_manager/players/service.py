@@ -23,11 +23,14 @@ class PlayerService:
         self.console = console
         self.events = events
         self.bootstrap_operator = bootstrap_operator
+        self._reapplied_modes: dict[str, str] = {}
 
     def reconcile_online_players(
         self, players: list[str], xuids: dict[str, str], source: str
     ) -> None:
         self.repository.reconcile_online_players(players, xuids, source)
+        for player in players:
+            self._reapply_preferred_game_mode(player, source)
 
     def observe_presence(self, player: str, connected: bool, xuid: str = "") -> None:
         snapshot = self.repository.snapshot()
@@ -42,18 +45,9 @@ class PlayerService:
         self.repository.observe_player(player, connected, xuid, "bedrock-log")
         self.repository.store("server", {"online": str(len(players))}, "bedrock-log")
         if connected:
-            mode = self.repository.get_preferred_game_mode(player)
-            if mode is not None:
-                try:
-                    self.console.set_game_mode(player, mode)
-                except Exception:
-                    pass
-                else:
-                    self.events.publish(
-                        "player.game_mode.reapplied",
-                        "bedrock-log",
-                        {"player": player, "mode": mode, "origin": "auto-reapply"},
-                    )
+            self._reapply_preferred_game_mode(player, "bedrock-log")
+        else:
+            self._reapplied_modes.pop(player.casefold(), None)
         self.events.publish("state.changed", "bedrock-log", {"domains": ["players", "server"]})
 
     def record_derived_death(self, player: str, cause: str, raw: str) -> bool:
@@ -65,7 +59,27 @@ class PlayerService:
         return inserted
 
     def close_online_sessions(self, reason: str) -> list[str]:
-        return self.repository.close_online_sessions(reason, "docker-events")
+        closed = self.repository.close_online_sessions(reason, "docker-events")
+        for player in closed:
+            self._reapplied_modes.pop(player.casefold(), None)
+        return closed
+
+    def _reapply_preferred_game_mode(self, player: str, source: str) -> bool:
+        """Apply a stored preference once per presence cycle after console success."""
+        mode = self.repository.get_preferred_game_mode(player)
+        key = player.casefold()
+        if mode is None or self._reapplied_modes.get(key) == mode:
+            return False
+        try:
+            self.console.set_game_mode(player, mode)
+        except Exception:
+            return False
+        self._reapplied_modes[key] = mode
+        self.events.publish(
+            "player.game_mode.reapplied", source,
+            {"player": player, "mode": mode, "origin": "auto-reapply"},
+        )
+        return True
 
     def refresh_permissions(self, publish: bool = True) -> None:
         known = self.repository.snapshot().get("known_players", {})

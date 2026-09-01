@@ -359,6 +359,57 @@ def test_observe_presence_state_changed_published_even_when_console_raises(
     assert len(reapplied_calls) == 0
 
 
+def test_reconciliation_retries_preferred_mode_after_connect_failure(
+    service: PlayerService, repo: MagicMock, console: MagicMock
+) -> None:
+    """A failed connect attempt is retried after a healthy reconciliation."""
+    repo.snapshot.return_value = {"players": [], "known_players": {}, "bootstrap": {}}
+    repo.get_preferred_game_mode.return_value = "survival"
+    console.set_game_mode.side_effect = [RuntimeError("offline"), None]
+
+    service.observe_presence("VonCrush", connected=True)
+    service.reconcile_online_players(["VonCrush"], {}, "bedrock-console")
+
+    assert console.set_game_mode.call_count == 2
+
+
+def test_reconciliation_does_not_duplicate_successful_reapply(
+    service: PlayerService, repo: MagicMock, console: MagicMock
+) -> None:
+    """Repeated healthy reconciliations do not repeat a successful command."""
+    repo.get_preferred_game_mode.return_value = "creative"
+
+    service.reconcile_online_players(["VonCrush"], {}, "bedrock-console")
+    service.reconcile_online_players(["VonCrush"], {}, "bedrock-console")
+
+    console.set_game_mode.assert_called_once_with("VonCrush", "creative")
+
+
+def test_reconciliation_keeps_server_default_unchanged(
+    service: PlayerService, repo: MagicMock, console: MagicMock
+) -> None:
+    """Players without a stored preference retain the server default."""
+    repo.get_preferred_game_mode.return_value = None
+
+    service.reconcile_online_players(["VonCrush"], {}, "bedrock-console")
+
+    console.set_game_mode.assert_not_called()
+
+
+def test_close_online_sessions_resets_reapply_cycle(
+    service: PlayerService, repo: MagicMock, console: MagicMock
+) -> None:
+    """A restart closes the cycle so the next reconciliation reapplies it."""
+    repo.get_preferred_game_mode.return_value = "adventure"
+    repo.close_online_sessions.return_value = ["VonCrush"]
+
+    service.reconcile_online_players(["VonCrush"], {}, "bedrock-console")
+    service.close_online_sessions("docker.die")
+    service.reconcile_online_players(["VonCrush"], {}, "bedrock-console")
+
+    assert console.set_game_mode.call_count == 2
+
+
 def test_observe_presence_player_name_with_spaces(
     service: PlayerService, repo: MagicMock, console: MagicMock
 ) -> None:

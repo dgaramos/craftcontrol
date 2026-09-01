@@ -310,12 +310,14 @@ def test_player_operator_service_error_returns_500(client, service: MagicMock) -
 
 
 def test_player_gamemode_set_returns_ok(client, service: MagicMock) -> None:
+    service.set_player_game_mode.return_value = "survival"
     resp = client.put("/api/players/VonCrush/gamemode", json={"mode": "survival"})
     assert resp.status_code == 200
     data = resp.get_json()
     assert data["ok"] is True
     assert data["player"] == "VonCrush"
     assert data["mode"] == "survival"
+    assert data["preferred_game_mode"] == "survival"
     service.set_player_game_mode.assert_called_once_with("VonCrush", "survival")
 
 

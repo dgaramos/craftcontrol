@@ -271,5 +271,5 @@ class ManagerService:
     def set_player_operator(self, player: str, enabled: bool) -> None:
         self.player_service.set_operator(player, enabled)
 
-    def set_player_game_mode(self, player: str, mode: str) -> None:
-        self.player_service.set_game_mode(player, mode)
+    def set_player_game_mode(self, player: str, mode: str) -> str | None:
+        return self.player_service.set_game_mode(player, mode)

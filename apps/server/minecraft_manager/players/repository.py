@@ -278,11 +278,26 @@ class SQLitePlayerRepository:
     # Read queries
     # ------------------------------------------------------------------
 
+    def set_preferred_game_mode(self, name: str, mode: str | None) -> None:
+        """Persist the operator-configured game mode preference for a player.
+
+        ``mode=None`` clears the preference (server default applies).
+        Never inferred from telemetry — exclusively panel-managed.
+        """
+        from .._db import player_identity
+        with self._connect() as connection:
+            identity = player_identity(connection, name)
+            connection.execute(
+                "UPDATE player_profiles SET preferred_game_mode=? WHERE identity=?",
+                (mode, identity),
+            )
+
     def player_profiles(self) -> list[dict[str, Any]]:
         with self._connect() as connection:
             rows = connection.execute(
                 "SELECT identity,current_name,first_seen_at,last_seen_at,online,connected_at,"
-                "sessions_count,total_play_seconds,deaths_count,last_death_at,permission "
+                "sessions_count,total_play_seconds,deaths_count,last_death_at,permission,"
+                "preferred_game_mode "
                 "FROM player_profiles ORDER BY online DESC,last_seen_at DESC"
             ).fetchall()
             telemetry_rows = connection.execute(
@@ -314,6 +329,7 @@ class SQLitePlayerRepository:
                 "last_death_at": row[9],
                 "permission": row[10],
                 "operator": row[10] == "operator",
+                "preferred_game_mode": row[11],
                 "telemetry": stats,
                 "telemetry_updated_at": telemetry_at,
             })
@@ -360,6 +376,8 @@ class SQLitePlayerRepository:
         telemetry_stats = profile.get("telemetry") or {}
         raw_game_mode = telemetry_stats.get("gameMode")
         profile["observed_game_mode"] = raw_game_mode if isinstance(raw_game_mode, str) and raw_game_mode else None
+        # preferred_game_mode is already present via player_profiles(); it is
+        # panel-managed and must never be overwritten by telemetry here.
         profile["history"] = [
             {
                 "id": row[0], "topic": row[1], "timestamp": row[2],

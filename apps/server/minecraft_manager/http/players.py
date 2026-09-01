@@ -46,7 +46,7 @@ def player_gamemode(player: str):
         mode = payload.get("mode") if payload else None
         if not isinstance(mode, str) or not mode:
             raise ValueError("modo de jogo ausente ou inválido")
-        manager().set_player_game_mode(player, mode)
+        preferred = manager().set_player_game_mode(player, mode)
     except BadRequest as error:
         return jsonify(error=str(error.description)), 400
     except LookupError as error:
@@ -55,4 +55,4 @@ def player_gamemode(player: str):
         return jsonify(error=str(error)), 400
     except Exception as error:
         return jsonify(error=str(error)), 500
-    return jsonify(ok=True, player=player, mode=mode)
+    return jsonify(ok=True, player=player, mode=mode, preferred_game_mode=preferred)

@@ -145,6 +145,19 @@ def _migration_006_operation_parent_link(connection: sqlite3.Connection) -> None
         )
 
 
+def _migration_007_player_preferred_game_mode(connection: sqlite3.Connection) -> None:
+    """Add preferred_game_mode column to player_profiles (issue #408).
+
+    NULL means no preference — the server default applies.
+    This column is managed exclusively by the panel and never inferred from telemetry.
+    """
+    columns = {row[1] for row in connection.execute("PRAGMA table_info(player_profiles)")}
+    if "preferred_game_mode" not in columns:
+        connection.execute(
+            "ALTER TABLE player_profiles ADD COLUMN preferred_game_mode TEXT DEFAULT NULL"
+        )
+
+
 MIGRATIONS: Mapping[int, Migration] = {
     1: _migration_001_initial_schema,
     2: _migration_002_retain_telemetry_payloads,
@@ -152,6 +165,7 @@ MIGRATIONS: Mapping[int, Migration] = {
     4: _migration_004_daily_player_aggregates,
     5: _migration_005_server_operations,
     6: _migration_006_operation_parent_link,
+    7: _migration_007_player_preferred_game_mode,
 }
 LATEST_SCHEMA_VERSION = max(MIGRATIONS)
 

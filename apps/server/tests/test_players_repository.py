@@ -97,6 +97,18 @@ def test_player_profile_returns_detail(repo: SQLitePlayerRepository) -> None:
     assert len(detail["sessions"]) == 1
 
 
+def test_player_profile_without_telemetry_has_no_observed_game_mode(
+    repo: SQLitePlayerRepository,
+) -> None:
+    """The optional Telemetry Pack never fabricates an observed game mode."""
+    repo.observe_player("VonCrush", True, "999", occurred_at=100.0)
+
+    detail = repo.player_profile(repo.player_profiles()[0]["id"])
+
+    assert detail is not None
+    assert detail["observed_game_mode"] is None
+
+
 def test_player_profile_unknown_returns_none(repo: SQLitePlayerRepository) -> None:
     assert repo.player_profile("nonexistent-id") is None
 

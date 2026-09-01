@@ -103,6 +103,10 @@ def test_diagnostics_summarize_telemetry_and_broker_counters(tmp_path: Path) -> 
     assert diagnostics["telemetry"]["rejected"] == 2
     assert diagnostics["telemetry"]["duplicates"] == 1
     assert diagnostics["telemetry"]["old"] == 1
+    assert diagnostics["telemetry"]["by_topic"]["block.broken"] == {
+        "accepted": 1, "rejected": 2, "duplicates": 1, "old": 1,
+        "gaps": 0, "resets": 0,
+    }
     assert diagnostics["telemetry"]["ingestion_duration_ms_max"] >= 0
     assert diagnostics["broker"]["events_by_topic"]["telemetry.sequence.rejected"] == 2
     assert diagnostics["persistence"].keys() == {"connections", "wait_ms_average", "wait_ms_max", "contention_failures", "retries", "database_size_bytes"}
@@ -120,6 +124,16 @@ def test_telemetry_event_rejects_boolean_sequence(tmp_path: Path) -> None:
 def test_diagnostics_tolerate_a_broker_without_diagnostics(tmp_path: Path) -> None:
     service = _make_service(tmp_path, manager_broker=object())
     assert service.diagnostics()["broker"] == {}
+
+
+def test_diagnostics_count_repository_rejection_by_snapshot_topic(tmp_path: Path) -> None:
+    service = _make_service(tmp_path)
+    envelope = {"schema": 1, "sequence": 1, "type": "snapshot.started", "timestamp": 1, "player": None, "data": {}}
+
+    service.telemetry_event(envelope)
+    service.telemetry_event(envelope)
+
+    assert service.diagnostics()["telemetry"]["by_topic"]["snapshot.started"]["rejected"] == 1
 
 
 def test_empty_snapshot_response_is_degraded_instead_of_stuck_syncing(tmp_path: Path) -> None:
@@ -144,6 +158,8 @@ def test_sequence_gap_degrades_and_requests_reconciliation(tmp_path: Path) -> No
     assert telemetry["missing_events"] == "2"
     assert telemetry["last_gap"] == "11-12"
     assert requested == ["sequence-gap"]
+    assert service.diagnostics()["telemetry"]["sequence"]["lost"] == 2
+    assert service.diagnostics()["telemetry"]["by_topic"]["block.broken"]["gaps"] == 1
 
 
 def test_snapshot_repairs_degraded_state_and_stale_delta_is_rejected(tmp_path: Path) -> None:
@@ -171,6 +187,20 @@ def test_pack_sequence_reset_requests_snapshot(tmp_path: Path) -> None:
     assert telemetry["status"] == "syncing"
     assert telemetry["reset_count"] == "1"
     assert requested == ["pack-started"]
+    assert service.diagnostics()["telemetry"]["by_topic"]["telemetry.started"]["resets"] == 1
+    assert service.diagnostics()["telemetry"]["sequence"]["resets"] == 1
+
+
+def test_sequence_losses_are_global_when_a_different_topic_detects_the_gap(tmp_path: Path) -> None:
+    service = _make_service(tmp_path)
+    service.request_telemetry_snapshot_async = lambda reason: None  # type: ignore[method-assign]
+    service.telemetry_event({"schema": 1, "sequence": 10, "type": "player.joined", "timestamp": 1, "player": {"name": "VonCrush"}, "data": {}})
+    service.telemetry_event({"schema": 1, "sequence": 13, "type": "blocks.changed", "timestamp": 2, "player": {"name": "VonCrush"}, "data": {}})
+
+    telemetry = service.diagnostics()["telemetry"]
+    assert telemetry["sequence"] == {"lost": 2, "gaps": 1, "resets": 0}
+    assert telemetry["by_topic"]["player.joined"]["gaps"] == 0
+    assert telemetry["by_topic"]["blocks.changed"]["gaps"] == 1
 
 
 def test_blocked_pack_storage_stays_degraded_after_snapshot(tmp_path: Path) -> None:

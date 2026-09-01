@@ -367,6 +367,74 @@ describe("createServerFeature", () => {
     expect(rendered).toContain("45.2 ms");
   });
 
+  test("domain freshness sub-panel renders with empty domains without errors", async () => {
+    const deps = makeDeps();
+    deps.elements["#diagnostics-state"] = makeEl();
+    deps.api.mockResolvedValue({
+      telemetry: { accepted: 0, rejected: 0, duplicates: 0, old: 0, sequence: { lost: 0, gaps: 0, resets: 0 }, by_topic: {}, ingestion_duration_ms_average: 0, ingestion_duration_ms_max: 0 },
+      broker: { sse_connections: 0, sse_connections_total: 0, events_by_topic: {} },
+      runtime_refreshing: false,
+      telemetry_state: { status: null, sequence: null, expected_sequence: null, gap_count: null, missing_events: null, reset_count: null, last_snapshot_at: null, last_event_at: null },
+      persistence: { connections: 0, wait_ms_average: 0, wait_ms_max: 0, contention_failures: 0, retries: 0, database_size_bytes: null },
+      runtime: { refreshing: false, pending_gamerule_refreshes: 0, gamerule_worker_running: false, snapshot_running: false, reconciliation: { count: 0, duration_ms_total: 0, duration_ms_max: 0, duration_ms_last: 0 } },
+      domains: {},
+    });
+    const feature = createServerFeature(deps);
+    await feature.loadDiagnostics();
+    expect(deps.elements["#diagnostics-state"].children[0]).toBeTruthy();
+  });
+
+  test("domain freshness sub-panel shows Fresh badge for non-stale domain", async () => {
+    const deps = makeDeps();
+    deps.elements["#diagnostics-state"] = makeEl();
+    deps.api.mockResolvedValue({
+      telemetry: { accepted: 0, rejected: 0, duplicates: 0, old: 0, sequence: { lost: 0, gaps: 0, resets: 0 }, by_topic: {}, ingestion_duration_ms_average: 0, ingestion_duration_ms_max: 0 },
+      broker: { sse_connections: 0, sse_connections_total: 0, events_by_topic: {} },
+      runtime_refreshing: false,
+      telemetry_state: { status: null, sequence: null, expected_sequence: null, gap_count: null, missing_events: null, reset_count: null, last_snapshot_at: null, last_event_at: null },
+      persistence: { connections: 0, wait_ms_average: 0, wait_ms_max: 0, contention_failures: 0, retries: 0, database_size_bytes: null },
+      runtime: { refreshing: false, pending_gamerule_refreshes: 0, gamerule_worker_running: false, snapshot_running: false, reconciliation: { count: 0, duration_ms_total: 0, duration_ms_max: 0, duration_ms_last: 0 } },
+      domains: { settings: { observed_at: 1700000000, age_seconds: 60, stale: false } },
+    });
+    const feature = createServerFeature(deps);
+    await feature.loadDiagnostics();
+    const rendered = deps.elements["#diagnostics-state"].children[0].textContent;
+    expect(rendered).toContain("domainFresh");
+    expect(rendered).toContain("domainFreshness");
+  });
+
+  test("domain freshness sub-panel shows Stale badge for stale domain", async () => {
+    const deps = makeDeps();
+    deps.elements["#diagnostics-state"] = makeEl();
+    deps.api.mockResolvedValue({
+      telemetry: { accepted: 0, rejected: 0, duplicates: 0, old: 0, sequence: { lost: 0, gaps: 0, resets: 0 }, by_topic: {}, ingestion_duration_ms_average: 0, ingestion_duration_ms_max: 0 },
+      broker: { sse_connections: 0, sse_connections_total: 0, events_by_topic: {} },
+      runtime_refreshing: false,
+      telemetry_state: { status: null, sequence: null, expected_sequence: null, gap_count: null, missing_events: null, reset_count: null, last_snapshot_at: null, last_event_at: null },
+      persistence: { connections: 0, wait_ms_average: 0, wait_ms_max: 0, contention_failures: 0, retries: 0, database_size_bytes: null },
+      runtime: { refreshing: false, pending_gamerule_refreshes: 0, gamerule_worker_running: false, snapshot_running: false, reconciliation: { count: 0, duration_ms_total: 0, duration_ms_max: 0, duration_ms_last: 0 } },
+      domains: { gamerules: { observed_at: 1700000000, age_seconds: 1500, stale: true } },
+    });
+    const feature = createServerFeature(deps);
+    await feature.loadDiagnostics();
+    const rendered = deps.elements["#diagnostics-state"].children[0].textContent;
+    expect(rendered).toContain("domainStale");
+  });
+
+  test("i18n catalogs contain domain freshness keys", async () => {
+    const [{ en }, { pt }, { es }] = await Promise.all([
+      import("../static/js/i18n/en.js"),
+      import("../static/js/i18n/pt.js"),
+      import("../static/js/i18n/es.js"),
+    ]);
+    const requiredKeys = ["domainFreshness", "domainObservedAt", "domainAgeSeconds", "domainStale", "domainFresh"];
+    for (const key of requiredKeys) {
+      expect({ key, locale: "en", value: en[key] }).toMatchObject({ key, locale: "en", value: expect.any(String) });
+      expect({ key, locale: "pt", value: pt[key] }).toMatchObject({ key, locale: "pt", value: expect.any(String) });
+      expect({ key, locale: "es", value: es[key] }).toMatchObject({ key, locale: "es", value: expect.any(String) });
+    }
+  });
+
   test("renders reconciliation sub-panel with zeros without errors", async () => {
     const deps = makeDeps();
     deps.elements["#diagnostics-state"] = makeEl();

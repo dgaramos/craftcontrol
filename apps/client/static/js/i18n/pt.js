@@ -120,4 +120,5 @@ export const pt = {
     opRetryHelp: "Iniciar uma nova operação vinculada com as mesmas alterações.",
     opRetryConflict: "Outra operação já está em execução. Aguarde e tente novamente.",
     opParentLink: "Repetição de",
+    domainFreshness: "Atualidade dos domínios", domainObservedAt: "Última observação", domainAgeSeconds: "Idade (s)", domainStale: "Obsoleto", domainFresh: "Atualizado",
   };

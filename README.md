@@ -223,6 +223,11 @@ project and must be deployed with its guarded commands. Never run a bare `docker
 See [Installation](docs/installation.md) for prerequisites, expected directory
 layout, configuration, cutover, access, post-install checks, and troubleshooting.
 
+The optional Host Agent has a supported idempotent prerequisite installer. Run
+it as root after installing the systemd service; it verifies the agent account,
+Docker access, scoped ACLs, the `.env` ACL watcher, and the systemd sandbox
+without restarting Bedrock. See [Host Agent](docs/host-agent.md#preferred-idempotent-installer).
+
 ## Configuration
 
 | Variable | Default | Purpose |

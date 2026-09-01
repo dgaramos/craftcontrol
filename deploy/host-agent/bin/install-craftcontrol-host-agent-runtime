@@ -48,6 +48,15 @@ _SERVICE = "craftcontrol-host-agent"
 _ENV_ACL_UNIT = "craftcontrol-host-agent-env-acl"
 
 
+def _is_group_member(
+    *, agent_user: str, primary_gid: int, target_gid: int, groups: list[object],
+) -> bool:
+    """Return membership for the configured user, never for the invoking process."""
+    return primary_gid == target_gid or any(
+        agent_user in group.gr_mem for group in groups if group.gr_gid == target_gid
+    )
+
+
 class ProductionFilesystem:
     """Production implementation of filesystem / ACL queries."""
 
@@ -165,8 +174,11 @@ def _probe_system(agent_user: str) -> SystemInfo:
         docker_gid = grp.getgrnam("docker").gr_gid
         import pwd as _pwd  # noqa: PLC0415
         pw = _pwd.getpwnam(agent_user)
-        in_docker = docker_gid in os.getgroups() or any(
-            agent_user in g.gr_mem for g in grp.getgrall() if g.gr_gid == docker_gid
+        in_docker = _is_group_member(
+            agent_user=agent_user,
+            primary_gid=pw.pw_gid,
+            target_gid=docker_gid,
+            groups=grp.getgrall(),
         )
     except (KeyError, PermissionError):
         in_docker = False

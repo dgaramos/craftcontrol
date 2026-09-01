@@ -165,6 +165,29 @@ ReadOnlyPaths=/etc/craftcontrol {project_root}
 Environment=DOCKER_CONFIG={docker_config}
 """
 
+_ENV_ACL_UNIT = "craftcontrol-host-agent-env-acl"
+_ENV_ACL_SERVICE_PATH = f"/etc/systemd/system/{_ENV_ACL_UNIT}.service"
+_ENV_ACL_PATH_PATH = f"/etc/systemd/system/{_ENV_ACL_UNIT}.path"
+_ENV_ACL_SERVICE_TEMPLATE = """\
+[Unit]
+Description=Restore Host Agent read access to the Bedrock Compose environment
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/setfacl -m u:{agent_user}:r-- {project_root}/.env
+"""
+_ENV_ACL_PATH_TEMPLATE = """\
+[Unit]
+Description=Watch the Bedrock Compose environment for replacements
+
+[Path]
+PathChanged={project_root}/.env
+Unit={unit}.service
+
+[Install]
+WantedBy=multi-user.target
+"""
+
 
 class Preflight:
     """Idempotent prerequisite installer for the CraftControl Host Agent."""
@@ -206,6 +229,9 @@ class Preflight:
         for label, path in [
             ("project_root", self._project_root),
             ("bedrock_data", self._bedrock_data),
+            ("compose_file", self._compose_file),
+            ("agent_state_dir", self._agent_state_dir),
+            ("docker_config", self._docker_config),
         ]:
             if not path.startswith("/"):
                 return PreflightResult(
@@ -218,17 +244,19 @@ class Preflight:
         if err:
             return PreflightResult(success=False, error=err)
 
-        # Phase 2 – Bedrock project ACLs
-        self._apply_acls()
+        try:
+            # Phase 2 – Bedrock project ACLs
+            self._apply_acls()
 
-        # Phase 3 – .env ACL repair (already covered by phase 2)
+            # Phase 3 – .env ACL repair (already covered by phase 2)
 
-        # Phase 4 – systemd drop-in
-        self._apply_dropin()
+            # Phase 4 – systemd drop-in
+            self._apply_dropin()
 
-        # Phase 5 – path unit install (recorded as planned action; no mutation
-        #            in unit-test context — production entrypoint handles this)
-        self._check_path_unit()
+            # Phase 5 – path unit install and verification
+            self._ensure_path_unit()
+        except RuntimeError as error:
+            return PreflightResult(success=False, error=str(error), planned_actions=list(self._planned))
 
         # Phase 6 – sandbox validation
         if not self._dry_run:
@@ -322,10 +350,30 @@ class Preflight:
             self._fs.write_dropin(_SERVICE, expected)
             self._runner.run(["systemctl", "daemon-reload"])
 
-    def _check_path_unit(self) -> None:
-        """Record that path units should be installed if not already active."""
-        unit = "craftcontrol-host-agent-env-acl.path"
+    def _ensure_path_unit(self) -> None:
+        """Install, enable, start, and verify the narrow .env ACL watcher."""
+        unit = f"{_ENV_ACL_UNIT}.path"
+        if self._fs.path_unit_active(unit):
+            return
+
+        self._planned.append(f"install and activate {unit}")
+        if self._dry_run:
+            return
+
+        self._fs.write_file(
+            _ENV_ACL_SERVICE_PATH,
+            _ENV_ACL_SERVICE_TEMPLATE.format(
+                agent_user=self._agent_user, project_root=self._project_root,
+            ),
+        )
+        self._fs.write_file(
+            _ENV_ACL_PATH_PATH,
+            _ENV_ACL_PATH_TEMPLATE.format(
+                project_root=self._project_root, unit=_ENV_ACL_UNIT,
+            ),
+        )
+        self._runner.run(["systemctl", "daemon-reload"])
+        self._runner.run(["systemctl", "enable", "--now", unit])
+        self._runner.run(["systemctl", "start", f"{_ENV_ACL_UNIT}.service"])
         if not self._fs.path_unit_active(unit):
-            self._planned.append(
-                "ensure craftcontrol-host-agent-env-acl.{path,service} installed"
-            )
+            raise RuntimeError(f"path unit did not become active: {unit}")

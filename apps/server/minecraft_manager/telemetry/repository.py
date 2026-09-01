@@ -24,6 +24,11 @@ from .._db import (
 )
 
 
+STALE_THRESHOLD_SECONDS = 1200
+
+_ALL_DOMAINS = ("settings", "gamerules", "players", "server", "telemetry")
+
+
 class SQLiteTelemetryRepository:
     """Autonomous telemetry repository backed directly by a SQLite database."""
 
@@ -73,8 +78,38 @@ class SQLiteTelemetryRepository:
             domain["source"] = source
         now = time.time()
         for domain in domains.values():
-            domain["freshness"] = "fresh" if now - domain["observed_at"] < 1200 else "stale"
+            domain["freshness"] = "fresh" if now - domain["observed_at"] < STALE_THRESHOLD_SECONDS else "stale"
         result["domains"] = domains
+        return result
+
+    def domain_freshness(self, time_fn=None) -> dict[str, Any]:
+        """Return freshness metadata for each tracked domain.
+
+        For each domain in ``_ALL_DOMAINS``:
+        - If the domain was never observed (``observed_at == 0`` or absent):
+          ``observed_at=None``, ``age_seconds=None``, ``stale=True``.
+        - Otherwise: ``age_seconds = time_fn() - observed_at``,
+          ``stale = age_seconds > STALE_THRESHOLD_SECONDS``.
+
+        ``time_fn`` defaults to ``time.time`` and is injectable for testing.
+        """
+        if time_fn is None:
+            time_fn = time.time
+        raw_domains = self.snapshot().get("domains", {})
+        now = time_fn()
+        result: dict[str, Any] = {}
+        for name in _ALL_DOMAINS:
+            raw = raw_domains.get(name)
+            observed_at = raw["observed_at"] if raw else 0
+            if not observed_at:
+                result[name] = {"observed_at": None, "age_seconds": None, "stale": True}
+            else:
+                age = now - observed_at
+                result[name] = {
+                    "observed_at": observed_at,
+                    "age_seconds": age,
+                    "stale": age >= STALE_THRESHOLD_SECONDS,
+                }
         return result
 
     # ------------------------------------------------------------------

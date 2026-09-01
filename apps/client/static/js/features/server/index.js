@@ -113,6 +113,23 @@ async function loadDiagnostics() {
       { key: "duration_ms_max", label: "snapshotDurationMax" },
       { key: "last_player_count", label: "snapshotLastPlayerCount" },
     ]);
+    const domains = result.domains || {};
+    const domainEntries = Object.entries(domains);
+    if (domainEntries.length) {
+      const domainGroup = document.createElement("div");
+      const domainLabel = document.createElement("strong");
+      domainLabel.textContent = t("domainFreshness");
+      domainGroup.append(domainLabel);
+      domainEntries.forEach(([name, info]) => {
+        const row = document.createElement("small");
+        const badge = info.stale ? t("domainStale") : t("domainFresh");
+        const observed = info.observed_at != null ? new Date(info.observed_at * 1000).toLocaleTimeString() : "—";
+        const age = info.age_seconds != null ? `${Math.round(info.age_seconds)}s` : "—";
+        row.textContent = `${name}: ${badge} — ${t("domainObservedAt")}: ${observed}, ${t("domainAgeSeconds")}: ${age}`;
+        domainGroup.append(row);
+      });
+      groups.push(domainGroup);
+    }
     section.append(heading, metrics, ...groups);
     const topics = Object.entries(broker.events_by_topic || {});
     if (topics.length) {

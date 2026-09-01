@@ -120,4 +120,5 @@ export const en = {
     opRetryHelp: "Start a new linked operation with the same changes.",
     opRetryConflict: "Another operation is already running. Please wait and try again.",
     opParentLink: "Retry of",
+    domainFreshness: "Domain freshness", domainObservedAt: "Last observed", domainAgeSeconds: "Age (s)", domainStale: "Stale", domainFresh: "Fresh",
   };

@@ -236,6 +236,96 @@ describe("createServerFeature", () => {
     }
   });
 
+  // --- issue #276: batch and snapshot diagnostics sub-panels ---
+
+  test("renders block batch diagnostics sub-panel when data is present", async () => {
+    const deps = makeDeps();
+    deps.elements["#diagnostics-state"] = makeEl();
+    deps.api.mockResolvedValue({
+      telemetry: {
+        accepted: 1, rejected: 0, duplicates: 0, old: 0,
+        sequence: { lost: 0, gaps: 0, resets: 0 }, by_topic: {},
+        ingestion_duration_ms_average: 0, ingestion_duration_ms_max: 0,
+        blocks: { count: 3, total_blocks_declared: 12, max_blocks_declared: 7 },
+        snapshots: { count: 2, duration_ms_total: 50, duration_ms_max: 30, last_player_count: 2 },
+      },
+      broker: { sse_connections: 0, sse_connections_total: 0, events_by_topic: {} },
+      runtime_refreshing: false,
+      telemetry_state: { status: "healthy", sequence: "1", expected_sequence: "2", gap_count: "0", missing_events: "0", reset_count: "0", last_snapshot_at: null, last_event_at: null },
+      persistence: { connections: 1, wait_ms_average: 0, wait_ms_max: 0, contention_failures: 0, retries: 0, database_size_bytes: 512 },
+      runtime: { refreshing: false, pending_gamerule_refreshes: 0, gamerule_worker_running: false, snapshot_running: false },
+    });
+    const feature = createServerFeature(deps);
+    await feature.loadDiagnostics();
+    const rendered = deps.elements["#diagnostics-state"].children[0].textContent;
+    expect(rendered).toContain("batchDiagnostics");
+    expect(rendered).toContain("batchCount: 3");
+    expect(rendered).toContain("batchTotalBlocks: 12");
+    expect(rendered).toContain("batchMaxBlocks: 7");
+  });
+
+  test("renders snapshot reconciliation diagnostics sub-panel when data is present", async () => {
+    const deps = makeDeps();
+    deps.elements["#diagnostics-state"] = makeEl();
+    deps.api.mockResolvedValue({
+      telemetry: {
+        accepted: 1, rejected: 0, duplicates: 0, old: 0,
+        sequence: { lost: 0, gaps: 0, resets: 0 }, by_topic: {},
+        ingestion_duration_ms_average: 0, ingestion_duration_ms_max: 0,
+        blocks: { count: 0, total_blocks_declared: 0, max_blocks_declared: 0 },
+        snapshots: { count: 2, duration_ms_total: 80, duration_ms_max: 50, last_player_count: null },
+      },
+      broker: { sse_connections: 0, sse_connections_total: 0, events_by_topic: {} },
+      runtime_refreshing: false,
+      telemetry_state: { status: "healthy", sequence: "1", expected_sequence: "2", gap_count: "0", missing_events: "0", reset_count: "0", last_snapshot_at: null, last_event_at: null },
+      persistence: { connections: 1, wait_ms_average: 0, wait_ms_max: 0, contention_failures: 0, retries: 0, database_size_bytes: 512 },
+      runtime: { refreshing: false, pending_gamerule_refreshes: 0, gamerule_worker_running: false, snapshot_running: false },
+    });
+    const feature = createServerFeature(deps);
+    await feature.loadDiagnostics();
+    const rendered = deps.elements["#diagnostics-state"].children[0].textContent;
+    expect(rendered).toContain("snapshotDiagnostics");
+    expect(rendered).toContain("snapshotCount: 2");
+    expect(rendered).toContain("snapshotDurationTotal: 80");
+    expect(rendered).toContain("snapshotDurationMax: 50");
+  });
+
+  test("diagnostics sub-panels render with zero values without errors", async () => {
+    const deps = makeDeps();
+    deps.elements["#diagnostics-state"] = makeEl();
+    deps.api.mockResolvedValue({
+      telemetry: {
+        accepted: 0, rejected: 0, duplicates: 0, old: 0,
+        sequence: { lost: 0, gaps: 0, resets: 0 }, by_topic: {},
+        ingestion_duration_ms_average: 0, ingestion_duration_ms_max: 0,
+        blocks: { count: 0, total_blocks_declared: 0, max_blocks_declared: 0 },
+        snapshots: { count: 0, duration_ms_total: 0, duration_ms_max: 0, last_player_count: null },
+      },
+      broker: { sse_connections: 0, sse_connections_total: 0, events_by_topic: {} },
+      runtime_refreshing: false,
+      telemetry_state: null,
+      persistence: null,
+      runtime: null,
+    });
+    const feature = createServerFeature(deps);
+    await feature.loadDiagnostics();
+    expect(deps.elements["#diagnostics-state"].children[0]).toBeTruthy();
+  });
+
+  test("i18n catalogs contain batch and snapshot diagnostic keys", async () => {
+    const [{ en }, { pt }, { es }] = await Promise.all([
+      import("../static/js/i18n/en.js"),
+      import("../static/js/i18n/pt.js"),
+      import("../static/js/i18n/es.js"),
+    ]);
+    const requiredKeys = ["batchDiagnostics", "batchCount", "batchTotalBlocks", "batchMaxBlocks", "snapshotDiagnostics", "snapshotCount", "snapshotDurationTotal", "snapshotDurationMax", "snapshotLastPlayerCount"];
+    for (const key of requiredKeys) {
+      expect({ key, locale: "en", value: en[key] }).toMatchObject({ key, locale: "en", value: expect.any(String) });
+      expect({ key, locale: "pt", value: pt[key] }).toMatchObject({ key, locale: "pt", value: expect.any(String) });
+      expect({ key, locale: "es", value: es[key] }).toMatchObject({ key, locale: "es", value: expect.any(String) });
+    }
+  });
+
   test("renders inactive packs, fallbacks, errors, and supported capabilities", async () => {
     const deps = makeDeps({ state: { frontendVersion: null } });
     const action = makeEl({ dataset: { packAction: "disable" } });

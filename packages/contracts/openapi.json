@@ -1811,7 +1811,7 @@
         "properties": {
           "telemetry": {
             "type": "object",
-            "required": ["accepted", "rejected", "duplicates", "old", "by_topic", "sequence", "ingestion_duration_ms_average", "ingestion_duration_ms_max"],
+            "required": ["accepted", "rejected", "duplicates", "old", "by_topic", "sequence", "ingestion_duration_ms_average", "ingestion_duration_ms_max", "blocks", "snapshots"],
             "properties": {
               "accepted": {"type": "integer", "minimum": 0},
               "rejected": {"type": "integer", "minimum": 0},
@@ -1842,7 +1842,26 @@
                 }
               },
               "ingestion_duration_ms_average": {"type": "number", "minimum": 0},
-              "ingestion_duration_ms_max": {"type": "number", "minimum": 0}
+              "ingestion_duration_ms_max": {"type": "number", "minimum": 0},
+              "blocks": {
+                "type": "object",
+                "required": ["count", "total_blocks_declared", "max_blocks_declared"],
+                "properties": {
+                  "count": {"type": "integer", "minimum": 0},
+                  "total_blocks_declared": {"type": "integer", "minimum": 0},
+                  "max_blocks_declared": {"type": "integer", "minimum": 0}
+                }
+              },
+              "snapshots": {
+                "type": "object",
+                "required": ["count", "duration_ms_total", "duration_ms_max", "last_player_count"],
+                "properties": {
+                  "count": {"type": "integer", "minimum": 0},
+                  "duration_ms_total": {"type": "number", "minimum": 0},
+                  "duration_ms_max": {"type": "number", "minimum": 0},
+                  "last_player_count": {"type": "integer", "minimum": 0, "nullable": true}
+                }
+              }
             }
           },
           "broker": {

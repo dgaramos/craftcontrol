@@ -20,7 +20,11 @@ def type_expression(schema: dict[str, Any]) -> str:
         return " | ".join(json.dumps(value) for value in schema["enum"])
     if "allOf" in schema:
         return " & ".join(type_expression(item) for item in schema["allOf"])
+    nullable = schema.get("nullable", False)
     schema_type = schema.get("type")
+    if nullable and schema_type not in (None, "null"):
+        inner = type_expression({**schema, "nullable": False})
+        return f"{inner} | null"
     if isinstance(schema_type, list):
         return " | ".join(type_expression({**schema, "type": value}) for value in schema_type)
     if schema_type == "string":

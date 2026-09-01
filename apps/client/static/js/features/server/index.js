@@ -101,6 +101,12 @@ async function loadDiagnostics() {
       { key: "total_blocks_declared", label: "batchTotalBlocks" },
       { key: "max_blocks_declared", label: "batchMaxBlocks" },
     ]);
+    addGroup(t("reconciliationDiagnostics"), result.runtime?.reconciliation, [
+      { key: "count", label: "reconciliationCount" },
+      { key: "duration_ms_total", label: "reconciliationDurationTotal", format: (value) => `${value} ms` },
+      { key: "duration_ms_max", label: "reconciliationDurationMax", format: (value) => `${value} ms` },
+      { key: "duration_ms_last", label: "reconciliationDurationLast", format: (value) => `${value} ms` },
+    ]);
     addGroup(t("snapshotDiagnostics"), telemetry.snapshots, [
       { key: "count", label: "snapshotCount" },
       { key: "duration_ms_total", label: "snapshotDurationTotal" },

@@ -421,3 +421,90 @@ def test_refresh_gamerules_async_keeps_valid_discards_invalid(tmp_path: Path) ->
     assert queried, "query_gamerules was never called"
     assert "pvp" in queried[0]
     assert "badname" not in queried[0]
+
+
+# ---------------------------------------------------------------------------
+# reconciliation diagnostics counters
+# ---------------------------------------------------------------------------
+
+def test_reconciliation_diagnostics_empty(tmp_path: Path) -> None:
+    """diagnostics() includes a reconciliation key with zero values on a fresh instance."""
+    _, rec = _reconciliation(tmp_path)
+    diag = rec.diagnostics()
+    assert "reconciliation" in diag
+    r = diag["reconciliation"]
+    assert r == {"count": 0, "duration_ms_total": 0.0, "duration_ms_max": 0.0, "duration_ms_last": 0.0}
+
+
+def test_reconciliation_diagnostics_after_one(tmp_path: Path) -> None:
+    """After one successful refresh(), count==1 and duration_ms_last > 0."""
+    bedrock = FakeBedrock()
+    bedrock.query_state_result = ({}, [], 0, 5, {})
+    tick = [0.0]
+
+    def fake_time():
+        tick[0] += 0.01
+        return tick[0]
+
+    _, rec = _reconciliation(tmp_path, bedrock)
+    rec._time_fn = fake_time
+
+    rec.refresh("test")
+
+    r = rec.diagnostics()["reconciliation"]
+    assert r["count"] == 1
+    assert r["duration_ms_last"] > 0
+
+
+def test_reconciliation_diagnostics_multiple(tmp_path: Path) -> None:
+    """After N successful refresh() calls, count==N and duration_ms_max is correct."""
+    bedrock = FakeBedrock()
+    bedrock.query_state_result = ({}, [], 0, 5, {})
+
+    durations = [0.001, 0.005, 0.003]  # seconds
+    call_idx = [0]
+
+    def fake_time():
+        # Each pair of calls (start, end) produces the next duration
+        idx = call_idx[0] // 2
+        offset = call_idx[0] % 2
+        call_idx[0] += 1
+        return (idx * 0.01) + (offset * durations[min(idx, len(durations) - 1)])
+
+    _, rec = _reconciliation(tmp_path, bedrock)
+    rec._time_fn = fake_time
+
+    for i in range(3):
+        rec.refresh(f"iter-{i}")
+
+    r = rec.diagnostics()["reconciliation"]
+    assert r["count"] == 3
+    assert r["duration_ms_max"] == pytest.approx(max(d * 1000 for d in durations), rel=1e-6)
+
+
+def test_reconciliation_diagnostics_failed_not_counted(tmp_path: Path) -> None:
+    """A refresh() that raises must not increment count."""
+    bedrock = FakeBedrock()
+    bedrock.query_state_error = RuntimeError("connection refused")
+    _, rec = _reconciliation(tmp_path, bedrock)
+
+    try:
+        rec.refresh("test")
+    except RuntimeError:
+        pass
+
+    r = rec.diagnostics()["reconciliation"]
+    assert r["count"] == 0
+
+
+def test_existing_runtime_fields_intact(tmp_path: Path) -> None:
+    """Existing diagnostics fields remain present after a refresh()."""
+    bedrock = FakeBedrock()
+    bedrock.query_state_result = ({}, [], 0, 5, {})
+    _, rec = _reconciliation(tmp_path, bedrock)
+
+    rec.refresh("test")
+
+    diag = rec.diagnostics()
+    for key in ("refreshing", "pending_gamerule_refreshes", "gamerule_worker_running", "snapshot_running"):
+        assert key in diag

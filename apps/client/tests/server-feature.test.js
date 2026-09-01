@@ -342,4 +342,50 @@ describe("createServerFeature", () => {
     expect(deps.elements["#telemetry-pack-state"].innerHTML).toContain("pack warning");
     expect(deps.elements["#telemetry-pack-state"].innerHTML).toContain("capabilityFull");
   });
+
+  test("renders reconciliation sub-panel when data is present", async () => {
+    const deps = makeDeps();
+    deps.elements["#diagnostics-state"] = makeEl();
+    deps.api.mockResolvedValue({
+      telemetry: { accepted: 0, rejected: 0, duplicates: 0, old: 0, sequence: { lost: 0, gaps: 0, resets: 0 }, by_topic: {}, ingestion_duration_ms_average: 0, ingestion_duration_ms_max: 0 },
+      broker: { sse_connections: 0, sse_connections_total: 0, events_by_topic: {} },
+      runtime_refreshing: false,
+      telemetry_state: { status: null, sequence: null, expected_sequence: null, gap_count: null, missing_events: null, reset_count: null, last_snapshot_at: null, last_event_at: null },
+      persistence: { connections: 0, wait_ms_average: 0, wait_ms_max: 0, contention_failures: 0, retries: 0, database_size_bytes: null },
+      runtime: {
+        refreshing: false, pending_gamerule_refreshes: 0, gamerule_worker_running: false, snapshot_running: false,
+        reconciliation: { count: 7, duration_ms_total: 350.5, duration_ms_max: 120.0, duration_ms_last: 45.2 },
+      },
+    });
+    const feature = createServerFeature(deps);
+    await feature.loadDiagnostics();
+    const rendered = deps.elements["#diagnostics-state"].children[0].textContent;
+    expect(rendered).toContain("reconciliationDiagnostics");
+    expect(rendered).toContain("reconciliationCount: 7");
+    expect(rendered).toContain("350.5 ms");
+    expect(rendered).toContain("120 ms");
+    expect(rendered).toContain("45.2 ms");
+  });
+
+  test("renders reconciliation sub-panel with zeros without errors", async () => {
+    const deps = makeDeps();
+    deps.elements["#diagnostics-state"] = makeEl();
+    deps.api.mockResolvedValue({
+      telemetry: { accepted: 0, rejected: 0, duplicates: 0, old: 0, sequence: { lost: 0, gaps: 0, resets: 0 }, by_topic: {}, ingestion_duration_ms_average: 0, ingestion_duration_ms_max: 0 },
+      broker: { sse_connections: 0, sse_connections_total: 0, events_by_topic: {} },
+      runtime_refreshing: false,
+      telemetry_state: { status: null, sequence: null, expected_sequence: null, gap_count: null, missing_events: null, reset_count: null, last_snapshot_at: null, last_event_at: null },
+      persistence: { connections: 0, wait_ms_average: 0, wait_ms_max: 0, contention_failures: 0, retries: 0, database_size_bytes: null },
+      runtime: {
+        refreshing: false, pending_gamerule_refreshes: 0, gamerule_worker_running: false, snapshot_running: false,
+        reconciliation: { count: 0, duration_ms_total: 0, duration_ms_max: 0, duration_ms_last: 0 },
+      },
+    });
+    const feature = createServerFeature(deps);
+    await feature.loadDiagnostics();
+    // Must render without throwing; reconciliation group must appear with count key
+    const rendered = deps.elements["#diagnostics-state"].children[0].textContent;
+    expect(rendered).toContain("reconciliationDiagnostics");
+    expect(rendered).toContain("reconciliationCount: 0");
+  });
 });

@@ -1878,11 +1878,12 @@
           },
           "broker": {
             "type": "object",
-            "required": ["events_by_topic", "sse_connections", "sse_connections_total"],
+            "required": ["events_by_topic", "sse_connections", "sse_connections_total", "sse_reconnections"],
             "properties": {
               "events_by_topic": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
               "sse_connections": {"type": "integer", "minimum": 0},
-              "sse_connections_total": {"type": "integer", "minimum": 0}
+              "sse_connections_total": {"type": "integer", "minimum": 0},
+              "sse_reconnections": {"type": "integer", "minimum": 0}
             }
           },
           "runtime_refreshing": {"type": "boolean"},

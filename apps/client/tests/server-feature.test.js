@@ -46,7 +46,7 @@ describe("createServerFeature", () => {
     deps.elements["#diagnostics-state"] = makeEl();
     deps.api.mockResolvedValue({
       telemetry: { accepted: 4, rejected: 1, duplicates: 2, old: 3, sequence: { lost: 2, gaps: 1, resets: 0 }, by_topic: { "blocks.changed": { accepted: 4, rejected: 1, duplicates: 1, old: 0, gaps: 1, resets: 0 } }, ingestion_duration_ms_average: 2.5, ingestion_duration_ms_max: 9 },
-      broker: { sse_connections: 3, sse_connections_total: 8, events_by_topic: { "telemetry.started": 2 } },
+      broker: { sse_connections: 3, sse_connections_total: 8, sse_reconnections: 5, events_by_topic: { "telemetry.started": 2 } },
       runtime_refreshing: true,
       telemetry_state: { status: "healthy", sequence: "10", expected_sequence: "11", gap_count: "0", missing_events: "0", reset_count: "0", last_snapshot_at: "1", last_event_at: "1" },
       persistence: { connections: 4, wait_ms_average: 1.5, wait_ms_max: 3, contention_failures: 0, retries: 2, database_size_bytes: 1024 },
@@ -65,6 +65,7 @@ describe("createServerFeature", () => {
     expect(rendered).toContain("9 ms");
     expect(rendered).toContain("sseConnections3");
     expect(rendered).toContain("sseConnectionsTotal8");
+    expect(rendered).toContain("sseReconnections5");
     expect(rendered).toContain("runtimeRefreshingyes");
     expect(rendered).toContain("telemetry.started: 2");
     expect(rendered).toContain("3");

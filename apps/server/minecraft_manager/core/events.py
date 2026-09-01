@@ -26,6 +26,7 @@ class EventBroker:
         self._topic_counts: dict[str, int] = {}
         self._active_stream_connections = 0
         self._stream_connections = 0
+        self._stream_reconnections: int = 0
 
     def publish(self, topic: str, source: str, payload: dict[str, Any] | None = None) -> Event:
         payload = payload or {}
@@ -48,12 +49,15 @@ class EventBroker:
                 "events_by_topic": dict(sorted(self._topic_counts.items())),
                 "sse_connections": self._active_stream_connections,
                 "sse_connections_total": self._stream_connections,
+                "sse_reconnections": self._stream_reconnections,
             }
 
     def stream(self, after_id: int = 0) -> Iterator[Event | None]:
         with self._lock:
             self._active_stream_connections += 1
             self._stream_connections += 1
+            if after_id > 0:
+                self._stream_reconnections += 1
         try:
             for saved in self.repository.events_after(after_id):
                 yield Event(saved["id"], saved["topic"], saved["timestamp"], saved["source"], saved["payload"])

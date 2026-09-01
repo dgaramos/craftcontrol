@@ -292,8 +292,9 @@ def test_daily_analytics_records_sessions_and_incremental_telemetry(tmp_path: Pa
         "player": {"name": "VonCrush"}, "data": {"blocksBroken": 10, "damageDealt": 5, "distance": 20},
     })
     block = {
-        "schema": 1, "sequence": 2, "type": "block.broken", "timestamp": 2,
-        "player": {"name": "VonCrush"}, "data": {"blockType": "minecraft:stone"},
+        "schema": 1, "sequence": 2, "type": "blocks.changed", "timestamp": 2,
+        "player": {"name": "VonCrush"},
+        "data": {"broken": {"total": 1, "byType": {"minecraft:stone": 1}}, "placed": {"total": 0, "byType": {}}},
     }
     telemetry_repo.ingest_telemetry(block)
     assert not telemetry_repo.ingest_telemetry(block)[0]

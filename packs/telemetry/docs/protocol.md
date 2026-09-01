@@ -36,8 +36,6 @@ Protocol `schema` and pack `storageVersion` are intentionally independent. Stora
 - `snapshot.started`
 - `snapshot.player`
 - `snapshot.finished`
-- `block.broken` *(deprecated since 0.3.1 — use `blocks.changed`; planned for removal in 0.4.0)*
-- `block.placed` *(deprecated since 0.3.1 — use `blocks.changed`; planned for removal in 0.4.0)*
 
 Send `/scriptevent bedrock_telemetry:sync full` from the dedicated-server console to request a full snapshot. The message body is reserved for future filters.
 
@@ -47,7 +45,7 @@ Pack `0.3.2` publishes the effective game mode of each online player. `snapshot.
 
 `player.gamemode.changed` is emitted when a player's observed mode changes between sampling cycles. Its `data` contains `previous` (the prior known value) and `current` (the new value); both are one of the three mode strings above.
 
-Pack `0.3.1` coalesces block activity per player and five-second persistence cycle into `blocks.changed`. Its `broken` and `placed` objects contain a `total` and bounded `byType` counts. Consumers continue accepting the legacy per-block topics during rolling upgrades.
+Pack `0.4.0` publishes coalesced block activity per player and five-second persistence cycle through `blocks.changed`. Its `broken` and `placed` objects contain a `total` and bounded `byType` counts.
 
 Snapshot player data in pack `0.3.0` adds `killsByType`, `distanceByDimension`, `activeTimeByDimension`, `firstDimensionVisitAt`, and `lastDimensionVisitAt`. Type and dimension maps are bounded. Visit timestamps are Unix epoch milliseconds as produced by the Bedrock JavaScript runtime.
 
@@ -55,6 +53,7 @@ Snapshot player data in pack `0.3.0` adds `killsByType`, `distanceByDimension`, 
 
 | Pack | Storage | Key additions |
 | --- | --- | --- |
+| 0.4.0 | 3 | Removes deprecated per-block topics; `blocks.changed` is the sole incremental block-activity topic |
 | 0.3.0 | 3 | `killsByType`, `distanceByDimension`, `activeTimeByDimension`, `firstDimensionVisitAt`, `lastDimensionVisitAt` in snapshot player data; bounded type and dimension maps |
 | 0.3.1 | 3 | `blocks.changed` coalesces per-player block activity per five-second cycle; `block.broken` and `block.placed` deprecated |
 | 0.3.2 | 3 | `player.gamemode.changed` emitted when game mode changes between cycles; `gameMode` field in `snapshot.player` when `gameModeReading` capability is supported and the player is online |

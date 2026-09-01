@@ -93,9 +93,9 @@ def test_manual_snapshot_is_ingested_synchronously(tmp_path: Path) -> None:
 
 def test_diagnostics_summarize_telemetry_and_broker_counters(tmp_path: Path) -> None:
     service = _make_service(tmp_path)
-    service.telemetry_event({"schema": 1, "sequence": 10, "type": "block.broken", "timestamp": 1, "player": {"name": "VonCrush"}, "data": {}})
-    service.telemetry_event({"schema": 1, "sequence": 10, "type": "block.broken", "timestamp": 2, "player": {"name": "VonCrush"}, "data": {}})
-    service.telemetry_event({"schema": 1, "sequence": 9, "type": "block.broken", "timestamp": 3, "player": {"name": "VonCrush"}, "data": {}})
+    service.telemetry_event({"schema": 1, "sequence": 10, "type": "blocks.changed", "timestamp": 1, "player": {"name": "VonCrush"}, "data": {}})
+    service.telemetry_event({"schema": 1, "sequence": 10, "type": "blocks.changed", "timestamp": 2, "player": {"name": "VonCrush"}, "data": {}})
+    service.telemetry_event({"schema": 1, "sequence": 9, "type": "blocks.changed", "timestamp": 3, "player": {"name": "VonCrush"}, "data": {}})
 
     diagnostics = service.diagnostics()
 
@@ -103,7 +103,7 @@ def test_diagnostics_summarize_telemetry_and_broker_counters(tmp_path: Path) -> 
     assert diagnostics["telemetry"]["rejected"] == 2
     assert diagnostics["telemetry"]["duplicates"] == 1
     assert diagnostics["telemetry"]["old"] == 1
-    assert diagnostics["telemetry"]["by_topic"]["block.broken"] == {
+    assert diagnostics["telemetry"]["by_topic"]["blocks.changed"] == {
         "accepted": 1, "rejected": 2, "duplicates": 1, "old": 1,
         "gaps": 0, "resets": 0,
     }
@@ -118,7 +118,7 @@ def test_telemetry_event_rejects_boolean_sequence(tmp_path: Path) -> None:
     service = _make_service(tmp_path)
 
     with pytest.raises(ValueError, match="sequence must be an integer"):
-        service.telemetry_event({"schema": 1, "sequence": True, "type": "block.broken", "timestamp": 1, "player": {"name": "VonCrush"}, "data": {}})
+        service.telemetry_event({"schema": 1, "sequence": True, "type": "blocks.changed", "timestamp": 1, "player": {"name": "VonCrush"}, "data": {}})
 
 
 def test_diagnostics_tolerate_a_broker_without_diagnostics(tmp_path: Path) -> None:
@@ -150,8 +150,8 @@ def test_sequence_gap_degrades_and_requests_reconciliation(tmp_path: Path) -> No
     service = _make_service(tmp_path)
     requested: list[str] = []
     service.request_telemetry_snapshot_async = requested.append  # type: ignore[method-assign]
-    service.telemetry_event({"schema": 1, "sequence": 10, "type": "block.broken", "timestamp": 1, "player": {"name": "VonCrush"}, "data": {"blockType": "minecraft:stone"}})
-    service.telemetry_event({"schema": 1, "sequence": 13, "type": "block.broken", "timestamp": 2, "player": {"name": "VonCrush"}, "data": {"blockType": "minecraft:dirt"}})
+    service.telemetry_event({"schema": 1, "sequence": 10, "type": "blocks.changed", "timestamp": 1, "player": {"name": "VonCrush"}, "data": {}})
+    service.telemetry_event({"schema": 1, "sequence": 13, "type": "blocks.changed", "timestamp": 2, "player": {"name": "VonCrush"}, "data": {}})
     telemetry = service.state()["telemetry"]
     assert telemetry["status"] == "degraded"
     assert telemetry["gap_count"] == "1"
@@ -159,15 +159,15 @@ def test_sequence_gap_degrades_and_requests_reconciliation(tmp_path: Path) -> No
     assert telemetry["last_gap"] == "11-12"
     assert requested == ["sequence-gap"]
     assert service.diagnostics()["telemetry"]["sequence"]["lost"] == 2
-    assert service.diagnostics()["telemetry"]["by_topic"]["block.broken"]["gaps"] == 1
+    assert service.diagnostics()["telemetry"]["by_topic"]["blocks.changed"]["gaps"] == 1
 
 
 def test_snapshot_repairs_degraded_state_and_stale_delta_is_rejected(tmp_path: Path) -> None:
     service = _make_service(tmp_path)
     service.request_telemetry_snapshot_async = lambda reason: None  # type: ignore[method-assign]
-    service.telemetry_event({"schema": 1, "sequence": 10, "type": "block.broken", "timestamp": 1, "player": {"name": "VonCrush"}, "data": {}})
-    service.telemetry_event({"schema": 1, "sequence": 12, "type": "block.broken", "timestamp": 2, "player": {"name": "VonCrush"}, "data": {}})
-    service.telemetry_event({"schema": 1, "sequence": 11, "type": "block.placed", "timestamp": 3, "player": {"name": "VonCrush"}, "data": {}})
+    service.telemetry_event({"schema": 1, "sequence": 10, "type": "blocks.changed", "timestamp": 1, "player": {"name": "VonCrush"}, "data": {}})
+    service.telemetry_event({"schema": 1, "sequence": 12, "type": "blocks.changed", "timestamp": 2, "player": {"name": "VonCrush"}, "data": {}})
+    service.telemetry_event({"schema": 1, "sequence": 11, "type": "player.joined", "timestamp": 3, "player": {"name": "VonCrush"}, "data": {}})
     assert service.state()["telemetry"]["sequence"] == "12"
     service.telemetry_event({"schema": 1, "sequence": 12, "type": "snapshot.started", "timestamp": 4, "player": None, "data": {"players": 0}})
     service.telemetry_event({"schema": 1, "sequence": 12, "type": "snapshot.finished", "timestamp": 5, "player": None, "data": {}})
@@ -181,7 +181,7 @@ def test_pack_sequence_reset_requests_snapshot(tmp_path: Path) -> None:
     service = _make_service(tmp_path)
     requested: list[str] = []
     service.request_telemetry_snapshot_async = requested.append  # type: ignore[method-assign]
-    service.telemetry_event({"schema": 1, "sequence": 20, "type": "block.broken", "timestamp": 1, "player": {"name": "VonCrush"}, "data": {}})
+    service.telemetry_event({"schema": 1, "sequence": 20, "type": "blocks.changed", "timestamp": 1, "player": {"name": "VonCrush"}, "data": {}})
     service.telemetry_event({"schema": 1, "sequence": 1, "type": "telemetry.started", "timestamp": 2, "player": None, "data": {"version": "0.2.0"}})
     telemetry = service.state()["telemetry"]
     assert telemetry["status"] == "syncing"

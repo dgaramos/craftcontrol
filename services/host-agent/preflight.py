@@ -134,7 +134,7 @@ class FakeFilesystem:
         return self._sandbox_ok
 
 
-class ProductionRunner:
+class ProductionRunner:  # pragma: no cover
     """Thin wrapper around subprocess.run for production use."""
 
     def __init__(self) -> None:

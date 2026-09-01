@@ -393,3 +393,92 @@ def test_preflight_never_writes_token_file():
     assert token_path not in fs.written_paths, (
         f"Token file was opened for writing: {token_path}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Additional coverage for uncovered branches
+# ---------------------------------------------------------------------------
+
+
+def test_preflight_fails_if_python_too_old():
+    """Python < 3.10 exits 1 before any work."""
+    sysinfo = SystemInfo(
+        python_version=(3, 9, 0),
+        docker_available=True,
+        compose_v2=True,
+        setfacl_available=True,
+        agent_user_exists=True,
+        agent_in_docker_group=True,
+    )
+    pf = _make_preflight(system_info=sysinfo)
+    result = pf.run()
+
+    assert not result.success
+    assert "python" in result.error.lower()
+    assert "3.10" in result.error
+
+
+def test_preflight_fails_if_setfacl_missing():
+    """Missing setfacl exits 1 with informative message."""
+    sysinfo = SystemInfo(
+        python_version=(3, 10, 0),
+        docker_available=True,
+        compose_v2=True,
+        setfacl_available=False,
+        agent_user_exists=True,
+        agent_in_docker_group=True,
+    )
+    pf = _make_preflight(system_info=sysinfo)
+    result = pf.run()
+
+    assert not result.success
+    assert "setfacl" in result.error.lower()
+
+
+def test_preflight_plans_path_unit_when_inactive():
+    """Inactive path unit is added to planned actions."""
+    fs = FakeFilesystem(
+        acls={
+            "/opt/craftcontrol": "u:craftcontrol-agent:--x",
+            "/opt/craftcontrol/.env": "u:craftcontrol-agent:r--",
+            "/opt/minecraft-bedrock": "u:craftcontrol-agent:rwX",
+            "d:/opt/minecraft-bedrock": "d:u:craftcontrol-agent:rwX",
+        },
+        dropin_content=_CORRECT_DROPIN,
+        dropin_exists=True,
+        sandbox_ok=True,
+        path_unit_active=False,
+    )
+    pf = _make_preflight(fs=fs)
+    result = pf.run()
+
+    assert result.success
+    assert any("env-acl" in a for a in result.planned_actions)
+
+
+def test_fake_filesystem_write_file_records_path():
+    """FakeFilesystem.write_file appends to written_paths."""
+    fs = FakeFilesystem(
+        acls={},
+        dropin_content=None,
+        dropin_exists=False,
+        sandbox_ok=True,
+    )
+    fs.write_file("/some/path", "content")
+    assert "/some/path" in fs.written_paths
+
+
+def test_fake_runner_raises_on_sandbox_fail_with_check():
+    """FakeRunner raises RuntimeError for systemd-run when sandbox_ok=False and check=True."""
+    import pytest as _pytest
+
+    runner = FakeRunner(sandbox_ok=False)
+    with _pytest.raises(RuntimeError):
+        runner.run(["systemd-run", "--wait", "test"], check=True)
+
+
+def test_fake_runner_returns_nonzero_on_sandbox_fail_without_check():
+    """FakeRunner returns 1 for systemd-run when sandbox_ok=False and check=False."""
+    runner = FakeRunner(sandbox_ok=False)
+    rc = runner.run(["systemd-run", "--wait", "test"], check=False)
+    assert rc == 1

@@ -113,7 +113,7 @@ ALLOWED_DAILY_FIELDS = frozenset({
 
 
 @contextmanager
-def open_connection(path: Path):
+def open_connection(path: Path, *, record_contention: bool = True):
     path.parent.mkdir(parents=True, exist_ok=True)
     started = time.perf_counter()
     connection = sqlite3.connect(path, timeout=SQLITE_BUSY_TIMEOUT_MS / 1000)
@@ -123,11 +123,18 @@ def open_connection(path: Path):
         with connection:
             yield connection
     except sqlite3.OperationalError as error:
-        if "locked" in str(error).lower() or "busy" in str(error).lower():
+        if record_contention and ("locked" in str(error).lower() or "busy" in str(error).lower()):
             _record_contention_failure()
         raise
     finally:
         connection.close()
+
+
+@contextmanager
+def open_retryable_connection(path: Path):
+    """Open a read connection without recording transient retry attempts as failures."""
+    with open_connection(path, record_contention=False) as connection:
+        yield connection
 
 
 def open_connection_with_retry(
@@ -135,7 +142,7 @@ def open_connection_with_retry(
     executor: Callable[[sqlite3.Connection], _T],
     max_retries: int = SQLITE_MAX_RETRIES,
     *,
-    connection_factory: ConnectionFactory = open_connection,
+    connection_factory: ConnectionFactory = open_retryable_connection,
 ) -> _T:
     """Open a SQLite connection with bounded retries for transient contention.
 
@@ -182,8 +189,9 @@ def open_connection_with_retry(
                 last_error = error
                 continue
             raise
-    # Budget exhausted — final failure already recorded by connection_factory's
-    # except clause; raise to surface the error to the caller.
+    # Only the final failure is reported; transient contention is represented
+    # by the retry counter.
+    _record_contention_failure()
     raise last_error  # type: ignore[misc]
 
 

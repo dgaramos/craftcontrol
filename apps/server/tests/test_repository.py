@@ -1,7 +1,9 @@
 import sqlite3
 import time
+from contextlib import contextmanager
 from pathlib import Path
 
+from minecraft_manager._db import open_connection, sqlite_diagnostics
 from minecraft_manager.players.repository import SQLitePlayerRepository
 from minecraft_manager.repository import StateRepository
 from minecraft_manager.telemetry_repository import SQLiteTelemetryRepository
@@ -27,6 +29,31 @@ def test_builds_api_snapshot(tmp_path: Path) -> None:
     assert snapshot["online"] == 1
     assert snapshot["max_players"] == 10
     assert snapshot["domains"]["settings"]["freshness"] == "fresh"
+
+
+def test_snapshot_retries_transient_sqlite_contention(tmp_path: Path) -> None:
+    path = tmp_path / "state.db"
+    attempts = 0
+
+    @contextmanager
+    def flaky_connection(path: Path):
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise sqlite3.OperationalError("database is locked")
+        with open_connection(path) as connection:
+            yield connection
+
+    repository = StateRepository(path, read_connection_factory=flaky_connection)
+    repository.initialize()
+    repository.store("settings", {"SERVER_NAME": "MalavaziRamos"}, "test")
+    before = int(sqlite_diagnostics()["retries"])
+
+    snapshot = repository.snapshot()
+
+    assert snapshot["settings"]["SERVER_NAME"] == "MalavaziRamos"
+    assert attempts == 2
+    assert int(sqlite_diagnostics()["retries"]) == before + 1
 
 
 def test_records_and_replays_events(tmp_path: Path) -> None:

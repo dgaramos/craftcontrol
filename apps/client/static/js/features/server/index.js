@@ -70,6 +70,8 @@ async function loadDiagnostics() {
       { key: "wait_ms_average", label: "sqliteWaitAverage", format: (value) => `${value} ms` },
       { key: "wait_ms_max", label: "sqliteWaitMax", format: (value) => `${value} ms` },
       { key: "contention_failures", label: "sqliteContentionFailures" },
+      { key: "retries", label: "sqliteRetries" },
+      { key: "database_size_bytes", label: "sqliteDatabaseSize", format: (value) => `${value} B` },
     ]);
     addGroup(t("runtimeDiagnostics"), result.runtime, [
       { key: "refreshing", label: "runtimeRefreshing", format: (value) => value ? t("yes") : t("no") },

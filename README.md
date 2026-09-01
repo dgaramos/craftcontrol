@@ -171,6 +171,11 @@ Authenticated installations expose:
 - `/api/events` — persisted and live Server-Sent Events.
 - `/api/diagnostics` — owner-only local telemetry and SSE diagnostics; it does not require an observability stack.
 
+Persistence diagnostics report SQLite connection wait, bounded retry pressure,
+final contention failures, and database size without exposing database contents
+or filesystem paths. Only idempotent reads may retry after transient SQLite
+contention; writes fail without automatic retry.
+
 `GET /api/operations` returns bounded, paginated operation history through a one-based `page` query parameter and a `limit` page size from 1 to 100 (default 10).
 
 Swagger attaches the session-bound CSRF token to unsafe “Try it out” requests and never bypasses role capabilities. There is no arbitrary shell or console endpoint.

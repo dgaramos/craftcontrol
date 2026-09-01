@@ -49,7 +49,7 @@ describe("createServerFeature", () => {
       broker: { sse_connections: 3, sse_connections_total: 8, events_by_topic: { "telemetry.started": 2 } },
       runtime_refreshing: true,
       telemetry_state: { status: "healthy", sequence: "10", expected_sequence: "11", gap_count: "0", missing_events: "0", reset_count: "0", last_snapshot_at: "1", last_event_at: "1" },
-      persistence: { connections: 4, wait_ms_average: 1.5, wait_ms_max: 3, contention_failures: 0 },
+      persistence: { connections: 4, wait_ms_average: 1.5, wait_ms_max: 3, contention_failures: 0, retries: 2, database_size_bytes: 1024 },
       runtime: { refreshing: false, pending_gamerule_refreshes: 2, gamerule_worker_running: true, snapshot_running: false },
     });
     const feature = createServerFeature(deps);
@@ -70,6 +70,8 @@ describe("createServerFeature", () => {
     expect(rendered).toContain("diagnosticStatus: healthy");
     expect(rendered).toContain("persistenceDiagnostics");
     expect(rendered).toContain("sqliteWaitAverage: 1.5 ms");
+    expect(rendered).toContain("sqliteRetries: 2");
+    expect(rendered).toContain("sqliteDatabaseSize: 1024 B");
     expect(rendered).toContain("runtimeDiagnostics");
     expect(rendered).toContain("pendingGameruleRefreshes: 2");
   });

@@ -1833,12 +1833,14 @@
           "runtime_refreshing": {"type": "boolean"},
           "persistence": {
             "type": "object",
-            "required": ["connections", "wait_ms_average", "wait_ms_max", "contention_failures"],
+            "required": ["connections", "wait_ms_average", "wait_ms_max", "contention_failures", "retries", "database_size_bytes"],
             "properties": {
               "connections": {"type": "integer", "minimum": 0},
               "wait_ms_average": {"type": "number", "minimum": 0},
               "wait_ms_max": {"type": "number", "minimum": 0},
-              "contention_failures": {"type": "integer", "minimum": 0}
+              "contention_failures": {"type": "integer", "minimum": 0},
+              "retries": {"type": "integer", "minimum": 0},
+              "database_size_bytes": {"type": ["integer", "null"], "minimum": 0}
             }
           },
           "runtime": {

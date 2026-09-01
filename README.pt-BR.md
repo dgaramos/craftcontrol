@@ -157,6 +157,12 @@ Instalações autenticadas expõem:
 - `/api/events` — Server-Sent Events persistidos e ao vivo.
 - `/api/diagnostics` — diagnósticos locais de telemetria e SSE para owners; não exige uma stack de observabilidade.
 
+Os diagnósticos de persistência reportam espera de conexão SQLite, pressão de
+tentativas limitadas, falhas finais de contenção e tamanho do banco sem expor
+conteúdo ou caminhos do sistema de arquivos. Somente leituras idempotentes
+podem tentar novamente após contenção transitória do SQLite; escritas falham
+sem nova tentativa automática.
+
 `GET /api/operations` retorna histórico de operações limitado e paginado pelo parâmetro `page`, baseado em 1, e pelo tamanho de página `limit`, de 1 a 100 (padrão 10).
 
 O Swagger anexa o token CSRF vinculado à sessão a requisições inseguras de “Try it out” e nunca ignora capabilities de papel. Não há endpoint arbitrário de shell ou console.

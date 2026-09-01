@@ -334,6 +334,7 @@ def test_open_connection_with_retry_increments_retries_on_contention(tmp_path: P
     """open_connection_with_retry must increment the shared retries counter on transient contention."""
     path = _initialized_db(tmp_path)
     before_retries = int(sqlite_diagnostics()["retries"])
+    before_failures = int(sqlite_diagnostics()["contention_failures"])
     call_count = 0
 
     import minecraft_manager._db as _db_module
@@ -343,7 +344,6 @@ def test_open_connection_with_retry_increments_retries_on_contention(tmp_path: P
         nonlocal call_count
         call_count += 1
         if call_count == 1:
-            _db_module._record_contention_failure()
             raise sqlite3.OperationalError("database is locked")
         with open_connection(p) as conn:
             yield conn
@@ -356,18 +356,19 @@ def test_open_connection_with_retry_increments_retries_on_contention(tmp_path: P
 
     after_retries = int(sqlite_diagnostics()["retries"])
     assert after_retries > before_retries, "retries counter was not incremented after transient contention"
+    assert int(sqlite_diagnostics()["contention_failures"]) == before_failures
 
 
 def test_open_connection_with_retry_exhausts_budget_and_raises(tmp_path: Path) -> None:
     """open_connection_with_retry must raise after exhausting all retry attempts."""
     path = _initialized_db(tmp_path)
     before_retries = int(sqlite_diagnostics()["retries"])
+    before_failures = int(sqlite_diagnostics()["contention_failures"])
 
     import minecraft_manager._db as _db_module
 
     @_db_module.contextmanager
     def _always_locked(p):
-        _db_module._record_contention_failure()
         raise sqlite3.OperationalError("database is locked")
         yield  # make it a generator
 
@@ -383,6 +384,7 @@ def test_open_connection_with_retry_exhausts_budget_and_raises(tmp_path: Path) -
     assert after_retries >= before_retries + 2, (
         "retries counter must reflect at least 2 retry attempts after budget exhaustion"
     )
+    assert int(sqlite_diagnostics()["contention_failures"]) == before_failures + 1
 
 
 def test_open_connection_with_retry_does_not_retry_non_contention_error(tmp_path: Path) -> None:

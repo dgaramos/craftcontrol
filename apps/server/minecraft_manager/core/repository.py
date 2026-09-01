@@ -9,7 +9,14 @@ import json
 import logging
 
 from ..migrations import LATEST_SCHEMA_VERSION, run_migrations, schema_version
-from .._db import SQLITE_BUSY_TIMEOUT_MS, _record_connection_wait, _record_contention_failure
+from .._db import (
+    SQLITE_BUSY_TIMEOUT_MS,
+    ConnectionFactory,
+    _record_connection_wait,
+    _record_contention_failure,
+    open_connection,
+    open_connection_with_retry,
+)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -22,8 +29,9 @@ class StateRepository:
     (SQLitePlayerRepository and SQLiteTelemetryRepository).
     """
 
-    def __init__(self, path: Path) -> None:
+    def __init__(self, path: Path, read_connection_factory: ConnectionFactory = open_connection) -> None:
         self.path = path
+        self._read_connection_factory = read_connection_factory
 
     def initialize(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -110,8 +118,11 @@ class StateRepository:
             "settings": {}, "gamerules": {}, "players": [], "online": 0,
             "max_players": 0, "updated_at": 0, "refreshing": refreshing,
         }
-        with self._connect() as connection:
-            rows = connection.execute("SELECT kind,key,value,updated_at,changed_at,source FROM state").fetchall()
+        rows = open_connection_with_retry(
+            self.path,
+            lambda connection: connection.execute("SELECT kind,key,value,updated_at,changed_at,source FROM state").fetchall(),
+            connection_factory=self._read_connection_factory,
+        )
         domains: dict[str, dict[str, Any]] = {}
         for kind, key, value, updated_at, changed_at, source in rows:
             if kind == "players":

@@ -257,16 +257,27 @@ class AuthService:
     def revoke_session(self, session_token: str, session_id: str) -> None:
         current_hash = self._token_hash(session_token)
         now = time.time()
+        # Read phase: resolve the caller's identity and look up the target token_hash.
+        with self._connect() as connection:
+            identity = self._active_session_identity(connection, current_hash, now)
+            rows = connection.execute(
+                "SELECT token_hash FROM panel_sessions WHERE identity=? AND revoked_at IS NULL",
+                (identity[0],),
+            ).fetchall()
+        actor_identity = identity[0]
+        target = next(
+            (row[0] for row in rows if hmac.compare_digest(hashlib.sha256(row[0].encode()).hexdigest()[:24], session_id)),
+            None,
+        )
+        denied = target is None or hmac.compare_digest(target, current_hash)
+        if denied:
+            with self._connect() as connection:
+                self._audit(connection, actor_identity, "auth.session.revoked", session_id, "denied", {})
+            raise ValueError("session cannot be revoked")
         with self._connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
-            identity = self._active_session_identity(connection, current_hash, now)
-            if not identity:
-                raise ValueError("session not found")
-            rows = connection.execute("SELECT token_hash FROM panel_sessions WHERE identity=? AND revoked_at IS NULL", (identity[0],)).fetchall()
-            target = next((row[0] for row in rows if hmac.compare_digest(hashlib.sha256(row[0].encode()).hexdigest()[:24], session_id)), None)
-            if target is None or hmac.compare_digest(target, current_hash):
-                raise ValueError("session cannot be revoked")
             connection.execute("UPDATE panel_sessions SET revoked_at=? WHERE token_hash=?", (now, target))
+            self._audit(connection, actor_identity, "auth.session.revoked", session_id, "success", {})
 
     def revoke_other_sessions(self, session_token: str) -> None:
         with self._connect() as connection:
@@ -275,23 +286,31 @@ class AuthService:
             if not identity:
                 raise ValueError("session not found")
             connection.execute("UPDATE panel_sessions SET revoked_at=? WHERE identity=? AND token_hash<>? AND revoked_at IS NULL", (time.time(), identity[0], self._token_hash(session_token)))
+            self._audit(connection, identity[0], "auth.sessions.revoked_all", identity[0], "success", {})
 
     def change_password(self, session_token: str, current_password: str, new_password: str) -> tuple[str, dict[str, Any]]:
         """Replace an authenticated account password and rotate all of its sessions."""
         self.validate_password(current_password)
         password_hash = self.hash_password(new_password)
         now = time.time()
+        token_hash = self._token_hash(session_token)
+        # Read phase: resolve session without holding a write lock during password verification.
         with self._connect() as connection:
-            connection.execute("BEGIN IMMEDIATE")
             row = connection.execute(
                 "SELECT s.identity,a.password_hash,a.status FROM panel_sessions s "
                 "JOIN panel_accounts a ON a.identity=s.identity WHERE s.token_hash=? "
                 "AND s.revoked_at IS NULL AND s.idle_expires_at>=? AND s.absolute_expires_at>=?",
-                (self._token_hash(session_token), now, now),
+                (token_hash, now, now),
             ).fetchone()
-            if not row or row[2] != "active" or not self.verify_password(current_password, row[1]):
-                raise ValueError("current password is incorrect")
-            identity = str(row[0])
+        valid = bool(row and row[2] == "active" and self.verify_password(current_password, row[1]))
+        if not valid:
+            denied_identity = str(row[0]) if row else None
+            with self._connect() as connection:
+                self._audit(connection, denied_identity, "auth.password.changed", denied_identity, "denied", {})
+            raise ValueError("current password is incorrect")
+        identity = str(row[0])
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
             connection.execute(
                 "UPDATE panel_accounts SET password_hash=?,updated_at=? WHERE identity=?",
                 (password_hash, now, identity),
@@ -300,6 +319,7 @@ class AuthService:
                 "UPDATE panel_sessions SET revoked_at=? WHERE identity=? AND revoked_at IS NULL",
                 (now, identity),
             )
+            self._audit(connection, identity, "auth.password.changed", identity, "success", {})
             return self._create_session(connection, identity, now)
 
     def access_list(self) -> list[dict[str, Any]]:

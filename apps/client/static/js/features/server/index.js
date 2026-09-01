@@ -56,6 +56,7 @@ async function loadDiagnostics() {
     add(t("ingestionDurationMax"), `${telemetry.ingestion_duration_ms_max || 0} ms`);
     add(t("sseConnections"), broker.sse_connections || 0);
     add(t("sseConnectionsTotal"), broker.sse_connections_total || 0);
+    add(t("sseReconnections"), broker.sse_reconnections || 0);
     add(t("runtimeRefreshing"), result.runtime_refreshing ? t("yes") : t("no"));
     const addGroup = (title, values, definitions) => {
       if (!values || !definitions.some(({ key }) => values[key] !== null && values[key] !== undefined)) return;

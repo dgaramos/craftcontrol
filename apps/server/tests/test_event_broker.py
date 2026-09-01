@@ -50,6 +50,7 @@ def test_diagnostics_reports_topic_counts_without_exposing_payloads(broker: Even
         "events_by_topic": {"telemetry.snapshot.finished": 1},
         "sse_connections": 0,
         "sse_connections_total": 0,
+        "sse_reconnections": 0,
     }
 
 
@@ -147,6 +148,44 @@ def test_stream_registers_and_removes_subscriber(broker: EventBroker) -> None:
     t.join(timeout=3)
     assert count == 1
     assert len(broker._subscribers) == 0
+
+
+# ---------------------------------------------------------------------------
+# stream — reconnection counter
+# ---------------------------------------------------------------------------
+
+def test_stream_reconnection_counter_starts_at_zero(broker: EventBroker) -> None:
+    """sse_reconnections is 0 before any stream call."""
+    diag = broker.diagnostics()
+    assert diag["sse_reconnections"] == 0
+
+
+def test_stream_reconnection_not_incremented_on_first_connection(broker: EventBroker) -> None:
+    """after_id=0 is a fresh connection, not a reconnection."""
+    gen = broker.stream(after_id=0)
+    next(gen)
+    gen.close()
+    diag = broker.diagnostics()
+    assert diag["sse_reconnections"] == 0
+
+
+def test_stream_reconnection_incremented_when_after_id_positive(broker: EventBroker) -> None:
+    """after_id > 0 signals a client reconnection; counter must increment."""
+    gen = broker.stream(after_id=5)
+    next(gen)
+    gen.close()
+    diag = broker.diagnostics()
+    assert diag["sse_reconnections"] == 1
+
+
+def test_stream_reconnection_counts_multiple_reconnections(broker: EventBroker) -> None:
+    """Each reconnection increments the counter independently."""
+    for after in (3, 7, 11):
+        gen = broker.stream(after_id=after)
+        next(gen)
+        gen.close()
+    diag = broker.diagnostics()
+    assert diag["sse_reconnections"] == 3
 
 
 def test_stream_yields_none_on_timeout(broker: EventBroker) -> None:

@@ -256,7 +256,32 @@ operational repair; restore its ownership from the Bedrock runtime instead.
 
 Do not change ownership of the Bedrock project or make it world-writable.
 Keep the project owned by its existing operator and grant the agent narrowly
-scoped ACLs instead. Substitute the paths and service account for your host:
+scoped ACLs instead.
+
+### Preferred: idempotent installer
+
+Run the bundled installer as root. It applies ACLs, creates the systemd drop-in,
+installs the `.env` watcher path unit, and validates the sandbox — all in one
+idempotent pass:
+
+```bash
+sudo HOST_AGENT_COMPOSE_FILE=/opt/craftcontrol/docker-compose.yml \
+     HOST_AGENT_BEDROCK_DATA=/opt/minecraft-bedrock \
+     HOST_AGENT_COMPOSE_PROJECT=minecraft-bedrock \
+  deploy/host-agent/bin/install-craftcontrol-host-agent-runtime
+```
+
+Pass `--dry-run` to preview what would be changed without applying any
+mutation. Re-running after a `.env` recreation or a path change is safe;
+the installer is idempotent and never changes owner/group of pre-existing files
+or touches `/etc/craftcontrol/host-agent-token`.
+
+### Manual reference
+
+Use the commands below if you need to inspect or repair individual components.
+They are the same operations the installer performs, expressed step by step.
+
+Substitute the paths and service account for your host:
 
 ```bash
 AGENT_USER=craftcontrol-agent
@@ -279,14 +304,12 @@ sudo find "$HOST_AGENT_BEDROCK_DATA" -type d \
 
 The default ACL applies to new files and directories created beneath `data`.
 It does not apply to a replacement `.env` file. Reapply the `.env` ACL after
-recreating that file, and run the verification commands below before retrying
-an operation. Issue #371 tracks an idempotent installer that performs these
-checks and repairs automatically.
+recreating that file manually, or re-run the installer.
 
 CraftControl Server writes `.env` atomically when a setting changes. An atomic
 replacement creates a new file and its restrictive creation mode can mask a
-directory default ACL. Until the installer is available, use a narrow systemd
-path unit to restore only the agent's read access after each replacement:
+directory default ACL. A narrow systemd path unit restores only the agent's
+read access after each replacement:
 
 ```bash
 sudo tee /etc/systemd/system/craftcontrol-host-agent-env-acl.service >/dev/null <<EOF

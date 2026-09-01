@@ -104,6 +104,7 @@ class ManagerService:
         broker_diagnostics = getattr(self.broker, "diagnostics", None)
         telemetry_state = self.state().get("telemetry", {})
         return {
+            "domains": self.telemetry_service.repository.domain_freshness(),
             "telemetry": self.telemetry_service.diagnostics(),
             "broker": broker_diagnostics() if callable(broker_diagnostics) else {},
             "runtime_refreshing": self.refreshing,

@@ -1807,7 +1807,7 @@
       },
       "Diagnostics": {
         "type": "object",
-        "required": ["telemetry", "broker", "runtime_refreshing", "persistence", "runtime", "telemetry_state"],
+        "required": ["domains", "telemetry", "broker", "runtime_refreshing", "persistence", "runtime", "telemetry_state"],
         "properties": {
           "telemetry": {
             "type": "object",
@@ -1861,6 +1861,18 @@
                   "duration_ms_max": {"type": "number", "minimum": 0},
                   "last_player_count": {"type": "integer", "minimum": 0, "nullable": true}
                 }
+              }
+            }
+          },
+          "domains": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "required": ["observed_at", "age_seconds", "stale"],
+              "properties": {
+                "observed_at": {"type": ["number", "null"]},
+                "age_seconds": {"type": ["number", "null"]},
+                "stale": {"type": "boolean"}
               }
             }
           },

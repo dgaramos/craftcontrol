@@ -159,10 +159,10 @@ describe("createPlayerProfile", () => {
   });
 
   test.each([
-    ["pt", "Modo observado (agora): Criativo"],
-    ["en", "Observed mode (now): Creative"],
-    ["es", "Modo observado (ahora): Creativo"],
-  ])("localizes the read-only observed game mode in %s", async (locale, expected) => {
+    ["pt", "Modo observado (agora): Criativo", "Preferência configurada: Sobrevivência"],
+    ["en", "Observed mode (now): Creative", "Configured preference: Survival"],
+    ["es", "Modo observado (ahora): Creativo", "Preferencia configurada: Supervivencia"],
+  ])("localizes the read-only observed game mode in %s", async (locale, observed, preferred) => {
     const deps = makeDeps();
     deps.state.locale = locale;
     ({ t: deps.t, localized: deps.localized } = createI18n(() => deps.state.locale));
@@ -174,8 +174,9 @@ describe("createPlayerProfile", () => {
 
     await createPlayerProfile(deps)({ id: "player-1" }, {});
 
-    expect(observedEl.textContent).toBe(expected);
-    expect(preferredStatusEl.textContent).not.toBe(observedEl.textContent);
+    expect(observedEl.hidden).toBe(false);
+    expect(observedEl.textContent).toBe(observed);
+    expect(preferredStatusEl.textContent).toBe(preferred);
   });
 
   test("hides observed game mode section when field is null", async () => {

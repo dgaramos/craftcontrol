@@ -20,7 +20,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from minecraft_manager.host_agent import HostAgentContainerOperations
+from minecraft_manager.server.host_agent import HostAgentContainerOperations
 from minecraft_manager.core.migrations import run_migrations
 from minecraft_manager.operations.lifecycle import OperationStage, OperationState
 from minecraft_manager.operations.repository import SQLiteOperationRepository

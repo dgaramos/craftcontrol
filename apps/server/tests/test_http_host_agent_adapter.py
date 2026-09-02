@@ -1,4 +1,4 @@
-"""Tests for HostAgentContainerOperations (host_agent.py).
+"""Tests for the server-owned HostAgentContainerOperations adapter.
 
 Covers:
 - status(): maps bedrock_running=true → online=True, agent-alive-but-bedrock-stopped → online=False, transport error → online=False
@@ -37,7 +37,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from minecraft_manager.host_agent import (
+from minecraft_manager.server.host_agent import (
     HostAgentContainerOperations,
     ReadTimeoutError,
     _UrllibClient,
@@ -681,25 +681,25 @@ class TestIntendedStateKeyTranslation:
 
     def test_conflicting_aliases_uppercase_first_raises_value_error(self) -> None:
         """GAMEMODE=survival then gamemode=creative → conflict → ValueError before payload."""
-        from minecraft_manager.host_agent import _translate_intended_state
+        from minecraft_manager.server.host_agent import _translate_intended_state
         with pytest.raises(ValueError, match="conflicting"):
             _translate_intended_state({"GAMEMODE": "survival", "gamemode": "creative"})
 
     def test_conflicting_aliases_lowercase_first_raises_value_error(self) -> None:
         """gamemode=creative then GAMEMODE=survival → conflict → ValueError before payload."""
-        from minecraft_manager.host_agent import _translate_intended_state
+        from minecraft_manager.server.host_agent import _translate_intended_state
         with pytest.raises(ValueError, match="conflicting"):
             _translate_intended_state({"gamemode": "creative", "GAMEMODE": "survival"})
 
     def test_duplicate_aliases_same_value_collapsed(self) -> None:
         """GAMEMODE=survival and gamemode=survival → same value → collapsed to one entry."""
-        from minecraft_manager.host_agent import _translate_intended_state
+        from minecraft_manager.server.host_agent import _translate_intended_state
         result = _translate_intended_state({"GAMEMODE": "survival", "gamemode": "survival"})
         assert result == {"gamemode": "survival"}
 
     def test_every_restart_required_setting_has_a_host_agent_field(self) -> None:
         """Every UI setting must translate to the host agent's canonical contract."""
-        from minecraft_manager.host_agent import _translate_intended_state
+        from minecraft_manager.server.host_agent import _translate_intended_state
         from minecraft_manager.core.schema import PROPERTY_NAMES, SETTINGS
 
         translated = _translate_intended_state({key: "value" for key in SETTINGS})

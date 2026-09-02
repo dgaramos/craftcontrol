@@ -1,9 +1,9 @@
 import { jest } from "@jest/globals";
-import { createCombatPanel } from "../static/js/features/analytics/combat.js";
-import { createExplorationPanel } from "../static/js/features/analytics/exploration.js";
-import { createTrendsPanel } from "../static/js/features/analytics/trends.js";
-import { createHealthPanel } from "../static/js/features/analytics/health.js";
-import { findNodes, makeDom, makeEl } from "./helpers.js";
+import { createCombatPanel } from "../../../static/js/features/analytics/combat.js";
+import { createExplorationPanel } from "../../../static/js/features/analytics/exploration.js";
+import { createTrendsPanel } from "../../../static/js/features/analytics/trends.js";
+import { createHealthPanel } from "../../../static/js/features/analytics/health.js";
+import { findNodes, makeDom, makeEl } from "../../helpers.js";
 
 
 function makeSharedDeps(stateOverrides = {}) {

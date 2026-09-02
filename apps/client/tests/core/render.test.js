@@ -1,5 +1,5 @@
 import { jest } from "@jest/globals";
-import { renderMarkup, renderTemplate } from "../static/js/core/render.js";
+import { renderMarkup, renderTemplate } from "../../static/js/core/render.js";
 
 describe("render helpers", () => {
   test("rejects targets without DOM replacement support", () => {

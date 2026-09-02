@@ -3,8 +3,8 @@
  */
 
 import { jest } from "@jest/globals";
-import { createServerFeature } from "../static/js/features/server/index.js";
-import { makeEl } from "./helpers.js";
+import { createServerFeature } from "../../../static/js/features/server/index.js";
+import { makeEl } from "../../helpers.js";
 
 function makeDeps(overrides = {}) {
   const elements = {};
@@ -315,9 +315,9 @@ describe("createServerFeature", () => {
 
   test("i18n catalogs contain batch and snapshot diagnostic keys", async () => {
     const [{ en }, { pt }, { es }] = await Promise.all([
-      import("../static/js/i18n/en.js"),
-      import("../static/js/i18n/pt.js"),
-      import("../static/js/i18n/es.js"),
+      import("../../../static/js/i18n/en.js"),
+      import("../../../static/js/i18n/pt.js"),
+      import("../../../static/js/i18n/es.js"),
     ]);
     const requiredKeys = ["batchDiagnostics", "batchCount", "batchTotalBlocks", "batchMaxBlocks", "snapshotDiagnostics", "snapshotCount", "snapshotDurationTotal", "snapshotDurationMax", "snapshotLastPlayerCount"];
     for (const key of requiredKeys) {
@@ -424,9 +424,9 @@ describe("createServerFeature", () => {
 
   test("i18n catalogs contain domain freshness keys", async () => {
     const [{ en }, { pt }, { es }] = await Promise.all([
-      import("../static/js/i18n/en.js"),
-      import("../static/js/i18n/pt.js"),
-      import("../static/js/i18n/es.js"),
+      import("../../../static/js/i18n/en.js"),
+      import("../../../static/js/i18n/pt.js"),
+      import("../../../static/js/i18n/es.js"),
     ]);
     const requiredKeys = ["domainFreshness", "domainObservedAt", "domainAgeSeconds", "domainStale", "domainFresh"];
     for (const key of requiredKeys) {

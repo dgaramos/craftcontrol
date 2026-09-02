@@ -9,7 +9,7 @@ import { join, dirname } from "path";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const FRONTEND = join(__dirname, "..");
+const FRONTEND = join(__dirname, "..", "..");
 const PLAYERS = join(FRONTEND, "static", "js", "features", "players");
 const SETTINGS = join(FRONTEND, "static", "js", "features", "settings");
 const COMPONENTS = join(FRONTEND, "static", "js", "components");

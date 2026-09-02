@@ -1,4 +1,4 @@
-import { formatDate, formatDuration, timelineTimestamp, sessionMoment } from "../static/js/components/time.js";
+import { formatDate, formatDuration, timelineTimestamp, sessionMoment } from "../../static/js/components/time.js";
 
 describe("formatDate", () => {
   test("returns em dash for falsy timestamp", () => expect(formatDate(0, "pt")).toBe("—"));

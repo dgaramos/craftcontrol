@@ -33,9 +33,12 @@ feature depends on `localStorage`, `fetch`, or `history`, accept the dependency
 as a constructor parameter with a production default. Tests pass a fake object.
 Reserve `jest.spyOn` for third-party or platform APIs that cannot be refactored.
 
-**Test files mirror `static/js/` structure.** A test for `features/players/` goes
-in `tests/players-*.test.js`; a test for `core/` goes in `tests/<module>.test.js`.
-Do not create test files at an unrelated path.
+**Test files mirror `static/js/` structure.** Put tests for `core/` in
+`tests/core/`, shared UI components in `tests/components/`, localisation in
+`tests/i18n/`, and feature tests in the matching `tests/features/<domain>/`
+directory. Cross-cutting structural checks belong in `tests/contracts/` and
+app-level tests that genuinely span modules may remain at `tests/`. Do not
+create test files at an unrelated path.
 
 **One concern per test file.** Contract tests (`*-contracts.test.js`) verify the
 API shape; feature tests (`*-feature.test.js`) verify behaviour. Keep them

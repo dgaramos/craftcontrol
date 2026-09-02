@@ -1,5 +1,5 @@
 import { jest } from "@jest/globals";
-import { connectInvalidation } from "../static/js/core/invalidation.js";
+import { connectInvalidation } from "../../static/js/core/invalidation.js";
 
 function makeSetup(overrides = {}) {
   const loadState = jest.fn().mockResolvedValue();

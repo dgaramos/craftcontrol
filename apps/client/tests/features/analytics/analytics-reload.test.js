@@ -1,6 +1,6 @@
 import { jest } from "@jest/globals";
-import { createAnalyticsFeature } from "../static/js/features/analytics/index.js";
-import { makeEl, makeAnalyticsDeps } from "./helpers.js";
+import { createAnalyticsFeature } from "../../../static/js/features/analytics/index.js";
+import { makeEl, makeAnalyticsDeps } from "../../helpers.js";
 
 // analytics/index.js uses `"IntersectionObserver" in window` and `window.scrollTo`.
 // Define a minimal global.window for node environment.

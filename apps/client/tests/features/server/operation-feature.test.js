@@ -10,7 +10,7 @@
  */
 
 import { jest } from "@jest/globals";
-import { createOperationFeature } from "../static/js/features/server/operation.js";
+import { createOperationFeature } from "../../../static/js/features/server/operation.js";
 
 function makeDeps(overrides = {}) {
   return {

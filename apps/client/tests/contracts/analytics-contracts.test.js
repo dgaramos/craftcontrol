@@ -3,7 +3,7 @@ import { join, resolve } from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
-const FRONTEND = resolve(__dirname, "..");
+const FRONTEND = resolve(__dirname, "..", "..");
 const ANALYTICS = join(FRONTEND, "static", "js", "features", "analytics");
 const I18N = join(FRONTEND, "static", "js", "i18n");
 

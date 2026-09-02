@@ -1,5 +1,5 @@
 import { jest } from "@jest/globals";
-import { createPlayerAccess } from "../static/js/features/players/access.js";
+import { createPlayerAccess } from "../../../static/js/features/players/access.js";
 
 function makeDeps(locale = "en", role = "owner") {
   const state = { locale, user: { role } };

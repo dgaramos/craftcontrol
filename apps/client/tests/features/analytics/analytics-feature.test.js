@@ -1,6 +1,6 @@
 import { jest } from "@jest/globals";
-import { createAnalyticsFeature } from "../static/js/features/analytics/index.js";
-import { makeDom, makeEl, makeAnalyticsDeps } from "./helpers.js";
+import { createAnalyticsFeature } from "../../../static/js/features/analytics/index.js";
+import { makeDom, makeEl, makeAnalyticsDeps } from "../../helpers.js";
 
 describe("createAnalyticsFeature — factory setup", () => {
   test("returns a render function", () => {

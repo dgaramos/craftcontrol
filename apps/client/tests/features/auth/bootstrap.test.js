@@ -1,5 +1,5 @@
 import { jest } from "@jest/globals";
-import { startAuthenticatedApplication } from "../static/js/features/auth/bootstrap.js";
+import { startAuthenticatedApplication } from "../../../static/js/features/auth/bootstrap.js";
 
 describe("startAuthenticatedApplication", () => {
   test("sets state.user and calls boot when user is returned", async () => {

@@ -1,4 +1,4 @@
-import { createGameTerms } from "../static/js/i18n/game-terms.js";
+import { createGameTerms } from "../../static/js/i18n/game-terms.js";
 
 function makeTerms(locale) {
   const escapeHtml = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");

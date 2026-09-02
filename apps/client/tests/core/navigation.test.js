@@ -1,5 +1,5 @@
 import { jest } from "@jest/globals";
-import { createNavigation } from "../static/js/core/navigation.js";
+import { createNavigation } from "../../static/js/core/navigation.js";
 
 let _savedWindow;
 beforeEach(() => {

@@ -1,4 +1,4 @@
-import { createPlayerTelemetry } from "../static/js/features/players/telemetry.js";
+import { createPlayerTelemetry } from "../../../static/js/features/players/telemetry.js";
 
 function makeDeps(locale = "en") {
   const state = { locale };

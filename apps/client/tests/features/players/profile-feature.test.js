@@ -1,7 +1,7 @@
 import { jest } from "@jest/globals";
-import { createPlayerProfile } from "../static/js/features/players/profile.js";
-import { createI18n } from "../static/js/i18n/index.js";
-import { makeEl } from "./helpers.js";
+import { createPlayerProfile } from "../../../static/js/features/players/profile.js";
+import { createI18n } from "../../../static/js/i18n/index.js";
+import { makeEl } from "../../helpers.js";
 
 function makeDeps() {
   const elements = {};

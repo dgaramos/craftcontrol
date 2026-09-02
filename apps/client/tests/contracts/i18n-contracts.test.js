@@ -10,7 +10,7 @@ import { join, resolve } from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
-const FRONTEND = resolve(__dirname, "..");
+const FRONTEND = resolve(__dirname, "..", "..");
 const STATIC = join(FRONTEND, "static");
 const JS = join(STATIC, "js");
 

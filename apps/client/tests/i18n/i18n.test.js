@@ -1,4 +1,4 @@
-import { createI18n, messages } from "../static/js/i18n/index.js";
+import { createI18n, messages } from "../../static/js/i18n/index.js";
 
 describe("messages object", () => {
   test("is frozen", () => expect(Object.isFrozen(messages)).toBe(true));

@@ -1,6 +1,6 @@
 import { jest } from "@jest/globals";
-import { createWorldFeature } from "../static/js/features/world/index.js";
-import { makeEl } from "./helpers.js";
+import { createWorldFeature } from "../../../static/js/features/world/index.js";
+import { makeEl } from "../../helpers.js";
 
 function makeDeps(overrides = {}) {
   const elements = {};

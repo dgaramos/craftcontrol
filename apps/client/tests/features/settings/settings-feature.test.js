@@ -1,6 +1,6 @@
 import { jest } from "@jest/globals";
-import { createSettingsFeature } from "../static/js/features/settings/index.js";
-import { makeSettingsDeps as makeDeps } from "./helpers.js";
+import { createSettingsFeature } from "../../../static/js/features/settings/index.js";
+import { makeSettingsDeps as makeDeps } from "../../helpers.js";
 
 describe("booleanControl", () => {
   test("renders enabled toggle for true value", () => {
@@ -161,4 +161,3 @@ describe("booleanControl — select type via inputFor via playerSettingsMarkup",
     expect(html).toContain("normal");
   });
 });
-

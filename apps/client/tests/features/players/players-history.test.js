@@ -1,4 +1,4 @@
-import { createPlayerHistory } from "../static/js/features/players/history.js";
+import { createPlayerHistory } from "../../../static/js/features/players/history.js";
 
 function makeDeps(locale = "en") {
   const state = { locale };

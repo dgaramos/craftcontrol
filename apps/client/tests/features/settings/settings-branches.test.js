@@ -1,6 +1,6 @@
 import { jest } from "@jest/globals";
-import { createSettingsFeature } from "../static/js/features/settings/index.js";
-import { makeEl, makeSettingsDeps as makeDeps } from "./helpers.js";
+import { createSettingsFeature } from "../../../static/js/features/settings/index.js";
+import { makeEl, makeSettingsDeps as makeDeps } from "../../helpers.js";
 
 // ── renderChangesDrawer — removal handler ─────────────────────────────────────
 

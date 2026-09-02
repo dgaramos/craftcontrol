@@ -1,4 +1,4 @@
-import { escapeHtml } from "../static/js/core/dom.js";
+import { escapeHtml } from "../../static/js/core/dom.js";
 
 describe("escapeHtml", () => {
   test("escapes ampersand", () => expect(escapeHtml("a&b")).toBe("a&amp;b"));

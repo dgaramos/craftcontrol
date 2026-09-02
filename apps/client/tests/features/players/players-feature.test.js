@@ -1,7 +1,7 @@
 import { jest } from "@jest/globals";
-import { createPlayersWorkspace } from "../static/js/features/players/workspace.js";
-import { createPlayersFeature } from "../static/js/features/players/index.js";
-import { makeEl, makeTemplateStub } from "./helpers.js";
+import { createPlayersWorkspace } from "../../../static/js/features/players/workspace.js";
+import { createPlayersFeature } from "../../../static/js/features/players/index.js";
+import { makeEl, makeTemplateStub } from "../../helpers.js";
 
 function makePlayer(overrides = {}) {
   return {

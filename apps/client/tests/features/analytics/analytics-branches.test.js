@@ -1,9 +1,9 @@
 import { jest } from "@jest/globals";
-import { createBlocksPanel } from "../static/js/features/analytics/blocks.js";
-import { createRankingsPanel } from "../static/js/features/analytics/rankings.js";
-import { createCombatPanel } from "../static/js/features/analytics/combat.js";
-import { createExplorationPanel } from "../static/js/features/analytics/exploration.js";
-import { makeAnalyticsDeps, makeEl } from "./helpers.js";
+import { createBlocksPanel } from "../../../static/js/features/analytics/blocks.js";
+import { createRankingsPanel } from "../../../static/js/features/analytics/rankings.js";
+import { createCombatPanel } from "../../../static/js/features/analytics/combat.js";
+import { createExplorationPanel } from "../../../static/js/features/analytics/exploration.js";
+import { makeAnalyticsDeps, makeEl } from "../../helpers.js";
 
 describe("analytics branch coverage", () => {
   const withBindings = (deps) => ({ ...deps, analyticsViewSwitch: () => "", bindAnalyticsViewSwitch: jest.fn() });

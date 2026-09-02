@@ -1,5 +1,5 @@
 import { jest } from "@jest/globals";
-import { createActivityView } from "../static/js/features/analytics/activity.js";
+import { createActivityView } from "../../../static/js/features/analytics/activity.js";
 
 function makeDeps(locale = "en") {
   const state = { locale };

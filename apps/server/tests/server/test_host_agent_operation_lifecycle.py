@@ -12,7 +12,6 @@ ServerOperationService with an SQLite repository so the full lifecycle executes 
 from __future__ import annotations
 
 import threading
-import time
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
@@ -22,7 +21,7 @@ import pytest
 from controlplane.server.host_agent import HostAgentContainerOperations
 from controlplane.operations.lifecycle import OperationStage, OperationState
 from controlplane.operations.service import ServerOperationService
-from conftest import make_operation_db, make_operation_service
+from conftest import make_operation_db, make_operation_service, wait_for_terminal
 
 
 # ---------------------------------------------------------------------------
@@ -85,21 +84,6 @@ def _make_service(
     )
 
 
-def _wait_for_terminal(
-    service: ServerOperationService,
-    operation_id: str,
-    timeout: float = 10.0,
-) -> None:
-    """Poll until *operation_id* reaches a terminal state or *timeout* seconds elapse."""
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-        op = service.get_operation(operation_id)
-        if op is not None and op.state.is_terminal:
-            return
-        time.sleep(0.05)
-    raise AssertionError(f"Operation {operation_id} did not reach terminal state before timeout")
-
-
 # ---------------------------------------------------------------------------
 # AC1: Agent unreachable → FAILED with user-readable error, no host internals
 # ---------------------------------------------------------------------------
@@ -117,7 +101,7 @@ class TestAgentUnreachable:
         service = _make_service(tmp_path, adapter)
 
         op = service.apply_restart_required({"MAX_PLAYERS": "5"}, lambda: None)
-        _wait_for_terminal(service, op.operation_id)
+        wait_for_terminal(service, op.operation_id)
 
         refreshed = service.get_operation(op.operation_id)
         assert refreshed is not None
@@ -131,7 +115,7 @@ class TestAgentUnreachable:
         service = _make_service(tmp_path, adapter)
 
         op = service.apply_restart_required({"MAX_PLAYERS": "5"}, lambda: None)
-        _wait_for_terminal(service, op.operation_id)
+        wait_for_terminal(service, op.operation_id)
 
         refreshed = service.get_operation(op.operation_id)
         assert refreshed is not None
@@ -151,7 +135,7 @@ class TestAgentUnreachable:
         service = _make_service(tmp_path, adapter)
 
         op = service.apply_restart_required({"MAX_PLAYERS": "5"}, lambda: None)
-        _wait_for_terminal(service, op.operation_id)
+        wait_for_terminal(service, op.operation_id)
 
         refreshed = service.get_operation(op.operation_id)
         assert refreshed is not None
@@ -170,7 +154,7 @@ class TestAgentUnreachable:
         service = _make_service(tmp_path, adapter)
 
         op = service.apply_restart_required({"MAX_PLAYERS": "5"}, lambda: None)
-        _wait_for_terminal(service, op.operation_id)
+        wait_for_terminal(service, op.operation_id)
 
         refreshed = service.get_operation(op.operation_id)
         assert refreshed is not None
@@ -251,7 +235,7 @@ class TestAgentFiveXxResponse:
         service = _make_service(tmp_path, adapter)
 
         op = service.apply_restart_required({"MAX_PLAYERS": "5"}, lambda: None)
-        _wait_for_terminal(service, op.operation_id)
+        wait_for_terminal(service, op.operation_id)
 
         refreshed = service.get_operation(op.operation_id)
         assert refreshed is not None
@@ -271,7 +255,7 @@ class TestAgentFiveXxResponse:
         service = _make_service(tmp_path, adapter)
 
         op = service.apply_restart_required({"MAX_PLAYERS": "5"}, lambda: None)
-        _wait_for_terminal(service, op.operation_id)
+        wait_for_terminal(service, op.operation_id)
 
         refreshed = service.get_operation(op.operation_id)
         assert refreshed is not None
@@ -346,7 +330,7 @@ class TestAgentFiveXxResponse:
         )
 
         op = service.apply_restart_required({"MAX_PLAYERS": "5"}, lambda: None)
-        _wait_for_terminal(service, op.operation_id)
+        wait_for_terminal(service, op.operation_id)
 
         refreshed = service.get_operation(op.operation_id)
         assert refreshed is not None
@@ -375,7 +359,7 @@ class TestReconciliationAfterAgentUnavailability:
         service = _make_service(tmp_path, adapter, configuration=configuration)
 
         op = service.apply_restart_required({"MAX_PLAYERS": "5"}, lambda: None)
-        _wait_for_terminal(service, op.operation_id)
+        wait_for_terminal(service, op.operation_id)
 
         failed = service.get_operation(op.operation_id)
         assert failed is not None and failed.state == OperationState.FAILED
@@ -401,7 +385,7 @@ class TestReconciliationAfterAgentUnavailability:
         service = _make_service(tmp_path, adapter, configuration=configuration)
 
         op = service.apply_restart_required({"MAX_PLAYERS": "5"}, lambda: None)
-        _wait_for_terminal(service, op.operation_id)
+        wait_for_terminal(service, op.operation_id)
 
         failed = service.get_operation(op.operation_id)
         assert failed is not None and failed.state == OperationState.FAILED
@@ -428,7 +412,7 @@ class TestReconciliationAfterAgentUnavailability:
         service = _make_service(tmp_path, adapter, configuration=configuration)
 
         op = service.apply_restart_required({"MAX_PLAYERS": "5"}, lambda: None)
-        _wait_for_terminal(service, op.operation_id)
+        wait_for_terminal(service, op.operation_id)
 
         failed = service.get_operation(op.operation_id)
         assert failed is not None and failed.state == OperationState.FAILED
@@ -453,7 +437,7 @@ class TestReconciliationAfterAgentUnavailability:
         service = _make_service(tmp_path, adapter, configuration=configuration)
 
         op = service.apply_restart_required({"MAX_PLAYERS": "5"}, lambda: None)
-        _wait_for_terminal(service, op.operation_id)
+        wait_for_terminal(service, op.operation_id)
 
         # Agent recovers.
         client.request.side_effect = None

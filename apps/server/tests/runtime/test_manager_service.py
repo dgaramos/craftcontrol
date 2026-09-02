@@ -898,31 +898,28 @@ def test_save_settings_raises_conflicting_operation_on_concurrent_request(tmp_pa
 # ---------------------------------------------------------------------------
 
 def _blocks_changed(sequence: int, broken_total: int = 0, placed_total: int = 0) -> dict:
-    return {
-        "schema": 1, "sequence": sequence, "type": "blocks.changed", "timestamp": sequence,
-        "player": {"name": "VonCrush"},
-        "data": {
+    return telemetry_envelope(
+        "blocks.changed", sequence=sequence, timestamp=sequence, player="VonCrush",
+        data={
             "broken": {"total": broken_total, "byType": {}},
             "placed": {"total": placed_total, "byType": {}},
         },
-    }
+    )
 
 
 def _snapshot_started(sequence: int) -> dict:
-    return {
-        "schema": 1, "sequence": sequence, "type": "snapshot.started",
-        "timestamp": sequence, "player": None, "data": {},
-    }
+    return telemetry_envelope(
+        "snapshot.started", sequence=sequence, timestamp=sequence, player=None, data={},
+    )
 
 
 def _snapshot_finished(sequence: int, players: list | None = None) -> dict:
     data: dict = {}
     if players is not None:
         data["players"] = players
-    return {
-        "schema": 1, "sequence": sequence, "type": "snapshot.finished",
-        "timestamp": sequence, "player": None, "data": data,
-    }
+    return telemetry_envelope(
+        "snapshot.finished", sequence=sequence, timestamp=sequence, player=None, data=data,
+    )
 
 
 def test_batch_diagnostics_start_empty(manager_service: ManagerService) -> None:

@@ -9,6 +9,7 @@ from controlplane.players.sqlite import add_daily, calendar_timezone, player_ide
 from controlplane.players.repository import SQLitePlayerRepository
 from controlplane.core.repository import StateRepository
 from controlplane.telemetry.repository import SQLiteTelemetryRepository
+from factories import telemetry_envelope
 
 
 def _init(tmp_path: Path) -> tuple[StateRepository, SQLitePlayerRepository, SQLiteTelemetryRepository]:
@@ -186,11 +187,10 @@ def test_global_activity_is_filtered_paginated_and_sanitized(tmp_path: Path) -> 
 def test_global_activity_distinguishes_structured_deaths(tmp_path: Path) -> None:
     _, player_repo, telemetry_repo = _init(tmp_path)
     player_repo.observe_player("Nicole", True, "456")
-    telemetry_repo.ingest_telemetry({
-        "schema": 1, "sequence": 1, "type": "entity.died", "timestamp": 1,
-        "player": {"name": "Nicole"},
-        "data": {"victim": "Nicole", "killerType": "minecraft:zombie", "cause": "entityAttack"},
-    })
+    telemetry_repo.ingest_telemetry(telemetry_envelope(
+        "entity.died", sequence=1, player="Nicole",
+        data={"victim": "Nicole", "killerType": "minecraft:zombie", "cause": "entityAttack"},
+    ))
     structured = player_repo.player_activity("deaths", "", "structured", "", 0, 1, 25)
     assert structured["total"] == 1
     assert structured["events"][0]["source"] == "behavior-pack"
@@ -202,11 +202,10 @@ def test_global_activity_prefers_structured_death_without_deleting_derived_evide
     _, player_repo, telemetry_repo = _init(tmp_path)
     player_repo.observe_player("Nicole", True, "456")
     player_repo.record_player_death("Nicole", "died", "raw evidence", "bedrock-log", "derived")
-    telemetry_repo.ingest_telemetry({
-        "schema": 1, "sequence": 2, "type": "entity.died", "timestamp": 1,
-        "player": {"name": "Nicole"},
-        "data": {"victim": "Nicole", "killerType": "minecraft:zombie", "cause": "entityAttack"},
-    })
+    telemetry_repo.ingest_telemetry(telemetry_envelope(
+        "entity.died", sequence=2, player="Nicole",
+        data={"victim": "Nicole", "killerType": "minecraft:zombie", "cause": "entityAttack"},
+    ))
     result = player_repo.player_activity("deaths", "", "all", "", 0, 1, 25)
     assert result["total"] == 1
     assert result["events"][0]["source"] == "behavior-pack"
@@ -221,16 +220,14 @@ def test_rankings_combine_manager_and_telemetry_aggregates(tmp_path: Path) -> No
     player_repo.observe_player("VonCrush", False, "private-ranking-xuid", occurred_at=220)
     player_repo.observe_player("Nicole", True, "456", occurred_at=100)
     player_repo.observe_player("Nicole", False, "456", occurred_at=160)
-    telemetry_repo.ingest_telemetry({
-        "schema": 1, "sequence": 1, "type": "snapshot.player", "timestamp": 1,
-        "player": {"name": "VonCrush"},
-        "data": {"deaths": 2, "mobKills": 8, "blocksBroken": 40, "distance": 123.5, "dimensions": {"overworld": 1, "nether": 1}},
-    })
-    telemetry_repo.ingest_telemetry({
-        "schema": 1, "sequence": 2, "type": "snapshot.player", "timestamp": 2,
-        "player": {"name": "Nicole"},
-        "data": {"deaths": 3, "mobKills": 2, "blocksBroken": 60, "distance": 80, "dimensions": {"overworld": 1}},
-    })
+    telemetry_repo.ingest_telemetry(telemetry_envelope(
+        "snapshot.player", sequence=1, timestamp=1, player="VonCrush",
+        data={"deaths": 2, "mobKills": 8, "blocksBroken": 40, "distance": 123.5, "dimensions": {"overworld": 1, "nether": 1}},
+    ))
+    telemetry_repo.ingest_telemetry(telemetry_envelope(
+        "snapshot.player", sequence=2, timestamp=2, player="Nicole",
+        data={"deaths": 3, "mobKills": 2, "blocksBroken": 60, "distance": 80, "dimensions": {"overworld": 1}},
+    ))
     rankings = player_repo.player_rankings()
     assert rankings["period"] == "lifetime"
     assert rankings["metrics"]["play_time"][0]["player"]["name"] == "VonCrush"
@@ -245,16 +242,14 @@ def test_block_analytics_aggregates_types_ores_and_players(tmp_path: Path) -> No
     _, player_repo, telemetry_repo = _init(tmp_path)
     player_repo.observe_player("VonCrush", False, "private-99")
     player_repo.observe_player("Nicole", False, "private-456")
-    telemetry_repo.ingest_telemetry({
-        "schema": 1, "sequence": 1, "type": "snapshot.player", "timestamp": 1,
-        "player": {"name": "VonCrush"},
-        "data": {"blocksBroken": 5, "blocksPlaced": 4, "brokenByType": {"minecraft:diamond_ore": 3, "minecraft:iron_ore": 2}, "placedByType": {"minecraft:stone": 4}},
-    })
-    telemetry_repo.ingest_telemetry({
-        "schema": 1, "sequence": 2, "type": "snapshot.player", "timestamp": 2,
-        "player": {"name": "Nicole"},
-        "data": {"blocksBroken": 5, "blocksPlaced": 2, "brokenByType": {"minecraft:deepslate_diamond_ore": 5}, "placedByType": {"minecraft:oak_planks": 2}},
-    })
+    telemetry_repo.ingest_telemetry(telemetry_envelope(
+        "snapshot.player", sequence=1, timestamp=1, player="VonCrush",
+        data={"blocksBroken": 5, "blocksPlaced": 4, "brokenByType": {"minecraft:diamond_ore": 3, "minecraft:iron_ore": 2}, "placedByType": {"minecraft:stone": 4}},
+    ))
+    telemetry_repo.ingest_telemetry(telemetry_envelope(
+        "snapshot.player", sequence=2, timestamp=2, player="Nicole",
+        data={"blocksBroken": 5, "blocksPlaced": 2, "brokenByType": {"minecraft:deepslate_diamond_ore": 5}, "placedByType": {"minecraft:oak_planks": 2}},
+    ))
     result = player_repo.block_analytics()
     assert result["totals"] == {"broken": 10, "placed": 6}
     assert result["ores"]["diamond"] == 8
@@ -278,21 +273,18 @@ def test_combat_analytics_aggregates_snapshots_and_structured_deaths(tmp_path: P
     _, player_repo, telemetry_repo = _init(tmp_path)
     player_repo.observe_player("VonCrush", True, "private-99")
     player_repo.observe_player("Nicole", True, "private-456")
-    telemetry_repo.ingest_telemetry({
-        "schema": 1, "sequence": 1, "type": "snapshot.player", "timestamp": 1,
-        "player": {"name": "VonCrush"},
-        "data": {"deaths": 1, "playerKills": 2, "mobKills": 8, "damageDealt": 42.5, "damageTaken": 12, "killsByType": {"minecraft:zombie": 6, "minecraft:skeleton": 2}},
-    })
-    telemetry_repo.ingest_telemetry({
-        "schema": 1, "sequence": 2, "type": "snapshot.player", "timestamp": 2,
-        "player": {"name": "Nicole"},
-        "data": {"deaths": 3, "playerKills": 1, "mobKills": 4, "damageDealt": 20, "damageTaken": 30},
-    })
-    telemetry_repo.ingest_telemetry({
-        "schema": 1, "sequence": 3, "type": "entity.died", "timestamp": 3,
-        "player": {"name": "Nicole"},
-        "data": {"victim": "Nicole", "killer": "VonCrush", "killerType": "minecraft:player", "projectileType": "minecraft:arrow", "cause": "projectile"},
-    })
+    telemetry_repo.ingest_telemetry(telemetry_envelope(
+        "snapshot.player", sequence=1, timestamp=1, player="VonCrush",
+        data={"deaths": 1, "playerKills": 2, "mobKills": 8, "damageDealt": 42.5, "damageTaken": 12, "killsByType": {"minecraft:zombie": 6, "minecraft:skeleton": 2}},
+    ))
+    telemetry_repo.ingest_telemetry(telemetry_envelope(
+        "snapshot.player", sequence=2, timestamp=2, player="Nicole",
+        data={"deaths": 3, "playerKills": 1, "mobKills": 4, "damageDealt": 20, "damageTaken": 30},
+    ))
+    telemetry_repo.ingest_telemetry(telemetry_envelope(
+        "entity.died", sequence=3, timestamp=3, player="Nicole",
+        data={"victim": "Nicole", "killer": "VonCrush", "killerType": "minecraft:player", "projectileType": "minecraft:arrow", "cause": "projectile"},
+    ))
     result = player_repo.combat_analytics()
     assert result["totals"]["mob_kills"] == 12
     assert result["totals"]["damage_dealt"] == 62.5
@@ -320,20 +312,18 @@ def test_exploration_analytics_combines_telemetry_and_manager_presence(tmp_path:
     player_repo.observe_player("VonCrush", False, "private-99", occurred_at=220)
     player_repo.observe_player("Nicole", True, "private-456", occurred_at=100)
     player_repo.observe_player("Nicole", False, "private-456", occurred_at=160)
-    telemetry_repo.ingest_telemetry({
-        "schema": 1, "sequence": 1, "type": "snapshot.player", "timestamp": 1,
-        "player": {"name": "VonCrush"},
-        "data": {"distance": 120.5, "dimensions": {"minecraft:overworld": 3, "minecraft:nether": 2}, "distanceByDimension": {"minecraft:overworld": 80.5, "minecraft:nether": 40}, "activeTimeByDimension": {"minecraft:overworld": 60, "minecraft:nether": 30}, "firstDimensionVisitAt": {"minecraft:overworld": 1000000000000}, "lastDimensionVisitAt": {"minecraft:overworld": 1000000005000}},
-    })
-    telemetry_repo.ingest_telemetry({
-        "schema": 1, "sequence": 2, "type": "snapshot.player", "timestamp": 2,
-        "player": {"name": "Nicole"},
-        "data": {"distance": 80, "dimensions": {"minecraft:overworld": 1}},
-    })
-    telemetry_repo.ingest_telemetry({
-        "schema": 1, "sequence": 3, "type": "player.dimension.changed", "timestamp": 3,
-        "player": {"name": "VonCrush"}, "data": {"from": "minecraft:overworld", "to": "minecraft:nether"},
-    })
+    telemetry_repo.ingest_telemetry(telemetry_envelope(
+        "snapshot.player", sequence=1, timestamp=1, player="VonCrush",
+        data={"distance": 120.5, "dimensions": {"minecraft:overworld": 3, "minecraft:nether": 2}, "distanceByDimension": {"minecraft:overworld": 80.5, "minecraft:nether": 40}, "activeTimeByDimension": {"minecraft:overworld": 60, "minecraft:nether": 30}, "firstDimensionVisitAt": {"minecraft:overworld": 1000000000000}, "lastDimensionVisitAt": {"minecraft:overworld": 1000000005000}},
+    ))
+    telemetry_repo.ingest_telemetry(telemetry_envelope(
+        "snapshot.player", sequence=2, timestamp=2, player="Nicole",
+        data={"distance": 80, "dimensions": {"minecraft:overworld": 1}},
+    ))
+    telemetry_repo.ingest_telemetry(telemetry_envelope(
+        "player.dimension.changed", sequence=3, timestamp=3, player="VonCrush",
+        data={"from": "minecraft:overworld", "to": "minecraft:nether"},
+    ))
     result = player_repo.exploration_analytics()
     assert result["totals"]["distance"] == 200.5
     assert result["totals"]["play_seconds"] == 180
@@ -353,21 +343,20 @@ def test_daily_analytics_records_sessions_and_incremental_telemetry(tmp_path: Pa
     _, player_repo, telemetry_repo = _init(tmp_path)
     now = time.time()
     player_repo.observe_player("VonCrush", True, "private-daily", occurred_at=now - 120)
-    telemetry_repo.ingest_telemetry({
-        "schema": 1, "sequence": 1, "type": "snapshot.player", "timestamp": 1,
-        "player": {"name": "VonCrush"}, "data": {"blocksBroken": 10, "damageDealt": 5, "distance": 20},
-    })
-    block = {
-        "schema": 1, "sequence": 2, "type": "blocks.changed", "timestamp": 2,
-        "player": {"name": "VonCrush"},
-        "data": {"broken": {"total": 1, "byType": {"minecraft:stone": 1}}, "placed": {"total": 0, "byType": {}}},
-    }
+    telemetry_repo.ingest_telemetry(telemetry_envelope(
+        "snapshot.player", sequence=1, timestamp=1, player="VonCrush",
+        data={"blocksBroken": 10, "damageDealt": 5, "distance": 20},
+    ))
+    block = telemetry_envelope(
+        "blocks.changed", sequence=2, timestamp=2, player="VonCrush",
+        data={"broken": {"total": 1, "byType": {"minecraft:stone": 1}}, "placed": {"total": 0, "byType": {}}},
+    )
     telemetry_repo.ingest_telemetry(block)
     assert not telemetry_repo.ingest_telemetry(block)[0]
-    telemetry_repo.ingest_telemetry({
-        "schema": 1, "sequence": 3, "type": "snapshot.player", "timestamp": 3,
-        "player": {"name": "VonCrush"}, "data": {"blocksBroken": 11, "damageDealt": 8.5, "distance": 27},
-    })
+    telemetry_repo.ingest_telemetry(telemetry_envelope(
+        "snapshot.player", sequence=3, timestamp=3, player="VonCrush",
+        data={"blocksBroken": 11, "damageDealt": 8.5, "distance": 27},
+    ))
     player_repo.observe_player("VonCrush", False, "private-daily", occurred_at=now)
     result = player_repo.period_analytics(7)
     assert result["period_days"] == 7

@@ -26,7 +26,7 @@ from controlplane.operations.service import (
     ConflictingOperationError,
     ServerOperationService,
 )
-from conftest import make_operation_db, make_operation_service
+from conftest import make_operation_db, make_operation_service, wait_for_terminal
 
 
 # ---------------------------------------------------------------------------
@@ -45,38 +45,17 @@ class InlineThread:
         self._target(*self._args)
 
 
-def wait_for_terminal(
-    service: "ServerOperationService",
-    operation_id: str,
-    timeout: float = 10.0,
-    poll_interval: float = 0.05,
-) -> None:
-    """Poll until the operation reaches a terminal state or the timeout expires.
-
-    Replaces fixed ``time.sleep`` calls so tests are deterministic under CI
-    load: they return as soon as the background thread finishes rather than
-    waiting an arbitrary amount of time.
-    """
-    deadline = time.monotonic() + timeout
-    last_state = None
-    while True:
-        op = service.get_operation(operation_id)
-        if op is not None:
-            last_state = op.state
-            if op.state.is_terminal:
-                return
-        remaining = deadline - time.monotonic()
-        if remaining <= 0:
-            raise AssertionError(
-                f"Operation {operation_id} did not reach terminal state "
-                f"before timeout; last_state={last_state!r}"
-            )
-        time.sleep(min(poll_interval, remaining))
-
-
 # ---------------------------------------------------------------------------
 # Lifecycle model tests
 # ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def running_operation() -> ServerOperation:
+    """Return a ``ServerOperation`` that has been created and started."""
+    op = ServerOperation.create("srv", {})
+    op.start()
+    return op
 
 
 class TestServerOperationContract:
@@ -94,48 +73,36 @@ class TestServerOperationContract:
         assert len(op.stages) == len(OperationStage.ordered())
         assert all(s.result == StageResult.PENDING for s in op.stages)
 
-    def test_start_transitions_to_running(self):
-        op = ServerOperation.create("srv", {})
-        op.start()
-        assert op.state == OperationState.RUNNING
+    def test_start_transitions_to_running(self, running_operation: ServerOperation):
+        assert running_operation.state == OperationState.RUNNING
 
-    def test_complete_stage_sets_evidence(self):
-        op = ServerOperation.create("srv", {})
-        op.start()
-        op.begin_stage(OperationStage.REVIEW)
-        op.complete_stage(OperationStage.REVIEW, evidence={"changes": ["MAX_PLAYERS"]})
-        record = next(s for s in op.stages if s.stage == OperationStage.REVIEW)
+    def test_complete_stage_sets_evidence(self, running_operation: ServerOperation):
+        running_operation.begin_stage(OperationStage.REVIEW)
+        running_operation.complete_stage(OperationStage.REVIEW, evidence={"changes": ["MAX_PLAYERS"]})
+        record = next(s for s in running_operation.stages if s.stage == OperationStage.REVIEW)
         assert record.result == StageResult.COMPLETED
         assert record.evidence["changes"] == ["MAX_PLAYERS"]
 
-    def test_fail_stage_marks_operation_failed(self):
-        op = ServerOperation.create("srv", {})
-        op.start()
-        op.begin_stage(OperationStage.RESTART)
-        op.fail_stage(OperationStage.RESTART, "container conflict")
-        assert op.state == OperationState.FAILED
-        assert op.terminal_error == "container conflict"
-        assert op.state.is_terminal
+    def test_fail_stage_marks_operation_failed(self, running_operation: ServerOperation):
+        running_operation.begin_stage(OperationStage.RESTART)
+        running_operation.fail_stage(OperationStage.RESTART, "container conflict")
+        assert running_operation.state == OperationState.FAILED
+        assert running_operation.terminal_error == "container conflict"
+        assert running_operation.state.is_terminal
 
-    def test_confirm_marks_operation_confirmed(self):
-        op = ServerOperation.create("srv", {})
-        op.start()
-        op.confirm(evidence={"confirmed_at": 123.0})
-        assert op.state == OperationState.CONFIRMED
-        assert op.state.is_terminal
+    def test_confirm_marks_operation_confirmed(self, running_operation: ServerOperation):
+        running_operation.confirm(evidence={"confirmed_at": 123.0})
+        assert running_operation.state == OperationState.CONFIRMED
+        assert running_operation.state.is_terminal
 
-    def test_diverge_marks_operation_divergent(self):
-        op = ServerOperation.create("srv", {})
-        op.start()
-        op.diverge("config mismatch", observation={"expected": "20", "actual": "10"})
-        assert op.state == OperationState.DIVERGENT
-        assert op.state.is_terminal
+    def test_diverge_marks_operation_divergent(self, running_operation: ServerOperation):
+        running_operation.diverge("config mismatch", observation={"expected": "20", "actual": "10"})
+        assert running_operation.state == OperationState.DIVERGENT
+        assert running_operation.state.is_terminal
 
-    def test_skip_stage_records_reason(self):
-        op = ServerOperation.create("srv", {})
-        op.start()
-        op.skip_stage(OperationStage.BACKUP_VERIFY, reason="no_backup_required")
-        record = next(s for s in op.stages if s.stage == OperationStage.BACKUP_VERIFY)
+    def test_skip_stage_records_reason(self, running_operation: ServerOperation):
+        running_operation.skip_stage(OperationStage.BACKUP_VERIFY, reason="no_backup_required")
+        record = next(s for s in running_operation.stages if s.stage == OperationStage.BACKUP_VERIFY)
         assert record.result == StageResult.SKIPPED
         assert record.evidence["skip_reason"] == "no_backup_required"
 
@@ -151,20 +118,16 @@ class TestServerOperationContract:
         review = next(s for s in restored.stages if s.stage == OperationStage.REVIEW)
         assert review.result == StageResult.COMPLETED
 
-    def test_active_stage_property(self):
-        op = ServerOperation.create("srv", {})
-        op.start()
-        op.begin_stage(OperationStage.PREPARE)
-        assert op.active_stage is not None
-        assert op.active_stage.stage == OperationStage.PREPARE
+    def test_active_stage_property(self, running_operation: ServerOperation):
+        running_operation.begin_stage(OperationStage.PREPARE)
+        assert running_operation.active_stage is not None
+        assert running_operation.active_stage.stage == OperationStage.PREPARE
 
-    def test_failed_stage_property(self):
-        op = ServerOperation.create("srv", {})
-        op.start()
-        op.begin_stage(OperationStage.RESTART)
-        op.fail_stage(OperationStage.RESTART, "boom")
-        assert op.failed_stage is not None
-        assert op.failed_stage.stage == OperationStage.RESTART
+    def test_failed_stage_property(self, running_operation: ServerOperation):
+        running_operation.begin_stage(OperationStage.RESTART)
+        running_operation.fail_stage(OperationStage.RESTART, "boom")
+        assert running_operation.failed_stage is not None
+        assert running_operation.failed_stage.stage == OperationStage.RESTART
 
 
 # ---------------------------------------------------------------------------

@@ -11,7 +11,7 @@ from ..ports import EventPublisher, ServerConfiguration, ServerConsole, StateSto
 from ..core.schema import GAMERULES, PROPERTY_NAMES, SETTINGS
 from ..telemetry.telemetry import PREFIX as TELEMETRY_PREFIX, parse_telemetry_line
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:
     from ..players import PlayerService
     from ..telemetry.service import TelemetryService
 

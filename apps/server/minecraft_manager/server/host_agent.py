@@ -61,6 +61,19 @@ def _translate_intended_state(intended_state: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+def _as_object(body: Any) -> dict[str, Any]:
+    """Return *body* unchanged when it is a ``dict``; otherwise return ``{}``.
+
+    The host agent always documents its successful responses as JSON objects,
+    but network proxies, error pages, or unexpected agent builds may return a
+    non-object JSON value (``null``, an array, a scalar).  Parsing those as-is
+    and then calling ``.get()`` raises ``AttributeError``.  This helper
+    normalises any non-dict body to an empty dict so every call site can use
+    ``.get()`` safely without per-site type guards.
+    """
+    return body if isinstance(body, dict) else {}
+
+
 class ReadTimeoutError(TimeoutError):
     """Raised when a read-phase timeout occurs after the TCP handshake completed.
 
@@ -237,7 +250,7 @@ class HostAgentContainerOperations:
             code, body = self._client.request("GET", url, headers=headers, timeout=10.0)
         except OSError:
             return {"online": False, "state": "stopped", "container": self._server_name}
-        if code == 200 and body.get("bedrock_running") is True:
+        if code == 200 and _as_object(body).get("bedrock_running") is True:
             return {"online": True, "state": "running", "container": self._server_name}
         return {"online": False, "state": "stopped", "container": self._server_name}
 
@@ -339,7 +352,7 @@ class HostAgentContainerOperations:
         if code == 401:
             raise RuntimeError("host agent authentication failed")
         if code == 400:
-            detail = resp_body.get("message", "bad request")
+            detail = _as_object(resp_body).get("message", "bad request")
             raise RuntimeError(f"host agent rejected request: {detail}")
         if code not in {200, 202}:
             # Post-delivery ambiguous failure: agent may have started execution.
@@ -401,12 +414,12 @@ class HostAgentContainerOperations:
                 return
 
             if code == 200:
-                status = body.get("status")
+                status = _as_object(body).get("status")
                 if status == "running":
                     time.sleep(_POLL_INTERVAL_SECONDS)
                     continue
                 if status == "done":
-                    self._handle_terminal_result(operation_id, body)
+                    self._handle_terminal_result(operation_id, _as_object(body))
                     return
 
             if code == 404:
@@ -467,10 +480,10 @@ class HostAgentContainerOperations:
                     attempt + 1, _POST_DELIVERY_RETRY_COUNT, operation_id, exc,
                 )
                 continue
-            if code == 200 and body.get("status") == "done":
-                self._handle_terminal_result(operation_id, body)
+            if code == 200 and _as_object(body).get("status") == "done":
+                self._handle_terminal_result(operation_id, _as_object(body))
                 return False
-            if code == 200 and body.get("status") == "running":
+            if code == 200 and _as_object(body).get("status") == "running":
                 # Still running; signal the caller to resume its own polling loop.
                 return True
             last_error = f"HTTP {code}"
@@ -484,6 +497,7 @@ class HostAgentContainerOperations:
     @staticmethod
     def _handle_terminal_result(operation_id: str, body: dict[str, Any]) -> None:
         """Raise ``RuntimeError`` on error outcomes; return normally on success."""
+        body = _as_object(body)
         outcome = body.get("outcome")
         if outcome == "ok":
             LOGGER.info(

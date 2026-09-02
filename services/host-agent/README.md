@@ -18,7 +18,7 @@ The host agent owns exactly three operation stages:
 
 | Stage | What it does |
 |---|---|
-| `PREPARATION` | Writes configuration to `server.properties` and `.env` on the host filesystem |
+| `PREPARATION` | Writes `server.properties` and `.env` atomically on the host filesystem |
 | `RESTART` | Restarts the Bedrock Docker Compose service |
 | `HEALTH_WAIT` | Polls the Bedrock UDP/RakNet probe until the server responds or the deadline passes |
 
@@ -86,7 +86,7 @@ in its own environment. The shared secret must match on both sides.
 The host agent is installed on the Docker host as a systemd service:
 
 ```bash
-# From the deploy/ directory — run on the host, not inside a container
+# Run on the host, not inside a container
 deploy/host-agent/bin/install-craftcontrol-host-agent-runtime
 ```
 

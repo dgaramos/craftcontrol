@@ -10,7 +10,7 @@ No build step. No framework. No bundler. ES modules loaded directly by the brows
 
 ## Layout
 
-```
+```text
 apps/client/
 ├── Dockerfile            # Nginx image — serves static assets, proxies /api/*
 ├── nginx.conf            # Nginx configuration (SSE unbuffered, gzip, cache headers)
@@ -97,8 +97,11 @@ The i18n check (`bin/check-frontend`) fails if any key is missing from any local
 npx jest
 ```
 
-Tests live in `scripts/` (check scripts) and the Jest suite covers DOM
-interactions and visual contracts. Requirements: Node.js 18+.
+Jest tests mirror `static/js/`: `tests/core/`, `tests/components/`,
+`tests/i18n/`, and `tests/features/<domain>/`. Cross-cutting structural
+contracts live in `tests/contracts/`; reusable DOM builders and dependency
+stubs live in `tests/helpers.js`. The `scripts/` directory contains the
+separate check scripts. Requirements: Node.js 18+.
 
 ---
 

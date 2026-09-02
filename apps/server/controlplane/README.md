@@ -11,7 +11,7 @@ own repository without structural changes.
 
 ## Package layout
 
-```
+```text
 controlplane/
 ├── __init__.py          # create_app() factory, frontend_root() helper
 ├── composition.py       # manual production dependency injection (no DI container)
@@ -69,13 +69,15 @@ controlplane/
 
 ## Architecture rules
 
-- **Dependencies flow inward:** `http/` → application services → `ports.py` adapters → `core/`.
+- **Dependencies flow inward:** `http/` → application services → `core/` ports → adapters.
   Runtime code must not reach through services into repositories.
 - **No DI container.** Use constructor injection. `composition.py` is the single
   place where concrete adapters are wired together.
-- **Replaceable boundaries via Protocol.** Define a `typing.Protocol` for every
-  adapter the application depends on. Concrete types satisfy contracts structurally —
-  no inheritance required.
+- **Replaceable boundaries via Protocol.** `ports.py` defines `typing.Protocol`
+  interfaces for every replaceable boundary (state store, player store, Bedrock
+  adapter, etc.). Concrete adapter classes satisfy these contracts structurally —
+  no inheritance required. Do not confuse `ports.py` (contracts) with the adapter
+  implementations in `server/`, `players/`, `telemetry/`, etc.
 - **Package root is reserved** for `create_app()`, `compose_manager()`, `ports.py`,
   `cli.py`, and `version.py`. New behavior belongs in the owning submodule. Compatibility
   re-exports in the root are temporary and tracked in the architecture-test allowlist.
@@ -86,8 +88,10 @@ controlplane/
 
 ## Database schema
 
-All persistent state lives in a single SQLite file (`data/manager.db`).
-Schema migrations run automatically at startup via `core/migrations.py`.
+All persistent state lives in a single SQLite file. The default path is
+`data/manager.db`; it is controlled by `Settings.database` and can be
+overridden via the `DATABASE` environment variable. Schema migrations run
+automatically at startup via `core/migrations.py`.
 
 ```mermaid
 erDiagram
@@ -262,6 +266,7 @@ Tests live in `apps/server/tests/` and mirror this package layout:
 | `runtime/` | `tests/runtime/` |
 | `http/` | `tests/http/` |
 | `audit/` | `tests/audit/` |
+| `auth/` | `tests/auth/` |
 
 Cross-cutting tests (architecture invariants, composition, CLI, config, brand) stay
 at the `tests/` root.

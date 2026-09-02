@@ -26,8 +26,7 @@ from minecraft_manager.operations.service import (
     ConflictingOperationError,
     ServerOperationService,
 )
-from minecraft_manager.core.migrations import run_migrations
-import sqlite3
+from conftest import make_operation_db, make_operation_service
 
 
 # ---------------------------------------------------------------------------
@@ -73,49 +72,6 @@ def wait_for_terminal(
                 f"before timeout; last_state={last_state!r}"
             )
         time.sleep(min(poll_interval, remaining))
-
-
-def make_db(tmp_path: Path) -> Path:
-    db = tmp_path / "state.db"
-    with sqlite3.connect(db) as conn:
-        run_migrations(conn)
-    return db
-
-
-def make_repo(tmp_path: Path) -> SQLiteOperationRepository:
-    return SQLiteOperationRepository(make_db(tmp_path))
-
-
-def make_service(
-    tmp_path: Path,
-    docker: MagicMock | None = None,
-    broker: MagicMock | None = None,
-    configuration: MagicMock | None = None,
-    health_timeout: int = 1,
-    restart_timeout: int = 180,
-    thread_factory=threading.Thread,
-    refresh_observed_settings=None,
-) -> ServerOperationService:
-    if docker is None:
-        docker = MagicMock()
-        docker.status.return_value = {"state": "running", "online": True}
-        docker.execute.return_value = None
-    if broker is None:
-        broker = MagicMock()
-    if configuration is None:
-        configuration = MagicMock()
-        configuration.read_properties.return_value = {"max-players": "1"}
-    return ServerOperationService(
-        operation_repository=make_repo(tmp_path),
-        docker=docker,
-        broker=broker,
-        configuration=configuration,
-        thread_factory=thread_factory,
-        server_id="test-server",
-        health_timeout=health_timeout,
-        restart_timeout=restart_timeout,
-        refresh_observed_settings=refresh_observed_settings,
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -217,112 +173,102 @@ class TestServerOperationContract:
 
 
 class TestSQLiteOperationRepository:
-    def test_save_and_get(self, tmp_path: Path):
-        repo = make_repo(tmp_path)
+    def test_save_and_get(self, operation_repo: SQLiteOperationRepository):
         op = ServerOperation.create("srv", {"K": "V"})
-        repo.save(op)
-        loaded = repo.get(op.operation_id)
+        operation_repo.save(op)
+        loaded = operation_repo.get(op.operation_id)
         assert loaded is not None
         assert loaded.operation_id == op.operation_id
         assert loaded.state == OperationState.PENDING
         assert loaded.requested_changes == {"K": "V"}
         assert len(loaded.stages) == len(OperationStage.ordered())
 
-    def test_get_latest(self, tmp_path: Path):
-        repo = make_repo(tmp_path)
+    def test_get_latest(self, operation_repo: SQLiteOperationRepository):
         op1 = ServerOperation.create("srv", {})
         op2 = ServerOperation.create("srv", {})
         op2.created_at = op1.created_at + 1
-        repo.save(op1)
-        repo.save(op2)
-        latest = repo.get_latest("srv")
+        operation_repo.save(op1)
+        operation_repo.save(op2)
+        latest = operation_repo.get_latest("srv")
         assert latest is not None
         assert latest.operation_id == op2.operation_id
 
-    def test_get_active_excludes_terminal(self, tmp_path: Path):
-        repo = make_repo(tmp_path)
+    def test_get_active_excludes_terminal(self, operation_repo: SQLiteOperationRepository):
         op = ServerOperation.create("srv", {})
         op.start()
         op.confirm()
-        repo.save(op)
-        assert repo.get_active("srv") is None
+        operation_repo.save(op)
+        assert operation_repo.get_active("srv") is None
 
-    def test_get_active_returns_running(self, tmp_path: Path):
-        repo = make_repo(tmp_path)
+    def test_get_active_returns_running(self, operation_repo: SQLiteOperationRepository):
         op = ServerOperation.create("srv", {})
         op.start()
-        repo.save(op)
-        active = repo.get_active("srv")
+        operation_repo.save(op)
+        active = operation_repo.get_active("srv")
         assert active is not None
         assert active.operation_id == op.operation_id
 
-    def test_update_stage_persists_without_full_save(self, tmp_path: Path):
-        repo = make_repo(tmp_path)
+    def test_update_stage_persists_without_full_save(self, operation_repo: SQLiteOperationRepository):
         op = ServerOperation.create("srv", {})
         op.start()
-        repo.save(op)
+        operation_repo.save(op)
         op.begin_stage(OperationStage.REVIEW)
-        repo.update_stage(op, OperationStage.REVIEW)
-        loaded = repo.get(op.operation_id)
+        operation_repo.update_stage(op, OperationStage.REVIEW)
+        loaded = operation_repo.get(op.operation_id)
         assert loaded is not None
         review = next(s for s in loaded.stages if s.stage == OperationStage.REVIEW)
         assert review.result == StageResult.RUNNING
 
-    def test_list_recent(self, tmp_path: Path):
-        repo = make_repo(tmp_path)
+    def test_list_recent(self, operation_repo: SQLiteOperationRepository):
         for i in range(3):
             op = ServerOperation.create("srv", {})
             op.created_at = float(i)
-            repo.save(op)
-        ops, total = repo.list_recent("srv", limit=2, page=2)
+            operation_repo.save(op)
+        ops, total = operation_repo.list_recent("srv", limit=2, page=2)
         assert total == 3
         assert len(ops) == 1
         assert ops[0].created_at == 0
 
-    def test_list_recent_returns_total_for_an_empty_page(self, tmp_path: Path):
-        repo = make_repo(tmp_path)
+    def test_list_recent_returns_total_for_an_empty_page(self, operation_repo: SQLiteOperationRepository):
         op = ServerOperation.create("srv", {})
-        repo.save(op)
-        ops, total = repo.list_recent("srv", limit=2, page=2)
+        operation_repo.save(op)
+        ops, total = operation_repo.list_recent("srv", limit=2, page=2)
         assert total == 1
         assert ops == []
 
-    def test_returns_none_for_missing(self, tmp_path: Path):
-        repo = make_repo(tmp_path)
-        assert repo.get("nonexistent") is None
-        assert repo.get_latest("absent") is None
-        assert repo.get_active("absent") is None
+    def test_returns_none_for_missing(self, operation_repo: SQLiteOperationRepository):
+        assert operation_repo.get("nonexistent") is None
+        assert operation_repo.get_latest("absent") is None
+        assert operation_repo.get_active("absent") is None
 
-    def test_idempotent_upsert(self, tmp_path: Path):
-        repo = make_repo(tmp_path)
+    def test_idempotent_upsert(self, operation_repo: SQLiteOperationRepository):
         op = ServerOperation.create("srv", {})
-        repo.save(op)
+        operation_repo.save(op)
         op.start()
-        repo.save(op)
-        loaded = repo.get(op.operation_id)
+        operation_repo.save(op)
+        loaded = operation_repo.get(op.operation_id)
         assert loaded is not None
         assert loaded.state == OperationState.RUNNING
 
-    def test_concurrent_save_last_writer_wins_without_corruption(self, tmp_path: Path):
+    def test_concurrent_save_last_writer_wins_without_corruption(self, operation_repo: SQLiteOperationRepository):
         """Two threads saving the same operation concurrently must not corrupt data.
 
         With BEGIN IMMEDIATE the second thread is blocked until the first
         commits, ensuring a clean serialised write rather than a lost update.
         """
-        repo = make_repo(tmp_path)
         op = ServerOperation.create("srv", {})
-        repo.save(op)
+        operation_repo.save(op)
 
         barrier = threading.Barrier(2)
         errors: list[Exception] = []
 
         def writer(state_transition):
             try:
-                op_local = repo.get(op.operation_id)
+                op_local = operation_repo.get(op.operation_id)
                 assert op_local is not None
                 state_transition(op_local)
                 barrier.wait(timeout=5)
-                repo.save(op_local)
+                operation_repo.save(op_local)
             except Exception as exc:
                 errors.append(exc)
 
@@ -334,11 +280,11 @@ class TestSQLiteOperationRepository:
         t2.join(timeout=10)
 
         assert not errors, errors
-        loaded = repo.get(op.operation_id)
+        loaded = operation_repo.get(op.operation_id)
         assert loaded is not None
         assert loaded.state == OperationState.RUNNING
 
-    def test_fetch_and_update_serializes_different_mutations(self, tmp_path: Path):
+    def test_fetch_and_update_serializes_different_mutations(self, operation_repo: SQLiteOperationRepository):
         """fetch_and_update must serialise concurrent writers so neither mutation is lost.
 
         Two threads each write a distinct key into the operation's observation
@@ -347,9 +293,8 @@ class TestSQLiteOperationRepository:
         committed by the first and merges its own change on top.  The final
         record must contain both keys — neither write is silently clobbered.
         """
-        repo = make_repo(tmp_path)
         op = ServerOperation.create("srv", {})
-        repo.save(op)
+        operation_repo.save(op)
 
         barrier = threading.Barrier(2)
         errors: list[Exception] = []
@@ -357,7 +302,7 @@ class TestSQLiteOperationRepository:
         def writer(key: str, value: str) -> None:
             try:
                 barrier.wait(timeout=5)
-                repo.fetch_and_update(
+                operation_repo.fetch_and_update(
                     op.operation_id,
                     lambda o: o.update_observation({key: value}),
                 )
@@ -372,63 +317,60 @@ class TestSQLiteOperationRepository:
         t2.join(timeout=10)
 
         assert not errors, errors
-        loaded = repo.get(op.operation_id)
+        loaded = operation_repo.get(op.operation_id)
         assert loaded is not None
         # Both mutations must be present — neither was silently lost.
         assert loaded.observation.get("writer_a") == "alpha"
         assert loaded.observation.get("writer_b") == "beta"
 
-    def test_fetch_and_update_returns_none_for_missing_operation(self, tmp_path: Path):
-        repo = make_repo(tmp_path)
-        result = repo.fetch_and_update("nonexistent", lambda o: None)
+    def test_fetch_and_update_returns_none_for_missing_operation(self, operation_repo: SQLiteOperationRepository):
+        result = operation_repo.fetch_and_update("nonexistent", lambda o: None)
         assert result is None
 
-    def test_fetch_and_update_rolls_back_when_modifier_raises(self, tmp_path: Path):
+    def test_fetch_and_update_rolls_back_when_modifier_raises(self, operation_repo: SQLiteOperationRepository):
         """A modifier that raises must leave the operation unchanged."""
-        repo = make_repo(tmp_path)
         op = ServerOperation.create("srv", {})
-        repo.save(op)
+        operation_repo.save(op)
 
         with pytest.raises(RuntimeError, match="modifier failure"):
-            repo.fetch_and_update(
+            operation_repo.fetch_and_update(
                 op.operation_id,
                 lambda o: (_ for _ in ()).throw(RuntimeError("modifier failure")),
             )
 
-        loaded = repo.get(op.operation_id)
+        loaded = operation_repo.get(op.operation_id)
         assert loaded is not None
         assert loaded.state == OperationState.PENDING
         assert loaded.observation == {}
 
-    def test_concurrent_update_stage_does_not_clobber_terminal_state(self, tmp_path: Path):
+    def test_concurrent_update_stage_does_not_clobber_terminal_state(self, operation_repo: SQLiteOperationRepository):
         """A concurrent update_stage write must not overwrite a terminal state
         written by another thread that holds the write lock first."""
-        repo = make_repo(tmp_path)
         op = ServerOperation.create("srv", {})
         op.start()
         op.complete_stage(OperationStage.REVIEW, evidence={})
-        repo.save(op)
+        operation_repo.save(op)
 
         barrier = threading.Barrier(2)
         errors: list[Exception] = []
 
         def complete_writer():
             try:
-                op_c = repo.get(op.operation_id)
+                op_c = operation_repo.get(op.operation_id)
                 assert op_c is not None
                 op_c.complete_stage(OperationStage.RESTART, evidence={"source": "complete"})
                 barrier.wait(timeout=5)
-                repo.update_stage(op_c, OperationStage.RESTART)
+                operation_repo.update_stage(op_c, OperationStage.RESTART)
             except Exception as exc:
                 errors.append(exc)
 
         def fail_writer():
             try:
-                op_f = repo.get(op.operation_id)
+                op_f = operation_repo.get(op.operation_id)
                 assert op_f is not None
                 op_f.fail_stage(OperationStage.RESTART, error="simulated failure")
                 barrier.wait(timeout=5)
-                repo.update_stage(op_f, OperationStage.RESTART)
+                operation_repo.update_stage(op_f, OperationStage.RESTART)
             except Exception as exc:
                 errors.append(exc)
 
@@ -441,7 +383,7 @@ class TestSQLiteOperationRepository:
 
         assert not errors, errors
         # The database must reflect exactly one of the two outcomes — not a mix.
-        loaded = repo.get(op.operation_id)
+        loaded = operation_repo.get(op.operation_id)
         assert loaded is not None
         restart_stage = next(
             (s for s in loaded.stages if s.stage == OperationStage.RESTART), None
@@ -471,7 +413,7 @@ class TestServerOperationService:
         docker.status.return_value = {"state": "running", "online": True}
         configuration = MagicMock()
         configuration.read_properties.return_value = {"max-players": "20"}
-        service = make_service(
+        service = make_operation_service(
             tmp_path,
             docker=docker,
             configuration=configuration,
@@ -490,7 +432,7 @@ class TestServerOperationService:
         docker.status.return_value = {"state": "running", "online": True}
         configuration = MagicMock()
         configuration.read_properties.return_value = {"max-players": "20"}
-        service = make_service(
+        service = make_operation_service(
             tmp_path,
             docker=docker,
             configuration=configuration,
@@ -507,7 +449,7 @@ class TestServerOperationService:
         docker.status.return_value = {"state": "running", "online": True}
         configuration = MagicMock()
         configuration.read_properties.return_value = {"max-players": "10"}
-        service = make_service(
+        service = make_operation_service(
             tmp_path,
             docker=docker,
             configuration=configuration,
@@ -530,7 +472,7 @@ class TestServerOperationService:
         ]
         configuration = MagicMock()
         configuration.read_properties.return_value = {"max-players": "20"}
-        service = make_service(
+        service = make_operation_service(
             tmp_path, docker=docker, configuration=configuration, thread_factory=InlineThread
         )
 
@@ -543,7 +485,7 @@ class TestServerOperationService:
     def test_operation_normalizes_valid_settings_before_verification(self, tmp_path: Path):
         configuration = MagicMock()
         configuration.read_properties.return_value = {"max-players": "20"}
-        service = make_service(tmp_path, configuration=configuration, thread_factory=InlineThread)
+        service = make_operation_service(tmp_path, configuration=configuration, thread_factory=InlineThread)
 
         operation = service.apply_restart_required({"MAX_PLAYERS": 20}, lambda: None)
 
@@ -551,7 +493,7 @@ class TestServerOperationService:
         assert operation.requested_changes == {"MAX_PLAYERS": "20"}
 
     def test_operation_records_each_invalid_setting_during_review(self, tmp_path: Path):
-        service = make_service(tmp_path, thread_factory=InlineThread)
+        service = make_operation_service(tmp_path, thread_factory=InlineThread)
 
         operation = service.apply_restart_required(
             {"MAX_PLAYERS": 101, "DIFFICULTY": "nightmare"}, lambda: None
@@ -565,7 +507,7 @@ class TestServerOperationService:
         }
 
     def test_operation_fails_before_apply_when_a_setting_cannot_be_verified(self, tmp_path: Path):
-        service = make_service(tmp_path, thread_factory=InlineThread)
+        service = make_operation_service(tmp_path, thread_factory=InlineThread)
         applied = []
 
         operation = service.apply_restart_required({"UNSUPPORTED_SETTING": "value"}, lambda: applied.append(True))
@@ -575,19 +517,18 @@ class TestServerOperationService:
         review = next(stage for stage in operation.stages if stage.stage == OperationStage.REVIEW)
         assert review.evidence["unverifiable_settings"] == ["UNSUPPORTED_SETTING"]
 
-    def test_apply_creates_operation_and_runs_apply_fn(self, tmp_path: Path):
-        service = make_service(tmp_path)
+    def test_apply_creates_operation_and_runs_apply_fn(self, operation_service: ServerOperationService):
         applied = []
 
         def apply_fn():
             applied.append(True)
 
-        op = service.apply_restart_required({"MAX_PLAYERS": "1"}, apply_fn)
+        op = operation_service.apply_restart_required({"MAX_PLAYERS": "1"}, apply_fn)
         assert op.operation_id
         assert op.state in {OperationState.PENDING, OperationState.RUNNING}
-        wait_for_terminal(service, op.operation_id)
+        wait_for_terminal(operation_service, op.operation_id)
         assert len(applied) == 1
-        refreshed = service.get_operation(op.operation_id)
+        refreshed = operation_service.get_operation(op.operation_id)
         assert refreshed is not None
         assert refreshed.state == OperationState.CONFIRMED
 
@@ -601,7 +542,7 @@ class TestServerOperationService:
             barrier.wait(timeout=5)
 
         docker.execute.side_effect = slow_execute
-        service = make_service(tmp_path, docker=docker, health_timeout=1)
+        service = make_operation_service(tmp_path, docker=docker, health_timeout=1)
 
         def apply_fn():
             pass
@@ -619,15 +560,14 @@ class TestServerOperationService:
             service.apply_restart_required({"MAX_PLAYERS": "2"}, apply_fn)
         barrier.set()
 
-    def test_operation_fails_when_apply_fn_raises(self, tmp_path: Path):
-        service = make_service(tmp_path)
+    def test_operation_fails_when_apply_fn_raises(self, operation_service: ServerOperationService):
 
         def bad_apply():
             raise RuntimeError("disk full")
 
-        op = service.apply_restart_required({"MAX_PLAYERS": "1"}, bad_apply)
-        wait_for_terminal(service, op.operation_id)
-        refreshed = service.get_operation(op.operation_id)
+        op = operation_service.apply_restart_required({"MAX_PLAYERS": "1"}, bad_apply)
+        wait_for_terminal(operation_service, op.operation_id)
+        refreshed = operation_service.get_operation(op.operation_id)
         assert refreshed is not None
         assert refreshed.state == OperationState.FAILED
         assert "disk full" in (refreshed.terminal_error or "")
@@ -636,7 +576,7 @@ class TestServerOperationService:
         docker = MagicMock()
         docker.status.return_value = {"state": "stopped", "online": False}
         docker.execute.side_effect = RuntimeError("container conflict")
-        service = make_service(tmp_path, docker=docker, health_timeout=1)
+        service = make_operation_service(tmp_path, docker=docker, health_timeout=1)
         op = service.apply_restart_required({}, lambda: None)
         wait_for_terminal(service, op.operation_id)
         refreshed = service.get_operation(op.operation_id)
@@ -650,7 +590,7 @@ class TestServerOperationService:
         configuration = MagicMock()
         configuration.read_properties.return_value = {"gamemode": "survival"}
         refresh_observed_settings = MagicMock()
-        service = make_service(
+        service = make_operation_service(
             tmp_path,
             docker=docker,
             configuration=configuration,
@@ -676,7 +616,7 @@ class TestServerOperationService:
         docker.status.return_value = {"state": "stopped", "online": False}
         docker.execute.side_effect = RuntimeError("restart failed")
         refresh_observed_settings = MagicMock()
-        service = make_service(
+        service = make_operation_service(
             tmp_path,
             docker=docker,
             thread_factory=InlineThread,
@@ -696,7 +636,7 @@ class TestServerOperationService:
         # Container stays offline
         docker.status.return_value = {"state": "stopped", "online": False}
         docker.execute.return_value = None
-        service = make_service(tmp_path, docker=docker, health_timeout=1)
+        service = make_operation_service(tmp_path, docker=docker, health_timeout=1)
         op = service.apply_restart_required({}, lambda: None)
         wait_for_terminal(service, op.operation_id)
         refreshed = service.get_operation(op.operation_id)
@@ -708,13 +648,13 @@ class TestServerOperationService:
 
     def test_broker_publishes_on_each_stage(self, tmp_path: Path):
         broker = MagicMock()
-        service = make_service(tmp_path, broker=broker, health_timeout=1)
+        service = make_operation_service(tmp_path, broker=broker, health_timeout=1)
         op = service.apply_restart_required({}, lambda: None)
         wait_for_terminal(service, op.operation_id)
         assert broker.publish.call_count >= 3
 
     def test_get_latest_returns_most_recent(self, tmp_path: Path):
-        service = make_service(tmp_path, health_timeout=1)
+        service = make_operation_service(tmp_path, health_timeout=1)
         op = service.apply_restart_required({}, lambda: None)
         wait_for_terminal(service, op.operation_id)
         latest = service.get_latest()
@@ -725,35 +665,32 @@ class TestServerOperationService:
         docker = MagicMock()
         docker.status.return_value = {"state": "running", "online": True}
         docker.execute.return_value = None
-        service = make_service(tmp_path, docker=docker, health_timeout=1)
+        service = make_operation_service(tmp_path, docker=docker, health_timeout=1)
         op = service.apply_restart_required({}, lambda: None)
         wait_for_terminal(service, op.operation_id)
         refreshed = service.request_reconciliation(op.operation_id)
         assert refreshed is not None
         assert "container_state" in refreshed.observation
 
-    def test_request_reconciliation_returns_none_for_unknown(self, tmp_path: Path):
-        service = make_service(tmp_path)
-        assert service.request_reconciliation("nonexistent") is None
+    def test_request_reconciliation_returns_none_for_unknown(self, operation_service: ServerOperationService):
+        assert operation_service.request_reconciliation("nonexistent") is None
 
-    def test_get_active_returns_none_when_no_active(self, tmp_path: Path):
-        service = make_service(tmp_path)
-        assert service.get_active() is None
+    def test_get_active_returns_none_when_no_active(self, operation_service: ServerOperationService):
+        assert operation_service.get_active() is None
 
     def test_list_recent_returns_operations(self, tmp_path: Path):
-        service = make_service(tmp_path, health_timeout=1)
+        service = make_operation_service(tmp_path, health_timeout=1)
         op = service.apply_restart_required({}, lambda: None)
         wait_for_terminal(service, op.operation_id)
         results = service.list_recent(limit=5)
         assert results["total"] >= 1
         assert any(r.operation_id == op.operation_id for r in results["operations"])
 
-    def test_list_recent_rejects_invalid_pagination(self, tmp_path: Path):
-        service = make_service(tmp_path)
+    def test_list_recent_rejects_invalid_pagination(self, operation_service: ServerOperationService):
         with pytest.raises(ValueError, match="limit"):
-            service.list_recent(limit=0)
+            operation_service.list_recent(limit=0)
         with pytest.raises(ValueError, match="page"):
-            service.list_recent(page=0)
+            operation_service.list_recent(page=0)
 
     def test_observe_container_error_branch(self, tmp_path: Path):
         """_observe_container catches docker.status() exceptions and returns error dict."""
@@ -761,7 +698,7 @@ class TestServerOperationService:
         docker.status.side_effect = RuntimeError("docker daemon unavailable")
         docker.execute.return_value = None
         broker = MagicMock()
-        service = make_service(tmp_path, docker=docker, broker=broker, health_timeout=1)
+        service = make_operation_service(tmp_path, docker=docker, broker=broker, health_timeout=1)
         # Trigger the error branch via apply which calls _observe_container during RESTART failure
         op = service.apply_restart_required({}, lambda: None)
         wait_for_terminal(service, op.operation_id)
@@ -781,7 +718,7 @@ class TestServerOperationService:
         docker.execute.return_value = None
         broker = MagicMock()
 
-        repo = make_repo(tmp_path)
+        repo = SQLiteOperationRepository(make_operation_db(tmp_path))
         original_update = repo.update_stage
 
         def flaky_update_stage(operation, stage):
@@ -813,7 +750,7 @@ class TestServerOperationService:
         """_publish swallows broker exceptions without failing the operation."""
         broker = MagicMock()
         broker.publish.side_effect = RuntimeError("broker unavailable")
-        service = make_service(tmp_path, broker=broker, health_timeout=1)
+        service = make_operation_service(tmp_path, broker=broker, health_timeout=1)
         op = service.apply_restart_required({}, lambda: None)
         wait_for_terminal(service, op.operation_id)
         # Operation still reaches terminal state despite broker failures
@@ -823,7 +760,7 @@ class TestServerOperationService:
 
     def test_reconcile_startup_orphan(self, tmp_path: Path):
         """On startup, active operations from a previous process are failed."""
-        db = make_db(tmp_path)
+        db = make_operation_db(tmp_path)
         repo = SQLiteOperationRepository(db)
         orphan = ServerOperation.create("test-server", {"X": "1"})
         orphan.start()
@@ -855,7 +792,7 @@ class TestServerOperationService:
 
     def test_reconcile_startup_orphan_with_active_stage(self, tmp_path: Path):
         """Orphan with an active (RUNNING) stage uses that stage for fail_stage."""
-        db = make_db(tmp_path)
+        db = make_operation_db(tmp_path)
         repo = SQLiteOperationRepository(db)
         orphan = ServerOperation.create("test-server", {})
         orphan.start()
@@ -882,7 +819,7 @@ class TestServerOperationService:
 
     def test_reconcile_startup_orphan_skips_recent_operations(self, tmp_path: Path):
         """Recently-updated operations are left untouched to avoid racing a live worker."""
-        db = make_db(tmp_path)
+        db = make_operation_db(tmp_path)
         repo = SQLiteOperationRepository(db)
         orphan = ServerOperation.create("test-server", {})
         orphan.start()
@@ -975,16 +912,15 @@ class TestRepositoryEdgeCases:
             ).fetchall()
         assert tables == []
 
-    def test_update_stage_returns_early_for_missing_stage(self, tmp_path: Path):
+    def test_update_stage_returns_early_for_missing_stage(self, operation_repo: SQLiteOperationRepository):
         """update_stage is a no-op when the stage is not found in operation.stages."""
-        repo = make_repo(tmp_path)
         op = ServerOperation.create("srv", {})
         op.start()
-        repo.save(op)
+        operation_repo.save(op)
         # Replace stages list with an empty list so the stage look-up finds nothing
         op.stages = []
         # Should not raise; just return early
-        repo.update_stage(op, OperationStage.REVIEW)
+        operation_repo.update_stage(op, OperationStage.REVIEW)
 
 
 # ---------------------------------------------------------------------------
@@ -1000,7 +936,7 @@ class TestRecoveryAndReconciliation:
         docker.execute.side_effect = RuntimeError("container conflict")
         configuration = MagicMock()
         configuration.read_properties.return_value = {"max-players": "20"}
-        service = make_service(tmp_path, docker=docker, configuration=configuration, health_timeout=1)
+        service = make_operation_service(tmp_path, docker=docker, configuration=configuration, health_timeout=1)
         op = service.apply_restart_required({"MAX_PLAYERS": "20"}, lambda: None)
         wait_for_terminal(service, op.operation_id)
         failed = service.get_operation(op.operation_id)
@@ -1020,7 +956,7 @@ class TestRecoveryAndReconciliation:
         docker.execute.side_effect = RuntimeError("conflict")
         configuration = MagicMock()
         configuration.read_properties.return_value = {"max-players": "10"}
-        service = make_service(tmp_path, docker=docker, configuration=configuration, health_timeout=1)
+        service = make_operation_service(tmp_path, docker=docker, configuration=configuration, health_timeout=1)
         op = service.apply_restart_required({"MAX_PLAYERS": "20"}, lambda: None)
         wait_for_terminal(service, op.operation_id)
         failed = service.get_operation(op.operation_id)
@@ -1034,7 +970,7 @@ class TestRecoveryAndReconciliation:
 
     def test_reconciliation_skips_running_operations(self, tmp_path: Path):
         """request_reconciliation does not alter non-terminal operations."""
-        service = make_service(tmp_path)
+        service = make_operation_service(tmp_path)
         op = ServerOperation.create("test-server", {})
         op.start()
         service._repo.save(op)
@@ -1042,9 +978,8 @@ class TestRecoveryAndReconciliation:
         assert result is not None
         assert result.state == OperationState.RUNNING
 
-    def test_reconciliation_returns_none_for_unknown(self, tmp_path: Path):
-        service = make_service(tmp_path)
-        assert service.request_reconciliation("nonexistent-id") is None
+    def test_reconciliation_returns_none_for_unknown(self, operation_service: ServerOperationService):
+        assert operation_service.request_reconciliation("nonexistent-id") is None
 
     def test_retry_creates_linked_operation(self, tmp_path: Path):
         """retry_operation returns a new operation linked to the original via parent_operation_id."""
@@ -1053,7 +988,7 @@ class TestRecoveryAndReconciliation:
         docker.execute.side_effect = RuntimeError("conflict")
         configuration = MagicMock()
         configuration.read_properties.return_value = {"max-players": "20"}
-        service = make_service(tmp_path, docker=docker, configuration=configuration, health_timeout=1)
+        service = make_operation_service(tmp_path, docker=docker, configuration=configuration, health_timeout=1)
         op = service.apply_restart_required({"MAX_PLAYERS": "20"}, lambda: None)
         wait_for_terminal(service, op.operation_id)
         original = service.get_operation(op.operation_id)
@@ -1071,10 +1006,9 @@ class TestRecoveryAndReconciliation:
         assert still_original is not None
         assert still_original.state == OperationState.FAILED
 
-    def test_retry_raises_for_unknown_operation(self, tmp_path: Path):
-        service = make_service(tmp_path)
+    def test_retry_raises_for_unknown_operation(self, operation_service: ServerOperationService):
         with pytest.raises(ValueError, match="not found"):
-            service.retry_operation("nonexistent", lambda: None)
+            operation_service.retry_operation("nonexistent", lambda: None)
 
     def test_retry_raises_for_confirmed_operation(self, tmp_path: Path):
         """retry_operation rejects CONFIRMED operations — only FAILED/DIVERGENT are retryable."""
@@ -1082,7 +1016,7 @@ class TestRecoveryAndReconciliation:
         docker.status.return_value = {"state": "running", "online": True}
         configuration = MagicMock()
         configuration.read_properties.return_value = {"max-players": "20"}
-        service = make_service(tmp_path, docker=docker, configuration=configuration, thread_factory=InlineThread)
+        service = make_operation_service(tmp_path, docker=docker, configuration=configuration, thread_factory=InlineThread)
         op = service.apply_restart_required({"MAX_PLAYERS": "20"}, lambda: None)
         assert op.state == OperationState.CONFIRMED
         with pytest.raises(ValueError, match="confirmed"):
@@ -1093,7 +1027,7 @@ class TestRecoveryAndReconciliation:
         docker = MagicMock()
         docker.status.return_value = {"state": "running", "online": True}
         docker.execute.side_effect = RuntimeError("conflict")
-        service = make_service(tmp_path, docker=docker, health_timeout=1)
+        service = make_operation_service(tmp_path, docker=docker, health_timeout=1)
         op = service.apply_restart_required({"MAX_PLAYERS": "20"}, lambda: None)
         wait_for_terminal(service, op.operation_id)
         original = service.get_operation(op.operation_id)
@@ -1112,7 +1046,7 @@ class TestRecoveryAndReconciliation:
         docker = MagicMock()
         docker.status.return_value = {"state": "running", "online": True}
         docker.execute.side_effect = RuntimeError("conflict")
-        service = make_service(tmp_path, docker=docker, health_timeout=1)
+        service = make_operation_service(tmp_path, docker=docker, health_timeout=1)
         # UNKNOWN_KEY is not in PROPERTY_NAMES — review stage would reject this,
         # but we inject a terminal op directly to simulate an edge-case record.
         op = ServerOperation.create("test-server", {"UNKNOWN_KEY": "value"})
@@ -1137,7 +1071,7 @@ class TestRecoveryAndReconciliation:
         docker.status.return_value = {"state": "running", "online": True}
         configuration = MagicMock()
         configuration.read_properties.return_value = {"max-players": "20"}
-        service = make_service(tmp_path, docker=docker, configuration=configuration, health_timeout=1)
+        service = make_operation_service(tmp_path, docker=docker, configuration=configuration, health_timeout=1)
         OperationStage = __import__(
             "minecraft_manager.operations.lifecycle", fromlist=["OperationStage"]
         ).OperationStage
@@ -1155,7 +1089,7 @@ class TestRecoveryAndReconciliation:
 
     def test_reconciliation_ignores_operation_from_different_server(self, tmp_path: Path):
         """request_reconciliation returns without modifying ops belonging to another server_id."""
-        service = make_service(tmp_path)
+        service = make_operation_service(tmp_path)
         op = ServerOperation.create("other-server", {"MAX_PLAYERS": "20"})
         op.start()
         op.fail_stage(
@@ -1175,7 +1109,7 @@ class TestRecoveryAndReconciliation:
         docker.status.return_value = {"state": "running", "online": True}
         configuration = MagicMock()
         configuration.read_properties.return_value = {"max-players": "20"}
-        service = make_service(tmp_path, docker=docker, configuration=configuration, thread_factory=InlineThread)
+        service = make_operation_service(tmp_path, docker=docker, configuration=configuration, thread_factory=InlineThread)
         op = service.apply_restart_required({"MAX_PLAYERS": "20"}, lambda: None)
         assert op.state == OperationState.CONFIRMED
         result = service.request_reconciliation(op.operation_id)
@@ -1189,7 +1123,7 @@ class TestRecoveryAndReconciliation:
         docker.status.return_value = {"state": "running", "online": True}
         configuration = MagicMock()
         configuration.read_properties.side_effect = RuntimeError("disk error")
-        service = make_service(tmp_path, docker=docker, configuration=configuration, health_timeout=1)
+        service = make_operation_service(tmp_path, docker=docker, configuration=configuration, health_timeout=1)
         docker.execute.side_effect = RuntimeError("conflict")
         op = service.apply_restart_required({"MAX_PLAYERS": "20"}, lambda: None)
         wait_for_terminal(service, op.operation_id)
@@ -1210,7 +1144,7 @@ class TestRecoveryAndReconciliation:
 
         docker = MagicMock()
         docker.status.return_value = {"state": "running", "online": True}
-        service = make_service(tmp_path, docker=docker)
+        service = make_operation_service(tmp_path, docker=docker)
         op = ServerOperation.create("test-server", {"MAX_PLAYERS": "20"})
         op.start()
         op.fail_stage(OperationStage.REVIEW, "boom")
@@ -1228,7 +1162,7 @@ class TestRecoveryAndReconciliation:
         """request_reconciliation transitions DIVERGENT→FAILED when the server is offline."""
         docker = MagicMock()
         docker.status.return_value = {"state": "stopped", "online": False}
-        service = make_service(tmp_path, docker=docker)
+        service = make_operation_service(tmp_path, docker=docker)
         op = ServerOperation.create("test-server", {"MAX_PLAYERS": "20"})
         op.start()
         op.diverge("config mismatch", observation={})
@@ -1246,7 +1180,7 @@ class TestRecoveryAndReconciliation:
         """
         docker = MagicMock()
         docker.status.return_value = {"state": "running", "online": True}
-        service = make_service(tmp_path, docker=docker)
+        service = make_operation_service(tmp_path, docker=docker)
         repo = service._repo
         db = repo._path
 
@@ -1278,7 +1212,7 @@ class TestRecoveryAndReconciliation:
         """
         docker = MagicMock()
         docker.status.return_value = {"state": "running", "online": True}
-        service = make_service(tmp_path, docker=docker)
+        service = make_operation_service(tmp_path, docker=docker)
         repo = service._repo
         db = repo._path
 
@@ -1312,7 +1246,7 @@ class TestRecoveryAndReconciliation:
         configuration = MagicMock()
         # Return mismatched values so verify produces divergent
         configuration.read_properties.return_value = {"max-players": "10"}
-        service = make_service(tmp_path, docker=docker, configuration=configuration)
+        service = make_operation_service(tmp_path, docker=docker, configuration=configuration)
         op = ServerOperation.create("test-server", {"MAX_PLAYERS": "20"})
         op.start()
         op.fail_stage(OperationStage.REVIEW, "boom")
@@ -1325,7 +1259,7 @@ class TestRecoveryAndReconciliation:
 
     def test_retry_raises_for_different_server_operation(self, tmp_path: Path):
         """retry_operation rejects operations belonging to a different server_id."""
-        service = make_service(tmp_path)
+        service = make_operation_service(tmp_path)
         op = ServerOperation.create("other-server", {"MAX_PLAYERS": "20"})
         op.start()
         op.fail_stage(
@@ -1338,7 +1272,7 @@ class TestRecoveryAndReconciliation:
 
     def test_parent_operation_id_survives_roundtrip(self, tmp_path: Path):
         """parent_operation_id is persisted and restored correctly."""
-        repo = make_repo(tmp_path)
+        repo = SQLiteOperationRepository(make_operation_db(tmp_path))
         origin = ServerOperation.create("srv", {})
         repo.save(origin)
         child = ServerOperation.create("srv", {}, parent_operation_id=origin.operation_id)

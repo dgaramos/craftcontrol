@@ -150,7 +150,7 @@ class SQLiteAuditRepository:
 
             rows = conn.execute(
                 f"SELECT id, occurred_at, actor_identity, action, target, result, details "
-                f"FROM audit_log {where} ORDER BY occurred_at DESC LIMIT ? OFFSET ?",
+                f"FROM audit_log {where} ORDER BY occurred_at DESC, id DESC LIMIT ? OFFSET ?",
                 [*params, page_size, offset],
             ).fetchall()
         finally:

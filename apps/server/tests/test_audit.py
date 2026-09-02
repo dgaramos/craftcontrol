@@ -250,3 +250,9 @@ class TestAuditService:
         service.write(actor=None, action="auth.login", target=None, result="denied", metadata={})
         assert port.written[0]["actor"] is None
         assert port.written[0]["target"] is None
+
+    def test_write_without_metadata_defaults_to_empty_dict(self) -> None:
+        port = FakeAuditPort()
+        service = AuditService(port)
+        service.write(actor="alice", action="auth.login", target="alice", result="success")
+        assert port.written[0]["metadata"] == {}

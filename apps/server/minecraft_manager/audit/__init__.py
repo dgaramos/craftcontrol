@@ -4,4 +4,4 @@ from .model import AuditRecord
 from .repository import SQLiteAuditRepository
 from .service import AuditService
 
-__all__ = ["AuditRecord", "SQLiteAuditRepository", "AuditService"]
+__all__ = ["AuditRecord", "AuditService", "SQLiteAuditRepository"]

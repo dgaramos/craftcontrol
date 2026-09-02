@@ -586,8 +586,8 @@ def test_missing_player_service_raises_type_error(tmp_path: Path) -> None:
     from minecraft_manager.reconciliation import ReconciliationService
     from minecraft_manager.repository import StateRepository
     from minecraft_manager.server import WorldService
-    from minecraft_manager.telemetry_repository import SQLiteTelemetryRepository
-    from minecraft_manager.telemetry_service import TelemetryService
+    from minecraft_manager.telemetry.repository import SQLiteTelemetryRepository
+    from minecraft_manager.telemetry.service import TelemetryService
     from fakes import FakeBedrock, FakeDocker
     db_path = tmp_path / "state.db"
     repo = StateRepository(db_path)
@@ -639,8 +639,8 @@ def test_missing_world_service_raises_type_error(tmp_path: Path) -> None:
     from minecraft_manager.files import ServerFiles
     from minecraft_manager.players import PlayerService, SQLitePlayerRepository
     from minecraft_manager.repository import StateRepository
-    from minecraft_manager.telemetry_repository import SQLiteTelemetryRepository
-    from minecraft_manager.telemetry_service import TelemetryService
+    from minecraft_manager.telemetry.repository import SQLiteTelemetryRepository
+    from minecraft_manager.telemetry.service import TelemetryService
     from fakes import FakeBedrock, FakeDocker
     db_path = tmp_path / "state.db"
     repo = StateRepository(db_path)
@@ -667,8 +667,8 @@ def test_missing_reconciliation_service_raises_type_error(tmp_path: Path) -> Non
     from minecraft_manager.players import PlayerService, SQLitePlayerRepository
     from minecraft_manager.repository import StateRepository
     from minecraft_manager.server import WorldService
-    from minecraft_manager.telemetry_repository import SQLiteTelemetryRepository
-    from minecraft_manager.telemetry_service import TelemetryService
+    from minecraft_manager.telemetry.repository import SQLiteTelemetryRepository
+    from minecraft_manager.telemetry.service import TelemetryService
     from fakes import FakeBedrock, FakeDocker
     db_path = tmp_path / "state.db"
     repo = StateRepository(db_path)
@@ -791,8 +791,8 @@ def _make_service_with_fakes(
     from minecraft_manager.repository import StateRepository
     from minecraft_manager.server import WorldService
     from minecraft_manager.services import ManagerService
-    from minecraft_manager.telemetry_repository import SQLiteTelemetryRepository
-    from minecraft_manager.telemetry_service import TelemetryService
+    from minecraft_manager.telemetry.repository import SQLiteTelemetryRepository
+    from minecraft_manager.telemetry.service import TelemetryService
     from fakes import FakeBedrock, FakeDocker
 
     db_path = tmp_path / "state.db"

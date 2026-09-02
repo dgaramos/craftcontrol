@@ -168,7 +168,7 @@ Migrations run automatically on backend startup. To inspect pending migrations o
 
 ```bash
 docker compose -f docker-compose.split.yml exec craftcontrol-backend \
-  python3 -c "from minecraft_manager.repository import get_db; get_db()"
+  python3 -c "import os, sqlite3; connection = sqlite3.connect(os.environ['DATABASE_PATH']); print(connection.execute('PRAGMA user_version').fetchone()[0]); connection.close()"
 ```
 
 See [Database migrations](database-migrations.md) for the migration convention and safety rules.

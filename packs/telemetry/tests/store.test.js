@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, test, jest } from "@jest/globals";
+import { suppressConsoleError } from "./helpers.mjs";
 import { STATE_KEY, PLAYER_STATE_PREFIX, STATE_BACKUP_KEY, STATE_BACKUP_V1_KEY, STATE_BACKUP_V2_KEY, playerKey, playerStateKey } from "../behavior_pack/scripts/model.js";
 import { STORAGE_VERSION } from "../behavior_pack/scripts/versions.js";
 
@@ -217,7 +218,7 @@ describe("flush", () => {
   test("skips persistence and logs error when blocked", async () => {
     const { mock, store } = await loadStore();
     mock.setMockDynamicProperty(STATE_KEY, "{bad");
-    const consoleSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    const consoleSpy = suppressConsoleError();
     store.loadState(); // triggers blocked
     store.flush(true);
     // STATE_KEY must remain the corrupt string — nothing new written
@@ -232,7 +233,7 @@ describe("flush", () => {
     // Intercept setDynamicProperty to throw after loadState succeeds (not blocked)
     const original = mock.world.setDynamicProperty.bind(mock.world);
     mock.world.setDynamicProperty = () => { throw new Error("quota exceeded"); };
-    const consoleSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    const consoleSpy = suppressConsoleError();
     store.flush(true);
     expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining("quota exceeded"));
     consoleSpy.mockRestore();

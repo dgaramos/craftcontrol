@@ -1,4 +1,5 @@
 import { jest, beforeEach, describe, test, expect } from "@jest/globals";
+import { suppressConsoleWarn } from "./helpers.mjs";
 
 // @minecraft/server is resolved to tests/minecraft-server.mock.js via
 // moduleNameMapper in jest.config.js.
@@ -93,7 +94,7 @@ describe("publish", () => {
 describe("queueBlockChange", () => {
   test("creates broken and placed buckets on first call", () => {
     queueBlockChange("Alice", "broken", "stone");
-    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = suppressConsoleWarn();
     publishBlockChanges();
     const logged = warn.mock.calls.map(([msg]) =>
       JSON.parse(msg.replace(/^\[BEDROCK_TELEMETRY\] /, ""))
@@ -111,7 +112,7 @@ describe("queueBlockChange", () => {
     queueBlockChange("Alice", "broken", "stone");
     queueBlockChange("Alice", "broken", "stone");
     queueBlockChange("Alice", "broken", "dirt");
-    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = suppressConsoleWarn();
     publishBlockChanges();
     const logged = warn.mock.calls.map(([msg]) =>
       JSON.parse(msg.replace(/^\[BEDROCK_TELEMETRY\] /, ""))
@@ -123,7 +124,7 @@ describe("queueBlockChange", () => {
 
   test("tracks placed blocks independently from broken blocks", () => {
     queueBlockChange("Bob", "placed", "oak_log");
-    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = suppressConsoleWarn();
     publishBlockChanges();
     const logged = warn.mock.calls.map(([msg]) =>
       JSON.parse(msg.replace(/^\[BEDROCK_TELEMETRY\] /, ""))
@@ -137,7 +138,7 @@ describe("queueBlockChange", () => {
   test("tracks multiple players independently", () => {
     queueBlockChange("Alice", "broken", "stone");
     queueBlockChange("Bob", "placed", "oak_log");
-    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = suppressConsoleWarn();
     publishBlockChanges();
     const logged = warn.mock.calls.map(([msg]) =>
       JSON.parse(msg.replace(/^\[BEDROCK_TELEMETRY\] /, ""))
@@ -160,7 +161,7 @@ describe("publishBlockChanges", () => {
   test("emits blocks.changed for each queued player", () => {
     queueBlockChange("Alice", "broken", "stone");
     queueBlockChange("Bob", "broken", "dirt");
-    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = suppressConsoleWarn();
     publishBlockChanges();
     const logged = warn.mock.calls.map(([msg]) =>
       JSON.parse(msg.replace(/^\[BEDROCK_TELEMETRY\] /, ""))
@@ -172,7 +173,7 @@ describe("publishBlockChanges", () => {
 
   test("clears pendingBlocks after emitting — a second call emits nothing", () => {
     queueBlockChange("Alice", "broken", "stone");
-    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = suppressConsoleWarn();
     publishBlockChanges();
     warn.mockClear();
     publishBlockChanges();
@@ -184,7 +185,7 @@ describe("publishBlockChanges", () => {
   });
 
   test("does nothing when pendingBlocks is empty", () => {
-    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = suppressConsoleWarn();
     publishBlockChanges();
     const logged = warn.mock.calls.map(([msg]) =>
       JSON.parse(msg.replace(/^\[BEDROCK_TELEMETRY\] /, ""))
@@ -214,7 +215,7 @@ describe("publishSnapshot", () => {
 
   test("drains pending block changes before snapshotting", () => {
     queueBlockChange("Alice", "broken", "stone");
-    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = suppressConsoleWarn();
     publishSnapshot();
     const logged = warn.mock.calls.map(([msg]) =>
       JSON.parse(msg.replace(/^\[BEDROCK_TELEMETRY\] /, ""))
@@ -236,7 +237,7 @@ describe("publishSnapshot", () => {
     mockLoadState.mockReturnValue({ sequence: 5, players: { alice: { name: "Alice" }, bob: { name: "Bob" } } });
     mockStorageStatus.mockReturnValue({ persistenceBlocked: false });
     mockCapabilitySnapshot.mockReturnValue({ gameModeReading: { supported: true } });
-    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = suppressConsoleWarn();
     publishSnapshot();
     const logged = warn.mock.calls.map(([msg]) =>
       JSON.parse(msg.replace(/^\[BEDROCK_TELEMETRY\] /, ""))
@@ -253,7 +254,7 @@ describe("publishSnapshot", () => {
     world.players = [{ name: "Alice" }];
     mockReadGameMode.mockReturnValue("survival");
     mockLoadState.mockReturnValue({ sequence: 1, players: { alice: { name: "Alice", deaths: 0 } } });
-    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = suppressConsoleWarn();
     publishSnapshot();
     const logged = warn.mock.calls.map(([msg]) =>
       JSON.parse(msg.replace(/^\[BEDROCK_TELEMETRY\] /, ""))
@@ -268,7 +269,7 @@ describe("publishSnapshot", () => {
   test("logs snapshot.player without gameMode for an offline player", () => {
     world.players = [];
     mockLoadState.mockReturnValue({ sequence: 1, players: { alice: { name: "Alice", deaths: 2 } } });
-    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = suppressConsoleWarn();
     publishSnapshot();
     const logged = warn.mock.calls.map(([msg]) =>
       JSON.parse(msg.replace(/^\[BEDROCK_TELEMETRY\] /, ""))
@@ -283,7 +284,7 @@ describe("publishSnapshot", () => {
     world.players = [{ name: "Alice" }];
     mockReadGameMode.mockReturnValue(null);
     mockLoadState.mockReturnValue({ sequence: 1, players: { alice: { name: "Alice", deaths: 0 } } });
-    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = suppressConsoleWarn();
     expect(() => publishSnapshot()).not.toThrow();
     const logged = warn.mock.calls.map(([msg]) =>
       JSON.parse(msg.replace(/^\[BEDROCK_TELEMETRY\] /, ""))
@@ -295,7 +296,7 @@ describe("publishSnapshot", () => {
   });
 
   test("logs snapshot.finished with empty data and null player", () => {
-    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = suppressConsoleWarn();
     publishSnapshot();
     const logged = warn.mock.calls.map(([msg]) =>
       JSON.parse(msg.replace(/^\[BEDROCK_TELEMETRY\] /, ""))

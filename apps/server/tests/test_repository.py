@@ -1,9 +1,10 @@
+import json
 import sqlite3
 import time
 from contextlib import contextmanager
 from pathlib import Path
 
-from minecraft_manager.core.sqlite import open_connection, sqlite_diagnostics
+from minecraft_manager.core.sqlite import open_connection, player_identity, sqlite_diagnostics
 from minecraft_manager.players.repository import SQLitePlayerRepository
 from minecraft_manager.repository import StateRepository
 from minecraft_manager.telemetry.repository import SQLiteTelemetryRepository
@@ -89,6 +90,57 @@ def test_xuid_unifies_a_temporary_name_profile(tmp_path: Path) -> None:
     public_id = player_repo.player_profiles()[0]["id"]
     assert "123" not in public_id
     assert player_repo.player_profile(public_id) is not None
+
+
+def test_xuid_unifies_temporary_records_when_canonical_profile_already_exists(tmp_path: Path) -> None:
+    repository, _, _ = _init(tmp_path)
+    temporary = "name:nicole"
+    canonical = "xuid:123"
+    with sqlite3.connect(repository.path) as connection:
+        connection.executemany(
+            "INSERT INTO player_profiles(identity,xuid,current_name,first_seen_at,last_seen_at) VALUES(?,?,?,?,?)",
+            ((temporary, None, "Nicole", 10, 20), (canonical, "123", "Nicole", 1, 30)),
+        )
+        connection.executemany(
+            "INSERT INTO player_aliases(identity,name,first_seen_at,last_seen_at) VALUES(?,?,?,?)",
+            ((temporary, "Nicole", 10, 20), (canonical, "Nicole", 1, 30)),
+        )
+        connection.execute(
+            "INSERT INTO player_sessions(identity,connected_at) VALUES(?,?)", (temporary, 10)
+        )
+        connection.execute(
+            "INSERT INTO player_history(identity,topic,occurred_at,source,payload,event_key) VALUES(?,?,?,?,?,?)",
+            (temporary, "player.connected", 10, "test", "{}", "temporary-history"),
+        )
+        connection.executemany(
+            "INSERT INTO player_telemetry(identity,stats,sequence,updated_at) VALUES(?,?,?,?)",
+            ((temporary, json.dumps({"blocksBroken": 4}), 3, 30), (canonical, json.dumps({"blocksBroken": 1}), 2, 20)),
+        )
+        connection.executemany(
+            "INSERT INTO player_daily(identity,day,play_seconds,blocks_broken,updated_at) VALUES(?,?,?,?,?)",
+            ((temporary, "2026-01-01", 10, 4, 30), (canonical, "2026-01-01", 5, 1, 20)),
+        )
+
+        assert player_identity(connection, "Nicole", "123") == canonical
+        assert player_identity(connection, "Nicole", "123") == canonical
+
+        assert connection.execute("SELECT identity FROM player_profiles WHERE identity=?", (temporary,)).fetchone() is None
+        assert connection.execute("SELECT COUNT(*) FROM player_aliases WHERE identity=?", (temporary,)).fetchone()[0] == 0
+        assert connection.execute("SELECT COUNT(*) FROM player_sessions WHERE identity=?", (temporary,)).fetchone()[0] == 0
+        assert connection.execute("SELECT COUNT(*) FROM player_history WHERE identity=?", (temporary,)).fetchone()[0] == 0
+        assert connection.execute("SELECT COUNT(*) FROM player_telemetry WHERE identity=?", (temporary,)).fetchone()[0] == 0
+        assert connection.execute("SELECT COUNT(*) FROM player_daily WHERE identity=?", (temporary,)).fetchone()[0] == 0
+        assert connection.execute(
+            "SELECT first_seen_at,last_seen_at FROM player_aliases WHERE identity=?", (canonical,)
+        ).fetchone() == (1, 30)
+        assert connection.execute("SELECT COUNT(*) FROM player_sessions WHERE identity=?", (canonical,)).fetchone()[0] == 1
+        assert connection.execute("SELECT COUNT(*) FROM player_history WHERE identity=?", (canonical,)).fetchone()[0] == 1
+        stats = json.loads(connection.execute("SELECT stats FROM player_telemetry WHERE identity=?", (canonical,)).fetchone()[0])
+        assert stats == {"blocksBroken": 4}
+        daily = connection.execute(
+            "SELECT play_seconds,blocks_broken,updated_at FROM player_daily WHERE identity=?", (canonical,)
+        ).fetchone()
+        assert daily == (15, 5, 30)
 
 
 def test_global_activity_is_filtered_paginated_and_sanitized(tmp_path: Path) -> None:

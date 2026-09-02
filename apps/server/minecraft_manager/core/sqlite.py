@@ -305,6 +305,52 @@ def player_identity(
                 connection.execute(
                     "DELETE FROM player_daily WHERE identity=?", (temp,)
                 )
+            elif existing and target:
+                connection.execute(
+                    "INSERT INTO player_aliases(identity,name,first_seen_at,last_seen_at) "
+                    "SELECT ?,name,first_seen_at,last_seen_at FROM player_aliases WHERE identity=? "
+                    "ON CONFLICT(identity,name) DO UPDATE SET "
+                    "first_seen_at=MIN(first_seen_at,excluded.first_seen_at),"
+                    "last_seen_at=MAX(last_seen_at,excluded.last_seen_at)",
+                    (identity, temp),
+                )
+                connection.execute("DELETE FROM player_aliases WHERE identity=?", (temp,))
+                connection.execute("UPDATE player_sessions SET identity=? WHERE identity=?", (identity, temp))
+                connection.execute("UPDATE OR IGNORE player_history SET identity=? WHERE identity=?", (identity, temp))
+                connection.execute("DELETE FROM player_history WHERE identity=?", (temp,))
+                temporary_telemetry = connection.execute(
+                    "SELECT stats,sequence,updated_at FROM player_telemetry WHERE identity=?", (temp,)
+                ).fetchone()
+                canonical_telemetry = connection.execute(
+                    "SELECT sequence,updated_at FROM player_telemetry WHERE identity=?", (identity,)
+                ).fetchone()
+                if temporary_telemetry and (
+                    not canonical_telemetry
+                    or temporary_telemetry[2] > canonical_telemetry[1]
+                    or (temporary_telemetry[2] == canonical_telemetry[1] and temporary_telemetry[1] > canonical_telemetry[0])
+                ):
+                    connection.execute(
+                        "INSERT INTO player_telemetry(identity,stats,sequence,updated_at) VALUES(?,?,?,?) "
+                        "ON CONFLICT(identity) DO UPDATE SET stats=excluded.stats,sequence=excluded.sequence,updated_at=excluded.updated_at",
+                        (identity, *temporary_telemetry),
+                    )
+                connection.execute("DELETE FROM player_telemetry WHERE identity=?", (temp,))
+                fields = ", ".join(
+                    f"{field}={field}+excluded.{field}" for field in sorted(ALLOWED_DAILY_FIELDS)
+                )
+                connection.execute(
+                    "INSERT INTO player_daily(identity,day,updated_at,"
+                    + ",".join(sorted(ALLOWED_DAILY_FIELDS))
+                    + ") SELECT ?,day,updated_at,"
+                    + ",".join(sorted(ALLOWED_DAILY_FIELDS))
+                    + " FROM player_daily WHERE identity=?"
+                    + " ON CONFLICT(identity,day) DO UPDATE SET "
+                    + fields
+                    + ",updated_at=MAX(updated_at,excluded.updated_at)",
+                    (identity, temp),
+                )
+                connection.execute("DELETE FROM player_daily WHERE identity=?", (temp,))
+                connection.execute("DELETE FROM player_profiles WHERE identity=?", (temp,))
         return identity
     row = connection.execute(
         "SELECT p.identity FROM player_profiles p "

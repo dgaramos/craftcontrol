@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from minecraft_manager.core.sqlite import open_connection, sqlite_diagnostics
-from minecraft_manager.players.sqlite import player_identity
+from minecraft_manager.players.sqlite import add_daily, calendar_timezone, player_identity
 from minecraft_manager.players.repository import SQLitePlayerRepository
 from minecraft_manager.repository import StateRepository
 from minecraft_manager.telemetry.repository import SQLiteTelemetryRepository
@@ -142,6 +142,19 @@ def test_xuid_unifies_temporary_records_when_canonical_profile_already_exists(tm
             "SELECT play_seconds,blocks_broken,updated_at FROM player_daily WHERE identity=?", (canonical,)
         ).fetchone()
         assert daily == (15, 5, 30)
+
+
+def test_player_sqlite_helpers_handle_invalid_timezone_and_empty_daily_values(
+    tmp_path: Path, monkeypatch
+) -> None:
+    _, player_repo, _ = _init(tmp_path)
+    monkeypatch.setenv("TZ", "invalid/timezone")
+
+    assert calendar_timezone().key == "UTC"
+
+    with player_repo._connect() as connection:
+        add_daily(connection, "name:nicole", 100, deaths=0, unknown=1)
+        assert connection.execute("SELECT COUNT(*) FROM player_daily").fetchone()[0] == 0
 
 
 def test_global_activity_is_filtered_paginated_and_sanitized(tmp_path: Path) -> None:

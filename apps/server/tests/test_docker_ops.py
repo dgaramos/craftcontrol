@@ -1,4 +1,4 @@
-"""Tests for DockerOperations (docker_ops.py)."""
+"""Tests for the server-owned DockerOperations adapter."""
 from __future__ import annotations
 
 import subprocess
@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from minecraft_manager.docker_ops import DockerOperations
+from minecraft_manager.server.docker import DockerOperations
 
 
 def _completed(returncode: int = 0, stdout: str = "", stderr: str = "") -> subprocess.CompletedProcess:

@@ -24,8 +24,6 @@ ROOT_MODULE_ALLOWLIST = frozenset(
         "__init__.py",  # Flask package bootstrap
         "cli.py",  # command-line entry point
         "composition.py",  # production composition root
-        "docker_ops.py",  # server migration tracked by #470
-        "host_agent.py",  # server migration tracked by #470
         "ports.py",  # shared structural contracts
         "reconciliation.py",  # runtime migration tracked by #471
         "repository.py",  # compatibility facade; retirement tracked by #472

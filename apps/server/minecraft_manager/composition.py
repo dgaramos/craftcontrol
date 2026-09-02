@@ -21,6 +21,7 @@ from .telemetry_repository import SQLiteTelemetryRepository
 from .server import WorldService
 from .reconciliation import ReconciliationService
 from .operations import ServerOperationService, SQLiteOperationRepository
+from .audit import SQLiteAuditRepository, AuditService
 
 
 def _docker_factory() -> object:
@@ -89,6 +90,8 @@ def compose_manager(
         health_timeout=settings.host_agent_health_timeout_seconds,
         restart_timeout=settings.host_agent_restart_timeout_seconds,
     )
+    audit_repo = SQLiteAuditRepository(settings.database)
+    audit = AuditService(audit_repo)
     manager = ManagerService(
         repository=repository,
         files=files,
@@ -101,6 +104,7 @@ def compose_manager(
         world_service=world,
         reconciliation_service=reconciliation,
         operation_service=operation_service,
+        audit_service=audit,
     )
     if runtime is None:
         runtime = EventRuntime(

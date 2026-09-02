@@ -145,3 +145,26 @@ class RuntimeApplication(Protocol):
     def refresh_gamerules_async(self, rules: set[str]) -> None: ...
     def refresh_permissions(self, publish: bool = True) -> None: ...
     def close_online_sessions(self, reason: str) -> list[str]: ...
+
+
+class AuditPort(Protocol):
+    """Durable store for sanitized audit records."""
+
+    def write(
+        self,
+        *,
+        actor: str | None,
+        action: str,
+        target: str | None,
+        result: str,
+        metadata: dict[str, Any],
+    ) -> None: ...
+
+    def query(
+        self,
+        *,
+        page: int,
+        page_size: int,
+        actor: str | None = ...,
+        action: str | None = ...,
+    ) -> dict[str, Any]: ...

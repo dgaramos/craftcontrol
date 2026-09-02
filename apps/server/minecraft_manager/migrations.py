@@ -158,6 +158,16 @@ def _migration_007_player_preferred_game_mode(connection: sqlite3.Connection) ->
         )
 
 
+def _migration_008_audit_log_indices(connection: sqlite3.Connection) -> None:
+    """Add performance indices on audit_log for occurred_at and actor queries (issue #265)."""
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_audit_log_occurred_at ON audit_log(occurred_at DESC)"
+    )
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_audit_log_actor ON audit_log(actor_identity, occurred_at DESC)"
+    )
+
+
 MIGRATIONS: Mapping[int, Migration] = {
     1: _migration_001_initial_schema,
     2: _migration_002_retain_telemetry_payloads,
@@ -166,6 +176,7 @@ MIGRATIONS: Mapping[int, Migration] = {
     5: _migration_005_server_operations,
     6: _migration_006_operation_parent_link,
     7: _migration_007_player_preferred_game_mode,
+    8: _migration_008_audit_log_indices,
 }
 LATEST_SCHEMA_VERSION = max(MIGRATIONS)
 

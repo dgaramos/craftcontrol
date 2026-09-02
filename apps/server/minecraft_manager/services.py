@@ -8,6 +8,7 @@ from .telemetry_service import TelemetryService
 from .server import WorldService
 from .reconciliation import ReconciliationService
 from .operations import ServerOperationService
+from .audit import AuditService
 from ._db import database_size_bytes, sqlite_diagnostics
 
 
@@ -33,6 +34,7 @@ class ManagerService:
         world_service: WorldService | None = None,
         reconciliation_service: ReconciliationService | None = None,
         operation_service: ServerOperationService | None = None,
+        audit_service: AuditService | None = None,
     ) -> None:
         self.repository = repository
         self.files = files
@@ -71,6 +73,8 @@ class ManagerService:
         self._reconciliation = reconciliation_service
         # operation_service is optional; None disables durable operation tracking.
         self.operation_service: ServerOperationService | None = operation_service
+        # audit_service is optional; None disables durable audit records.
+        self.audit_service: AuditService | None = audit_service
 
     def attach_runtime(self, runtime: RuntimeSupervisor) -> None:
         if self.runtime is not None:

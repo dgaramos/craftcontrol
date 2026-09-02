@@ -67,3 +67,13 @@ def test_newer_database_is_rejected(tmp_path: Path) -> None:
     with pytest.raises(RuntimeError, match="newer than supported"):
         run_migrations(connection)
     connection.close()
+
+
+def test_migration_008_adds_audit_log_indices(tmp_path: Path) -> None:
+    """Migration 008 must add performance indices on audit_log."""
+    connection = sqlite3.connect(tmp_path / "manager.db")
+    run_migrations(connection)
+    indices = {row[1] for row in connection.execute("SELECT type, name FROM sqlite_master WHERE type='index'")}
+    connection.close()
+    assert "idx_audit_log_occurred_at" in indices
+    assert "idx_audit_log_actor" in indices

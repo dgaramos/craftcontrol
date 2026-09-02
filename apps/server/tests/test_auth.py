@@ -8,7 +8,7 @@ from flask import Flask, jsonify
 from minecraft_manager.auth.http import auth_api, install_auth, require
 from minecraft_manager.auth.service import AuthService
 from minecraft_manager.players.repository import SQLitePlayerRepository
-from minecraft_manager.repository import StateRepository
+from minecraft_manager.core.repository import StateRepository
 
 
 @pytest.fixture

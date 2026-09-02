@@ -7,7 +7,7 @@ from pathlib import Path
 from minecraft_manager.core.sqlite import open_connection, sqlite_diagnostics
 from minecraft_manager.players.sqlite import add_daily, calendar_timezone, player_identity
 from minecraft_manager.players.repository import SQLitePlayerRepository
-from minecraft_manager.repository import StateRepository
+from minecraft_manager.core.repository import StateRepository
 from minecraft_manager.telemetry.repository import SQLiteTelemetryRepository
 
 

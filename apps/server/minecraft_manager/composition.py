@@ -11,10 +11,10 @@ from .core.config import Settings
 from .core.events import EventBroker
 from .server.files import ServerFiles
 from .ports import ContainerOperations, RuntimeSupervisor, ServerConsole
-from .repository import StateRepository
+from .core.repository import StateRepository
 from .runtime import EventRuntime
 from .core.schema import GAMERULES
-from .services import ManagerService
+from .runtime import ManagerService
 from .players import PlayerService, SQLitePlayerRepository
 from .telemetry.service import TelemetryService
 from .telemetry.repository import SQLiteTelemetryRepository

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from flask import current_app
 
-from ..services import ManagerService
+from ..runtime import ManagerService
 from ..telemetry.installer import TelemetryPackInstaller
 
 

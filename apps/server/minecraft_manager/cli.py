@@ -10,7 +10,7 @@ from .core.config import Settings
 from .server.console import BedrockClient
 from .operations.backup import BackupService, docker_container_running
 from .auth.service import AuthService
-from .repository import StateRepository
+from .core.repository import StateRepository
 from .telemetry.installer import TelemetryPackInstaller
 
 

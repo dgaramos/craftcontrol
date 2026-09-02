@@ -7,7 +7,7 @@ from .core.config import Settings
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .services import ManagerService
+    from .runtime import ManagerService
 
 
 def frontend_root(package_root: Path | None = None) -> Path:
@@ -22,7 +22,7 @@ def create_app(settings: Settings | None = None, service: ManagerService | None 
     from .composition import compose_manager
     from .auth.http import auth_api, install_auth
     from .auth.service import AuthService
-    from .routes import api
+    from .http import api
 
     settings = settings or Settings.from_env()
     service = service or compose_manager(settings)

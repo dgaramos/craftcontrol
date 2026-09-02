@@ -8,7 +8,7 @@ from flask import Flask
 from minecraft_manager import create_app
 from minecraft_manager.auth.http import auth_api
 from minecraft_manager.core.config import Settings
-from minecraft_manager.routes import api
+from minecraft_manager.http import api
 
 
 ROOT = Path(__file__).resolve().parents[3]

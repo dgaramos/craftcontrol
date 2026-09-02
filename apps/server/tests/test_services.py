@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from minecraft_manager.server.files import ServerFiles
-from minecraft_manager.services import ManagerService
+from minecraft_manager.runtime import ManagerService
 from conftest import make_manager_service as _make_service
 from fakes import FakeBedrock, FakeDocker, FakeRuntime
 
@@ -592,7 +592,7 @@ def test_missing_player_service_raises_type_error(tmp_path: Path) -> None:
     from minecraft_manager.core.events import EventBroker
     from minecraft_manager.server.files import ServerFiles
     from minecraft_manager.runtime import ReconciliationService
-    from minecraft_manager.repository import StateRepository
+    from minecraft_manager.core.repository import StateRepository
     from minecraft_manager.server import WorldService
     from minecraft_manager.telemetry.repository import SQLiteTelemetryRepository
     from minecraft_manager.telemetry.service import TelemetryService
@@ -620,7 +620,7 @@ def test_missing_telemetry_service_raises_type_error(tmp_path: Path) -> None:
     from minecraft_manager.core.events import EventBroker
     from minecraft_manager.server.files import ServerFiles
     from minecraft_manager.players import PlayerService, SQLitePlayerRepository
-    from minecraft_manager.repository import StateRepository
+    from minecraft_manager.core.repository import StateRepository
     from minecraft_manager.server import WorldService
     from fakes import FakeBedrock, FakeDocker
     db_path = tmp_path / "state.db"
@@ -646,7 +646,7 @@ def test_missing_world_service_raises_type_error(tmp_path: Path) -> None:
     from minecraft_manager.core.events import EventBroker
     from minecraft_manager.server.files import ServerFiles
     from minecraft_manager.players import PlayerService, SQLitePlayerRepository
-    from minecraft_manager.repository import StateRepository
+    from minecraft_manager.core.repository import StateRepository
     from minecraft_manager.telemetry.repository import SQLiteTelemetryRepository
     from minecraft_manager.telemetry.service import TelemetryService
     from fakes import FakeBedrock, FakeDocker
@@ -673,7 +673,7 @@ def test_missing_reconciliation_service_raises_type_error(tmp_path: Path) -> Non
     from minecraft_manager.core.events import EventBroker
     from minecraft_manager.server.files import ServerFiles
     from minecraft_manager.players import PlayerService, SQLitePlayerRepository
-    from minecraft_manager.repository import StateRepository
+    from minecraft_manager.core.repository import StateRepository
     from minecraft_manager.server import WorldService
     from minecraft_manager.telemetry.repository import SQLiteTelemetryRepository
     from minecraft_manager.telemetry.service import TelemetryService
@@ -796,9 +796,9 @@ def _make_service_with_fakes(
     """Build a ManagerService with injected fakes instead of real services."""
     from minecraft_manager.core.events import EventBroker
     from minecraft_manager.server.files import ServerFiles
-    from minecraft_manager.repository import StateRepository
+    from minecraft_manager.core.repository import StateRepository
     from minecraft_manager.server import WorldService
-    from minecraft_manager.services import ManagerService
+    from minecraft_manager.runtime import ManagerService
     from minecraft_manager.telemetry.repository import SQLiteTelemetryRepository
     from minecraft_manager.telemetry.service import TelemetryService
     from fakes import FakeBedrock, FakeDocker
@@ -904,7 +904,7 @@ def _make_service_with_operation_service(tmp_path: Path) -> "ManagerService":
     from conftest import make_manager_service
     from minecraft_manager.operations.repository import SQLiteOperationRepository
     from minecraft_manager.operations.service import ServerOperationService
-    from minecraft_manager.repository import StateRepository
+    from minecraft_manager.core.repository import StateRepository
 
     class InlineThread:
         def __init__(self, *, target, args, **_kwargs) -> None:

@@ -5,10 +5,10 @@ from typing import Any
 import pytest
 from flask import Flask
 
-from minecraft_manager import create_app
-from minecraft_manager.core.config import Settings
-from minecraft_manager.http.docs import contract_root
-from minecraft_manager.http import api
+from controlplane import create_app
+from controlplane.core.config import Settings
+from controlplane.http.docs import contract_root
+from controlplane.http import api
 from packages.contracts.generate_types import OUTPUT_PATH, generate
 
 
@@ -138,8 +138,8 @@ def test_operation_ids_are_unique_and_mutations_declare_csrf(openapi_specs) -> N
 
 
 def test_contract_paths_resolve_in_source_and_packaged_layouts() -> None:
-    assert contract_root(ROOT / "apps" / "server" / "minecraft_manager") == ROOT / "packages" / "contracts"
-    assert contract_root(Path("/app/minecraft_manager")) == Path("/app/packages/contracts")
+    assert contract_root(ROOT / "apps" / "server" / "controlplane") == ROOT / "packages" / "contracts"
+    assert contract_root(Path("/app/controlplane")) == Path("/app/packages/contracts")
 
 
 def test_generated_frontend_types_match_openapi_schemas(openapi_specs) -> None:

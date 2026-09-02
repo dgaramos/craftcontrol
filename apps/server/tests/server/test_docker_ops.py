@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from minecraft_manager.server.docker import DockerOperations
+from controlplane.server.docker import DockerOperations
 
 
 def _completed(returncode: int = 0, stdout: str = "", stderr: str = "") -> subprocess.CompletedProcess:

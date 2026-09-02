@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from minecraft_manager.operations.backup import BackupService
+from controlplane.operations.backup import BackupService
 from fakes import FakeConsole
 
 
@@ -58,7 +58,7 @@ def test_creates_verifiable_coordinated_backup_and_resumes_saves(backup_env) -> 
 
 def test_backup_sqlite_paths_are_opened_through_the_injected_factory(backup_env) -> None:
     """Backup creation measures every SQLite connection it opens."""
-    from minecraft_manager.core.sqlite import sqlite_diagnostics
+    from controlplane.core.sqlite import sqlite_diagnostics
 
     env = backup_env
     opened: list[Path] = []
@@ -86,7 +86,7 @@ def test_backup_sqlite_paths_are_opened_through_the_injected_factory(backup_env)
 
 def test_backup_records_locked_database_failures(backup_env) -> None:
     """A locked backup verification connection contributes to diagnostics."""
-    from minecraft_manager.core.sqlite import sqlite_diagnostics
+    from controlplane.core.sqlite import sqlite_diagnostics
 
     env = backup_env
     identifier = str(env["service"].create()["id"])
@@ -112,7 +112,7 @@ def test_backup_records_locked_database_failures(backup_env) -> None:
 
 def test_backup_records_locked_database_operation_failures(backup_env) -> None:
     """A lock raised after connection setup is counted and closes the connection."""
-    from minecraft_manager.core.sqlite import sqlite_diagnostics
+    from controlplane.core.sqlite import sqlite_diagnostics
 
     env = backup_env
     identifier = str(env["service"].create()["id"])
@@ -304,7 +304,7 @@ def test_docker_container_running_returns_false_when_docker_unavailable(
 ) -> None:
     """docker_container_running returns False when docker binary is not found."""
     import subprocess
-    import minecraft_manager.operations.backup as backup_mod
+    import controlplane.operations.backup as backup_mod
 
     def _raise(*args, **kwargs):
         raise FileNotFoundError("docker: command not found")

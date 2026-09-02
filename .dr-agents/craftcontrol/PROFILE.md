@@ -162,7 +162,7 @@ manifests `inline_comments_json`, `replies_json`, and `resolve_thread_ids_json`.
 `REQUEST_CHANGES` — approval is a human decision. Every finding whose evidence
 line is within the diff must be delivered via `inline_comments_json`, not
 embedded as body text in the top-level review comment. Informational observations must be labelled non-actionable and must not appear in the merge-risk justification or approval rationale. Auth/CSRF claims must be grounded in
-`apps/server/minecraft_manager/auth/` before inclusion in any finding.
+`apps/server/controlplane/auth/` before inclusion in any finding.
 
 Dispatch `publish-cody-issue.yml` or `publish-claudio-issue.yml` with `title`,
 `body`, labels, assignees, and `milestone_number`.

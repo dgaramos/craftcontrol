@@ -23,7 +23,7 @@ from unittest.mock import MagicMock
 import pytest
 from flask import Blueprint, Flask, jsonify
 
-from minecraft_manager.auth.http import require
+from controlplane.auth.http import require
 from conftest import make_auth_mock, wire_auth
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -128,16 +128,16 @@ class TestProfileReviewEventRules:
 
     def test_profile_requires_auth_claims_to_be_grounded_in_real_rules(self) -> None:
         text = PROFILE.read_text()
-        # minecraft_manager/auth/ path and grounding requirement must appear
+        # controlplane/auth/ path and grounding requirement must appear
         # together in one coherent rule clause.
         pattern = (
-            r"minecraft_manager/auth/[^.]*?"
+            r"controlplane/auth/[^.]*?"
             r"(?:grounded|real auth rules|actual auth)"
-            r"|(?:grounded|real auth rules|actual auth)[^.]*?minecraft_manager/auth/"
+            r"|(?:grounded|real auth rules|actual auth)[^.]*?controlplane/auth/"
         )
         assert re.search(pattern, text, re.DOTALL), (
             "PROFILE.md must contain a coherent rule clause that cites "
-            "minecraft_manager/auth/ as the real auth rules location AND requires "
+            "controlplane/auth/ as the real auth rules location AND requires "
             "auth/CSRF claims to be grounded there before inclusion in any finding."
         )
 

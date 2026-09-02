@@ -4,10 +4,10 @@ from pathlib import Path
 
 import pytest
 
-from minecraft_manager.players.repository import SQLitePlayerRepository
-from minecraft_manager.telemetry.telemetry import parse_telemetry_line
-from minecraft_manager.telemetry.repository import SQLiteTelemetryRepository
-from minecraft_manager.core.sqlite import sqlite_diagnostics
+from controlplane.players.repository import SQLitePlayerRepository
+from controlplane.telemetry.telemetry import parse_telemetry_line
+from controlplane.telemetry.repository import SQLiteTelemetryRepository
+from controlplane.core.sqlite import sqlite_diagnostics
 from factories import telemetry_envelope
 
 

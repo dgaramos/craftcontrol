@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from minecraft_manager.players.repository import SQLitePlayerRepository
+from controlplane.players.repository import SQLitePlayerRepository
 
 
 def test_observe_player_creates_profile(player_repo: SQLitePlayerRepository) -> None:

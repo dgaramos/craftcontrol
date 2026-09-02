@@ -30,7 +30,7 @@ CraftControl is not a strict textbook Clean Architecture implementation. It appl
 
 ```mermaid
 flowchart TD
-    manager["apps/server/minecraft_manager/"] --> core["core/ — configuration, database, events, validation"]
+    manager["apps/server/controlplane/"] --> core["core/ — configuration, database, events, validation"]
     manager --> server["server/ — settings, gamerules, world and lifecycle use cases"]
     manager --> players["players/ — profiles, sessions, history and permissions"]
     manager --> telemetry["telemetry/ — protocol, reconciliation, persistence and installation"]

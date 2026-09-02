@@ -2,11 +2,11 @@ from pathlib import Path
 
 import pytest
 
-from minecraft_manager import frontend_root
-from minecraft_manager.core.events import EventBroker
-from minecraft_manager.server.files import ServerFiles
-from minecraft_manager.players import PlayerService, SQLitePlayerRepository
-from minecraft_manager.core.repository import StateRepository
+from controlplane import frontend_root
+from controlplane.core.events import EventBroker
+from controlplane.server.files import ServerFiles
+from controlplane.players import PlayerService, SQLitePlayerRepository
+from controlplane.core.repository import StateRepository
 
 
 class FakeConsole:
@@ -39,16 +39,17 @@ def _unexpected_root_python_modules(package: Path) -> set[str]:
 
 
 def test_frontend_path_resolves_in_source_and_packaged_image_layouts() -> None:
-    assert frontend_root(ROOT / "apps" / "server" / "minecraft_manager") == ROOT / "apps" / "client"
-    assert frontend_root(Path("/app/minecraft_manager")) == Path("/app/apps/client")
+    assert frontend_root(ROOT / "apps" / "server" / "controlplane") == ROOT / "apps" / "client"
+    assert frontend_root(Path("/app/controlplane")) == Path("/app/apps/client")
 
 
 def test_frontend_and_backend_have_explicit_application_boundaries() -> None:
     assert (ROOT / "apps" / "client" / "static" / "app.js").is_file()
-    assert (ROOT / "apps" / "server" / "minecraft_manager" / "composition.py").is_file()
-    assert (ROOT / "minecraft_manager").resolve() == (ROOT / "apps" / "server" / "minecraft_manager").resolve()
+    assert (ROOT / "apps" / "server" / "controlplane" / "composition.py").is_file()
+    assert not (ROOT / "minecraft_manager").exists()
+    assert not (ROOT / "controlplane").exists()
     compose = (ROOT / "docker-compose.yml").read_text()
-    assert "./apps/server/minecraft_manager:/app/minecraft_manager:ro" in compose
+    assert "./apps/server/controlplane:/app/controlplane:ro" in compose
 
 
 def test_player_use_cases_accept_injected_boundary_adapters(tmp_path: Path) -> None:
@@ -79,7 +80,7 @@ def test_architecture_document_defines_composition_and_dependency_direction() ->
 
 
 def test_telemetry_compatibility_shims_are_retired() -> None:
-    package = ROOT / "apps" / "server" / "minecraft_manager"
+    package = ROOT / "apps" / "server" / "controlplane"
     retired = (
         "bedrock.py",
         "config.py",
@@ -99,7 +100,7 @@ def test_telemetry_compatibility_shims_are_retired() -> None:
 
 
 def test_backend_package_root_rejects_unapproved_python_modules() -> None:
-    package = ROOT / "apps" / "server" / "minecraft_manager"
+    package = ROOT / "apps" / "server" / "controlplane"
 
     assert _unexpected_root_python_modules(package) == set()
 

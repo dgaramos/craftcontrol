@@ -23,7 +23,7 @@ world data into the profile or review output.
 - Keep CraftControl a modular monolith: organize by domain, retain layered use cases inside modules, and use ports/adapters only at meaningful persistence and infrastructure boundaries.
 - Inject dependencies through constructors and assemble production implementations in the composition root. Use `typing.Protocol` for replaceable boundaries; do not add a DI framework, service locator, or redundant interface for every concrete service.
 - Runtime supervisors must call application-facing ports and must never reach through a service to its repository or adapter.
-- Keep HTTP mapping in `apps/backend/minecraft_manager/routes.py`, orchestration in `services.py`, event ingestion in `runtime.py`, persistence in `repository.py`, and Bedrock/Docker/filesystem concerns in their adapters.
+- Keep HTTP mapping in `apps/server/controlplane/http/`, orchestration in `services.py`, event ingestion in `runtime.py`, persistence in `repository.py`, and Bedrock/Docker/filesystem concerns in their adapters.
 - Preserve the internal event broker, persisted operational events, SSE browser updates, targeted refreshes, and periodic full reconciliation.
 - Keep one Gunicorn worker unless the process-local broker and runtime supervisors are redesigned for multiple workers.
 - Do not add browser polling when an event-driven invalidation and targeted reconciliation is sufficient.
@@ -36,7 +36,7 @@ The legacy file locations in the preceding rule are compatibility facades during
 
 ### Backend module placement
 
-New backend implementation modules must not be created in the `minecraft_manager` package root. Put code in its owning module: shared configuration, SQLite support, migrations, event primitives, and validation in `core/`; Bedrock, Docker, Host Agent, and server-file adapters in `server/`; player behavior in `players/`; telemetry protocol, persistence, and installation in `telemetry/`; backup and operational workflows in `operations/`; supervisors and reconciliation in `runtime/`; request mapping in `http/`; authentication in `auth/`; and durable security records in `audit/`.
+New backend implementation modules must not be created in the `controlplane` package root. Put code in its owning module: shared configuration, SQLite support, migrations, event primitives, and validation in `core/`; Bedrock, Docker, Host Agent, and server-file adapters in `server/`; player behavior in `players/`; telemetry protocol, persistence, and installation in `telemetry/`; backup and operational workflows in `operations/`; supervisors and reconciliation in `runtime/`; request mapping in `http/`; authentication in `auth/`; and durable security records in `audit/`.
 
 The package root is reserved for package bootstrap, the production composition root, CLI entry points, version metadata, and genuinely cross-domain structural contracts. Compatibility facades may preserve an existing import path only; new behavior belongs in the owning module. Do not create a new root module or add canonical behavior to a facade merely for convenience. The architecture test contains the explicit temporary allowlist for files awaiting the migration issues; update it only when a reviewed architecture decision changes that allowlist.
 
@@ -80,7 +80,7 @@ Update tests and the English `README.md` whenever public behavior, persistence, 
 ## Testing conventions
 
 **Test file placement.** Backend tests live under `apps/server/tests/` mirroring
-the `minecraft_manager/` submodule structure:
+the `controlplane/` submodule structure:
 
 | Production module | Test subdirectory |
 |---|---|

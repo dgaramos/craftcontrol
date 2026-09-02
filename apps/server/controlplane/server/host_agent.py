@@ -19,7 +19,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any, Protocol
 
-from minecraft_manager.core.schema import PROPERTY_NAMES
+from controlplane.core.schema import PROPERTY_NAMES
 
 LOGGER = logging.getLogger(__name__)
 

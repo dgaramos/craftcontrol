@@ -26,20 +26,20 @@ if _HOST_AGENT_DIR not in sys.path:
 import pytest
 from flask import Flask
 
-from minecraft_manager.auth.http import install_auth
-from minecraft_manager.auth.service import AuthService
-from minecraft_manager.core.events import EventBroker
-from minecraft_manager.core.migrations import run_migrations
-from minecraft_manager.server.files import ServerFiles
-from minecraft_manager.players import PlayerService, SQLitePlayerRepository
-from minecraft_manager.runtime import ReconciliationService
-from minecraft_manager.core.repository import StateRepository
-from minecraft_manager.server import WorldService
-from minecraft_manager.runtime import ManagerService
-from minecraft_manager.operations.repository import SQLiteOperationRepository
-from minecraft_manager.operations.service import ServerOperationService
-from minecraft_manager.telemetry.repository import SQLiteTelemetryRepository
-from minecraft_manager.telemetry.service import TelemetryService
+from controlplane.auth.http import install_auth
+from controlplane.auth.service import AuthService
+from controlplane.core.events import EventBroker
+from controlplane.core.migrations import run_migrations
+from controlplane.server.files import ServerFiles
+from controlplane.players import PlayerService, SQLitePlayerRepository
+from controlplane.runtime import ReconciliationService
+from controlplane.core.repository import StateRepository
+from controlplane.server import WorldService
+from controlplane.runtime import ManagerService
+from controlplane.operations.repository import SQLiteOperationRepository
+from controlplane.operations.service import ServerOperationService
+from controlplane.telemetry.repository import SQLiteTelemetryRepository
+from controlplane.telemetry.service import TelemetryService
 from fakes import FakeBedrock, FakeConsole, FakeDocker, FakeRuntime  # noqa: E402
 
 __all__ = ["FakeBedrock", "FakeConsole", "FakeDocker", "FakeRuntime"]

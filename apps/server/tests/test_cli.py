@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from minecraft_manager.cli import CliDependencies
+from controlplane.cli import CliDependencies
 
 
 class _FakeRepository:
@@ -18,7 +18,7 @@ class _FakeRepository:
 
 @pytest.fixture
 def cli_parser():
-    from minecraft_manager.cli import parser
+    from controlplane.cli import parser
     return parser()
 
 
@@ -128,7 +128,7 @@ def test_auth_bootstrap_prints_json(tmp_path: Path, capsys) -> None:
         auth_service_factory=lambda settings: fake_auth,
     )
 
-    from minecraft_manager.cli import main
+    from controlplane.cli import main
     rc = main(["auth", "bootstrap", "--player", "Steve"], settings=settings, deps=deps)
 
     assert rc == 0
@@ -147,7 +147,7 @@ def test_auth_invite_prints_json(tmp_path: Path, capsys) -> None:
         auth_service_factory=lambda settings: fake_auth,
     )
 
-    from minecraft_manager.cli import main
+    from controlplane.cli import main
     rc = main(["auth", "invite", "Alex", "--role", "operator"], settings=settings, deps=deps)
 
     assert rc == 0
@@ -165,7 +165,7 @@ def test_auth_recover_prints_json(tmp_path: Path, capsys) -> None:
         auth_service_factory=lambda settings: fake_auth,
     )
 
-    from minecraft_manager.cli import main
+    from controlplane.cli import main
     rc = main(["auth", "recover", "Steve"], settings=settings, deps=deps)
 
     assert rc == 0
@@ -181,7 +181,7 @@ def test_auth_bootstrap_no_player_raises(tmp_path: Path) -> None:
         auth_service_factory=lambda settings: MagicMock(),
     )
 
-    from minecraft_manager.cli import main
+    from controlplane.cli import main
     with pytest.raises(SystemExit):
         main(["auth", "bootstrap"], settings=settings, deps=deps)
 
@@ -202,7 +202,7 @@ def test_backup_list_prints_json(tmp_path: Path, capsys) -> None:
     fake_backup.list.return_value = []
     deps = CliDependencies(backup_service_factory=lambda settings: fake_backup)
 
-    from minecraft_manager.cli import main
+    from controlplane.cli import main
     rc = main(["backup", "list"], settings=settings, deps=deps)
 
     assert rc == 0
@@ -220,7 +220,7 @@ def test_backup_restore_without_yes_raises(tmp_path: Path) -> None:
     )
     deps = CliDependencies(backup_service_factory=lambda settings: MagicMock())
 
-    from minecraft_manager.cli import main
+    from controlplane.cli import main
     with pytest.raises(SystemExit):
         main(["backup", "restore", "bak1"], settings=settings, deps=deps)
 
@@ -237,7 +237,7 @@ def test_telemetry_status_prints_json(tmp_path: Path, capsys) -> None:
     fake_installer.status.return_value = fake_status
     deps = CliDependencies(installer_factory=lambda settings, project: fake_installer)
 
-    from minecraft_manager.cli import main
+    from controlplane.cli import main
     rc = main(["telemetry", "status"], settings=settings, deps=deps)
 
     assert rc == 0
@@ -249,7 +249,7 @@ def test_telemetry_remove_without_yes_raises(tmp_path: Path) -> None:
     settings = SimpleNamespace(project=tmp_path)
     deps = CliDependencies(installer_factory=lambda settings, project: MagicMock())
 
-    from minecraft_manager.cli import main
+    from controlplane.cli import main
     with pytest.raises(SystemExit):
         main(["telemetry", "remove"], settings=settings, deps=deps)
 
@@ -258,7 +258,7 @@ def test_telemetry_rollback_without_yes_raises(tmp_path: Path) -> None:
     settings = SimpleNamespace(project=tmp_path)
     deps = CliDependencies(installer_factory=lambda settings, project: MagicMock())
 
-    from minecraft_manager.cli import main
+    from controlplane.cli import main
     with pytest.raises(SystemExit):
         main(["telemetry", "rollback"], settings=settings, deps=deps)
 
@@ -269,7 +269,7 @@ def test_telemetry_install_prints_json(tmp_path: Path, capsys) -> None:
     fake_installer.install.return_value = {"changed": True}
     deps = CliDependencies(installer_factory=lambda settings, project: fake_installer)
 
-    from minecraft_manager.cli import main
+    from controlplane.cli import main
     rc = main(["telemetry", "install"], settings=settings, deps=deps)
 
     assert rc == 0
@@ -283,7 +283,7 @@ def test_telemetry_disable_prints_json(tmp_path: Path, capsys) -> None:
     fake_installer.disable.return_value = {"changed": False, "action": "disable"}
     deps = CliDependencies(installer_factory=lambda settings, project: fake_installer)
 
-    from minecraft_manager.cli import main
+    from controlplane.cli import main
     rc = main(["telemetry", "disable"], settings=settings, deps=deps)
 
     assert rc == 0

@@ -30,7 +30,7 @@ services:
       - ./data:/data
       - ./apps/server/app.py:/app/app.py:ro
       - ./apps/server/wsgi.py:/app/wsgi.py:ro
-      - ./apps/server/minecraft_manager:/app/minecraft_manager:ro
+      - ./apps/server/controlplane:/app/controlplane:ro
       - ./apps/client/static:/app/apps/client/static:ro
       - ./apps/client/templates:/app/apps/client/templates:ro
       - ./packs:/app/packs:ro

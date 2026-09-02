@@ -73,7 +73,7 @@ backup_id="$(python -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<<"
 compose exec -T craftcontrol craftcontrol backup verify "$backup_id" >/dev/null
 
 git -C "$SOURCE_ROOT" ls-files -z \
-  | rsync -a --from0 --exclude=/minecraft_manager --exclude=/requirements.txt \
+  | rsync -a --from0 --exclude=/controlplane --exclude=/requirements.txt \
       --files-from=- "$SOURCE_ROOT/" "$DEPLOY_ROOT/"
 
 [[ "$(sha256sum "$ENV_FILE" | awk '{print $1}')" == "$before_env" ]] \

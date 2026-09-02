@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from minecraft_manager.server.files import ServerFiles
-from minecraft_manager.runtime import ManagerService
+from controlplane.server.files import ServerFiles
+from controlplane.runtime import ManagerService
 from conftest import make_manager_service as _make_service
 from factories import telemetry_envelope
 from fakes import FakeBedrock, FakeDocker, FakeRuntime
@@ -366,7 +366,7 @@ def test_save_settings_rejects_unknown_keys(manager_service: ManagerService) -> 
 # ---------------------------------------------------------------------------
 
 def test_set_known_gamerule_sends_command(manager_service: ManagerService, fake_bedrock: FakeBedrock) -> None:
-    from minecraft_manager.core.schema import GAMERULES
+    from controlplane.core.schema import GAMERULES
     rule = next(iter(GAMERULES))
     schema = GAMERULES[rule]
     value = schema.get("default", "false")
@@ -519,13 +519,13 @@ def test_close_online_sessions_returns_list(manager_service: ManagerService) -> 
 # ---------------------------------------------------------------------------
 
 def test_missing_player_service_raises_type_error(tmp_path: Path) -> None:
-    from minecraft_manager.core.events import EventBroker
-    from minecraft_manager.server.files import ServerFiles
-    from minecraft_manager.runtime import ReconciliationService
-    from minecraft_manager.core.repository import StateRepository
-    from minecraft_manager.server import WorldService
-    from minecraft_manager.telemetry.repository import SQLiteTelemetryRepository
-    from minecraft_manager.telemetry.service import TelemetryService
+    from controlplane.core.events import EventBroker
+    from controlplane.server.files import ServerFiles
+    from controlplane.runtime import ReconciliationService
+    from controlplane.core.repository import StateRepository
+    from controlplane.server import WorldService
+    from controlplane.telemetry.repository import SQLiteTelemetryRepository
+    from controlplane.telemetry.service import TelemetryService
     from fakes import FakeBedrock, FakeDocker
     db_path = tmp_path / "state.db"
     repo = StateRepository(db_path)
@@ -547,11 +547,11 @@ def test_missing_player_service_raises_type_error(tmp_path: Path) -> None:
 
 
 def test_missing_telemetry_service_raises_type_error(tmp_path: Path) -> None:
-    from minecraft_manager.core.events import EventBroker
-    from minecraft_manager.server.files import ServerFiles
-    from minecraft_manager.players import PlayerService, SQLitePlayerRepository
-    from minecraft_manager.core.repository import StateRepository
-    from minecraft_manager.server import WorldService
+    from controlplane.core.events import EventBroker
+    from controlplane.server.files import ServerFiles
+    from controlplane.players import PlayerService, SQLitePlayerRepository
+    from controlplane.core.repository import StateRepository
+    from controlplane.server import WorldService
     from fakes import FakeBedrock, FakeDocker
     db_path = tmp_path / "state.db"
     repo = StateRepository(db_path)
@@ -573,12 +573,12 @@ def test_missing_telemetry_service_raises_type_error(tmp_path: Path) -> None:
 
 
 def test_missing_world_service_raises_type_error(tmp_path: Path) -> None:
-    from minecraft_manager.core.events import EventBroker
-    from minecraft_manager.server.files import ServerFiles
-    from minecraft_manager.players import PlayerService, SQLitePlayerRepository
-    from minecraft_manager.core.repository import StateRepository
-    from minecraft_manager.telemetry.repository import SQLiteTelemetryRepository
-    from minecraft_manager.telemetry.service import TelemetryService
+    from controlplane.core.events import EventBroker
+    from controlplane.server.files import ServerFiles
+    from controlplane.players import PlayerService, SQLitePlayerRepository
+    from controlplane.core.repository import StateRepository
+    from controlplane.telemetry.repository import SQLiteTelemetryRepository
+    from controlplane.telemetry.service import TelemetryService
     from fakes import FakeBedrock, FakeDocker
     db_path = tmp_path / "state.db"
     repo = StateRepository(db_path)
@@ -600,13 +600,13 @@ def test_missing_world_service_raises_type_error(tmp_path: Path) -> None:
 
 
 def test_missing_reconciliation_service_raises_type_error(tmp_path: Path) -> None:
-    from minecraft_manager.core.events import EventBroker
-    from minecraft_manager.server.files import ServerFiles
-    from minecraft_manager.players import PlayerService, SQLitePlayerRepository
-    from minecraft_manager.core.repository import StateRepository
-    from minecraft_manager.server import WorldService
-    from minecraft_manager.telemetry.repository import SQLiteTelemetryRepository
-    from minecraft_manager.telemetry.service import TelemetryService
+    from controlplane.core.events import EventBroker
+    from controlplane.server.files import ServerFiles
+    from controlplane.players import PlayerService, SQLitePlayerRepository
+    from controlplane.core.repository import StateRepository
+    from controlplane.server import WorldService
+    from controlplane.telemetry.repository import SQLiteTelemetryRepository
+    from controlplane.telemetry.service import TelemetryService
     from fakes import FakeBedrock, FakeDocker
     db_path = tmp_path / "state.db"
     repo = StateRepository(db_path)
@@ -724,13 +724,13 @@ def _make_service_with_fakes(
     player_service: _FakePlayerService | None = None,
 ) -> "ManagerService":
     """Build a ManagerService with injected fakes instead of real services."""
-    from minecraft_manager.core.events import EventBroker
-    from minecraft_manager.server.files import ServerFiles
-    from minecraft_manager.core.repository import StateRepository
-    from minecraft_manager.server import WorldService
-    from minecraft_manager.runtime import ManagerService
-    from minecraft_manager.telemetry.repository import SQLiteTelemetryRepository
-    from minecraft_manager.telemetry.service import TelemetryService
+    from controlplane.core.events import EventBroker
+    from controlplane.server.files import ServerFiles
+    from controlplane.core.repository import StateRepository
+    from controlplane.server import WorldService
+    from controlplane.runtime import ManagerService
+    from controlplane.telemetry.repository import SQLiteTelemetryRepository
+    from controlplane.telemetry.service import TelemetryService
     from fakes import FakeBedrock, FakeDocker
 
     db_path = tmp_path / "state.db"
@@ -832,9 +832,9 @@ def _make_service_with_operation_service(tmp_path: Path) -> "ManagerService":
     and the schema is idempotent.
     """
     from conftest import make_manager_service
-    from minecraft_manager.operations.repository import SQLiteOperationRepository
-    from minecraft_manager.operations.service import ServerOperationService
-    from minecraft_manager.core.repository import StateRepository
+    from controlplane.operations.repository import SQLiteOperationRepository
+    from controlplane.operations.service import ServerOperationService
+    from controlplane.core.repository import StateRepository
 
     class InlineThread:
         def __init__(self, *, target, args, **_kwargs) -> None:
@@ -879,9 +879,9 @@ def test_save_settings_routes_through_operation_service_and_returns_operation_id
 
 
 def test_save_settings_raises_conflicting_operation_on_concurrent_request(tmp_path: Path) -> None:
-    from minecraft_manager.operations.service import ConflictingOperationError
-    from minecraft_manager.operations.lifecycle import ServerOperation
-    from minecraft_manager.operations.repository import SQLiteOperationRepository
+    from controlplane.operations.service import ConflictingOperationError
+    from controlplane.operations.lifecycle import ServerOperation
+    from controlplane.operations.repository import SQLiteOperationRepository
     service = _make_service_with_operation_service(tmp_path)
     # Persist a non-terminal (PENDING) operation in the real repository so that
     # get_active returns it and save_settings raises ConflictingOperationError.

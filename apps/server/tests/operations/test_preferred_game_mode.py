@@ -6,10 +6,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from minecraft_manager.players.repository import SQLitePlayerRepository
-from minecraft_manager.players.service import PlayerService
-from minecraft_manager.core.migrations import run_migrations
-from minecraft_manager.runtime import ManagerService
+from controlplane.players.repository import SQLitePlayerRepository
+from controlplane.players.service import PlayerService
+from controlplane.core.migrations import run_migrations
+from controlplane.runtime import ManagerService
 
 import sqlite3
 

@@ -2,7 +2,7 @@ from flask import Flask
 
 import pytest
 
-from minecraft_manager.http.analytics import analytics_api
+from controlplane.http.analytics import analytics_api
 
 
 class FakeAnalyticsManager:

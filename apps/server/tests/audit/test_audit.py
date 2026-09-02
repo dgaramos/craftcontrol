@@ -10,9 +10,9 @@ from pathlib import Path
 
 import pytest
 
-from minecraft_manager.audit.model import AuditRecord
-from minecraft_manager.audit.repository import SQLiteAuditRepository
-from minecraft_manager.audit.service import AuditService
+from controlplane.audit.model import AuditRecord
+from controlplane.audit.repository import SQLiteAuditRepository
+from controlplane.audit.service import AuditService
 from conftest import make_operation_db
 
 

@@ -56,7 +56,7 @@ coverage:
 flags:
   backend:
     paths:
-      - apps/server/minecraft_manager/
+      - apps/server/controlplane/
   frontend:
     paths:
       - apps/client/static/js/
@@ -75,35 +75,35 @@ component_management:
     - component_id: backend_auth
       name: "backend: auth"
       paths:
-        - apps/server/minecraft_manager/auth/
+        - apps/server/controlplane/auth/
     - component_id: backend_core
       name: "backend: core"
       paths:
-        - apps/server/minecraft_manager/core/
+        - apps/server/controlplane/core/
     - component_id: backend_http
       name: "backend: http"
       paths:
-        - apps/server/minecraft_manager/http/
+        - apps/server/controlplane/http/
     - component_id: backend_operations
       name: "backend: operations"
       paths:
-        - apps/server/minecraft_manager/operations/
+        - apps/server/controlplane/operations/
     - component_id: backend_players
       name: "backend: players"
       paths:
-        - apps/server/minecraft_manager/players/
+        - apps/server/controlplane/players/
     - component_id: backend_runtime
       name: "backend: runtime"
       paths:
-        - apps/server/minecraft_manager/runtime/
+        - apps/server/controlplane/runtime/
     - component_id: backend_server
       name: "backend: server"
       paths:
-        - apps/server/minecraft_manager/server/
+        - apps/server/controlplane/server/
     - component_id: backend_telemetry
       name: "backend: telemetry"
       paths:
-        - apps/server/minecraft_manager/telemetry/
+        - apps/server/controlplane/telemetry/
     - component_id: frontend_components
       name: "frontend: components"
       paths:

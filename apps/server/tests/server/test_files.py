@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from minecraft_manager.server.files import ServerFiles
+from controlplane.server.files import ServerFiles
 
 
 def test_updates_env_without_losing_comments_or_unrelated_values(tmp_path: Path) -> None:

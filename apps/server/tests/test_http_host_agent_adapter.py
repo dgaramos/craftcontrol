@@ -732,3 +732,63 @@ class TestIntendedStateKeyTranslation:
             agent_field = property_name.replace("-", "_")
             assert _translate_intended_state({schema_field: "value"}) == {agent_field: "value"}
             assert agent_field_map[agent_field] == property_name
+
+
+# ---------------------------------------------------------------------------
+# Non-object JSON body handling (#482)
+# ---------------------------------------------------------------------------
+
+class TestNonObjectJsonBody:
+    """Non-dict JSON bodies (arrays, scalars, null) must never crash the adapter.
+
+    The host agent may return a valid JSON response whose body parses to a
+    non-dict value (e.g. ``null``, ``[]``, ``"string"``).  Calling ``.get()``
+    on those values raises AttributeError, which would surface as an unhandled
+    exception.  The adapter must treat any non-dict body as an empty object
+    and handle it gracefully.
+    """
+
+    def test_status_non_dict_body_returns_offline(self) -> None:
+        """status() with a non-dict body (e.g. null) must return offline without error."""
+        client = _make_client([(200, None)])  # type: ignore[list-item]
+        result = _adapter(client).status()
+        assert result["online"] is False
+        assert result["state"] == "stopped"
+
+    def test_execute_400_non_dict_body_raises_with_generic_message(self) -> None:
+        """execute() 400 response with non-dict body must raise RuntimeError with generic message."""
+        client = _make_client([
+            (400, None),  # type: ignore[list-item]
+        ])
+        adapter = _adapter(client)
+        with pytest.raises(RuntimeError, match="bad request"):
+            _execute(adapter)
+
+    def test_poll_until_done_non_dict_body_triggers_recovery(self) -> None:
+        """_poll_until_done with non-dict body on 200 must enter recovery, not crash."""
+        # POST /v1/execute → 202 accepted
+        # GET /v1/status   → 200 with non-dict body (triggers recovery path)
+        # Recovery GET     → 200 {"status": "done", "outcome": "ok"} (terminal)
+        client = _make_client([
+            (202, {"operation_id": OP_ID}),
+            (200, None),  # type: ignore[list-item]  — non-dict: recovery triggered
+            (200, {"status": "done", "outcome": "ok", "executor_ref": "ref-1"}),
+        ])
+        _execute(_adapter(client))  # must not raise
+
+    def test_poll_with_recovery_non_dict_body_re_enters_loop(self) -> None:
+        """_poll_with_recovery with non-dict body returns True (still running)."""
+        # POST → 202, first status → non-dict (recovery), recovery → running, then done
+        client = _make_client([
+            (202, {"operation_id": OP_ID}),
+            (200, None),  # type: ignore[list-item]  — poll_until_done: non-dict triggers recovery
+            (200, {"status": "running"}),              # recovery: still running → return True
+            (200, {"status": "done", "outcome": "ok", "executor_ref": "ref-2"}),  # poll resumes
+        ])
+        _execute(_adapter(client))  # must not raise
+
+    def test_handle_terminal_result_non_dict_body_raises_on_error_outcome(self) -> None:
+        """_handle_terminal_result with non-dict body treats outcome as None → raises RuntimeError."""
+        from minecraft_manager.server.host_agent import HostAgentContainerOperations
+        with pytest.raises(RuntimeError):
+            HostAgentContainerOperations._handle_terminal_result(OP_ID, None)  # type: ignore[arg-type]

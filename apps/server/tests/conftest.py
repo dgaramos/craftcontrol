@@ -262,6 +262,30 @@ def operation_service(tmp_path: Path) -> ServerOperationService:
     )
 
 
+def wait_for_terminal(
+    service: "ServerOperationService",
+    operation_id: str,
+    timeout: float = 10.0,
+    poll_interval: float = 0.05,
+) -> None:
+    """Poll until the operation reaches a terminal state or the timeout expires."""
+    import time as _time
+    deadline = _time.monotonic() + timeout
+    last_state = None
+    while True:
+        op = service.get_operation(operation_id)
+        if op is not None:
+            last_state = op.state
+            if op.state.is_terminal:
+                return
+        remaining = deadline - _time.monotonic()
+        if remaining <= 0:
+            raise AssertionError(
+                f"Operation {operation_id} timed out; last_state={last_state!r}"
+            )
+        _time.sleep(min(poll_interval, remaining))
+
+
 @pytest.fixture
 def reconciliation_service(tmp_path: Path, fake_bedrock: FakeBedrock) -> ReconciliationService:
     """ReconciliationService with injected fakes, ready for isolation tests."""

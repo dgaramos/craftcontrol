@@ -31,6 +31,31 @@ def _make_app(manager: MagicMock, *, auth_mode: str = "disabled") -> Flask:
     return app
 
 
+def assert_capability_required(
+    service: MagicMock,
+    method: str,
+    path: str,
+    capability: str,
+    **request_kwargs,
+) -> None:
+    """Assert a route requires authentication (401) and the given capability (403).
+
+    Constructs a local-auth app, verifies an unauthenticated request returns 401,
+    then verifies a request whose ``require_capability`` raises ``PermissionError``
+    returns 403.
+    """
+    app = _make_app(service, auth_mode="local")
+    auth = app.extensions["auth_service"]
+    client = app.test_client()
+
+    auth.authenticate.return_value = None
+    assert getattr(client, method.lower())(path, **request_kwargs).status_code == 401
+
+    auth.authenticate.return_value = {"id": "viewer", "role": "viewer", "capabilities": []}
+    auth.require_capability.side_effect = PermissionError(capability)
+    assert getattr(client, method.lower())(path, **request_kwargs).status_code == 403
+
+
 @pytest.fixture
 def service() -> MagicMock:
     svc = MagicMock()
@@ -72,22 +97,11 @@ def test_diagnostics_returns_manager_data(client, service: MagicMock) -> None:
 
 
 def test_diagnostics_requires_telemetry_manage_capability(service: MagicMock) -> None:
+    assert_capability_required(service, "get", "/api/diagnostics", "telemetry.manage")
+
     app = _make_app(service, auth_mode="local")
     auth = app.extensions["auth_service"]
     client = app.test_client()
-
-    auth.authenticate.return_value = None
-    assert client.get("/api/diagnostics").status_code == 401
-
-    def require_telemetry_manage(user, capability):
-        if capability not in user["capabilities"] and "*" not in user["capabilities"]:
-            raise PermissionError(capability)
-
-    auth.require_capability.side_effect = require_telemetry_manage
-    for role in ("viewer", "operator"):
-        auth.authenticate.return_value = {"id": role, "role": role, "capabilities": []}
-        assert client.get("/api/diagnostics").status_code == 403
-
     auth.authenticate.return_value = {"id": "1", "role": "owner", "capabilities": ["*"]}
     service.diagnostics.return_value = {"telemetry": {}, "broker": {}, "runtime_refreshing": False}
     assert client.get("/api/diagnostics").status_code == 200
@@ -130,15 +144,7 @@ def test_refresh_returns_202(client, service: MagicMock) -> None:
 
 
 def test_refresh_requires_server_configure_capability(service: MagicMock) -> None:
-    app = _make_app(service, auth_mode="local")
-    auth = app.extensions["auth_service"]
-    client = app.test_client()
-    auth.authenticate.return_value = {"id": "viewer", "role": "viewer", "capabilities": []}
-    auth.require_capability.side_effect = PermissionError("server.configure")
-
-    response = client.post("/api/refresh")
-
-    assert response.status_code == 403
+    assert_capability_required(service, "post", "/api/refresh", "server.configure")
     service.refresh_async.assert_not_called()
 
 
@@ -339,11 +345,10 @@ def test_player_gamemode_service_error_returns_500(client, service: MagicMock) -
 
 
 def test_player_gamemode_requires_authentication(service: MagicMock) -> None:
-    app = _make_app(service, auth_mode="local")
-    auth = app.extensions["auth_service"]
-    auth.authenticate.return_value = None
-    resp = app.test_client().put("/api/players/VonCrush/gamemode", json={"mode": "survival"})
-    assert resp.status_code == 401
+    assert_capability_required(
+        service, "put", "/api/players/VonCrush/gamemode", "players.manage",
+        json={"mode": "survival"},
+    )
 
 
 def test_player_gamemode_offline_player_returns_409(client, service: MagicMock) -> None:

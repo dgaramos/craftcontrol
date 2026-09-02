@@ -155,7 +155,7 @@ def test_snapshot_exception_publishes_failed_event(tmp_path: Path) -> None:
 def test_telemetry_callback_error_does_not_abort_refresh(tmp_path: Path) -> None:
     bedrock = FakeBedrock()
     bedrock.query_state_result = ({}, [], 0, 5, {})
-    svc, rec = _reconciliation(tmp_path, bedrock)
+    _svc, rec = _reconciliation(tmp_path, bedrock)
 
     def bad_callback(reason: str) -> None:
         raise RuntimeError("telemetry trigger failed")

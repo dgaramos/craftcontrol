@@ -79,6 +79,34 @@ Update tests and the English `README.md` whenever public behavior, persistence, 
 
 ## Testing conventions
 
+**Test file placement.** Backend tests live under `apps/server/tests/` mirroring
+the `minecraft_manager/` submodule structure:
+
+| Production module | Test subdirectory |
+|---|---|
+| `core/` | `tests/core/` |
+| `server/` | `tests/server/` |
+| `players/` | `tests/players/` |
+| `telemetry/` | `tests/telemetry/` |
+| `operations/` | `tests/operations/` |
+| `runtime/` | `tests/runtime/` |
+| `http/` | `tests/http/` |
+| `audit/` | `tests/audit/` |
+
+Cross-cutting tests (architecture, composition, CLI, config, deployment,
+documentation, brand, analytics, OpenMCPi, agent workflows) live at the
+`tests/` root. Never create a new test file in the `tests/` root for a
+single-module concern — put it in the matching subdirectory. Each subdirectory
+has an empty `__init__.py` for pytest discovery.
+
+**Shared helpers.** Add new test utilities to the right file — never inline them
+in a single test module:
+
+- `tests/fakes.py` — injectable fakes that replace production adapters
+- `tests/factories.py` — builder functions for domain objects and protocol
+  envelopes (`telemetry_envelope`, `player_snapshot`, etc.)
+- `tests/conftest.py` — pytest fixtures shared across the whole suite
+
 **Prefer constructor injection over monkey-patching.**
 
 Inject infrastructure dependencies (subprocess runners, file readers, socket

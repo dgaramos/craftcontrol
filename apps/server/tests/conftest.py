@@ -8,6 +8,13 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 # ---------------------------------------------------------------------------
+# tests-root path bootstrap (allows subpackages to import fakes / conftest)
+# ---------------------------------------------------------------------------
+_TESTS_DIR = os.path.dirname(os.path.abspath(__file__))
+if _TESTS_DIR not in sys.path:
+    sys.path.append(_TESTS_DIR)
+
+# ---------------------------------------------------------------------------
 # host-agent path bootstrap (shared by test_host_agent_* modules)
 # ---------------------------------------------------------------------------
 _HOST_AGENT_DIR = os.path.abspath(

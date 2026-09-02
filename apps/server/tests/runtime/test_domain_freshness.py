@@ -130,8 +130,6 @@ def test_diagnostics_includes_domains(tmp_path: Path) -> None:
     from minecraft_manager.telemetry.repository import SQLiteTelemetryRepository
     from minecraft_manager.telemetry.service import TelemetryService
 
-    import sys
-    sys.path.insert(0, str(Path(__file__).parent))
     from fakes import FakeBedrock, FakeDocker
 
     db_path = tmp_path / "state.db"

@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from minecraft_manager.core.migrations import LATEST_SCHEMA_VERSION, run_migrations, schema_version
-from minecraft_manager.repository import StateRepository
+from minecraft_manager.core.repository import StateRepository
 
 
 def test_fresh_database_reaches_latest_version(tmp_path: Path) -> None:

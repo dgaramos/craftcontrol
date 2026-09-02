@@ -4,7 +4,7 @@ from __future__ import annotations
 import pytest
 from flask import Flask
 
-from minecraft_manager.routes import api
+from minecraft_manager.http import api
 
 
 def _collect_routes(app: Flask) -> dict[str, set[str]]:

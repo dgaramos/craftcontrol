@@ -25,9 +25,9 @@ from minecraft_manager.core.events import EventBroker
 from minecraft_manager.server.files import ServerFiles
 from minecraft_manager.players import PlayerService, SQLitePlayerRepository
 from minecraft_manager.runtime import ReconciliationService
-from minecraft_manager.repository import StateRepository
+from minecraft_manager.core.repository import StateRepository
 from minecraft_manager.server import WorldService
-from minecraft_manager.services import ManagerService
+from minecraft_manager.runtime import ManagerService
 from minecraft_manager.telemetry.repository import SQLiteTelemetryRepository
 from minecraft_manager.telemetry.service import TelemetryService
 from fakes import FakeBedrock, FakeConsole, FakeDocker, FakeRuntime  # noqa: E402

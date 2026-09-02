@@ -6,7 +6,7 @@ from minecraft_manager import frontend_root
 from minecraft_manager.core.events import EventBroker
 from minecraft_manager.server.files import ServerFiles
 from minecraft_manager.players import PlayerService, SQLitePlayerRepository
-from minecraft_manager.repository import StateRepository
+from minecraft_manager.core.repository import StateRepository
 
 
 class FakeConsole:
@@ -25,10 +25,6 @@ ROOT_MODULE_ALLOWLIST = frozenset(
         "cli.py",  # command-line entry point
         "composition.py",  # production composition root
         "ports.py",  # shared structural contracts
-        "repository.py",  # compatibility facade; retirement tracked by #472
-        "routes.py",  # compatibility facade; retirement tracked by #472
-        "runtime.py",  # compatibility facade; retirement tracked by #472
-        "services.py",  # compatibility facade; retirement tracked by #472
         "version.py",  # process version and startup timestamp
     }
 )

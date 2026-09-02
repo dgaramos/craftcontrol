@@ -11,7 +11,7 @@ from minecraft_manager.core.config import Settings
 from minecraft_manager.composition import _docker_factory, compose_manager
 from minecraft_manager.server.host_agent import HostAgentContainerOperations
 from minecraft_manager.server.console import BedrockClient
-from minecraft_manager.services import ManagerService
+from minecraft_manager.runtime import ManagerService
 
 
 def _minimal_settings(

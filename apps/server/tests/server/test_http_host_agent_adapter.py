@@ -703,7 +703,7 @@ class TestIntendedStateKeyTranslation:
         from minecraft_manager.core.schema import PROPERTY_NAMES, SETTINGS
 
         translated = _translate_intended_state({key: "value" for key in SETTINGS})
-        agent_operations = Path(__file__).parents[3] / "services" / "host-agent" / "operations.py"
+        agent_operations = Path(__file__).parents[4] / "services" / "host-agent" / "operations.py"
         module = ast.parse(agent_operations.read_text())
         values = {}
         for node in module.body:

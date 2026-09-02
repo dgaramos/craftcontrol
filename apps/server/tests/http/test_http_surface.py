@@ -11,7 +11,7 @@ from minecraft_manager.core.config import Settings
 from minecraft_manager.http import api
 
 
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[4]
 FRONTEND = ROOT / "apps" / "client"
 CONTRACT = ROOT / "packages" / "contracts" / "http-surface.json"
 

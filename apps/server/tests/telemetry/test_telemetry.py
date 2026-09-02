@@ -29,7 +29,7 @@ def telemetry_repo(db_path: Path) -> SQLiteTelemetryRepository:
 
 
 def test_parses_actual_bedrock_content_log_fixture() -> None:
-    fixture = Path(__file__).with_name("fixtures") / "bedrock_content_log.txt"
+    fixture = Path(__file__).parents[1] / "fixtures" / "bedrock_content_log.txt"
     envelopes = [parse_telemetry_line(line) for line in fixture.read_text().splitlines()]
     assert [item["type"] for item in envelopes if item] == [
         "telemetry.started", "snapshot.started", "snapshot.player", "snapshot.finished",

@@ -25,20 +25,14 @@ from minecraft_manager.core.repository import StateRepository
 from minecraft_manager.operations.repository import SQLiteOperationRepository, _connect as _ops_connect, _write_connect as _ops_write_connect
 from minecraft_manager.players.repository import SQLitePlayerRepository
 from minecraft_manager.telemetry.repository import SQLiteTelemetryRepository
-from minecraft_manager.core.migrations import run_migrations, LATEST_SCHEMA_VERSION
+from minecraft_manager.core.migrations import LATEST_SCHEMA_VERSION
 import sqlite3
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
+from conftest import make_operation_db
 
 
 def _initialized_db(tmp_path: Path, name: str = "manager.db") -> Path:
     """Return a path to a freshly migrated database."""
-    path = tmp_path / name
-    StateRepository(path).initialize()
-    return path
+    return make_operation_db(tmp_path, name)
 
 
 def _baseline() -> int:

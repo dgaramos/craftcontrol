@@ -11,7 +11,6 @@ ServerOperationService with an SQLite repository so the full lifecycle executes 
 """
 from __future__ import annotations
 
-import sqlite3
 import threading
 import time
 from pathlib import Path
@@ -21,10 +20,9 @@ from unittest.mock import MagicMock
 import pytest
 
 from minecraft_manager.server.host_agent import HostAgentContainerOperations
-from minecraft_manager.core.migrations import run_migrations
 from minecraft_manager.operations.lifecycle import OperationStage, OperationState
-from minecraft_manager.operations.repository import SQLiteOperationRepository
 from minecraft_manager.operations.service import ServerOperationService
+from conftest import make_operation_db, make_operation_service
 
 
 # ---------------------------------------------------------------------------
@@ -72,32 +70,18 @@ def _make_adapter(
     )
 
 
-def _make_db(tmp_path: Path) -> Path:
-    """Create and migrate an SQLite database in *tmp_path* and return its path."""
-    db = tmp_path / "state.db"
-    with sqlite3.connect(db) as conn:
-        run_migrations(conn)
-    return db
-
-
 def _make_service(
     tmp_path: Path,
     adapter: HostAgentContainerOperations,
     configuration: MagicMock | None = None,
 ) -> ServerOperationService:
     """Wire adapter and a fresh SQLite repository into a ServerOperationService."""
-    broker = MagicMock()
-    if configuration is None:
-        configuration = MagicMock()
-        configuration.read_properties.return_value = {}
-    return ServerOperationService(
-        operation_repository=SQLiteOperationRepository(_make_db(tmp_path)),
+    return make_operation_service(
+        tmp_path,
         docker=adapter,
-        broker=broker,
         configuration=configuration,
-        thread_factory=threading.Thread,
-        server_id="test-server",
         health_timeout=1,
+        thread_factory=threading.Thread,
     )
 
 
@@ -352,15 +336,13 @@ class TestAgentFiveXxResponse:
         configuration.read_properties.return_value = {"max-players": "5"}
         adapter = _make_adapter(client)
 
-        broker = MagicMock()
-        service = ServerOperationService(
-            operation_repository=SQLiteOperationRepository(_make_db(tmp_path)),
+        service = make_operation_service(
+            tmp_path,
             docker=adapter,
-            broker=broker,
+            broker=MagicMock(),
             configuration=configuration,
-            thread_factory=threading.Thread,
-            server_id="test-server",
             health_timeout=5,
+            thread_factory=threading.Thread,
         )
 
         op = service.apply_restart_required({"MAX_PLAYERS": "5"}, lambda: None)

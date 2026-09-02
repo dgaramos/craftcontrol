@@ -12,22 +12,13 @@ DOMAINS = {"settings", "gamerules", "players", "server", "telemetry"}
 STALE_THRESHOLD = 1200
 
 
-def _fresh_repo(tmp_path: Path) -> SQLiteTelemetryRepository:
-    path = tmp_path / "state.db"
-    repo = StateRepository(path)
-    repo.initialize()
-    return SQLiteTelemetryRepository(path)
-
-
 # ---------------------------------------------------------------------------
 # 1. Never observed — observed_at==0 for every domain
 # ---------------------------------------------------------------------------
 
 
-def test_domain_freshness_never_observed(tmp_path: Path) -> None:
-    repo = _fresh_repo(tmp_path)
-
-    freshness = repo.domain_freshness()
+def test_domain_freshness_never_observed(telemetry_repo: SQLiteTelemetryRepository) -> None:
+    freshness = telemetry_repo.domain_freshness()
 
     for name in DOMAINS:
         entry = freshness[name]

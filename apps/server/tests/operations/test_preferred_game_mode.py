@@ -94,17 +94,17 @@ def test_set_game_mode_invalid_mode_rejected(service: PlayerService) -> None:
 
 
 def test_set_game_mode_offline_still_persists(
-    service: PlayerService, repo: SQLitePlayerRepository, console: MagicMock
+    service: PlayerService, player_repo: SQLitePlayerRepository, console: MagicMock
 ) -> None:
     """Offline player: preference is persisted but no console command is sent."""
-    repo.observe_player("VonCrush", True, "999")
+    player_repo.observe_player("VonCrush", True, "999")
     # Disconnect so they are offline.
-    repo.observe_player("VonCrush", False, "999")
+    player_repo.observe_player("VonCrush", False, "999")
 
     service.set_game_mode("VonCrush", "creative")
 
     console.set_game_mode.assert_not_called()
-    profiles = repo.player_profiles()
+    profiles = player_repo.player_profiles()
     assert profiles[0]["preferred_game_mode"] == "creative"
 
 
@@ -140,17 +140,17 @@ def test_preferred_game_mode_null_by_default(player_repo: SQLitePlayerRepository
 
 
 def test_observed_game_mode_unchanged(
-    service: PlayerService, repo: SQLitePlayerRepository
+    service: PlayerService, player_repo: SQLitePlayerRepository
 ) -> None:
     """After setting preference, observed_game_mode still reflects only telemetry."""
-    repo.observe_player("VonCrush", True, "999")
-    repo.store("players", {"VonCrush": "online"}, "bedrock-log")
-    profiles = repo.player_profiles()
+    player_repo.observe_player("VonCrush", True, "999")
+    player_repo.store("players", {"VonCrush": "online"}, "bedrock-log")
+    profiles = player_repo.player_profiles()
     public_id = profiles[0]["id"]
 
     service.set_game_mode("VonCrush", "creative")
 
-    detail = repo.player_profile(public_id)
+    detail = player_repo.player_profile(public_id)
     assert detail is not None
     # No telemetry was pushed, so observed_game_mode must remain None.
     assert detail["observed_game_mode"] is None

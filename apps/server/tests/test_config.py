@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from minecraft_manager.core.config import Settings
+from controlplane.core.config import Settings
 
 
 def test_settings_uses_default_compose_project(monkeypatch: pytest.MonkeyPatch) -> None:

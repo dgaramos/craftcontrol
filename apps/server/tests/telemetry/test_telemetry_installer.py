@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from minecraft_manager.telemetry.installer import LEGACY_DIRECTORY, PACK_DIRECTORY, PACK_ID, TelemetryPackInstaller
+from controlplane.telemetry.installer import LEGACY_DIRECTORY, PACK_DIRECTORY, PACK_ID, TelemetryPackInstaller
 
 
 @pytest.fixture

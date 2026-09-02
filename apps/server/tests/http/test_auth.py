@@ -5,9 +5,9 @@ from unittest.mock import patch
 import pytest
 from flask import Flask, jsonify
 
-from minecraft_manager.auth.http import auth_api, install_auth, require
-from minecraft_manager.auth.service import AuthService
-from minecraft_manager.players.repository import SQLitePlayerRepository
+from controlplane.auth.http import auth_api, install_auth, require
+from controlplane.auth.service import AuthService
+from controlplane.players.repository import SQLitePlayerRepository
 from conftest import make_operation_db
 
 
@@ -165,12 +165,12 @@ def test_authentication_throttles_session_writes(auth_db) -> None:
     session, _ = auth.claim("Nicole", invitation, "a sufficiently long password")
     with sqlite3.connect(path) as connection:
         before = connection.execute("SELECT last_seen_at FROM panel_sessions WHERE revoked_at IS NULL").fetchone()[0]
-    with patch("minecraft_manager.auth.service.time.time", return_value=before + 30):
+    with patch("controlplane.auth.service.time.time", return_value=before + 30):
         assert auth.authenticate(session) is not None
     with sqlite3.connect(path) as connection:
         unchanged = connection.execute("SELECT last_seen_at FROM panel_sessions WHERE revoked_at IS NULL").fetchone()[0]
     assert unchanged == before
-    with patch("minecraft_manager.auth.service.time.time", return_value=before + 61):
+    with patch("controlplane.auth.service.time.time", return_value=before + 61):
         assert auth.authenticate(session) is not None
     with sqlite3.connect(path) as connection:
         touched = connection.execute("SELECT last_seen_at FROM panel_sessions WHERE revoked_at IS NULL").fetchone()[0]

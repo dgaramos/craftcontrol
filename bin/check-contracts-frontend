@@ -29,5 +29,5 @@ run_node_contract_checks() {
 }
 
 run_node_contract_checks
-"$PYTHON" -m pytest apps/server/tests/test_brand.py -v
+PYTHONPATH="$ROOT/apps/server${PYTHONPATH:+:$PYTHONPATH}" "$PYTHON" -m pytest apps/server/tests/test_brand.py -v
 echo "contracts-frontend gate: ok"

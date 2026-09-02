@@ -25,7 +25,7 @@ reviews:
         - Nenhuma operação Docker arbitrária — apenas as operações do allowlist existente.
         - Nunca expor XUID no payload de resposta.
 
-    - path: "apps/backend/minecraft_manager/http/**"
+    - path: "apps/server/controlplane/http/**"
       instructions: |
         Camada HTTP Flask. Verifique:
         - CSRF token validado em toda mutação de estado.

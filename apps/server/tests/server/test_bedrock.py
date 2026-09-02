@@ -1,6 +1,6 @@
 import pytest
 
-from minecraft_manager.server.console import BedrockClient
+from controlplane.server.console import BedrockClient
 
 
 # ---------------------------------------------------------------------------

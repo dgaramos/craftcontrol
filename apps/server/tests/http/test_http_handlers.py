@@ -6,11 +6,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 from flask import Flask
 
-from minecraft_manager.http.analytics import analytics_api
-from minecraft_manager.http.core import core_api
-from minecraft_manager.http.players import players_api
-from minecraft_manager.http.server import server_api
-from minecraft_manager.http.telemetry import telemetry_api
+from controlplane.http.analytics import analytics_api
+from controlplane.http.core import core_api
+from controlplane.http.players import players_api
+from controlplane.http.server import server_api
+from controlplane.http.telemetry import telemetry_api
 from conftest import make_auth_mock, wire_auth
 
 
@@ -180,7 +180,7 @@ def test_update_config_includes_operation_id_when_operation_service_is_active(cl
 
 
 def test_update_config_returns_409_on_conflicting_operation(client, service: MagicMock) -> None:
-    from minecraft_manager.operations import ConflictingOperationError
+    from controlplane.operations import ConflictingOperationError
     service.save_settings.side_effect = ConflictingOperationError("op-xyz already active")
     resp = client.put("/api/config", json={"difficulty": "hard"})
     assert resp.status_code == 409
@@ -428,7 +428,7 @@ def test_telemetry_pack_status_returns_200(client, service: MagicMock) -> None:
     }
     fake_installer = MagicMock()
     fake_installer.status.return_value.to_dict.return_value = {"installed": True, "world": "Bedrock level"}
-    with patch("minecraft_manager.http.telemetry.telemetry_installer", return_value=fake_installer):
+    with patch("controlplane.http.telemetry.telemetry_installer", return_value=fake_installer):
         resp = client.get("/api/telemetry-pack")
     assert resp.status_code == 200
     data = resp.get_json()
@@ -436,7 +436,7 @@ def test_telemetry_pack_status_returns_200(client, service: MagicMock) -> None:
 
 
 def test_telemetry_pack_status_error_returns_400(client, service: MagicMock) -> None:
-    with patch("minecraft_manager.http.telemetry.telemetry_installer", side_effect=FileNotFoundError("no pack")):
+    with patch("controlplane.http.telemetry.telemetry_installer", side_effect=FileNotFoundError("no pack")):
         resp = client.get("/api/telemetry-pack")
     assert resp.status_code == 400
 
@@ -444,7 +444,7 @@ def test_telemetry_pack_status_error_returns_400(client, service: MagicMock) -> 
 def test_telemetry_pack_install_returns_result(client) -> None:
     fake_installer = MagicMock()
     fake_installer.install.return_value = {"changed": True}
-    with patch("minecraft_manager.http.telemetry.telemetry_installer", return_value=fake_installer):
+    with patch("controlplane.http.telemetry.telemetry_installer", return_value=fake_installer):
         resp = client.post("/api/telemetry-pack/install")
     assert resp.status_code == 200
     assert resp.get_json()["changed"] is True
@@ -453,7 +453,7 @@ def test_telemetry_pack_install_returns_result(client) -> None:
 def test_telemetry_pack_upgrade_sets_action(client) -> None:
     fake_installer = MagicMock()
     fake_installer.install.return_value = {"changed": False}
-    with patch("minecraft_manager.http.telemetry.telemetry_installer", return_value=fake_installer):
+    with patch("controlplane.http.telemetry.telemetry_installer", return_value=fake_installer):
         resp = client.post("/api/telemetry-pack/upgrade")
     assert resp.status_code == 200
     assert resp.get_json()["action"] == "upgrade"
@@ -462,7 +462,7 @@ def test_telemetry_pack_upgrade_sets_action(client) -> None:
 def test_telemetry_pack_disable_returns_result(client) -> None:
     fake_installer = MagicMock()
     fake_installer.disable.return_value = {"changed": True, "action": "disable"}
-    with patch("minecraft_manager.http.telemetry.telemetry_installer", return_value=fake_installer):
+    with patch("controlplane.http.telemetry.telemetry_installer", return_value=fake_installer):
         resp = client.post("/api/telemetry-pack/disable")
     assert resp.status_code == 200
 
@@ -470,7 +470,7 @@ def test_telemetry_pack_disable_returns_result(client) -> None:
 def test_telemetry_pack_rollback_rejected_without_confirmation(client, service: MagicMock) -> None:
     fake_installer = MagicMock()
     service.docker.status.return_value = {"running": False}
-    with patch("minecraft_manager.http.telemetry.telemetry_installer", return_value=fake_installer):
+    with patch("controlplane.http.telemetry.telemetry_installer", return_value=fake_installer):
         resp = client.post("/api/telemetry-pack/rollback")
     assert resp.status_code == 400
     assert "confirm" in resp.get_json()["error"].lower()
@@ -479,7 +479,7 @@ def test_telemetry_pack_rollback_rejected_without_confirmation(client, service: 
 def test_telemetry_pack_rollback_rejected_when_server_running(client, service: MagicMock) -> None:
     fake_installer = MagicMock()
     service.docker.status.return_value = {"running": True}
-    with patch("minecraft_manager.http.telemetry.telemetry_installer", return_value=fake_installer):
+    with patch("controlplane.http.telemetry.telemetry_installer", return_value=fake_installer):
         resp = client.post("/api/telemetry-pack/rollback?confirm=true")
     assert resp.status_code == 409
     assert "offline" in resp.get_json()["error"].lower()
@@ -491,7 +491,7 @@ def test_telemetry_pack_rollback_creates_recovery_copy_and_proceeds(client, serv
     fake_installer.snapshot.return_value = "20240101T000001.000000Z"
     fake_installer.rollback.return_value = {"changed": True, "action": "rollback"}
     service.docker.status.return_value = {"running": False}
-    with patch("minecraft_manager.http.telemetry.telemetry_installer", return_value=fake_installer):
+    with patch("controlplane.http.telemetry.telemetry_installer", return_value=fake_installer):
         resp = client.post("/api/telemetry-pack/rollback?confirm=true")
     assert resp.status_code == 200
     data = resp.get_json()
@@ -504,7 +504,7 @@ def test_telemetry_pack_rollback_creates_recovery_copy_and_proceeds(client, serv
 def test_telemetry_pack_rollback_rejected_with_non_dict_json_body(client, service: MagicMock) -> None:
     fake_installer = MagicMock()
     service.docker.status.return_value = {"running": False}
-    with patch("minecraft_manager.http.telemetry.telemetry_installer", return_value=fake_installer):
+    with patch("controlplane.http.telemetry.telemetry_installer", return_value=fake_installer):
         resp = client.post(
             "/api/telemetry-pack/rollback",
             data="true",
@@ -516,7 +516,7 @@ def test_telemetry_pack_rollback_rejected_with_non_dict_json_body(client, servic
 
 def test_telemetry_pack_unknown_action_returns_404(client) -> None:
     fake_installer = MagicMock()
-    with patch("minecraft_manager.http.telemetry.telemetry_installer", return_value=fake_installer):
+    with patch("controlplane.http.telemetry.telemetry_installer", return_value=fake_installer):
         resp = client.post("/api/telemetry-pack/explode")
     assert resp.status_code == 404
 
@@ -524,7 +524,7 @@ def test_telemetry_pack_unknown_action_returns_404(client) -> None:
 def test_telemetry_pack_action_file_not_found_returns_400(client) -> None:
     fake_installer = MagicMock()
     fake_installer.install.side_effect = FileNotFoundError("world not found")
-    with patch("minecraft_manager.http.telemetry.telemetry_installer", return_value=fake_installer):
+    with patch("controlplane.http.telemetry.telemetry_installer", return_value=fake_installer):
         resp = client.post("/api/telemetry-pack/install")
     assert resp.status_code == 400
 
@@ -534,7 +534,7 @@ def test_telemetry_pack_action_file_not_found_returns_400(client) -> None:
 # ---------------------------------------------------------------------------
 
 def _make_operations_app(manager: MagicMock, *, auth_mode: str = "disabled") -> Flask:
-    from minecraft_manager.http.operations import operations_api as ops_bp
+    from controlplane.http.operations import operations_api as ops_bp
     app = Flask(__name__, template_folder="../../client/templates")
     app.extensions["manager_service"] = manager
     auth = make_auth_mock()
@@ -557,7 +557,7 @@ def op_client(op_service: MagicMock):
 
 
 def test_get_latest_operation_returns_200_when_found(op_client, op_service: MagicMock) -> None:
-    from minecraft_manager.operations.lifecycle import ServerOperation
+    from controlplane.operations.lifecycle import ServerOperation
     op = ServerOperation.create("default", {"difficulty": "hard"})
     op_service.operation_service.get_latest.return_value = op
     resp = op_client.get("/api/operations/latest")
@@ -574,7 +574,7 @@ def test_get_latest_operation_returns_null_when_none(op_client, op_service: Magi
 
 
 def test_get_active_operation_returns_200_when_found(op_client, op_service: MagicMock) -> None:
-    from minecraft_manager.operations.lifecycle import ServerOperation
+    from controlplane.operations.lifecycle import ServerOperation
     op = ServerOperation.create("default", {"difficulty": "hard"})
     op_service.operation_service.get_active.return_value = op
     resp = op_client.get("/api/operations/active")
@@ -590,7 +590,7 @@ def test_get_active_operation_returns_null_when_none(op_client, op_service: Magi
 
 
 def test_get_operation_by_id_returns_200_when_found(op_client, op_service: MagicMock) -> None:
-    from minecraft_manager.operations.lifecycle import ServerOperation
+    from controlplane.operations.lifecycle import ServerOperation
     op = ServerOperation.create("default", {"difficulty": "hard"})
     op_service.operation_service.get_operation.return_value = op
     resp = op_client.get(f"/api/operations/{op.operation_id}")
@@ -605,7 +605,7 @@ def test_get_operation_by_id_returns_404_when_not_found(op_client, op_service: M
 
 
 def test_list_operations_returns_recent_list(op_client, op_service: MagicMock) -> None:
-    from minecraft_manager.operations.lifecycle import ServerOperation
+    from controlplane.operations.lifecycle import ServerOperation
     ops = [ServerOperation.create("default", {"difficulty": "hard"})]
     op_service.operation_service.list_recent.return_value = {
         "operations": ops, "page": 2, "page_size": 1, "total": 2, "pages": 2,
@@ -654,7 +654,7 @@ def test_stream_operations_defaults_after_id_on_invalid_header(op_client, op_ser
 
 def test_stream_operations_emits_operation_events(op_client, op_service: MagicMock) -> None:
     import json as _json
-    from minecraft_manager.operations.lifecycle import ServerOperation
+    from controlplane.operations.lifecycle import ServerOperation
 
     op = ServerOperation.create("default", {"difficulty": "hard"})
 
@@ -685,7 +685,7 @@ def test_stream_operations_skips_non_operation_events(op_client, op_service: Mag
 
 
 def test_reconcile_operation_returns_200_when_found(op_client, op_service: MagicMock) -> None:
-    from minecraft_manager.operations.lifecycle import ServerOperation
+    from controlplane.operations.lifecycle import ServerOperation
     op = ServerOperation.create("default", {"difficulty": "hard"})
     op_service.operation_service.request_reconciliation.return_value = op
     resp = op_client.post(f"/api/operations/{op.operation_id}/reconcile")

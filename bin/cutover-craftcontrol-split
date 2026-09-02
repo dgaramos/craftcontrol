@@ -82,7 +82,7 @@ fi
 touch /tmp/craftcontrol-cutover.lock
 trap 'rm -f /tmp/craftcontrol-cutover.lock' EXIT
 docker inspect craftcontrol >/dev/null 2>&1 || fail "compatibility service is not active"
-git -C "$SOURCE_ROOT" ls-files -z | rsync -a --from0 --exclude=/minecraft_manager --exclude=/requirements.txt --files-from=- "$SOURCE_ROOT/" "$DEPLOY_ROOT/"
+git -C "$SOURCE_ROOT" ls-files -z | rsync -a --from0 --exclude=/controlplane --exclude=/requirements.txt --files-from=- "$SOURCE_ROOT/" "$DEPLOY_ROOT/"
 split config --quiet
 split build
 "$SOURCE_ROOT/bin/check-split-auth"

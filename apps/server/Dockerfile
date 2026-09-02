@@ -13,7 +13,7 @@ WORKDIR /app
 COPY apps/server/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 COPY apps/server/app.py apps/server/wsgi.py ./
-COPY apps/server/minecraft_manager ./minecraft_manager
+COPY apps/server/controlplane ./controlplane
 COPY packages ./packages
 COPY packs ./packs
 COPY bin/craftcontrol /usr/local/bin/craftcontrol

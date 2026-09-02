@@ -19,9 +19,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from minecraft_manager.server.host_agent import HostAgentContainerOperations
-from minecraft_manager.operations.lifecycle import OperationStage, OperationState
-from minecraft_manager.operations.service import ServerOperationService
+from controlplane.server.host_agent import HostAgentContainerOperations
+from controlplane.operations.lifecycle import OperationStage, OperationState
+from controlplane.operations.service import ServerOperationService
 from conftest import make_operation_db, make_operation_service
 
 

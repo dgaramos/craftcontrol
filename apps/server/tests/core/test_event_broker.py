@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from minecraft_manager.core.events import Event, EventBroker
+from controlplane.core.events import Event, EventBroker
 
 
 @pytest.fixture
@@ -204,7 +204,7 @@ def test_stream_yields_none_on_timeout(broker: EventBroker) -> None:
             raise queue.Empty
 
     import unittest.mock as mock
-    with mock.patch("minecraft_manager.core.events.queue.Queue", ImmediateTimeoutQueue):
+    with mock.patch("controlplane.core.events.queue.Queue", ImmediateTimeoutQueue):
         broker2 = EventBroker(broker.repository)
         gen = broker2.stream(after_id=0)
         item = next(gen)

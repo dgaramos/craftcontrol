@@ -132,7 +132,7 @@ def test_compose_mounts_explicit_application_boundaries() -> None:
     compose = (ROOT / "docker-compose.yml").read_text()
     assert "./apps/client/static:/app/apps/client/static:ro" in compose
     assert "./apps/client/templates:/app/apps/client/templates:ro" in compose
-    assert "./apps/server/minecraft_manager:/app/minecraft_manager:ro" in compose
+    assert "./apps/server/controlplane:/app/controlplane:ro" in compose
     assert "./static:/app/static" not in compose
     assert "./templates:/app/templates" not in compose
 
@@ -233,7 +233,7 @@ def test_backend_image_does_not_bundle_frontend_application() -> None:
     backend = (ROOT / "apps" / "server" / "Dockerfile").read_text()
     frontend = (ROOT / "apps" / "client" / "Dockerfile").read_text()
     assert "apps/client" not in backend
-    assert "minecraft_manager" not in frontend
+    assert "controlplane" not in frontend
     assert "COPY apps/client/static" in frontend
     assert "chmod -R a=rX /usr/share/nginx/html" in frontend
 

@@ -15,14 +15,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from minecraft_manager.operations.lifecycle import (
+from controlplane.operations.lifecycle import (
     OperationStage,
     OperationState,
     ServerOperation,
     StageResult,
 )
-from minecraft_manager.operations.repository import SQLiteOperationRepository
-from minecraft_manager.operations.service import (
+from controlplane.operations.repository import SQLiteOperationRepository
+from controlplane.operations.service import (
     ConflictingOperationError,
     ServerOperationService,
 )
@@ -893,7 +893,7 @@ class TestRepositoryEdgeCases:
     def test_write_connect_rolls_back_and_reraises_on_exception(self, tmp_path: Path):
         """_write_connect must roll back the transaction and re-raise when an
         exception is raised inside the context, leaving the connection closed."""
-        from minecraft_manager.operations.repository import _write_connect
+        from controlplane.operations.repository import _write_connect
 
         db = tmp_path / "ops.db"
         sentinel = RuntimeError("injected failure")
@@ -1052,7 +1052,7 @@ class TestRecoveryAndReconciliation:
         op = ServerOperation.create("test-server", {"UNKNOWN_KEY": "value"})
         op.start()
         op.fail_stage(
-            __import__("minecraft_manager.operations.lifecycle", fromlist=["OperationStage"]).OperationStage.REVIEW,
+            __import__("controlplane.operations.lifecycle", fromlist=["OperationStage"]).OperationStage.REVIEW,
             "requested changes cannot be verified",
         )
         service._repo.save(op)
@@ -1073,7 +1073,7 @@ class TestRecoveryAndReconciliation:
         configuration.read_properties.return_value = {"max-players": "20"}
         service = make_operation_service(tmp_path, docker=docker, configuration=configuration, health_timeout=1)
         OperationStage = __import__(
-            "minecraft_manager.operations.lifecycle", fromlist=["OperationStage"]
+            "controlplane.operations.lifecycle", fromlist=["OperationStage"]
         ).OperationStage
         # Inject a terminal op with one verifiable key and one unverifiable key
         op = ServerOperation.create("test-server", {"MAX_PLAYERS": "20", "UNKNOWN_KEY": "value"})
@@ -1093,7 +1093,7 @@ class TestRecoveryAndReconciliation:
         op = ServerOperation.create("other-server", {"MAX_PLAYERS": "20"})
         op.start()
         op.fail_stage(
-            __import__("minecraft_manager.operations.lifecycle", fromlist=["OperationStage"]).OperationStage.REVIEW,
+            __import__("controlplane.operations.lifecycle", fromlist=["OperationStage"]).OperationStage.REVIEW,
             "failed",
         )
         service._repo.save(op)
@@ -1263,7 +1263,7 @@ class TestRecoveryAndReconciliation:
         op = ServerOperation.create("other-server", {"MAX_PLAYERS": "20"})
         op.start()
         op.fail_stage(
-            __import__("minecraft_manager.operations.lifecycle", fromlist=["OperationStage"]).OperationStage.REVIEW,
+            __import__("controlplane.operations.lifecycle", fromlist=["OperationStage"]).OperationStage.REVIEW,
             "failed",
         )
         service._repo.save(op)

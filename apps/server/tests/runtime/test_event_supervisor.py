@@ -6,7 +6,7 @@ from unittest.mock import ANY, MagicMock, patch, call
 
 import pytest
 
-from minecraft_manager.runtime import EventRuntime
+from controlplane.runtime import EventRuntime
 
 
 class FakeService:
@@ -127,9 +127,9 @@ def test_death_event_dispatched(log_runtime) -> None:
 
 def test_telemetry_line_dispatched(log_runtime) -> None:
     runtime, _, service = log_runtime
-    from minecraft_manager.telemetry.telemetry import PREFIX
+    from controlplane.telemetry.telemetry import PREFIX
     service.telemetry_event = MagicMock()
-    with patch("minecraft_manager.runtime.supervisor.parse_telemetry_line") as mock_parse:
+    with patch("controlplane.runtime.supervisor.parse_telemetry_line") as mock_parse:
         mock_parse.return_value = {"type": "snapshot"}
         runtime._handle_log(f"[INFO] {PREFIX} {{\"type\": \"snapshot\"}}")
     service.telemetry_event.assert_called_once_with({"type": "snapshot"})
@@ -137,23 +137,23 @@ def test_telemetry_line_dispatched(log_runtime) -> None:
 
 def test_telemetry_json_error_publishes_rejected(log_runtime) -> None:
     runtime, broker, service = log_runtime
-    from minecraft_manager.telemetry.telemetry import PREFIX
-    with patch("minecraft_manager.runtime.supervisor.parse_telemetry_line", side_effect=json.JSONDecodeError("bad", "", 0)):
+    from controlplane.telemetry.telemetry import PREFIX
+    with patch("controlplane.runtime.supervisor.parse_telemetry_line", side_effect=json.JSONDecodeError("bad", "", 0)):
         runtime._handle_log(f"[INFO] {PREFIX} bad")
     broker.publish.assert_called_with("telemetry.event.rejected", "bedrock-log", ANY)
 
 
 def test_telemetry_none_return_skips_service(log_runtime) -> None:
     runtime, broker, service = log_runtime
-    from minecraft_manager.telemetry.telemetry import PREFIX
-    with patch("minecraft_manager.runtime.supervisor.parse_telemetry_line", return_value=None):
+    from controlplane.telemetry.telemetry import PREFIX
+    with patch("controlplane.runtime.supervisor.parse_telemetry_line", return_value=None):
         runtime._handle_log(f"[INFO] {PREFIX} something")
     service.telemetry_event.assert_not_called()
 
 
 def test_gamerule_line_triggers_refresh(log_runtime) -> None:
     runtime, broker, service = log_runtime
-    from minecraft_manager.core.schema import GAMERULES
+    from controlplane.core.schema import GAMERULES
     rule = next(iter(GAMERULES))
     runtime._handle_log(f"[INFO] Gamerule {rule} changed")
     broker.publish.assert_called_with("gamerule.invalidated", "bedrock-log", ANY)
@@ -162,7 +162,7 @@ def test_gamerule_line_triggers_refresh(log_runtime) -> None:
 
 def test_gamerule_skipped_when_refreshing(log_runtime) -> None:
     runtime, broker, service = log_runtime
-    from minecraft_manager.core.schema import GAMERULES
+    from controlplane.core.schema import GAMERULES
     service.refreshing = True
     rule = next(iter(GAMERULES))
     runtime._handle_log(f"[INFO] Gamerule {rule} changed")

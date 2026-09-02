@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 import pytest
 from flask import Flask, jsonify
 
-from minecraft_manager.auth.http import auth_api, require
+from controlplane.auth.http import auth_api, require
 from conftest import make_auth_mock, wire_auth
 
 

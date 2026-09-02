@@ -102,7 +102,7 @@ flowchart TD
     repo --> bin["bin/ — comandos de qualidade, implantação, cutover, backup e recuperação"]
     repo --> deploy["deploy/ — ativos exclusivos de implantação (unidades systemd, scripts de instalação)"]
     repo --> docs["docs/ — guias de arquitetura, segurança, telemetria e operações"]
-    repo --> overlay["minecraft_manager/, app.py, wsgi.py — overlays temporários de compatibilidade do backend"]
+    repo --> overlay["controlplane/, app.py, wsgi.py — overlays temporários de compatibilidade do backend"]
     repo --> split["docker-compose.split.yml — topologia de produção dividida ativa"]
     repo --> combined["docker-compose.yml — topologia combinada de compatibilidade/recuperação"]
     repo --> versions["versions.env — par frontend/backend testado"]
@@ -131,7 +131,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    manager["apps/server/minecraft_manager/"] --> composition["composition.py — injeção manual de dependências de produção"]
+    manager["apps/server/controlplane/"] --> composition["composition.py — injeção manual de dependências de produção"]
     manager --> http["http/ — mapeamento HTTP por domínio"]
     manager --> players["players/ — casos de uso de jogadores"]
     manager --> auth["auth/ — contas, sessões, papéis, CSRF e auditoria"]

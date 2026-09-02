@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from minecraft_manager.players.service import PlayerService
+from controlplane.players.service import PlayerService
 
 
 @pytest.fixture

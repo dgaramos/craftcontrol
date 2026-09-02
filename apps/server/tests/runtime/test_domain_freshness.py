@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from minecraft_manager.core.repository import StateRepository
-from minecraft_manager.telemetry.repository import SQLiteTelemetryRepository
+from controlplane.core.repository import StateRepository
+from controlplane.telemetry.repository import SQLiteTelemetryRepository
 
 DOMAINS = {"settings", "gamerules", "players", "server", "telemetry"}
 STALE_THRESHOLD = 1200
@@ -113,13 +113,13 @@ def test_domain_freshness_time_injectable(tmp_path: Path) -> None:
 
 
 def test_diagnostics_includes_domains(tmp_path: Path) -> None:
-    from minecraft_manager.core.events import EventBroker
-    from minecraft_manager.server.files import ServerFiles
-    from minecraft_manager.core.repository import StateRepository
-    from minecraft_manager.server import WorldService
-    from minecraft_manager.runtime import ManagerService
-    from minecraft_manager.telemetry.repository import SQLiteTelemetryRepository
-    from minecraft_manager.telemetry.service import TelemetryService
+    from controlplane.core.events import EventBroker
+    from controlplane.server.files import ServerFiles
+    from controlplane.core.repository import StateRepository
+    from controlplane.server import WorldService
+    from controlplane.runtime import ManagerService
+    from controlplane.telemetry.repository import SQLiteTelemetryRepository
+    from controlplane.telemetry.service import TelemetryService
 
     from fakes import FakeBedrock, FakeDocker
 

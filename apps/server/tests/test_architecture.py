@@ -19,6 +19,38 @@ class FakeConsole:
 
 ROOT = Path(__file__).resolve().parents[3]
 
+ROOT_MODULE_ALLOWLIST = frozenset(
+    {
+        "__init__.py",  # Flask package bootstrap
+        "_db.py",  # shared SQLite helpers; migration tracked by #469
+        "bedrock.py",  # compatibility shim; retirement tracked by #468
+        "cli.py",  # command-line entry point
+        "composition.py",  # production composition root
+        "config.py",  # core migration tracked by #469
+        "docker_ops.py",  # server migration tracked by #470
+        "events.py",  # compatibility shim; retirement tracked by #468
+        "files.py",  # compatibility shim; retirement tracked by #468
+        "host_agent.py",  # server migration tracked by #470
+        "migrations.py",  # core migration tracked by #469
+        "ports.py",  # shared structural contracts
+        "reconciliation.py",  # runtime migration tracked by #471
+        "repository.py",  # compatibility facade; retirement tracked by #472
+        "routes.py",  # compatibility facade; retirement tracked by #472
+        "runtime.py",  # compatibility facade; retirement tracked by #472
+        "schema.py",  # core migration tracked by #469
+        "services.py",  # compatibility facade; retirement tracked by #472
+        "version.py",  # process version and startup timestamp
+    }
+)
+
+
+def _unexpected_root_python_modules(package: Path) -> set[str]:
+    return {
+        path.name
+        for path in package.glob("*.py")
+        if path.stem.isidentifier()
+    } - ROOT_MODULE_ALLOWLIST
+
 
 def test_frontend_path_resolves_in_source_and_packaged_image_layouts() -> None:
     assert frontend_root(ROOT / "apps" / "server" / "minecraft_manager") == ROOT / "apps" / "client"
@@ -71,3 +103,22 @@ def test_telemetry_compatibility_shims_are_retired() -> None:
 
     assert all(not (package / name).exists() for name in retired)
     assert "get_db" not in (ROOT / "docs" / "development-setup.md").read_text()
+
+
+def test_backend_package_root_rejects_unapproved_python_modules() -> None:
+    package = ROOT / "apps" / "server" / "minecraft_manager"
+
+    assert _unexpected_root_python_modules(package) == set()
+
+
+def test_backend_module_placement_policy_is_documented_for_agents() -> None:
+    required = (
+        "Backend module placement",
+        "New backend implementation modules must not be created",
+        "package root",
+        "Compatibility facades may preserve an existing import path only",
+    )
+
+    for document in (ROOT / "AGENTS.md", ROOT / "CLAUDE.md"):
+        content = document.read_text()
+        assert all(text in content for text in required), document

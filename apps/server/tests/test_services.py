@@ -146,6 +146,14 @@ def test_empty_snapshot_response_is_degraded_instead_of_stuck_syncing(tmp_path: 
     assert telemetry["last_error"] == "snapshot returned no envelopes"
 
 
+def test_snapshot_lines_without_telemetry_prefix_are_skipped(tmp_path: Path) -> None:
+    bedrock = FakeBedrock()
+    bedrock.telemetry_output = "INFO: some unrelated log line\nDEBUG: another line"
+    service = _make_service(tmp_path, bedrock)
+    assert service.request_telemetry_snapshot("test-no-prefix") == 0
+    assert service.state()["telemetry"]["status"] == "degraded"
+
+
 def test_sequence_gap_degrades_and_requests_reconciliation(tmp_path: Path) -> None:
     service = _make_service(tmp_path)
     requested: list[str] = []
@@ -583,7 +591,7 @@ def test_close_online_sessions_returns_list(tmp_path: Path) -> None:
 def test_missing_player_service_raises_type_error(tmp_path: Path) -> None:
     from minecraft_manager.core.events import EventBroker
     from minecraft_manager.server.files import ServerFiles
-    from minecraft_manager.reconciliation import ReconciliationService
+    from minecraft_manager.runtime import ReconciliationService
     from minecraft_manager.repository import StateRepository
     from minecraft_manager.server import WorldService
     from minecraft_manager.telemetry.repository import SQLiteTelemetryRepository

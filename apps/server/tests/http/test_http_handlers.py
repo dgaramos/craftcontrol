@@ -52,8 +52,15 @@ def assert_capability_required(
     assert getattr(client, method.lower())(path, **request_kwargs).status_code == 401
 
     auth.authenticate.return_value = {"id": "viewer", "role": "viewer", "capabilities": []}
-    auth.require_capability.side_effect = PermissionError(capability)
+    requested: list[str] = []
+
+    def _deny(user: object, cap: str) -> None:
+        requested.append(cap)
+        raise PermissionError(cap)
+
+    auth.require_capability.side_effect = _deny
     assert getattr(client, method.lower())(path, **request_kwargs).status_code == 403
+    assert capability in requested, f"expected capability {capability!r} to be checked, got {requested}"
 
 
 @pytest.fixture
@@ -346,7 +353,7 @@ def test_player_gamemode_service_error_returns_500(client, service: MagicMock) -
 
 def test_player_gamemode_requires_authentication(service: MagicMock) -> None:
     assert_capability_required(
-        service, "put", "/api/players/VonCrush/gamemode", "players.manage",
+        service, "put", "/api/players/VonCrush/gamemode", "players.manage_permissions",
         json={"mode": "survival"},
     )
 

@@ -357,6 +357,14 @@ repository-scoped homelab runner. The workflow invokes the same guarded release
 command used for manual operations; see [Automated
 homelab deployment](docs/automated-deployment.md).
 
+Backend tests live under `apps/server/tests/` and mirror the `controlplane/`
+submodule structure (`core/`, `server/`, `players/`, `telemetry/`, `operations/`,
+`runtime/`, `http/`, `audit/`). Shared test infrastructure lives in `tests/fakes.py`
+(injectable fakes), `tests/factories.py` (domain object builders), and
+`tests/conftest.py` (shared fixtures). See
+[`apps/server/controlplane/README.md`](apps/server/controlplane/README.md) for the
+full package reference including architecture rules and extraction guidance.
+
 See [Development setup](docs/development-setup.md) for prerequisites, environment configuration, and a guide to common development tasks.
 
 ## Security status

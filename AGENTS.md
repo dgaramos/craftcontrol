@@ -107,6 +107,14 @@ in a single test module:
   envelopes (`telemetry_envelope`, `player_snapshot`, etc.)
 - `tests/conftest.py` — pytest fixtures shared across the whole suite
 
+**Capability assertions.** When testing that a route is protected, assert the
+*exact* capability name that the handler checks — not just that a 403 is
+returned. Use or extend the `assert_capability_required` helper in
+`tests/http/test_http_handlers.py` as the model.
+
+The canonical package-level architecture reference is
+[`apps/server/controlplane/README.md`](apps/server/controlplane/README.md).
+
 **Prefer constructor injection over monkey-patching.**
 
 Inject infrastructure dependencies (subprocess runners, file readers, socket

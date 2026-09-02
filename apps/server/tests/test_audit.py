@@ -13,7 +13,7 @@ import pytest
 from minecraft_manager.audit.model import AuditRecord
 from minecraft_manager.audit.repository import SQLiteAuditRepository
 from minecraft_manager.audit.service import AuditService
-from minecraft_manager.migrations import run_migrations
+from minecraft_manager.core.migrations import run_migrations
 
 
 # ---------------------------------------------------------------------------

@@ -3,7 +3,7 @@ from __future__ import annotations
 from flask import Flask
 from pathlib import Path
 
-from .config import Settings
+from .core.config import Settings
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:

@@ -7,7 +7,7 @@ import time
 from typing import Any, Callable
 
 from ..core.events import EventBroker
-from ..schema import GAMERULES
+from ..core.schema import GAMERULES
 from ..telemetry.telemetry import PREFIX as TELEMETRY_PREFIX, parse_telemetry_line
 from ..ports import EventPublisher, RuntimeApplication
 

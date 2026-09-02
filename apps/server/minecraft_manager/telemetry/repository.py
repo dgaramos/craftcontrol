@@ -6,7 +6,7 @@ the database.  It does not delegate to any other repository.
 Telemetry events cross the player-domain boundary: ingestion writes to
 player_profiles, player_history, and player_daily in addition to its own
 telemetry_events and player_telemetry tables.  The shared helpers in
-minecraft_manager._db handle those cross-table writes so the logic is not
+minecraft_manager.core.sqlite handles those cross-table writes so the logic is not
 duplicated between this repository and SQLitePlayerRepository.
 """
 from __future__ import annotations
@@ -16,7 +16,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from .._db import (
+from ..core.sqlite import (
     add_daily,
     open_connection,
     player_identity,

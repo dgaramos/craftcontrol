@@ -13,7 +13,7 @@ import pytest
 
 from unittest.mock import patch
 
-from minecraft_manager._db import (
+from minecraft_manager.core.sqlite import (
     SQLITE_MAX_RETRIES,
     database_size_bytes,
     open_connection,
@@ -25,7 +25,7 @@ from minecraft_manager.core.repository import StateRepository
 from minecraft_manager.operations.repository import SQLiteOperationRepository, _connect as _ops_connect, _write_connect as _ops_write_connect
 from minecraft_manager.players.repository import SQLitePlayerRepository
 from minecraft_manager.telemetry.repository import SQLiteTelemetryRepository
-from minecraft_manager.migrations import run_migrations, LATEST_SCHEMA_VERSION
+from minecraft_manager.core.migrations import run_migrations, LATEST_SCHEMA_VERSION
 import sqlite3
 
 
@@ -175,7 +175,7 @@ def test_initialize_new_database_increments_diagnostics(tmp_path: Path) -> None:
     assert after > before, "initialize did not increment diagnostics connection counter"
     assert path.exists(), "initialize must create the database file"
     conn = sqlite3.connect(path)
-    from minecraft_manager.migrations import schema_version
+    from minecraft_manager.core.migrations import schema_version
     version = schema_version(conn)
     conn.close()
     assert version == LATEST_SCHEMA_VERSION, (
@@ -251,7 +251,7 @@ def test_core_state_connect_records_contention_failure(tmp_path: Path) -> None:
 
 def test_core_initialize_records_contention_failure(tmp_path: Path) -> None:
     """StateRepository.initialize must call _record_contention_failure when OperationalError('locked') is raised."""
-    from minecraft_manager import migrations as _mig
+    from minecraft_manager.core import migrations as _mig
 
     path = tmp_path / "fail.db"
     before = int(sqlite_diagnostics()["contention_failures"])
@@ -337,7 +337,7 @@ def test_open_connection_with_retry_increments_retries_on_contention(tmp_path: P
     before_failures = int(sqlite_diagnostics()["contention_failures"])
     call_count = 0
 
-    import minecraft_manager._db as _db_module
+    import minecraft_manager.core.sqlite as _db_module
 
     @_db_module.contextmanager
     def _failing_once(p):
@@ -365,7 +365,7 @@ def test_open_connection_with_retry_exhausts_budget_and_raises(tmp_path: Path) -
     before_retries = int(sqlite_diagnostics()["retries"])
     before_failures = int(sqlite_diagnostics()["contention_failures"])
 
-    import minecraft_manager._db as _db_module
+    import minecraft_manager.core.sqlite as _db_module
 
     @_db_module.contextmanager
     def _always_locked(p):
@@ -392,7 +392,7 @@ def test_open_connection_with_retry_does_not_retry_non_contention_error(tmp_path
     path = _initialized_db(tmp_path)
     before_retries = int(sqlite_diagnostics()["retries"])
 
-    import minecraft_manager._db as _db_module
+    import minecraft_manager.core.sqlite as _db_module
 
     @_db_module.contextmanager
     def _schema_error(p):

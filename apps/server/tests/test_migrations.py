@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from minecraft_manager.migrations import LATEST_SCHEMA_VERSION, run_migrations, schema_version
+from minecraft_manager.core.migrations import LATEST_SCHEMA_VERSION, run_migrations, schema_version
 from minecraft_manager.repository import StateRepository
 
 

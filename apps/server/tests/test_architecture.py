@@ -22,19 +22,15 @@ ROOT = Path(__file__).resolve().parents[3]
 ROOT_MODULE_ALLOWLIST = frozenset(
     {
         "__init__.py",  # Flask package bootstrap
-        "_db.py",  # shared SQLite helpers; migration tracked by #469
         "cli.py",  # command-line entry point
         "composition.py",  # production composition root
-        "config.py",  # core migration tracked by #469
         "docker_ops.py",  # server migration tracked by #470
         "host_agent.py",  # server migration tracked by #470
-        "migrations.py",  # core migration tracked by #469
         "ports.py",  # shared structural contracts
         "reconciliation.py",  # runtime migration tracked by #471
         "repository.py",  # compatibility facade; retirement tracked by #472
         "routes.py",  # compatibility facade; retirement tracked by #472
         "runtime.py",  # compatibility facade; retirement tracked by #472
-        "schema.py",  # core migration tracked by #469
         "services.py",  # compatibility facade; retirement tracked by #472
         "version.py",  # process version and startup timestamp
     }
@@ -93,6 +89,10 @@ def test_telemetry_compatibility_shims_are_retired() -> None:
     package = ROOT / "apps" / "server" / "minecraft_manager"
     retired = (
         "bedrock.py",
+        "config.py",
+        "migrations.py",
+        "schema.py",
+        "_db.py",
         "events.py",
         "files.py",
         "telemetry.py",

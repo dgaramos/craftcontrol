@@ -8,8 +8,8 @@ from typing import Any
 import json
 import logging
 
-from ..migrations import LATEST_SCHEMA_VERSION, run_migrations, schema_version
-from .._db import (
+from .migrations import LATEST_SCHEMA_VERSION, run_migrations, schema_version
+from .sqlite import (
     SQLITE_BUSY_TIMEOUT_MS,
     ConnectionFactory,
     _record_connection_wait,

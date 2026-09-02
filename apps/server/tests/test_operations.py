@@ -26,7 +26,7 @@ from minecraft_manager.operations.service import (
     ConflictingOperationError,
     ServerOperationService,
 )
-from minecraft_manager.migrations import run_migrations
+from minecraft_manager.core.migrations import run_migrations
 import sqlite3
 
 

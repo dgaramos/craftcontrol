@@ -58,7 +58,7 @@ def test_creates_verifiable_coordinated_backup_and_resumes_saves(backup_env) -> 
 
 def test_backup_sqlite_paths_are_opened_through_the_injected_factory(backup_env) -> None:
     """Backup creation measures every SQLite connection it opens."""
-    from minecraft_manager._db import sqlite_diagnostics
+    from minecraft_manager.core.sqlite import sqlite_diagnostics
 
     env = backup_env
     opened: list[Path] = []
@@ -86,7 +86,7 @@ def test_backup_sqlite_paths_are_opened_through_the_injected_factory(backup_env)
 
 def test_backup_records_locked_database_failures(backup_env) -> None:
     """A locked backup verification connection contributes to diagnostics."""
-    from minecraft_manager._db import sqlite_diagnostics
+    from minecraft_manager.core.sqlite import sqlite_diagnostics
 
     env = backup_env
     identifier = str(env["service"].create()["id"])
@@ -112,7 +112,7 @@ def test_backup_records_locked_database_failures(backup_env) -> None:
 
 def test_backup_records_locked_database_operation_failures(backup_env) -> None:
     """A lock raised after connection setup is counted and closes the connection."""
-    from minecraft_manager._db import sqlite_diagnostics
+    from minecraft_manager.core.sqlite import sqlite_diagnostics
 
     env = backup_env
     identifier = str(env["service"].create()["id"])

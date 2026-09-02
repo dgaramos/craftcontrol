@@ -8,7 +8,7 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 from .ports import EventPublisher, ServerConfiguration, ServerConsole, StateStore
-from .schema import GAMERULES, PROPERTY_NAMES, SETTINGS
+from .core.schema import GAMERULES, PROPERTY_NAMES, SETTINGS
 from .telemetry.telemetry import PREFIX as TELEMETRY_PREFIX, parse_telemetry_line
 
 if TYPE_CHECKING:

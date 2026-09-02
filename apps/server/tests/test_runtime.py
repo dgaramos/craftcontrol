@@ -153,7 +153,7 @@ def test_telemetry_none_return_skips_service(log_runtime) -> None:
 
 def test_gamerule_line_triggers_refresh(log_runtime) -> None:
     runtime, broker, service = log_runtime
-    from minecraft_manager.schema import GAMERULES
+    from minecraft_manager.core.schema import GAMERULES
     rule = next(iter(GAMERULES))
     runtime._handle_log(f"[INFO] Gamerule {rule} changed")
     broker.publish.assert_called_with("gamerule.invalidated", "bedrock-log", ANY)
@@ -162,7 +162,7 @@ def test_gamerule_line_triggers_refresh(log_runtime) -> None:
 
 def test_gamerule_skipped_when_refreshing(log_runtime) -> None:
     runtime, broker, service = log_runtime
-    from minecraft_manager.schema import GAMERULES
+    from minecraft_manager.core.schema import GAMERULES
     service.refreshing = True
     rule = next(iter(GAMERULES))
     runtime._handle_log(f"[INFO] Gamerule {rule} changed")

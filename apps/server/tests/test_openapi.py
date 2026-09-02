@@ -6,7 +6,7 @@ import pytest
 from flask import Flask
 
 from minecraft_manager import create_app
-from minecraft_manager.config import Settings
+from minecraft_manager.core.config import Settings
 from minecraft_manager.http.docs import contract_root
 from minecraft_manager.routes import api
 from packages.contracts.generate_types import OUTPUT_PATH, generate

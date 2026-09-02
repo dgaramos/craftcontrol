@@ -1,6 +1,6 @@
 import pytest
 
-from minecraft_manager.schema import GAMERULES, SETTINGS, validate_value
+from minecraft_manager.core.schema import GAMERULES, SETTINGS, validate_value
 
 
 def test_normalizes_boolean_values() -> None:

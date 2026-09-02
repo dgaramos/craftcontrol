@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from .._db import (
+from ..core.sqlite import (
     add_daily,
     allocate_daily_play,
     calendar_timezone,
@@ -284,7 +284,7 @@ class SQLitePlayerRepository:
         ``mode=None`` clears the preference (server default applies).
         Never inferred from telemetry — exclusively panel-managed.
         """
-        from .._db import player_identity
+        from ..core.sqlite import player_identity
         with self._connect() as connection:
             identity = player_identity(connection, name)
             connection.execute(

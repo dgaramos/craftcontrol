@@ -28,7 +28,7 @@ from .lifecycle import (
     ServerOperation,
 )
 from ..ports import ContainerOperations, EventPublisher, OperationStore, ServerConfiguration, ThreadFactory
-from ..schema import PROPERTY_NAMES, SETTINGS, validate_value
+from ..core.schema import PROPERTY_NAMES, SETTINGS, validate_value
 
 LOGGER = logging.getLogger(__name__)
 

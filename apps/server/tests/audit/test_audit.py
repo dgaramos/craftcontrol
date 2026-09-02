@@ -13,20 +13,12 @@ import pytest
 from minecraft_manager.audit.model import AuditRecord
 from minecraft_manager.audit.repository import SQLiteAuditRepository
 from minecraft_manager.audit.service import AuditService
-from minecraft_manager.core.migrations import run_migrations
+from conftest import make_operation_db
 
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 def _db(tmp_path: Path) -> Path:
     """Create a migrated test database and return its path."""
-    path = tmp_path / "test.db"
-    conn = sqlite3.connect(path)
-    run_migrations(conn)
-    conn.close()
-    return path
+    return make_operation_db(tmp_path, "test.db")
 
 
 # ---------------------------------------------------------------------------

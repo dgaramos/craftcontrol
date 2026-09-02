@@ -29,12 +29,15 @@ from flask import Flask
 from minecraft_manager.auth.http import install_auth
 from minecraft_manager.auth.service import AuthService
 from minecraft_manager.core.events import EventBroker
+from minecraft_manager.core.migrations import run_migrations
 from minecraft_manager.server.files import ServerFiles
 from minecraft_manager.players import PlayerService, SQLitePlayerRepository
 from minecraft_manager.runtime import ReconciliationService
 from minecraft_manager.core.repository import StateRepository
 from minecraft_manager.server import WorldService
 from minecraft_manager.runtime import ManagerService
+from minecraft_manager.operations.repository import SQLiteOperationRepository
+from minecraft_manager.operations.service import ServerOperationService
 from minecraft_manager.telemetry.repository import SQLiteTelemetryRepository
 from minecraft_manager.telemetry.service import TelemetryService
 from fakes import FakeBedrock, FakeConsole, FakeDocker, FakeRuntime  # noqa: E402
@@ -132,3 +135,149 @@ def tmp_db(tmp_path: Path) -> StateRepository:
 @pytest.fixture
 def manager_service(tmp_path: Path, fake_bedrock: FakeBedrock, fake_docker: FakeDocker) -> ManagerService:
     return make_manager_service(tmp_path, fake_bedrock, fake_docker)
+
+
+# ---------------------------------------------------------------------------
+# Repository fixtures
+# ---------------------------------------------------------------------------
+
+def _make_db(tmp_path: Path) -> Path:
+    """Create and migrate a fresh SQLite database; return its path."""
+    import sqlite3
+    db = tmp_path / "state.db"
+    with sqlite3.connect(db) as conn:
+        run_migrations(conn)
+    return db
+
+
+def make_operation_db(tmp_path: Path, filename: str = "state.db") -> Path:
+    """Public factory: create and migrate a fresh SQLite database.
+
+    Suitable for tests that need direct access to the database path (e.g.
+    startup-orphan tests that pre-populate operations before creating the
+    service).
+    """
+    import sqlite3
+    db = tmp_path / filename
+    with sqlite3.connect(db) as conn:
+        run_migrations(conn)
+    return db
+
+
+def make_operation_service(
+    tmp_path: Path,
+    docker: MagicMock | None = None,
+    broker: MagicMock | None = None,
+    configuration: MagicMock | None = None,
+    health_timeout: int = 1,
+    restart_timeout: int = 180,
+    thread_factory=None,
+    refresh_observed_settings=None,
+) -> "ServerOperationService":
+    """Public factory: assemble a ServerOperationService with sensible mocks.
+
+    This is the shared replacement for the per-file ``make_service`` helpers.
+    Pass only the parameters you want to override; everything else uses safe
+    defaults.
+    """
+    import threading as _threading
+    if thread_factory is None:
+        thread_factory = _threading.Thread
+    if docker is None:
+        docker = MagicMock()
+        docker.status.return_value = {"state": "running", "online": True}
+        docker.execute.return_value = None
+    if broker is None:
+        broker = MagicMock()
+    if configuration is None:
+        configuration = MagicMock()
+        configuration.read_properties.return_value = {"max-players": "1"}
+    return ServerOperationService(
+        operation_repository=SQLiteOperationRepository(make_operation_db(tmp_path)),
+        docker=docker,
+        broker=broker,
+        configuration=configuration,
+        thread_factory=thread_factory,
+        server_id="test-server",
+        health_timeout=health_timeout,
+        restart_timeout=restart_timeout,
+        refresh_observed_settings=refresh_observed_settings,
+    )
+
+
+@pytest.fixture
+def operation_repo(tmp_path: Path) -> SQLiteOperationRepository:
+    """Initialized SQLiteOperationRepository backed by a temp database."""
+    return SQLiteOperationRepository(_make_db(tmp_path))
+
+
+@pytest.fixture
+def player_repo(tmp_path: Path) -> SQLitePlayerRepository:
+    """Initialized SQLitePlayerRepository backed by a temp database."""
+    db = _make_db(tmp_path)
+    return SQLitePlayerRepository(db)
+
+
+@pytest.fixture
+def telemetry_repo(tmp_path: Path) -> SQLiteTelemetryRepository:
+    """Initialized SQLiteTelemetryRepository backed by a temp database."""
+    db = _make_db(tmp_path)
+    return SQLiteTelemetryRepository(db)
+
+
+@pytest.fixture
+def broker(tmp_db: StateRepository) -> EventBroker:
+    """EventBroker composed over an initialized StateRepository."""
+    return EventBroker(tmp_db)
+
+
+# ---------------------------------------------------------------------------
+# Service fixtures
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def operation_service(tmp_path: Path) -> ServerOperationService:
+    """ServerOperationService assembled with sensible mocks for unit tests.
+
+    Mirrors the local ``make_service`` helper in
+    ``tests/operations/test_operations.py`` so that file can delegate to this
+    fixture instead of duplicating the wiring.
+    """
+    docker = MagicMock()
+    docker.status.return_value = {"state": "running", "online": True}
+    docker.execute.return_value = None
+    broker_mock = MagicMock()
+    configuration = MagicMock()
+    configuration.read_properties.return_value = {"max-players": "1"}
+    return ServerOperationService(
+        operation_repository=SQLiteOperationRepository(_make_db(tmp_path)),
+        docker=docker,
+        broker=broker_mock,
+        configuration=configuration,
+        thread_factory=__import__("threading").Thread,
+        server_id="test-server",
+        health_timeout=1,
+        restart_timeout=180,
+        refresh_observed_settings=None,
+    )
+
+
+@pytest.fixture
+def reconciliation_service(tmp_path: Path, fake_bedrock: FakeBedrock) -> ReconciliationService:
+    """ReconciliationService with injected fakes, ready for isolation tests."""
+    db_path = _make_db(tmp_path)
+    repo = StateRepository(db_path)
+    repo.initialize()
+    files = ServerFiles(tmp_path / ".env", tmp_path / "server.properties")
+    brk = EventBroker(repo)
+    player_repo = SQLitePlayerRepository(db_path)
+    player_svc = PlayerService(player_repo, files, fake_bedrock, brk)  # type: ignore[arg-type]
+    telemetry_svc = TelemetryService(SQLiteTelemetryRepository(db_path), brk)
+    return ReconciliationService(
+        repository=repo,
+        files=files,
+        bedrock=fake_bedrock,  # type: ignore[arg-type]
+        broker=brk,
+        player_service=player_svc,
+        telemetry_service=telemetry_svc,
+    )

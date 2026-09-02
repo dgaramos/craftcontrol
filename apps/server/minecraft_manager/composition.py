@@ -16,8 +16,8 @@ from .runtime import EventRuntime
 from .schema import GAMERULES
 from .services import ManagerService
 from .players import PlayerService, SQLitePlayerRepository
-from .telemetry_service import TelemetryService
-from .telemetry_repository import SQLiteTelemetryRepository
+from .telemetry.service import TelemetryService
+from .telemetry.repository import SQLiteTelemetryRepository
 from .server import WorldService
 from .reconciliation import ReconciliationService
 from .operations import ServerOperationService, SQLiteOperationRepository

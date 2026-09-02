@@ -11,7 +11,7 @@ from .bedrock import BedrockClient
 from .operations.backup import BackupService, docker_container_running
 from .auth.service import AuthService
 from .repository import StateRepository
-from .telemetry_installer import TelemetryPackInstaller
+from .telemetry.installer import TelemetryPackInstaller
 
 
 class _Repository(Protocol):

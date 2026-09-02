@@ -58,3 +58,16 @@ def test_architecture_document_defines_composition_and_dependency_direction() ->
     assert "composition root" in document
     assert "Dependency direction" in document
     assert "modular monolith" in document
+
+
+def test_telemetry_compatibility_shims_are_retired() -> None:
+    package = ROOT / "apps" / "server" / "minecraft_manager"
+    retired = (
+        "telemetry.py",
+        "telemetry_service.py",
+        "telemetry_repository.py",
+        "telemetry_installer.py",
+    )
+
+    assert all(not (package / name).exists() for name in retired)
+    assert "get_db" not in (ROOT / "docs" / "development-setup.md").read_text()

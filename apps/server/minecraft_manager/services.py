@@ -4,7 +4,7 @@ from typing import Any
 
 from .ports import ContainerOperations, EventPublisher, RuntimeSupervisor, ServerConfiguration, ServerConsole, StateStore
 from .players import PlayerService
-from .telemetry_service import TelemetryService
+from .telemetry.service import TelemetryService
 from .server import WorldService
 from .reconciliation import ReconciliationService
 from .operations import ServerOperationService

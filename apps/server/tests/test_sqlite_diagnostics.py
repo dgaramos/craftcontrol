@@ -24,7 +24,7 @@ from minecraft_manager.auth.service import AuthService
 from minecraft_manager.core.repository import StateRepository
 from minecraft_manager.operations.repository import SQLiteOperationRepository, _connect as _ops_connect, _write_connect as _ops_write_connect
 from minecraft_manager.players.repository import SQLitePlayerRepository
-from minecraft_manager.telemetry_repository import SQLiteTelemetryRepository
+from minecraft_manager.telemetry.repository import SQLiteTelemetryRepository
 from minecraft_manager.migrations import run_migrations, LATEST_SCHEMA_VERSION
 import sqlite3
 

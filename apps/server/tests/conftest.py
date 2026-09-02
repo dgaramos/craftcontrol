@@ -28,8 +28,8 @@ from minecraft_manager.reconciliation import ReconciliationService
 from minecraft_manager.repository import StateRepository
 from minecraft_manager.server import WorldService
 from minecraft_manager.services import ManagerService
-from minecraft_manager.telemetry_repository import SQLiteTelemetryRepository
-from minecraft_manager.telemetry_service import TelemetryService
+from minecraft_manager.telemetry.repository import SQLiteTelemetryRepository
+from minecraft_manager.telemetry.service import TelemetryService
 from fakes import FakeBedrock, FakeConsole, FakeDocker, FakeRuntime  # noqa: E402
 
 __all__ = ["FakeBedrock", "FakeConsole", "FakeDocker", "FakeRuntime"]

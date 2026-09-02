@@ -1,7 +1,7 @@
 """Telemetry reconciliation use cases.
 
 This module is intentionally separate from telemetry.py, which validates the wire
-protocol, and telemetry_installer.py, which manages pack files.
+protocol, and telemetry/installer.py, which manages pack files.
 """
 
 from __future__ import annotations

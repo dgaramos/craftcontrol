@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from minecraft_manager.repository import StateRepository
-from minecraft_manager.telemetry_repository import SQLiteTelemetryRepository
+from minecraft_manager.telemetry.repository import SQLiteTelemetryRepository
 
 DOMAINS = {"settings", "gamerules", "players", "server", "telemetry"}
 STALE_THRESHOLD = 1200
@@ -127,8 +127,8 @@ def test_diagnostics_includes_domains(tmp_path: Path) -> None:
     from minecraft_manager.repository import StateRepository
     from minecraft_manager.server import WorldService
     from minecraft_manager.services import ManagerService
-    from minecraft_manager.telemetry_repository import SQLiteTelemetryRepository
-    from minecraft_manager.telemetry_service import TelemetryService
+    from minecraft_manager.telemetry.repository import SQLiteTelemetryRepository
+    from minecraft_manager.telemetry.service import TelemetryService
 
     import sys
     sys.path.insert(0, str(Path(__file__).parent))

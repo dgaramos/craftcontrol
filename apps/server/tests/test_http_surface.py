@@ -7,7 +7,7 @@ from flask import Flask
 
 from minecraft_manager import create_app
 from minecraft_manager.auth.http import auth_api
-from minecraft_manager.config import Settings
+from minecraft_manager.core.config import Settings
 from minecraft_manager.routes import api
 
 

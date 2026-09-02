@@ -8,7 +8,7 @@ from minecraft_manager.players.repository import SQLitePlayerRepository
 from minecraft_manager.repository import StateRepository
 from minecraft_manager.telemetry.telemetry import parse_telemetry_line
 from minecraft_manager.telemetry.repository import SQLiteTelemetryRepository
-from minecraft_manager._db import sqlite_diagnostics
+from minecraft_manager.core.sqlite import sqlite_diagnostics
 
 
 @pytest.fixture

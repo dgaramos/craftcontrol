@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Protocol
 
-from .config import Settings
+from .core.config import Settings
 from .server.console import BedrockClient
 from .operations.backup import BackupService, docker_container_running
 from .auth.service import AuthService

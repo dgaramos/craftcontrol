@@ -9,7 +9,7 @@ from .server import WorldService
 from .reconciliation import ReconciliationService
 from .operations import ServerOperationService
 from .audit import AuditService
-from ._db import database_size_bytes, sqlite_diagnostics
+from .core.sqlite import database_size_bytes, sqlite_diagnostics
 
 
 class ManagerService:
@@ -172,7 +172,7 @@ class ManagerService:
         Returns ``(changed_keys, operation_id)``; ``operation_id`` is ``None``
         when operation tracking is not active.
         """
-        from .schema import SETTINGS, validate_value
+        from .core.schema import SETTINGS, validate_value
         if not isinstance(payload, dict):
             raise TypeError("Formato inválido")
         changes = {key: validate_value(SETTINGS[key], value) for key, value in payload.items() if key in SETTINGS}
@@ -191,7 +191,7 @@ class ManagerService:
         else:
             # Fallback for contexts where operation tracking is not wired in
             # (e.g. existing tests that compose ManagerService directly).
-            from .schema import PROPERTY_NAMES
+            from .core.schema import PROPERTY_NAMES
             self.files.write_properties({PROPERTY_NAMES[key]: value for key, value in changes.items()})
             self.repository.store("settings", changes, "server.properties")
             self.broker.publish("state.changed", "manager", {"domains": ["settings"], "keys": list(changes)})
@@ -222,7 +222,7 @@ class ManagerService:
         return retry.operation_id
 
     def set_gamerule(self, rule: str, value: Any) -> str:
-        from .schema import GAMERULES, validate_value
+        from .core.schema import GAMERULES, validate_value
         if rule not in GAMERULES:
             raise KeyError(rule)
         validated = validate_value(GAMERULES[rule], value)

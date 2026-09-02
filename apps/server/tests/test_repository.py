@@ -3,7 +3,7 @@ import time
 from contextlib import contextmanager
 from pathlib import Path
 
-from minecraft_manager._db import open_connection, sqlite_diagnostics
+from minecraft_manager.core.sqlite import open_connection, sqlite_diagnostics
 from minecraft_manager.players.repository import SQLitePlayerRepository
 from minecraft_manager.repository import StateRepository
 from minecraft_manager.telemetry.repository import SQLiteTelemetryRepository

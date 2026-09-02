@@ -401,7 +401,7 @@ def test_save_settings_rejects_unknown_keys(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 def test_set_known_gamerule_sends_command(tmp_path: Path) -> None:
-    from minecraft_manager.schema import GAMERULES
+    from minecraft_manager.core.schema import GAMERULES
     bedrock = FakeBedrock()
     service = _make_service(tmp_path, bedrock)
     rule = next(iter(GAMERULES))

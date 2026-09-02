@@ -5,7 +5,7 @@ from __future__ import annotations
 import threading
 
 from .server.console import BedrockClient
-from .config import Settings
+from .core.config import Settings
 from .docker_ops import DockerOperations
 from .core.events import EventBroker
 from .server.files import ServerFiles
@@ -13,7 +13,7 @@ from .host_agent import HostAgentContainerOperations, _UrllibClient, _load_token
 from .ports import ContainerOperations, RuntimeSupervisor, ServerConsole
 from .repository import StateRepository
 from .runtime import EventRuntime
-from .schema import GAMERULES
+from .core.schema import GAMERULES
 from .services import ManagerService
 from .players import PlayerService, SQLitePlayerRepository
 from .telemetry.service import TelemetryService

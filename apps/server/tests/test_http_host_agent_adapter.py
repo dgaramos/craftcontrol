@@ -700,7 +700,7 @@ class TestIntendedStateKeyTranslation:
     def test_every_restart_required_setting_has_a_host_agent_field(self) -> None:
         """Every UI setting must translate to the host agent's canonical contract."""
         from minecraft_manager.host_agent import _translate_intended_state
-        from minecraft_manager.schema import PROPERTY_NAMES, SETTINGS
+        from minecraft_manager.core.schema import PROPERTY_NAMES, SETTINGS
 
         translated = _translate_intended_state({key: "value" for key in SETTINGS})
         agent_operations = Path(__file__).parents[3] / "services" / "host-agent" / "operations.py"

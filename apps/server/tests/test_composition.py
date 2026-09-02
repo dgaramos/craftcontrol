@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from minecraft_manager.config import Settings
+from minecraft_manager.core.config import Settings
 from minecraft_manager.composition import _docker_factory, compose_manager
 from minecraft_manager.host_agent import HostAgentContainerOperations
 from minecraft_manager.server.console import BedrockClient

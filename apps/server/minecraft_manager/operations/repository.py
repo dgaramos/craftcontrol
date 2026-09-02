@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any, Generator
 
 from .lifecycle import OperationState, OperationStage, ServerOperation, StageRecord
-from .._db import _record_connection_wait, _record_contention_failure
+from ..core.sqlite import _record_connection_wait, _record_contention_failure
 
 
 SQLITE_BUSY_TIMEOUT_MS = 30_000

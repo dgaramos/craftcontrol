@@ -4,7 +4,7 @@ import json
 
 from flask import Blueprint, Response, jsonify, render_template, request, stream_with_context
 
-from ..schema import GAMERULES, SETTINGS
+from ..core.schema import GAMERULES, SETTINGS
 from ..auth.http import require
 from .dependencies import manager
 

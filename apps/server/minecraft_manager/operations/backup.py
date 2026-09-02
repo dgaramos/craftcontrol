@@ -14,7 +14,7 @@ import tempfile
 import time
 from typing import Callable, Iterator
 
-from .._db import _record_connection_wait, _record_contention_failure
+from ..core.sqlite import _record_connection_wait, _record_contention_failure
 from ..ports import ServerConsole
 
 

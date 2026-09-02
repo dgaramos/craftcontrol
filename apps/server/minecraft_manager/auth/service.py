@@ -12,7 +12,7 @@ from typing import Any
 from contextlib import contextmanager
 from collections.abc import Iterator
 
-from .._db import _record_connection_wait, _record_contention_failure
+from ..core.sqlite import _record_connection_wait, _record_contention_failure
 
 
 ROLE_CAPABILITIES = {

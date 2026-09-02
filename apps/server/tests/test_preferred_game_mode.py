@@ -8,7 +8,7 @@ import pytest
 
 from minecraft_manager.players.repository import SQLitePlayerRepository
 from minecraft_manager.players.service import PlayerService
-from minecraft_manager.migrations import run_migrations
+from minecraft_manager.core.migrations import run_migrations
 from minecraft_manager.repository import StateRepository
 from minecraft_manager.services import ManagerService
 

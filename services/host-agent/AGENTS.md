@@ -15,9 +15,28 @@ before changing the project.
   writes are atomic (`adapters/filesystem.py`). Neither adapter shells out.
 - Keep `HOST_AGENT_WORKERS` at 1. The queue is bounded; reject with 503 rather
   than growing unbounded.
-- Tests use `FakeDocker` and `FakeFilesystem` — never require a live Docker
-  daemon in the test suite.
 - Do not add dependencies beyond `requirements.txt` without explicit approval.
 - Never commit the token file, database, or roadmap.
+
+## Testing conventions
+
+**sys.path bootstrap belongs in `tests/conftest.py` only.** Every test file that
+currently repeats the `sys.path.insert` block should import from `conftest`
+instead. New test files must never add their own `sys.path` manipulation.
+
+**Shared helpers live in `tests/helpers.py`.** `FakeProbe`, `make_executor`, and
+any other reusable builder or fake belong there — never inline them in a single
+test file.
+
+**Prefer constructor injection over `patch`.** `DockerComposeRunner`,
+`BedrockFileSystem`, and `HealthProbe` already accept injected collaborators.
+Pass fakes through those seams. Do not use `unittest.mock.patch` on stdlib
+(`pathlib.Path`, `subprocess`, `socket`) — add an injection point to the
+production class instead.
+
+**Use a builder for subprocess results.** The repeated pattern
+`MagicMock(return_value=MagicMock(returncode=0, stdout="", stderr=""))` belongs
+in `helpers.py` as `fake_run(returncode=0, stdout="", stderr="")`. New tests must
+use the builder; existing tests should be migrated when a file is touched.
 
 Run `pytest tests/ -x -q` and `git diff --check` before handoff.

@@ -23,4 +23,22 @@ before changing the project.
   icon libraries.
 - Never commit `node_modules/`, coverage output, or roadmap content.
 
+## Testing conventions
+
+**Shared helpers live in `tests/helpers.js`.** DOM builders, stub factories, and
+reusable setup belong there — never inline them in a single test file.
+
+**Prefer dependency injection over `jest.spyOn` on platform globals.** When a
+feature depends on `localStorage`, `fetch`, or `history`, accept the dependency
+as a constructor parameter with a production default. Tests pass a fake object.
+Reserve `jest.spyOn` for third-party or platform APIs that cannot be refactored.
+
+**Test files mirror `static/js/` structure.** A test for `features/players/` goes
+in `tests/players-*.test.js`; a test for `core/` goes in `tests/<module>.test.js`.
+Do not create test files at an unrelated path.
+
+**One concern per test file.** Contract tests (`*-contracts.test.js`) verify the
+API shape; feature tests (`*-feature.test.js`) verify behaviour. Keep them
+separate so a contract change doesn't force rewriting behaviour tests.
+
 Run `../../bin/check-frontend` and `git diff --check` before handoff.

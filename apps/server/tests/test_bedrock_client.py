@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from minecraft_manager.bedrock import BedrockClient
+from minecraft_manager.server.console import BedrockClient
 
 
 def _fake_docker(logs_output: bytes = b"") -> tuple[MagicMock, MagicMock, MagicMock]:

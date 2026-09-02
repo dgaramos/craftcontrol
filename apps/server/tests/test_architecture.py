@@ -3,8 +3,8 @@ from pathlib import Path
 import pytest
 
 from minecraft_manager import frontend_root
-from minecraft_manager.events import EventBroker
-from minecraft_manager.files import ServerFiles
+from minecraft_manager.core.events import EventBroker
+from minecraft_manager.server.files import ServerFiles
 from minecraft_manager.players import PlayerService, SQLitePlayerRepository
 from minecraft_manager.repository import StateRepository
 
@@ -23,13 +23,10 @@ ROOT_MODULE_ALLOWLIST = frozenset(
     {
         "__init__.py",  # Flask package bootstrap
         "_db.py",  # shared SQLite helpers; migration tracked by #469
-        "bedrock.py",  # compatibility shim; retirement tracked by #468
         "cli.py",  # command-line entry point
         "composition.py",  # production composition root
         "config.py",  # core migration tracked by #469
         "docker_ops.py",  # server migration tracked by #470
-        "events.py",  # compatibility shim; retirement tracked by #468
-        "files.py",  # compatibility shim; retirement tracked by #468
         "host_agent.py",  # server migration tracked by #470
         "migrations.py",  # core migration tracked by #469
         "ports.py",  # shared structural contracts
@@ -95,6 +92,9 @@ def test_architecture_document_defines_composition_and_dependency_direction() ->
 def test_telemetry_compatibility_shims_are_retired() -> None:
     package = ROOT / "apps" / "server" / "minecraft_manager"
     retired = (
+        "bedrock.py",
+        "events.py",
+        "files.py",
         "telemetry.py",
         "telemetry_service.py",
         "telemetry_repository.py",

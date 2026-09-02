@@ -122,8 +122,8 @@ def test_domain_freshness_time_injectable(tmp_path: Path) -> None:
 
 
 def test_diagnostics_includes_domains(tmp_path: Path) -> None:
-    from minecraft_manager.events import EventBroker
-    from minecraft_manager.files import ServerFiles
+    from minecraft_manager.core.events import EventBroker
+    from minecraft_manager.server.files import ServerFiles
     from minecraft_manager.repository import StateRepository
     from minecraft_manager.server import WorldService
     from minecraft_manager.services import ManagerService

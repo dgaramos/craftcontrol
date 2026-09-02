@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from minecraft_manager.events import Event, EventBroker
+from minecraft_manager.core.events import Event, EventBroker
 
 
 @pytest.fixture

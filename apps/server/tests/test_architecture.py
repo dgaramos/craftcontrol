@@ -117,6 +117,17 @@ def test_backend_module_placement_policy_is_documented_for_agents() -> None:
         "New backend implementation modules must not be created",
         "package root",
         "Compatibility facades may preserve an existing import path only",
+        "core/",
+        "server/",
+        "players/",
+        "telemetry/",
+        "operations/",
+        "runtime/",
+        "http/",
+        "auth/",
+        "audit/",
+        "allowlist",
+        "reviewed",
     )
 
     for document in (ROOT / "AGENTS.md", ROOT / "CLAUDE.md"):

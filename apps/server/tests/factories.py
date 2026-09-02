@@ -7,7 +7,7 @@ from __future__ import annotations
 
 
 def telemetry_envelope(
-    type: str = "blocks.changed",
+    event_type: str = "blocks.changed",
     sequence: int = 1,
     player: str | None = "VonCrush",
     data: dict | None = None,
@@ -16,7 +16,7 @@ def telemetry_envelope(
     """Return a well-formed telemetry envelope dict.
 
     Args:
-        type: The event type string (e.g. ``"blocks.changed"``).
+        event_type: The event type string (e.g. ``"blocks.changed"``).
         sequence: Monotonically increasing sequence number from the pack.
         player: Player name to embed in ``{"name": player}``; pass ``None``
             for server-level events that carry no player context.
@@ -29,7 +29,7 @@ def telemetry_envelope(
     return {
         "schema": 1,
         "sequence": sequence,
-        "type": type,
+        "type": event_type,
         "timestamp": timestamp,
         "player": {"name": player} if player is not None else None,
         "data": data if data is not None else {},

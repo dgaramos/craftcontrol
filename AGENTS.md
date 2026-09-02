@@ -34,6 +34,12 @@ world data into the profile or review output.
 
 The legacy file locations in the preceding rule are compatibility facades during the modular refactor. New domain modules may live under `http/`, `server/`, `players/`, `telemetry/`, `operations/`, and `runtime/`; do not remove a compatibility import until its callers and tests have migrated.
 
+### Backend module placement
+
+New backend implementation modules must not be created in the `minecraft_manager` package root. Put code in its owning module: shared configuration, SQLite support, migrations, event primitives, and validation in `core/`; Bedrock, Docker, Host Agent, and server-file adapters in `server/`; player behavior in `players/`; telemetry protocol, persistence, and installation in `telemetry/`; backup and operational workflows in `operations/`; supervisors and reconciliation in `runtime/`; request mapping in `http/`; authentication in `auth/`; and durable security records in `audit/`.
+
+The package root is reserved for package bootstrap, the production composition root, CLI entry points, version metadata, and genuinely cross-domain structural contracts. Compatibility facades may preserve an existing import path only; new behavior belongs in the owning module. Do not create a new root module or add canonical behavior to a facade merely for convenience. The architecture test contains the explicit temporary allowlist for files awaiting the migration issues; update it only when a reviewed architecture decision changes that allowlist.
+
 ## Player data invariants
 
 - A disconnect updates presence and closes a session; it never removes a player profile.

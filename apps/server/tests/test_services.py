@@ -583,7 +583,7 @@ def test_close_online_sessions_returns_list(tmp_path: Path) -> None:
 def test_missing_player_service_raises_type_error(tmp_path: Path) -> None:
     from minecraft_manager.core.events import EventBroker
     from minecraft_manager.server.files import ServerFiles
-    from minecraft_manager.reconciliation import ReconciliationService
+    from minecraft_manager.runtime import ReconciliationService
     from minecraft_manager.repository import StateRepository
     from minecraft_manager.server import WorldService
     from minecraft_manager.telemetry.repository import SQLiteTelemetryRepository

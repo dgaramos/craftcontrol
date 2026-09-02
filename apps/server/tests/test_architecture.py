@@ -25,7 +25,6 @@ ROOT_MODULE_ALLOWLIST = frozenset(
         "cli.py",  # command-line entry point
         "composition.py",  # production composition root
         "ports.py",  # shared structural contracts
-        "reconciliation.py",  # runtime migration tracked by #471
         "repository.py",  # compatibility facade; retirement tracked by #472
         "routes.py",  # compatibility facade; retirement tracked by #472
         "runtime.py",  # compatibility facade; retirement tracked by #472

@@ -7,13 +7,13 @@ import time
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
-from .ports import EventPublisher, ServerConfiguration, ServerConsole, StateStore
-from .core.schema import GAMERULES, PROPERTY_NAMES, SETTINGS
-from .telemetry.telemetry import PREFIX as TELEMETRY_PREFIX, parse_telemetry_line
+from ..ports import EventPublisher, ServerConfiguration, ServerConsole, StateStore
+from ..core.schema import GAMERULES, PROPERTY_NAMES, SETTINGS
+from ..telemetry.telemetry import PREFIX as TELEMETRY_PREFIX, parse_telemetry_line
 
 if TYPE_CHECKING:
-    from .players import PlayerService
-    from .telemetry.service import TelemetryService
+    from ..players import PlayerService
+    from ..telemetry.service import TelemetryService
 
 
 class ReconciliationService:

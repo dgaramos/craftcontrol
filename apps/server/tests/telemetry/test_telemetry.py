@@ -5,27 +5,10 @@ from pathlib import Path
 import pytest
 
 from minecraft_manager.players.repository import SQLitePlayerRepository
-from minecraft_manager.core.repository import StateRepository
 from minecraft_manager.telemetry.telemetry import parse_telemetry_line
 from minecraft_manager.telemetry.repository import SQLiteTelemetryRepository
 from minecraft_manager.core.sqlite import sqlite_diagnostics
-
-
-@pytest.fixture
-def db_path(tmp_path: Path) -> Path:
-    path = tmp_path / "state.db"
-    StateRepository(path).initialize()
-    return path
-
-
-@pytest.fixture
-def player_repo(db_path: Path) -> SQLitePlayerRepository:
-    return SQLitePlayerRepository(db_path)
-
-
-@pytest.fixture
-def telemetry_repo(db_path: Path) -> SQLiteTelemetryRepository:
-    return SQLiteTelemetryRepository(db_path)
+from factories import telemetry_envelope
 
 
 def test_parses_actual_bedrock_content_log_fixture() -> None:
@@ -59,17 +42,17 @@ def test_rejects_unknown_topic() -> None:
 def test_snapshot_is_persisted_and_deduplicated(
     player_repo: SQLitePlayerRepository,
     telemetry_repo: SQLiteTelemetryRepository,
-    db_path: Path,
+    tmp_path: Path,
 ) -> None:
     player_repo.observe_player("VonCrush", True, "99")
-    event = {"schema": 1, "sequence": 8, "type": "snapshot.player", "timestamp": 1, "player": {"name": "VonCrush"}, "data": {"deaths": 3, "blocksBroken": 42}}
+    event = telemetry_envelope("snapshot.player", sequence=8, player="VonCrush", data={"deaths": 3, "blocksBroken": 42})
     assert telemetry_repo.ingest_telemetry(event) == (True, ["VonCrush"])
     assert telemetry_repo.ingest_telemetry(event) == (False, [])
     profile = player_repo.player_profiles()[0]
     assert profile["deaths_count"] == 3
     assert profile["deaths_source"] == "behavior-pack"
     assert profile["telemetry"]["blocksBroken"] == 42
-    with sqlite3.connect(db_path) as connection:
+    with sqlite3.connect(tmp_path / "state.db") as connection:
         stored = json.loads(connection.execute("SELECT payload FROM telemetry_events").fetchone()[0])
     assert stored == event
 
@@ -78,7 +61,7 @@ def test_telemetry_follows_profile_when_xuid_becomes_known(
     player_repo: SQLitePlayerRepository,
     telemetry_repo: SQLiteTelemetryRepository,
 ) -> None:
-    event = {"schema": 1, "sequence": 2, "type": "snapshot.player", "timestamp": 1, "player": {"name": "Nicole"}, "data": {"mobKills": 9}}
+    event = telemetry_envelope("snapshot.player", sequence=2, player="Nicole", data={"mobKills": 9})
     telemetry_repo.ingest_telemetry(event)
     player_repo.observe_player("Nicole", True, "123")
     profiles = player_repo.player_profiles()
@@ -91,8 +74,11 @@ def test_behavior_pack_death_is_saved_in_player_history(
     telemetry_repo: SQLiteTelemetryRepository,
 ) -> None:
     player_repo.observe_player("VonCrush", True, "99")
-    telemetry_repo.ingest_telemetry({"schema": 1, "sequence": 8, "type": "snapshot.player", "timestamp": 1, "player": {"name": "VonCrush"}, "data": {"deaths": 0}})
-    death = {"schema": 1, "sequence": 9, "type": "entity.died", "timestamp": 2, "player": {"name": "VonCrush"}, "data": {"victim": "VonCrush", "victimType": "minecraft:player", "killer": None, "killerType": "minecraft:zombie", "projectileType": None, "cause": "entityAttack"}}
+    telemetry_repo.ingest_telemetry(telemetry_envelope("snapshot.player", sequence=8, player="VonCrush", data={"deaths": 0}))
+    death = telemetry_envelope(
+        "entity.died", sequence=9, timestamp=2, player="VonCrush",
+        data={"victim": "VonCrush", "victimType": "minecraft:player", "killer": None, "killerType": "minecraft:zombie", "projectileType": None, "cause": "entityAttack"},
+    )
     assert telemetry_repo.ingest_telemetry(death) == (True, ["VonCrush"])
     profile = player_repo.player_profile(player_repo.player_profiles()[0]["id"])
     deaths = [event for event in profile["history"] if event["topic"] == "player.death"]
@@ -107,15 +93,11 @@ def test_respawn_and_dimension_change_are_saved_in_player_history(
     telemetry_repo: SQLiteTelemetryRepository,
 ) -> None:
     player_repo.observe_player("VonCrush", True, "99")
-    telemetry_repo.ingest_telemetry({
-        "schema": 1, "sequence": 1, "type": "player.respawned", "timestamp": 1,
-        "player": {"name": "VonCrush"}, "data": {},
-    })
-    telemetry_repo.ingest_telemetry({
-        "schema": 1, "sequence": 2, "type": "player.dimension.changed", "timestamp": 2,
-        "player": {"name": "VonCrush"},
-        "data": {"from": "minecraft:overworld", "to": "minecraft:nether"},
-    })
+    telemetry_repo.ingest_telemetry(telemetry_envelope("player.respawned", sequence=1, player="VonCrush"))
+    telemetry_repo.ingest_telemetry(telemetry_envelope(
+        "player.dimension.changed", sequence=2, timestamp=2, player="VonCrush",
+        data={"from": "minecraft:overworld", "to": "minecraft:nether"},
+    ))
     activity = player_repo.player_activity("all", "", "structured", "", 0, 1, 25)
     assert activity["summary"]["respawns"] == 1
     assert activity["summary"]["dimensions"] == 1
@@ -128,8 +110,8 @@ def test_new_snapshot_at_same_sequence_replaces_authoritative_totals(
     player_repo: SQLitePlayerRepository,
     telemetry_repo: SQLiteTelemetryRepository,
 ) -> None:
-    first = {"schema": 1, "sequence": 8, "type": "snapshot.player", "timestamp": 1, "player": {"name": "VonCrush"}, "data": {"blocksBroken": 10}}
-    second = {**first, "timestamp": 2, "data": {"blocksBroken": 15}}
+    first = telemetry_envelope("snapshot.player", sequence=8, player="VonCrush", data={"blocksBroken": 10})
+    second = telemetry_envelope("snapshot.player", sequence=8, timestamp=2, player="VonCrush", data={"blocksBroken": 15})
     assert telemetry_repo.ingest_telemetry(first)[0]
     assert telemetry_repo.ingest_telemetry(second)[0]
     assert player_repo.player_profiles()[0]["telemetry"]["blocksBroken"] == 15
@@ -163,11 +145,7 @@ def test_snapshot_player_gamemode_is_stored_in_stats(
     player_repo: SQLitePlayerRepository,
     telemetry_repo: SQLiteTelemetryRepository,
 ) -> None:
-    event = {
-        "schema": 1, "sequence": 10, "type": "snapshot.player", "timestamp": 1,
-        "player": {"name": "VonCrush"},
-        "data": {"deaths": 0, "gameMode": "survival"},
-    }
+    event = telemetry_envelope("snapshot.player", sequence=10, player="VonCrush", data={"deaths": 0, "gameMode": "survival"})
     telemetry_repo.ingest_telemetry(event)
     profile = player_repo.player_profiles()[0]
     assert profile["telemetry"]["gameMode"] == "survival"
@@ -177,11 +155,7 @@ def test_snapshot_player_without_gamemode_leaves_field_absent(
     player_repo: SQLitePlayerRepository,
     telemetry_repo: SQLiteTelemetryRepository,
 ) -> None:
-    event = {
-        "schema": 1, "sequence": 11, "type": "snapshot.player", "timestamp": 1,
-        "player": {"name": "VonCrush"},
-        "data": {"deaths": 0},
-    }
+    event = telemetry_envelope("snapshot.player", sequence=11, player="VonCrush", data={"deaths": 0})
     telemetry_repo.ingest_telemetry(event)
     profile = player_repo.player_profiles()[0]
     assert "gameMode" not in profile["telemetry"]
@@ -190,14 +164,9 @@ def test_snapshot_player_without_gamemode_leaves_field_absent(
 def test_observed_game_mode_exposed_in_player_profile(
     player_repo: SQLitePlayerRepository,
     telemetry_repo: SQLiteTelemetryRepository,
-    db_path: Path,
 ) -> None:
     player_repo.observe_player("VonCrush", True, "99")
-    event = {
-        "schema": 1, "sequence": 12, "type": "snapshot.player", "timestamp": 1,
-        "player": {"name": "VonCrush"},
-        "data": {"deaths": 0, "gameMode": "creative"},
-    }
+    event = telemetry_envelope("snapshot.player", sequence=12, player="VonCrush", data={"deaths": 0, "gameMode": "creative"})
     telemetry_repo.ingest_telemetry(event)
     profiles = player_repo.player_profiles()
     profile_id = profiles[0]["id"]
@@ -208,7 +177,6 @@ def test_observed_game_mode_exposed_in_player_profile(
 
 def test_observed_game_mode_is_null_without_telemetry(
     player_repo: SQLitePlayerRepository,
-    db_path: Path,
 ) -> None:
     player_repo.observe_player("VonCrush", True, "99")
     profiles = player_repo.player_profiles()
@@ -221,27 +189,25 @@ def test_observed_game_mode_is_null_without_telemetry(
 def test_batched_block_deltas_update_totals_maps_and_daily_buckets(
     player_repo: SQLitePlayerRepository,
     telemetry_repo: SQLiteTelemetryRepository,
-    db_path: Path,
+    tmp_path: Path,
 ) -> None:
-    telemetry_repo.ingest_telemetry({
-        "schema": 1, "sequence": 1, "type": "snapshot.player", "timestamp": 1,
-        "player": {"name": "VonCrush"},
-        "data": {"blocksBroken": 4, "blocksPlaced": 2, "brokenByType": {}, "placedByType": {}},
-    })
-    batch = {
-        "schema": 1, "sequence": 2, "type": "blocks.changed", "timestamp": 2,
-        "player": {"name": "VonCrush"},
-        "data": {
+    telemetry_repo.ingest_telemetry(telemetry_envelope(
+        "snapshot.player", sequence=1, player="VonCrush",
+        data={"blocksBroken": 4, "blocksPlaced": 2, "brokenByType": {}, "placedByType": {}},
+    ))
+    batch = telemetry_envelope(
+        "blocks.changed", sequence=2, timestamp=2, player="VonCrush",
+        data={
             "broken": {"total": 3, "byType": {"minecraft:stone": 2, "minecraft:diamond_ore": 1}},
             "placed": {"total": 2, "byType": {"minecraft:oak_planks": 2}},
         },
-    }
+    )
     assert telemetry_repo.ingest_telemetry(batch)[0]
     assert not telemetry_repo.ingest_telemetry(batch)[0]
     stats = player_repo.player_profiles()[0]["telemetry"]
     assert stats["blocksBroken"] == 7
     assert stats["brokenByType"]["minecraft:stone"] == 2
     assert stats["blocksPlaced"] == 4
-    with sqlite3.connect(db_path) as connection:
+    with sqlite3.connect(tmp_path / "state.db") as connection:
         daily = connection.execute("SELECT blocks_broken,blocks_placed FROM player_daily").fetchone()
     assert daily == (3, 2)

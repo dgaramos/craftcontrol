@@ -84,6 +84,170 @@ controlplane/
 
 ---
 
+## Database schema
+
+All persistent state lives in a single SQLite file (`data/manager.db`).
+Schema migrations run automatically at startup via `core/migrations.py`.
+
+```mermaid
+erDiagram
+    state {
+        TEXT kind PK
+        TEXT key PK
+        TEXT value
+        REAL updated_at
+        TEXT source
+        REAL changed_at
+    }
+
+    events {
+        INTEGER id PK
+        TEXT topic
+        TEXT source
+        TEXT payload
+        REAL occurred_at
+    }
+
+    player_profiles {
+        TEXT identity PK
+        TEXT xuid UK
+        TEXT name
+        REAL first_seen_at
+        REAL last_seen_at
+        TEXT stats
+    }
+
+    player_aliases {
+        TEXT identity PK
+        TEXT name PK
+        REAL first_seen_at
+        REAL last_seen_at
+    }
+
+    player_sessions {
+        INTEGER id PK
+        TEXT identity
+        REAL connected_at
+        REAL disconnected_at
+        TEXT reason
+    }
+
+    player_history {
+        INTEGER id PK
+        TEXT identity
+        TEXT event_type
+        REAL occurred_at
+        TEXT payload
+        TEXT event_key UK
+    }
+
+    player_telemetry {
+        TEXT identity PK
+        TEXT stats
+        REAL updated_at
+    }
+
+    player_daily {
+        TEXT identity PK
+        TEXT day PK
+        INTEGER blocks_broken
+        INTEGER blocks_placed
+        INTEGER deaths
+        INTEGER kills
+        INTEGER distance_walked
+        INTEGER dimension_transitions
+        REAL updated_at
+    }
+
+    telemetry_events {
+        TEXT event_key PK
+        INTEGER sequence
+        TEXT event_type
+        TEXT player_name
+        TEXT payload
+        REAL received_at
+    }
+
+    panel_accounts {
+        TEXT identity PK
+        TEXT role
+        TEXT password_hash
+        REAL created_at
+    }
+
+    panel_invitations {
+        TEXT token_hash PK
+        TEXT identity
+        TEXT role
+        REAL created_at
+        REAL used_at
+    }
+
+    panel_sessions {
+        TEXT token_hash PK
+        TEXT identity
+        REAL created_at
+        REAL last_seen_at
+    }
+
+    auth_attempts {
+        INTEGER id PK
+        TEXT login_key
+        REAL occurred_at
+        INTEGER success
+    }
+
+    audit_log {
+        INTEGER id PK
+        REAL occurred_at
+        TEXT actor_identity
+        TEXT action
+        TEXT target
+        TEXT payload
+    }
+
+    server_operations {
+        TEXT operation_id PK
+        TEXT server_id
+        TEXT state
+        TEXT payload
+        REAL created_at
+        REAL updated_at
+    }
+
+    operation_stages {
+        TEXT operation_id PK
+        TEXT stage PK
+        TEXT result
+        TEXT evidence
+        REAL started_at
+        REAL finished_at
+    }
+
+    player_profiles ||--o{ player_aliases : "identity"
+    player_profiles ||--o{ player_sessions : "identity"
+    player_profiles ||--o{ player_history : "identity"
+    player_profiles ||--o| player_telemetry : "identity"
+    player_profiles ||--o{ player_daily : "identity"
+    panel_accounts ||--o{ panel_invitations : "identity"
+    panel_accounts ||--o{ panel_sessions : "identity"
+    panel_accounts ||--o{ audit_log : "actor_identity"
+    server_operations ||--o{ operation_stages : "operation_id"
+```
+
+**Groups by domain:**
+
+| Tables | Domain |
+|---|---|
+| `state`, `events` | Core state store and event log |
+| `player_profiles`, `player_aliases`, `player_sessions`, `player_history`, `player_telemetry`, `player_daily` | Player identity and analytics |
+| `telemetry_events` | Behavior-pack event ingestion |
+| `panel_accounts`, `panel_invitations`, `panel_sessions`, `auth_attempts` | Authentication |
+| `audit_log` | Security audit trail |
+| `server_operations`, `operation_stages` | Lifecycle operations |
+
+---
+
 ## Testing
 
 Tests live in `apps/server/tests/` and mirror this package layout:

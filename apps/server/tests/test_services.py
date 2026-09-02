@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from minecraft_manager.files import ServerFiles
+from minecraft_manager.server.files import ServerFiles
 from minecraft_manager.services import ManagerService
 from conftest import make_manager_service as _make_service
 from fakes import FakeBedrock, FakeDocker, FakeRuntime
@@ -581,8 +581,8 @@ def test_close_online_sessions_returns_list(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 def test_missing_player_service_raises_type_error(tmp_path: Path) -> None:
-    from minecraft_manager.events import EventBroker
-    from minecraft_manager.files import ServerFiles
+    from minecraft_manager.core.events import EventBroker
+    from minecraft_manager.server.files import ServerFiles
     from minecraft_manager.reconciliation import ReconciliationService
     from minecraft_manager.repository import StateRepository
     from minecraft_manager.server import WorldService
@@ -609,8 +609,8 @@ def test_missing_player_service_raises_type_error(tmp_path: Path) -> None:
 
 
 def test_missing_telemetry_service_raises_type_error(tmp_path: Path) -> None:
-    from minecraft_manager.events import EventBroker
-    from minecraft_manager.files import ServerFiles
+    from minecraft_manager.core.events import EventBroker
+    from minecraft_manager.server.files import ServerFiles
     from minecraft_manager.players import PlayerService, SQLitePlayerRepository
     from minecraft_manager.repository import StateRepository
     from minecraft_manager.server import WorldService
@@ -635,8 +635,8 @@ def test_missing_telemetry_service_raises_type_error(tmp_path: Path) -> None:
 
 
 def test_missing_world_service_raises_type_error(tmp_path: Path) -> None:
-    from minecraft_manager.events import EventBroker
-    from minecraft_manager.files import ServerFiles
+    from minecraft_manager.core.events import EventBroker
+    from minecraft_manager.server.files import ServerFiles
     from minecraft_manager.players import PlayerService, SQLitePlayerRepository
     from minecraft_manager.repository import StateRepository
     from minecraft_manager.telemetry.repository import SQLiteTelemetryRepository
@@ -662,8 +662,8 @@ def test_missing_world_service_raises_type_error(tmp_path: Path) -> None:
 
 
 def test_missing_reconciliation_service_raises_type_error(tmp_path: Path) -> None:
-    from minecraft_manager.events import EventBroker
-    from minecraft_manager.files import ServerFiles
+    from minecraft_manager.core.events import EventBroker
+    from minecraft_manager.server.files import ServerFiles
     from minecraft_manager.players import PlayerService, SQLitePlayerRepository
     from minecraft_manager.repository import StateRepository
     from minecraft_manager.server import WorldService
@@ -786,8 +786,8 @@ def _make_service_with_fakes(
     player_service: _FakePlayerService | None = None,
 ) -> "ManagerService":
     """Build a ManagerService with injected fakes instead of real services."""
-    from minecraft_manager.events import EventBroker
-    from minecraft_manager.files import ServerFiles
+    from minecraft_manager.core.events import EventBroker
+    from minecraft_manager.server.files import ServerFiles
     from minecraft_manager.repository import StateRepository
     from minecraft_manager.server import WorldService
     from minecraft_manager.services import ManagerService

@@ -21,8 +21,8 @@ from flask import Flask
 
 from minecraft_manager.auth.http import install_auth
 from minecraft_manager.auth.service import AuthService
-from minecraft_manager.events import EventBroker
-from minecraft_manager.files import ServerFiles
+from minecraft_manager.core.events import EventBroker
+from minecraft_manager.server.files import ServerFiles
 from minecraft_manager.players import PlayerService, SQLitePlayerRepository
 from minecraft_manager.reconciliation import ReconciliationService
 from minecraft_manager.repository import StateRepository

@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import threading
 
-from .bedrock import BedrockClient
+from .server.console import BedrockClient
 from .config import Settings
 from .docker_ops import DockerOperations
-from .events import EventBroker
-from .files import ServerFiles
+from .core.events import EventBroker
+from .server.files import ServerFiles
 from .host_agent import HostAgentContainerOperations, _UrllibClient, _load_token
 from .ports import ContainerOperations, RuntimeSupervisor, ServerConsole
 from .repository import StateRepository

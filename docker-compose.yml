@@ -1,6 +1,8 @@
 services:
   craftcontrol:
-    build: .
+    build:
+      context: .
+      dockerfile: apps/server/controlplane/Dockerfile
     image: craftcontrol:0.2.18
     container_name: craftcontrol
     labels:
@@ -28,9 +30,9 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ../minecraft-bedrock:/minecraft-project
       - ./data:/data
-      - ./apps/server/app.py:/app/app.py:ro
-      - ./apps/server/wsgi.py:/app/wsgi.py:ro
-      - ./apps/server/controlplane:/app/controlplane:ro
+      - ./apps/server/controlplane/app.py:/app/app.py:ro
+      - ./apps/server/controlplane/wsgi.py:/app/wsgi.py:ro
+      - ./apps/server/controlplane/src:/app/src:ro
       - ./apps/client/static:/app/apps/client/static:ro
       - ./apps/client/templates:/app/apps/client/templates:ro
       - ./packs:/app/packs:ro

@@ -6,11 +6,11 @@ readonly PYTHON="${PYTHON:-python3}"
 cd "$ROOT"
 
 "$PYTHON" -m compileall -q \
-  apps/server/controlplane apps/server/app.py apps/server/wsgi.py app.py wsgi.py
+  apps/server/controlplane/src apps/server/controlplane/app.py apps/server/controlplane/wsgi.py
 mkdir -p test-results
-PYTHONPATH="$ROOT/apps/server${PYTHONPATH:+:$PYTHONPATH}" "$PYTHON" -m pytest apps/server/tests/ \
-  --ignore=apps/server/tests/test_agent_workflows.py \
-  --cov=apps/server/controlplane \
+PYTHONPATH="$ROOT/apps/server/controlplane${PYTHONPATH:+:$PYTHONPATH}" "$PYTHON" -m pytest apps/server/controlplane/tests/ \
+  --ignore=apps/server/controlplane/tests/test_agent_workflows.py \
+  --cov=apps/server/controlplane/src \
   --cov-report=xml:coverage.xml \
   --junit-xml=test-results/results.xml \
   -v

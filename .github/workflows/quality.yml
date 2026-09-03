@@ -20,7 +20,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: python -m pip install -r apps/server/requirements.txt
+      - run: python -m pip install -r apps/server/controlplane/requirements.txt
       - run: bin/check-backend
       - name: Upload backend coverage
         uses: codecov/codecov-action@v5.4.3
@@ -44,7 +44,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: python -m pip install -r apps/server/requirements.txt
+      - run: python -m pip install -r apps/server/controlplane/requirements.txt
       - run: bin/check-contracts
 
   bedrock-proxy:
@@ -58,7 +58,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: python -m pip install -r apps/server/requirements.txt
+      - run: python -m pip install -r apps/server/controlplane/requirements.txt
       - run: bin/check-bedrock-proxy
       - name: Upload bedrock-proxy coverage
         uses: codecov/codecov-action@v5.4.3
@@ -80,7 +80,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: python -m pip install -r apps/server/requirements.txt
+      - run: python -m pip install -r apps/server/controlplane/requirements.txt
       - run: bin/check-contracts-frontend
 
   frontend:
@@ -116,7 +116,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: python -m pip install -r apps/server/requirements.txt
+      - run: python -m pip install -r apps/server/controlplane/requirements.txt
       - run: bin/check-dr-agents
       - name: Upload dr-agents coverage
         uses: codecov/codecov-action@v5.4.3
@@ -166,5 +166,5 @@ jobs:
       - uses: actions/setup-node@v4.4.0
         with:
           node-version: "22"
-      - run: python -m pip install -r apps/server/requirements.txt
+      - run: python -m pip install -r apps/server/controlplane/requirements.txt
       - run: bin/check-integration

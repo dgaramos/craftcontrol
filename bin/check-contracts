@@ -7,5 +7,5 @@ cd "$ROOT"
 
 "$PYTHON" -m json.tool packages/contracts/openapi.json >/dev/null
 "$PYTHON" packages/contracts/generate_types.py --check
-PYTHONPATH="$ROOT/apps/server${PYTHONPATH:+:$PYTHONPATH}" "$PYTHON" -m pytest apps/server/tests/http/test_http_surface.py apps/server/tests/test_openapi.py -v
+PYTHONPATH="$ROOT/apps/server/controlplane${PYTHONPATH:+:$PYTHONPATH}" "$PYTHON" -m pytest apps/server/controlplane/tests/http/test_http_surface.py apps/server/controlplane/tests/test_openapi.py -v
 echo "contracts gate: ok"

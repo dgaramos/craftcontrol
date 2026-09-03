@@ -2,7 +2,7 @@ services:
   craftcontrol-backend:
     build:
       context: .
-      dockerfile: apps/server/Dockerfile
+      dockerfile: apps/server/controlplane/Dockerfile
       args:
         CRAFTCONTROL_BACKEND_VERSION: "${CRAFTCONTROL_BACKEND_VERSION:-0.1.0}"
     image: "craftcontrol-backend:${CRAFTCONTROL_BACKEND_VERSION:-0.1.0}"

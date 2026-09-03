@@ -38,6 +38,12 @@ paths. The deploy script must follow this order:
 4. Start the new container.
 5. Optionally verify the backup: `docker exec <container> craftcontrol backup verify <id>`.
 
+## Homelab setup
+
+If you need to recreate the self-hosted deploy infrastructure (runner, deploy
+root, Bedrock Proxy service) from scratch, see
+[`docs/deploy-homelab.md`](../docs/deploy-homelab.md).
+
 ## Subdirectories
 
 - `bedrock-proxy/` — host-side artifacts for the Bedrock Proxy service.

@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { world, system } from "@minecraft/server";
+import { captureConsole } from "./console-capture.mjs";
 
 // --- setup ---
-const output = [];
-console.warn = (line) => output.push(String(line));
+const capture = captureConsole("warn");
+const { lines: output } = capture;
 
 // Give the mock player a getGameMode method returning "survival"
 const player = {
@@ -96,3 +97,4 @@ assert.ok(snapshot3, "snapshot.player must exist for player without getGameMode"
 // gameMode field must be absent (not undefined-forced or erroring)
 assert.ok(!("gameMode" in snapshot3.data) || snapshot3.data.gameMode === null || snapshot3.data.gameMode === undefined,
   "gameMode must be absent or null when getGameMode is not supported");
+capture.restore();

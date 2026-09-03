@@ -40,6 +40,10 @@ many tests. Extract it as `suppressConsoleWarn()` (and `suppressConsoleError()`)
 in a shared `tests/helpers.mjs` file. New tests must use the helper; migrate
 existing tests when a file is touched.
 
+Runtime fixtures execute outside Jest. Use `tests/runtime/console-capture.mjs`
+there to capture `warn` or `error`, and call `restore()` after fixture
+assertions; do not assign `console.warn` or `console.error` directly.
+
 **Use shared builders for recurring telemetry data.** `tests/factories.mjs`
 owns explicit-override builders for persisted metadata, player snapshots,
 player shards, protocol envelopes, and captured telemetry log records.

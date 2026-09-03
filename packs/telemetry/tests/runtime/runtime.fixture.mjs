@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { world, system } from "@minecraft/server";
+import { captureConsole } from "./console-capture.mjs";
 
-const output = [];
-console.warn = (line) => output.push(String(line));
+const capture = captureConsole("warn");
+const { lines: output } = capture;
 
 await import("../../behavior_pack/scripts/main.js");
 
@@ -37,3 +38,4 @@ assert.equal(snapshot?.data.killsByType["minecraft:zombie"], 1);
 assert.equal(snapshot?.data.distanceByDimension["minecraft:overworld"], 5);
 assert.equal(snapshot?.data.activeTimeByDimension["minecraft:overworld"], 5);
 assert.ok(snapshot?.data.firstDimensionVisitAt["minecraft:overworld"] > 0);
+capture.restore();

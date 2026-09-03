@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { world, system } from "@minecraft/server";
+import { captureConsole } from "./console-capture.mjs";
 
-const output = [];
-console.warn = (line) => output.push(String(line));
+const capture = captureConsole("warn");
+const { lines: output } = capture;
 
 // Player without getGameMode (runtime that does not support it)
 const player = {
@@ -42,3 +43,4 @@ assert.ok(!changeEvent, "player.gamemode.changed must not be emitted when getGam
 const snapshotPlayer = envelopes.findLast((e) => e.type === "snapshot.player" && e.player?.name === "NoGMPlayer");
 assert.ok(snapshotPlayer, "snapshot.player must exist");
 assert.ok(!("gameMode" in snapshotPlayer.data), "gameMode must be absent when getGameMode is unsupported");
+capture.restore();

@@ -107,18 +107,11 @@ The backend intentionally runs one Gunicorn worker with multiple threads. Its ev
 ```mermaid
 flowchart TD
     repo["CraftControl repository"] --> apps["apps/"]
-    apps --> frontend["frontend/ — Nginx image, HTML, CSS, and native ES modules"]
-    apps --> backend["backend/ — Flask image, composition root, and Python application"]
-    repo --> services["services/"]
-    services --> hostagentsvc["host-agent/ — independently deployed systemd service (host-level, outside Docker)"]
+    apps --> frontend["apps/client/ — Nginx image, HTML, CSS, and native ES modules"]
+    apps --> backend["apps/server/ — Flask image, composition root, and Python application"]
+    repo --> services["services/host-agent/ — independently deployed systemd service"]
     repo --> contracts["packages/contracts/ — canonical OpenAPI 3.1 contract and generated types"]
     repo --> telemetry["packs/telemetry/ — embedded Behavior Pack and lifecycle assets"]
-    repo --> bin["bin/ — quality, deployment, cutover, backup, and recovery commands"]
-    repo --> deploy["deploy/ — deployment-only assets (systemd units, install scripts)"]
-    repo --> docs["docs/ — architecture, security, telemetry, and operations guides"]
-    repo --> overlay["controlplane/, app.py, wsgi.py — temporary backend compatibility overlays"]
-    repo --> split["docker-compose.split.yml — active split production topology"]
-    repo --> combined["docker-compose.yml — combined compatibility/recovery topology"]
     repo --> versions["versions.env — tested frontend/backend release pair"]
 ```
 
@@ -139,7 +132,7 @@ flowchart TD
     js --> i18n["i18n/ — PT, EN, ES catalogs and localized game terminology"]
 ```
 
-`app.js` starts the composition root. Feature modules own their markup, bindings, and local state; core modules do not import features. Shared dependencies are explicit, and the interaction gate executes navigation, authentication, player sessions, individual telemetry, analytics, responsive behavior, SSE invalidation, and localization paths.
+Feature modules own their markup, bindings, and local state; `core/` modules do not import `features/`. See [Architecture](docs/architecture.md) for dependency rules, event consistency, deliberate non-goals, and the incremental target layout.
 
 ### Backend layers
 
@@ -150,15 +143,11 @@ flowchart TD
     manager --> players["players/ — player application use cases"]
     manager --> auth["auth/ — accounts, sessions, roles, CSRF, and audit"]
     manager --> operations["operations/ — backup, restore, and operational workflows"]
-    manager --> services["services.py — compatibility orchestration facade"]
-    manager --> repository["repository.py — SQLite persistence compatibility facade"]
-    manager --> runtime["runtime.py — log, Docker-event, and reconciliation supervisors"]
+    manager --> runtime["runtime/ — log, Docker-event, and reconciliation supervisors"]
     manager --> ports["ports.py — structural external-boundary contracts"]
 ```
 
-Routes translate HTTP requests and responses. Use cases coordinate behavior. Repositories own persistence. Adapters isolate Docker, Bedrock console, files, and CraftControl Telemetry Pack installation. Production dependencies are assembled manually; there is no service locator or dependency-injection framework.
-
-See [Architecture](docs/architecture.md) for dependency rules, event consistency, deliberate non-goals, and the incremental target layout.
+Routes translate HTTP requests and responses. Use cases coordinate behavior. Repositories own persistence. See [`apps/server/controlplane/README.md`](apps/server/controlplane/README.md) for the full package layout and architecture rules.
 
 ### Contracts and API documentation
 
@@ -182,7 +171,7 @@ Swagger attaches the session-bound CSRF token to unsafe “Try it out” request
 
 ## Event-driven state and telemetry
 
-CraftControl follows Bedrock logs and Docker lifecycle events, commits durable evidence to SQLite, publishes changes through SSE, performs targeted refreshes, and runs a full safety reconciliation every 15 minutes by default.
+CraftControl follows Bedrock logs and Docker lifecycle events, commits durable evidence to SQLite, publishes changes through SSE, performs targeted refreshes, and runs a full safety reconciliation every 15 minutes by default. Stale information remains visible and marked instead of being replaced by false empty data.
 
 ```mermaid
 flowchart LR
@@ -193,26 +182,9 @@ flowchart LR
     broker --> reconciliation["targeted reconciliation"]
 ```
 
-Cached values retain observation and change timestamps. Stale information remains visible and marked instead of being replaced by false empty data.
+The optional CraftControl Telemetry Pack (`0.4.0`) emits schema-versioned JSON and supports authoritative snapshots plus incremental events. Snapshots can recover lifetime aggregates after downtime; they cannot recreate every missed event, timestamp, cause, or coordinate.
 
-Owner diagnostics include process-lifetime ingestion counters by topic:
-accepted, rejected, duplicate, old, detected gaps, and pack resets. Separate
-process-lifetime sequence health reports inferred-lost envelopes, gaps, and
-resets. A lost count records the size of an observed sequence gap; it does not
-reconstruct missing events or their details.
-
-The optional CraftControl Telemetry Pack currently ships as `0.4.0`. It emits schema-versioned JSON and supports authoritative snapshots plus incremental events. Block changes are coalesced into five-second `blocks.changed` batches. Sequence gaps, resets, missing ranges, blocked storage, and partial Bedrock capabilities degrade health and request a coalesced snapshot. Stale deltas are rejected; health returns to healthy only after complete reconciliation.
-
-Snapshots can recover lifetime aggregates after downtime. They cannot recreate every missed historical event, timestamp, cause, or coordinate, and CraftControl never invents that detail.
-
-The Server area reports the frontend image, backend image, installed Behavior Pack, pack response time, sequence, completed snapshot, gaps, missing events, storage migration, and supported metrics separately. Installation, upgrade, disable, removal, backup, and rollback are available through the interface and CLI. Pack changes never restart Bedrock automatically.
-
-```bash
-docker compose -f docker-compose.split.yml exec craftcontrol-backend craftcontrol telemetry status
-docker compose -f docker-compose.split.yml exec craftcontrol-backend craftcontrol telemetry install
-```
-
-See [CraftControl Telemetry Pack integration](docs/telemetry-pack.md) for the lifecycle and recovery runbook.
+See [Architecture](docs/architecture.md) for the event and consistency model, and [CraftControl Telemetry Pack integration](docs/telemetry-pack.md) for the lifecycle and recovery runbook.
 
 ## Installation
 
@@ -230,55 +202,13 @@ without restarting Bedrock. See [Host Agent](docs/host-agent.md#preferred-idempo
 
 ## Configuration
 
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `MANAGER_PORT` | `8082` | Public frontend port |
-| `MINECRAFT_CONTAINER` | `minecraft-bedrock` | Bedrock container managed by CraftControl |
-| `MINECRAFT_PROJECT` | `/minecraft-project` | Bedrock Compose project inside the backend |
-| `DATABASE_PATH` | `/data/manager.db` | SQLite state and player history |
-| `BACKUP_ROOT` | `/data/backups/coordinated` | Coordinated recovery sets |
-| `BOOTSTRAP_OPERATOR` | `VonCrush` | Initial in-game operator compatibility setting |
-| `RECONCILE_SECONDS` | `900` | Full safety-reconciliation interval |
-| `AUTH_MODE` | `local` | Built-in authentication; `disabled` is recovery compatibility only |
-| `AUTH_COOKIE_SECURE` | `true` | Restrict session cookies to HTTPS |
-| `HOST_AGENT_HEALTH_TIMEOUT_SECONDS` | `300` | Bedrock health-wait deadline for a lifecycle operation; valid range: 10–600 |
-| `HOST_AGENT_RESTART_TIMEOUT_SECONDS` | `180` | Compose restart-command deadline for a lifecycle operation; valid range: 10–300 |
-| `TZ` | `America/Sao_Paulo` | Runtime and analytics timezone |
+CraftControl is configured through environment variables (`MANAGER_PORT`, `MINECRAFT_CONTAINER`, `DATABASE_PATH`, `HOST_AGENT_URL`, `TZ`, and others) and reads `versions.env` for the tested frontend/backend release pair.
 
-The running frontend and backend versions come from `versions.env`. Old service names, database filenames, package paths, and environment variables remain supported as compatibility overlays; persistent paths are not renamed destructively.
-
-### Bedrock configuration authority
-
-CraftControl treats Bedrock as the source of truth: managed boot-time settings
-live in `data/server.properties`, while gamerules live in the loaded world.
-The Bedrock Compose `.env` is reserved for deployment concerns such as the EULA,
-image version, paths, and observability. Do not pass managed server-property
-variables through the Bedrock service environment, because the container image
-would overwrite the effective configuration at startup.
-
-The upstream image defines non-empty defaults for `SERVER_PORT` and
-`SERVER_PORT_V6`. A Compose deployment that delegates those settings to
-CraftControl must explicitly set both environment variables to empty strings;
-the image then leaves the persisted `server-port` and `server-portv6` values
-unchanged. The exporter may read the port from deployment configuration, but it
-must not feed it back into the Bedrock service environment.
-
-The host agent is optional. When it is enabled, configure `HOST_AGENT_URL` and `HOST_AGENT_TOKEN_FILE` for the backend. `HOST_AGENT_RESTART_TIMEOUT_SECONDS` gives Docker Compose up to 180 seconds to stop and restart Bedrock; after that, `HOST_AGENT_HEALTH_TIMEOUT_SECONDS` gives Bedrock up to 300 seconds to become healthy. See [Host agent](docs/host-agent.md) for the shared-secret, systemd, path, and timeout configuration.
+See [Configuration](docs/configuration.md) for the full variable reference, Bedrock configuration authority rules, and host-agent timeout settings.
 
 ## Authentication and access
 
-Panel accounts attach to players Bedrock has already observed. Private XUID-backed identity survives Gamertag changes; XUIDs never appear in public API responses or the interface.
-
-| Capability | Viewer | Operator | Owner |
-| --- | :---: | :---: | :---: |
-| Read status, players, history, and telemetry | Yes | Yes | Yes |
-| Change settings, gamerules, time, and weather | No | Yes | Yes |
-| Start and restart Bedrock | No | Yes | Yes |
-| Stop Bedrock | No | No | Yes |
-| Change in-game operator permission | No | Yes | Yes |
-| Manage panel users and the Telemetry Pack | No | No | Yes |
-
-Minecraft permission and CraftControl role are independent. API capabilities are the security boundary; hiding a browser control is not authorization.
+Panel accounts attach to players Bedrock has already observed. Three roles — Viewer, Operator, and Owner — control access to settings, lifecycle commands, and user management. Minecraft permission and CraftControl role are independent.
 
 Generate the first one-time owner code after that player has joined Bedrock:
 
@@ -287,11 +217,7 @@ docker compose -f docker-compose.split.yml exec craftcontrol-backend \
   craftcontrol auth bootstrap --player VonCrush
 ```
 
-Owners generate invitation or recovery codes from an individual player profile. Codes expire after 15 minutes, work once, and are stored only as hashes. Passwords use salted `scrypt`; opaque server-side sessions have idle and absolute expiration. Every authenticated mutation requires a CSRF token tied to the exact session and a valid same-origin request.
-
-Authenticated users can change their own password from the account control. CraftControl verifies the current password, revokes the account's existing sessions, and issues a fresh session only to the browser completing the change.
-
-See [Local authentication and authorization](docs/authentication.md).
+Every authenticated mutation requires a CSRF token tied to the exact session and a valid same-origin request. See [Local authentication and authorization](docs/authentication.md) for the full capability matrix, invitation flow, and session policy.
 
 ## Player data and analytics
 
@@ -350,22 +276,7 @@ bin/check-integration    # Compose builds, split runtime, architecture and deplo
 bin/check                # complete local gate
 ```
 
-GitHub Actions and Gitea Actions run the six quality gates independently: frontend, backend, host agent, backend contracts, frontend contracts, and integration. Changes use Conventional Commits and production deployment is accepted only from clean, published `main`.
-
-Successful Gitea `main` quality runs deploy automatically through the
-repository-scoped homelab runner. The workflow invokes the same guarded release
-command used for manual operations; see [Automated
-homelab deployment](docs/automated-deployment.md).
-
-Backend tests live under `apps/server/tests/` and mirror the `controlplane/`
-submodule structure (`core/`, `server/`, `players/`, `telemetry/`, `operations/`,
-`runtime/`, `http/`, `audit/`). Shared test infrastructure lives in `tests/fakes.py`
-(injectable fakes), `tests/factories.py` (domain object builders), and
-`tests/conftest.py` (shared fixtures). See
-[`apps/server/controlplane/README.md`](apps/server/controlplane/README.md) for the
-full package reference including architecture rules and extraction guidance.
-
-See [Development setup](docs/development-setup.md) for prerequisites, environment configuration, and a guide to common development tasks.
+GitHub Actions and Gitea Actions run the six quality gates independently. Successful Gitea `main` runs deploy automatically through the repository-scoped homelab runner. See [Contributing](CONTRIBUTING.md) for commit conventions and PR workflow. See [`apps/server/controlplane/README.md`](apps/server/controlplane/README.md) for the backend package layout and test infrastructure reference. See [Development setup](docs/development-setup.md) for prerequisites, environment configuration, and common development tasks.
 
 ## Security status
 
@@ -404,28 +315,10 @@ até o PR (inclusive via link) autoriza branch, commit, push e abertura do PR;
 merge e deploy continuam exigindo pedido explícito.
 
 The tool-neutral [`.dr-agents/craftcontrol/PROFILE.md`](.dr-agents/craftcontrol/PROFILE.md)
-contains the safeguards specific to Cody DR and Claudio DR reviews. See
-[Agent review profile](docs/dr-agents-profile.md) to use it with portable
-plugins too. Any agent can follow this local profile when it receives the path;
-the profile augments generic review skills and does not trigger review by itself.
-
-### Claude Code skills
-
-If you use Claude Code, this repository ships a set of skills in `.claude/agents/` that encode the project's workflow and conventions. Invoke them with `/skill-name`:
-
-| Skill | When to use |
-|---|---|
-| `$execute-issue <n>` | Executa uma issue do início ao merge — orquestra as três fases abaixo |
-| `$start-issue <n>` | Verifica metadados, lê contexto obrigatório, mapeia código, cria branch |
-| `$implement` | Detecta camada (backend$frontend), carrega skill especializada, implementa e testa |
-| `$handle-pr-findings` | Triagem explícita de findings, correções e respostas nas threads |
-| `$ship-issue` | Commit, PR com metadados, CI, CodeRabbit, sync Gitea |
-| `$review-pr <PR ou ref>` | Revisão cruzada sob demanda ou re-review incremental de um PR/ref — checklist por camada |
-| `$backend` | Padrões Python: DI, Protocols, `is None`, composition root, fakes |
-| `$frontend` | Padrões JS: injeção de deps, helpers compartilhados, ESM, i18n |
-| `$create-issue` | Workshop PM/Dev Hat → cria issue bem formada com todos os metadados |
-| `$manage-project` | Adiciona/lista/audita issues nos project boards |
-| `$manage-milestone` | Atribui/lista/audita milestones, detecta backlog solto |
+contains the safeguards specific to Cody DR and Claudio DR reviews. Provide the
+profile path explicitly with the requested PR/ref — it does not load
+automatically. The profile augments generic review skills and does not trigger
+review by itself.
 
 ## License and trademarks
 

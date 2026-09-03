@@ -331,4 +331,4 @@ If this package is ever extracted:
 3. Copy `apps/server/requirements.txt` and `apps/server/Dockerfile`.
 4. The `apps/client/` frontend and host-agent remain separate packages.
 5. Update `frontend_root()` in `__init__.py` — the monorepo path branch can be removed.
-6. All import paths (`from controlplane.*`) are already stable and require no changes.
+6. All import paths (`from src.*`) are already stable and require no changes.

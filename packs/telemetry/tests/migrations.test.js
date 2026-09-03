@@ -1,6 +1,7 @@
 import { test } from "@jest/globals";
 import assert from "node:assert/strict";
 import { migrateShardedV2, migrateState } from "../behavior_pack/scripts/migrations.js";
+import { playerShard, playerSnapshot, storageMetadata } from "./factories.mjs";
 
 test("migrates legacy schema state without resetting counters", () => {
   const legacy = {
@@ -23,15 +24,15 @@ test("migrates legacy schema state without resetting counters", () => {
 });
 
 test("migrates monolithic storage v1 independently from protocol schema", () => {
-  const current = { storageVersion: 1, sequence: 3, players: {} };
+  const current = storageMetadata({ storageVersion: 1, sequence: 3, players: {} });
   const result = migrateState(current);
   assert.equal(result.migratedFrom, 1);
   assert.deepEqual(result.state, { storageVersion: 3, sequence: 3, players: {} });
 });
 
 test("migrates sharded storage v2 and preserves source shards for backup", () => {
-  const raw = JSON.stringify({ storageVersion: 2, sequence: 9, key: "voncrush", player: { name: "VonCrush", mobKills: 7 } });
-  const result = migrateShardedV2({ storageVersion: 2, sequence: 7 }, [["bedrock_telemetry:player:voncrush", raw]]);
+  const raw = JSON.stringify(playerShard({ storageVersion: 2, sequence: 9, player: playerSnapshot({ mobKills: 7 }) }));
+  const result = migrateShardedV2(storageMetadata({ storageVersion: 2, sequence: 7 }), [["bedrock_telemetry:player:voncrush", raw]]);
   assert.equal(result.migratedFrom, 2);
   assert.equal(result.state.storageVersion, 3);
   assert.equal(result.state.sequence, 9);

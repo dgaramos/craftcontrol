@@ -40,6 +40,10 @@ many tests. Extract it as `suppressConsoleWarn()` (and `suppressConsoleError()`)
 in a shared `tests/helpers.mjs` file. New tests must use the helper; migrate
 existing tests when a file is touched.
 
+**Use shared builders for recurring telemetry data.** `tests/factories.mjs`
+owns explicit-override builders for persisted metadata, player snapshots,
+player shards, protocol envelopes, and captured telemetry log records.
+
 **Never commit duplicate files.** Files ending in ` 2.js` or ` 2.mjs` are
 copy artifacts — delete them before committing.
 

@@ -10,5 +10,7 @@ When writing or modifying tests:
   `tests/`, and installer tests in `tests/scripts/`.
 - Use `suppressConsoleWarn()` / `suppressConsoleError()` from `tests/helpers.mjs`
   instead of inline `jest.spyOn(console, ...)` calls.
+- Use `tests/factories.mjs` for recurring storage, player, envelope, and
+  captured-log test data.
 - `.mjs` fixtures are for end-to-end scenarios; `.test.js` files are for units.
 - Never commit files ending in ` 2.js` or ` 2.mjs`.

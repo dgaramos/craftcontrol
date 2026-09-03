@@ -1,5 +1,6 @@
 import { jest, beforeEach, describe, test, expect } from "@jest/globals";
 import { suppressConsoleWarn } from "../helpers.mjs";
+import { capturedTelemetryRecords } from "../factories.mjs";
 
 // @minecraft/server is resolved to tests/minecraft-server.mock.js via
 // moduleNameMapper in jest.config.js.
@@ -96,9 +97,7 @@ describe("queueBlockChange", () => {
     queueBlockChange("Alice", "broken", "stone");
     const warn = suppressConsoleWarn();
     publishBlockChanges();
-    const logged = warn.mock.calls.map(([msg]) =>
-      JSON.parse(msg.replace(/^\[BEDROCK_TELEMETRY\] /, ""))
-    );
+    const logged = capturedTelemetryRecords(warn);
     const blocksMsg = logged.find((c) => c.type === "blocks.changed");
     expect(blocksMsg.player).toEqual({ name: "Alice" });
     expect(blocksMsg.data).toEqual({
@@ -114,9 +113,7 @@ describe("queueBlockChange", () => {
     queueBlockChange("Alice", "broken", "dirt");
     const warn = suppressConsoleWarn();
     publishBlockChanges();
-    const logged = warn.mock.calls.map(([msg]) =>
-      JSON.parse(msg.replace(/^\[BEDROCK_TELEMETRY\] /, ""))
-    );
+    const logged = capturedTelemetryRecords(warn);
     const blocksMsg = logged.find((c) => c.type === "blocks.changed");
     expect(blocksMsg.data.broken).toEqual({ total: 3, byType: { stone: 2, dirt: 1 } });
     warn.mockRestore();
@@ -126,9 +123,7 @@ describe("queueBlockChange", () => {
     queueBlockChange("Bob", "placed", "oak_log");
     const warn = suppressConsoleWarn();
     publishBlockChanges();
-    const logged = warn.mock.calls.map(([msg]) =>
-      JSON.parse(msg.replace(/^\[BEDROCK_TELEMETRY\] /, ""))
-    );
+    const logged = capturedTelemetryRecords(warn);
     const blocksMsg = logged.find((c) => c.type === "blocks.changed");
     expect(blocksMsg.data.placed).toEqual({ total: 1, byType: { oak_log: 1 } });
     expect(blocksMsg.data.broken).toEqual({ total: 0, byType: {} });
@@ -140,9 +135,7 @@ describe("queueBlockChange", () => {
     queueBlockChange("Bob", "placed", "oak_log");
     const warn = suppressConsoleWarn();
     publishBlockChanges();
-    const logged = warn.mock.calls.map(([msg]) =>
-      JSON.parse(msg.replace(/^\[BEDROCK_TELEMETRY\] /, ""))
-    );
+    const logged = capturedTelemetryRecords(warn);
     const blocksMsgs = logged.filter((c) => c.type === "blocks.changed");
     expect(blocksMsgs).toHaveLength(2);
     const aliceMsg = blocksMsgs.find((c) => c.player.name === "Alice");
@@ -163,9 +156,7 @@ describe("publishBlockChanges", () => {
     queueBlockChange("Bob", "broken", "dirt");
     const warn = suppressConsoleWarn();
     publishBlockChanges();
-    const logged = warn.mock.calls.map(([msg]) =>
-      JSON.parse(msg.replace(/^\[BEDROCK_TELEMETRY\] /, ""))
-    );
+    const logged = capturedTelemetryRecords(warn);
     const blocksMsgs = logged.filter((c) => c.type === "blocks.changed");
     expect(blocksMsgs).toHaveLength(2);
     warn.mockRestore();
@@ -177,9 +168,7 @@ describe("publishBlockChanges", () => {
     publishBlockChanges();
     warn.mockClear();
     publishBlockChanges();
-    const logged = warn.mock.calls.map(([msg]) =>
-      JSON.parse(msg.replace(/^\[BEDROCK_TELEMETRY\] /, ""))
-    );
+    const logged = capturedTelemetryRecords(warn);
     expect(logged.filter((c) => c.type === "blocks.changed")).toHaveLength(0);
     warn.mockRestore();
   });
@@ -187,9 +176,7 @@ describe("publishBlockChanges", () => {
   test("does nothing when pendingBlocks is empty", () => {
     const warn = suppressConsoleWarn();
     publishBlockChanges();
-    const logged = warn.mock.calls.map(([msg]) =>
-      JSON.parse(msg.replace(/^\[BEDROCK_TELEMETRY\] /, ""))
-    );
+    const logged = capturedTelemetryRecords(warn);
     expect(logged.filter((c) => c.type === "blocks.changed")).toHaveLength(0);
     warn.mockRestore();
   });
@@ -217,18 +204,14 @@ describe("publishSnapshot", () => {
     queueBlockChange("Alice", "broken", "stone");
     const warn = suppressConsoleWarn();
     publishSnapshot();
-    const logged = warn.mock.calls.map(([msg]) =>
-      JSON.parse(msg.replace(/^\[BEDROCK_TELEMETRY\] /, ""))
-    );
+    const logged = capturedTelemetryRecords(warn);
     const types = logged.map((c) => c.type);
     expect(types).toContain("blocks.changed");
     expect(types.indexOf("blocks.changed")).toBeLessThan(types.indexOf("snapshot.started"));
     // pendingBlocks is clear — a second publishBlockChanges emits nothing
     warn.mockClear();
     publishBlockChanges();
-    const after = warn.mock.calls.map(([msg]) =>
-      JSON.parse(msg.replace(/^\[BEDROCK_TELEMETRY\] /, ""))
-    );
+    const after = capturedTelemetryRecords(warn);
     expect(after.filter((c) => c.type === "blocks.changed")).toHaveLength(0);
     warn.mockRestore();
   });
@@ -239,9 +222,7 @@ describe("publishSnapshot", () => {
     mockCapabilitySnapshot.mockReturnValue({ gameModeReading: { supported: true } });
     const warn = suppressConsoleWarn();
     publishSnapshot();
-    const logged = warn.mock.calls.map(([msg]) =>
-      JSON.parse(msg.replace(/^\[BEDROCK_TELEMETRY\] /, ""))
-    );
+    const logged = capturedTelemetryRecords(warn);
     const started = logged.find((c) => c.type === "snapshot.started");
     expect(started).toBeDefined();
     expect(started.data.players).toBe(2);
@@ -256,9 +237,7 @@ describe("publishSnapshot", () => {
     mockLoadState.mockReturnValue({ sequence: 1, players: { alice: { name: "Alice", deaths: 0 } } });
     const warn = suppressConsoleWarn();
     publishSnapshot();
-    const logged = warn.mock.calls.map(([msg]) =>
-      JSON.parse(msg.replace(/^\[BEDROCK_TELEMETRY\] /, ""))
-    );
+    const logged = capturedTelemetryRecords(warn);
     const playerMsg = logged.find((c) => c.type === "snapshot.player");
     expect(playerMsg).toBeDefined();
     expect(playerMsg.player).toEqual({ name: "Alice" });
@@ -271,9 +250,7 @@ describe("publishSnapshot", () => {
     mockLoadState.mockReturnValue({ sequence: 1, players: { alice: { name: "Alice", deaths: 2 } } });
     const warn = suppressConsoleWarn();
     publishSnapshot();
-    const logged = warn.mock.calls.map(([msg]) =>
-      JSON.parse(msg.replace(/^\[BEDROCK_TELEMETRY\] /, ""))
-    );
+    const logged = capturedTelemetryRecords(warn);
     const playerMsg = logged.find((c) => c.type === "snapshot.player");
     expect(playerMsg).toBeDefined();
     expect(playerMsg.data).not.toHaveProperty("gameMode");
@@ -286,9 +263,7 @@ describe("publishSnapshot", () => {
     mockLoadState.mockReturnValue({ sequence: 1, players: { alice: { name: "Alice", deaths: 0 } } });
     const warn = suppressConsoleWarn();
     expect(() => publishSnapshot()).not.toThrow();
-    const logged = warn.mock.calls.map(([msg]) =>
-      JSON.parse(msg.replace(/^\[BEDROCK_TELEMETRY\] /, ""))
-    );
+    const logged = capturedTelemetryRecords(warn);
     const playerMsg = logged.find((c) => c.type === "snapshot.player");
     expect(playerMsg).toBeDefined();
     expect(playerMsg.data).not.toHaveProperty("gameMode");
@@ -298,9 +273,7 @@ describe("publishSnapshot", () => {
   test("logs snapshot.finished with empty data and null player", () => {
     const warn = suppressConsoleWarn();
     publishSnapshot();
-    const logged = warn.mock.calls.map(([msg]) =>
-      JSON.parse(msg.replace(/^\[BEDROCK_TELEMETRY\] /, ""))
-    );
+    const logged = capturedTelemetryRecords(warn);
     const finished = logged.find((c) => c.type === "snapshot.finished");
     expect(finished).toBeDefined();
     expect(finished.data).toEqual({});

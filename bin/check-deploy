@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly ROOT="$(git rev-parse --show-toplevel)"
+readonly PYTHON="${PYTHON:-python3}"
+cd "$ROOT"
+
+bash -n bin/deploy-craftcontrol
+bash -n bin/deploy-craftcontrol-frontend
+bash -n bin/deploy-craftcontrol-backend
+bash -n bin/deploy-craftcontrol-release
+bash -n bin/check-split-auth
+bash -n bin/cutover-craftcontrol-split
+bash -n deploy/bedrock-proxy/bin/install-craftcontrol-storage-io-queue
+mkdir -p test-results
+"$PYTHON" -m pytest deploy/tests/ --junit-xml=test-results/deploy.xml -v
+echo "deploy gate: ok"

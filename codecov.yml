@@ -54,6 +54,11 @@ coverage:
         threshold: 5%
 
 flags:
+  deploy:
+    paths:
+      - deploy/tests/
+      - bin/deploy-craftcontrol*
+      - bin/check-deploy
   backend:
     paths:
       - apps/server/controlplane/

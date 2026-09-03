@@ -47,9 +47,10 @@ function makeFakeNavTabTemplate() {
 
 function makeTabsElement() {
   const buttons = [];
+  const replaceChildren = jest.fn(() => { buttons.length = 0; });
   return {
     _buttons: buttons,
-    replaceChildren() { buttons.length = 0; },
+    replaceChildren,
     appendChild(fragment) { if (fragment._button) buttons.push(fragment._button); },
     querySelectorAll(sel) { return sel === "button" ? buttons : []; },
   };
@@ -157,10 +158,9 @@ describe("createNavigation — renderTabs", () => {
 
   test("replaceChildren is called to clear tabs on every render", () => {
     const { state, $, t, uiIcon, render, tabsEl } = makeEnv("home");
-    const replaceChildrenSpy = jest.spyOn(tabsEl, "replaceChildren");
     const nav = createNavigation({ state, $, t, uiIcon, render });
     nav.renderTabs();
-    expect(replaceChildrenSpy).toHaveBeenCalled();
+    expect(tabsEl.replaceChildren).toHaveBeenCalled();
   });
 });
 

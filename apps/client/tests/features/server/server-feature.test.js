@@ -458,3 +458,110 @@ describe("createServerFeature", () => {
     expect(rendered).toContain("reconciliationCount: 0");
   });
 });
+
+describe("createServerFeature — renderReleaseTags", () => {
+  test("returns early when #release-tags element is absent", () => {
+    const $ = jest.fn(() => null);
+    const deps = {
+      state: { frontendVersion: null },
+      content: { innerHTML: "", querySelectorAll: jest.fn(() => []) },
+      t: (k) => k,
+      api: jest.fn(),
+      $,
+      escapeHtml: (s) => String(s ?? ""),
+      uiIcon: () => "",
+      formatDate: () => "—",
+      toast: jest.fn(),
+      getSettingsFeature: () => ({ renderSettingsGroups: jest.fn() }),
+    };
+    const { renderReleaseTags } = createServerFeature(deps);
+    expect(() => renderReleaseTags({})).not.toThrow();
+  });
+
+  test("sets innerHTML on release-tags element", () => {
+    const releaseEl = { innerHTML: "" };
+    const $ = jest.fn((sel) => sel === "#release-tags" ? releaseEl : null);
+    const deps = {
+      state: { frontendVersion: "1.2.3" },
+      content: { innerHTML: "", querySelectorAll: jest.fn(() => []) },
+      t: (k) => k,
+      api: jest.fn(),
+      $,
+      escapeHtml: (s) => String(s ?? ""),
+      uiIcon: () => "",
+      formatDate: () => "2024-01-01",
+      toast: jest.fn(),
+      getSettingsFeature: () => ({ renderSettingsGroups: jest.fn() }),
+    };
+    const { renderReleaseTags } = createServerFeature(deps);
+    renderReleaseTags({ application: { version: "2.0.0", started_at: 0 }, runtime_version: "1.0", last_response_at: 0 });
+    expect(releaseEl.innerHTML).toContain("1.2.3");
+    expect(releaseEl.innerHTML).toContain("2.0.0");
+  });
+});
+
+describe("createServerFeature — loadFrontendVersion", () => {
+  test("updates state.frontendVersion on success", async () => {
+    const state = { frontendVersion: null };
+    const mockFetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue({ service: "frontend", version: "3.1.4" }),
+    });
+    global.fetch = mockFetch;
+    const deps = {
+      state,
+      content: { innerHTML: "", querySelectorAll: jest.fn(() => []) },
+      t: (k) => k,
+      api: jest.fn(),
+      $: jest.fn(() => null),
+      escapeHtml: (s) => String(s ?? ""),
+      uiIcon: () => "",
+      formatDate: () => "—",
+      toast: jest.fn(),
+      getSettingsFeature: () => ({ renderSettingsGroups: jest.fn() }),
+    };
+    const { loadFrontendVersion } = createServerFeature(deps);
+    await loadFrontendVersion();
+    expect(state.frontendVersion).toBe("3.1.4");
+  });
+
+  test("ignores non-ok responses", async () => {
+    const state = { frontendVersion: null };
+    global.fetch = jest.fn().mockResolvedValue({ ok: false });
+    const deps = {
+      state,
+      content: { innerHTML: "", querySelectorAll: jest.fn(() => []) },
+      t: (k) => k,
+      api: jest.fn(),
+      $: jest.fn(() => null),
+      escapeHtml: (s) => String(s ?? ""),
+      uiIcon: () => "",
+      formatDate: () => "—",
+      toast: jest.fn(),
+      getSettingsFeature: () => ({ renderSettingsGroups: jest.fn() }),
+    };
+    const { loadFrontendVersion } = createServerFeature(deps);
+    await loadFrontendVersion();
+    expect(state.frontendVersion).toBeNull();
+  });
+
+  test("swallows fetch errors silently", async () => {
+    const state = { frontendVersion: null };
+    global.fetch = jest.fn().mockRejectedValue(new Error("network"));
+    const deps = {
+      state,
+      content: { innerHTML: "", querySelectorAll: jest.fn(() => []) },
+      t: (k) => k,
+      api: jest.fn(),
+      $: jest.fn(() => null),
+      escapeHtml: (s) => String(s ?? ""),
+      uiIcon: () => "",
+      formatDate: () => "—",
+      toast: jest.fn(),
+      getSettingsFeature: () => ({ renderSettingsGroups: jest.fn() }),
+    };
+    const { loadFrontendVersion } = createServerFeature(deps);
+    await expect(loadFrontendVersion()).resolves.toBeUndefined();
+    expect(state.frontendVersion).toBeNull();
+  });
+});

@@ -32,7 +32,7 @@ _AGENT_SRC = _REPO_ROOT / "services" / "host-agent"
 if str(_AGENT_SRC) not in sys.path:
     sys.path.insert(0, str(_AGENT_SRC))
 
-from host_agent.preflight.preflight import (  # noqa: E402
+from proxy.preflight.preflight import (  # noqa: E402
     FakeFilesystem,
     Preflight,
     ProductionRunner,

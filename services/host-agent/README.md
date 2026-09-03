@@ -30,12 +30,12 @@ remains in the CraftControl Server.
 ## Layout
 
 ```
-services/host-agent/
-├── agent.py          # sole entry point — bootstraps HTTPServer and imports from host_agent.*
+services/host-proxy/
+├── agent.py          # sole entry point — bootstraps HTTPServer and imports from agent.*
 ├── requirements.txt  # Python dependencies
 ├── pyproject.toml    # package declaration and entry point
 ├── Dockerfile        # container image for the host agent
-└── host_agent/       # named Python package
+└── proxy/       # named Python package
     ├── ports.py      # Protocol definitions for replaceable boundaries
     ├── auth/
     │   └── auth.py   # shared-secret token loading and verification
@@ -125,18 +125,18 @@ The host agent is installed on the Docker host as a systemd service:
 
 ```bash
 # Run on the host, not inside a container
-deploy/host-agent/bin/install-craftcontrol-host-agent-runtime
+deploy/host-proxy/bin/install-craftcontrol-host-agent-runtime
 ```
 
-systemd unit and udev rules live in `deploy/host-agent/systemd/` and
-`deploy/host-agent/udev/`. See [docs/host-agent.md](../../docs/host-agent.md)
+systemd unit and udev rules live in `deploy/host-proxy/systemd/` and
+`deploy/host-proxy/udev/`. See [docs/host-agent.md](../../docs/host-agent.md)
 for the full installation and configuration walkthrough.
 
 ---
 
 ## Running tests
 
-From `services/host-agent/`:
+From `services/host-proxy/`:
 
 ```bash
 pytest tests/ -x -q
@@ -155,8 +155,8 @@ check. Integration with a live Docker daemon is not required — `FakeDocker` an
 The host agent is already a standalone Python application with no dependency on
 the `controlplane` package. If extracted:
 
-1. Copy `services/host-agent/` as the project root.
-2. The `deploy/host-agent/` scripts reference the installed binary path — update
+1. Copy `services/host-proxy/` as the project root.
+2. The `deploy/host-proxy/` scripts reference the installed binary path — update
    `install-craftcontrol-host-agent-runtime` if the install location changes.
 3. `HOST_AGENT_SECRET_FILE` and `HOST_AGENT_DB` paths are configurable; no
    hardcoded paths exist inside the Python source.

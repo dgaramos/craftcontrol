@@ -7,12 +7,12 @@ before changing the project.
   deployed inside a container or depend on the CraftControl Server package.
 - The endpoint surface is fixed: `/health`, `/status`, `/execute`, `/poll/<id>`.
   Do not add endpoints without a reviewed architecture decision.
-- All field validation uses strict allowlists defined in `host_agent/runtime/operations.py`. Never
+- All field validation uses strict allowlists defined in `proxy/runtime/operations.py`. Never
   relax an allowlist or introduce shell execution to handle a new field type.
 - Authentication is bearer-token only. The token is read from a file at startup
   and never logged or included in error responses.
-- Docker operations go through the Docker SDK (`host_agent/adapters/docker.py`). Filesystem
-  writes are atomic (`host_agent/adapters/filesystem.py`). Neither adapter shells out.
+- Docker operations go through the Docker SDK (`proxy/adapters/docker.py`). Filesystem
+  writes are atomic (`proxy/adapters/filesystem.py`). Neither adapter shells out.
 - Keep `HOST_AGENT_WORKERS` at 1. The queue is bounded; reject with 503 rather
   than growing unbounded.
 - Do not add dependencies beyond `requirements.txt` without explicit approval.
@@ -20,19 +20,19 @@ before changing the project.
 
 ## Package layout
 
-The `host_agent/` named package organises modules by responsibility:
+The `proxy/` named package organises modules by responsibility:
 
 | Subpackage | Contents |
 |---|---|
-| `host_agent/auth/` | `auth.py` — shared-secret token loading and verification |
-| `host_agent/http/` | `handler.py`, `router.py` — request parsing, routing, authentication |
-| `host_agent/runtime/` | `operations.py`, `queue_worker.py` — executor and bounded thread pool |
-| `host_agent/store/` | `store.py` — SQLite-backed operation persistence |
-| `host_agent/preflight/` | `preflight.py` — startup self-check |
-| `host_agent/adapters/` | `docker.py`, `filesystem.py`, `raknet.py` — infrastructure adapters |
-| `host_agent/ports.py` | Protocol definitions for replaceable boundaries (at package root) |
+| `proxy/auth/` | `auth.py` — shared-secret token loading and verification |
+| `proxy/http/` | `handler.py`, `router.py` — request parsing, routing, authentication |
+| `proxy/runtime/` | `operations.py`, `queue_worker.py` — executor and bounded thread pool |
+| `proxy/store/` | `store.py` — SQLite-backed operation persistence |
+| `proxy/preflight/` | `preflight.py` — startup self-check |
+| `proxy/adapters/` | `docker.py`, `filesystem.py`, `raknet.py` — infrastructure adapters |
+| `proxy/ports.py` | Protocol definitions for replaceable boundaries (at package root) |
 
-`agent.py` remains the sole file at the service root and imports from `host_agent.*`.
+`agent.py` remains the sole file at the service root and imports from `agent.*`.
 New modules must not be added to the service root; place them in the owning subpackage above.
 
 ## Testing conventions

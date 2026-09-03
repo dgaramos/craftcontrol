@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 import tempfile
 
-import host_agent.store.store as st
+import proxy.store.store as st
 from helpers import operation_id
 
 

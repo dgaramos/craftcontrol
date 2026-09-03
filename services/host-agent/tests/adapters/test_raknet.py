@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import struct
 
-from host_agent.adapters.raknet import _build_unconnected_ping, _next_probe_delay, _validate_pong, _wait_for_health
+from proxy.adapters.raknet import _build_unconnected_ping, _next_probe_delay, _validate_pong, _wait_for_health
 
 
 _MAGIC = bytes([0x00, 0xFF, 0xFF, 0x00, 0xFE, 0xFE, 0xFE, 0xFE, 0xFD, 0xFD, 0xFD, 0xFD, 0x12, 0x34, 0x56, 0x78])

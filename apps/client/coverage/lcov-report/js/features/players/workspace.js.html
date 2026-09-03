@@ -1,0 +1,424 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for js/features/players/workspace.js</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../../prettify.css" />
+    <link rel="stylesheet" href="../../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../../index.html">All files</a> / <a href="index.html">js/features/players</a> workspace.js</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>0/100</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/38</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/17</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>0/87</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a>
+<a name='L55'></a><a href='#L55'>55</a>
+<a name='L56'></a><a href='#L56'>56</a>
+<a name='L57'></a><a href='#L57'>57</a>
+<a name='L58'></a><a href='#L58'>58</a>
+<a name='L59'></a><a href='#L59'>59</a>
+<a name='L60'></a><a href='#L60'>60</a>
+<a name='L61'></a><a href='#L61'>61</a>
+<a name='L62'></a><a href='#L62'>62</a>
+<a name='L63'></a><a href='#L63'>63</a>
+<a name='L64'></a><a href='#L64'>64</a>
+<a name='L65'></a><a href='#L65'>65</a>
+<a name='L66'></a><a href='#L66'>66</a>
+<a name='L67'></a><a href='#L67'>67</a>
+<a name='L68'></a><a href='#L68'>68</a>
+<a name='L69'></a><a href='#L69'>69</a>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a>
+<a name='L77'></a><a href='#L77'>77</a>
+<a name='L78'></a><a href='#L78'>78</a>
+<a name='L79'></a><a href='#L79'>79</a>
+<a name='L80'></a><a href='#L80'>80</a>
+<a name='L81'></a><a href='#L81'>81</a>
+<a name='L82'></a><a href='#L82'>82</a>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a>
+<a name='L85'></a><a href='#L85'>85</a>
+<a name='L86'></a><a href='#L86'>86</a>
+<a name='L87'></a><a href='#L87'>87</a>
+<a name='L88'></a><a href='#L88'>88</a>
+<a name='L89'></a><a href='#L89'>89</a>
+<a name='L90'></a><a href='#L90'>90</a>
+<a name='L91'></a><a href='#L91'>91</a>
+<a name='L92'></a><a href='#L92'>92</a>
+<a name='L93'></a><a href='#L93'>93</a>
+<a name='L94'></a><a href='#L94'>94</a>
+<a name='L95'></a><a href='#L95'>95</a>
+<a name='L96'></a><a href='#L96'>96</a>
+<a name='L97'></a><a href='#L97'>97</a>
+<a name='L98'></a><a href='#L98'>98</a>
+<a name='L99'></a><a href='#L99'>99</a>
+<a name='L100'></a><a href='#L100'>100</a>
+<a name='L101'></a><a href='#L101'>101</a>
+<a name='L102'></a><a href='#L102'>102</a>
+<a name='L103'></a><a href='#L103'>103</a>
+<a name='L104'></a><a href='#L104'>104</a>
+<a name='L105'></a><a href='#L105'>105</a>
+<a name='L106'></a><a href='#L106'>106</a>
+<a name='L107'></a><a href='#L107'>107</a>
+<a name='L108'></a><a href='#L108'>108</a>
+<a name='L109'></a><a href='#L109'>109</a>
+<a name='L110'></a><a href='#L110'>110</a>
+<a name='L111'></a><a href='#L111'>111</a>
+<a name='L112'></a><a href='#L112'>112</a>
+<a name='L113'></a><a href='#L113'>113</a>
+<a name='L114'></a><a href='#L114'>114</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">export function <span class="fstat-no" title="function not covered" >createPlayersWorkspace(</span>{ state, content, t, localized, api, $, escapeHtml, toast, getSettingsFeature, formatDuration, formatDate, renderPlayerDetail }) {
+<span class="cstat-no" title="statement not covered" >return async function <span class="fstat-no" title="function not covered" >renderPlayersPanel(</span>) {</span>
+  const tplScreen = <span class="cstat-no" title="statement not covered" >$("#tpl-players-screen");</span>
+  const clone = <span class="cstat-no" title="statement not covered" >tplScreen.content.cloneNode(true);</span>
+<span class="cstat-no" title="statement not covered" >  clone.querySelector(".eyebrow").textContent = localized("JOGADORES", "PLAYERS", "JUGADORES");</span>
+<span class="cstat-no" title="statement not covered" >  clone.querySelector("h3").textContent = t("allPlayers");</span>
+<span class="cstat-no" title="statement not covered" >  clone.querySelector("p").textContent = localized("Selecione uma pessoa para abrir sua ficha, histórico e permissões.", "Select a person to open their profile, history, and permissions.", "Selecciona una persona para ver su ficha, historial y permisos.");</span>
+<span class="cstat-no" title="statement not covered" >  clone.querySelector("#player-search").placeholder = t("searchPlayers");</span>
+<span class="cstat-no" title="statement not covered" >  clone.querySelector("[data-player-filter=all]").textContent = t("filterAll");</span>
+<span class="cstat-no" title="statement not covered" >  clone.querySelector("[data-player-filter=online]").textContent = t("filterOnline");</span>
+<span class="cstat-no" title="statement not covered" >  clone.querySelector("[data-player-filter=offline]").textContent = t("filterOffline");</span>
+<span class="cstat-no" title="statement not covered" >  clone.querySelector("[data-player-filter=operator]").textContent = t("filterOperators");</span>
+<span class="cstat-no" title="statement not covered" >  clone.querySelector(".loading-players").textContent = t("checking");</span>
+<span class="cstat-no" title="statement not covered" >  content.replaceChildren(clone);</span>
+  const settings = <span class="cstat-no" title="statement not covered" >getSettingsFeature();</span>
+  const requiredSettingsHelpers = <span class="cstat-no" title="statement not covered" >["playerSettingsMarkup", "bindSegmentedControls", "bindSettingFields"];</span>
+  const missingSettingsHelpers = <span class="cstat-no" title="statement not covered" >requiredSettingsHelpers.filter(<span class="fstat-no" title="function not covered" >(n</span>ame) =&gt; <span class="cstat-no" title="statement not covered" >typeof settings?.[name] !== "function")</span>;</span>
+<span class="cstat-no" title="statement not covered" >  if (missingSettingsHelpers.length) {</span>
+<span class="cstat-no" title="statement not covered" >    throw new Error(`Players settings feature is missing callable helpers: ${missingSettingsHelpers.join(", ")}`);</span>
+  }
+<span class="cstat-no" title="statement not covered" >  content.insertAdjacentHTML("beforeend", settings.playerSettingsMarkup());</span>
+<span class="cstat-no" title="statement not covered" >  settings.bindSegmentedControls();</span>
+<span class="cstat-no" title="statement not covered" >  settings.bindSettingFields(["Jogadores"]);</span>
+<span class="cstat-no" title="statement not covered" >  try {</span>
+    const result = <span class="cstat-no" title="statement not covered" >await api("/api/players");</span>
+    const list = <span class="cstat-no" title="statement not covered" >result.players || [];</span>
+    let access = <span class="cstat-no" title="statement not covered" >{};</span>
+<span class="cstat-no" title="statement not covered" >    if (state.user?.role === "owner") {</span>
+      const accessResult = <span class="cstat-no" title="statement not covered" >await api("/api/auth/access");</span>
+<span class="cstat-no" title="statement not covered" >      access = Object.fromEntries((accessResult.players || []).map(<span class="fstat-no" title="function not covered" >(i</span>tem) =&gt; <span class="cstat-no" title="statement not covered" >[item.name.toLocaleLowerCase(), item])</span>);</span>
+    }
+    const container = <span class="cstat-no" title="statement not covered" >content.querySelector(".loading-players");</span>
+<span class="cstat-no" title="statement not covered" >    if (!list.length) {</span>
+<span class="cstat-no" title="statement not covered" >      container.textContent = t("noHistory");</span>
+<span class="cstat-no" title="statement not covered" >      return;</span>
+    }
+<span class="cstat-no" title="statement not covered" >    renderPlayerOverview(list);</span>
+    const toolbar = <span class="cstat-no" title="statement not covered" >content.querySelector(".player-toolbar");</span>
+<span class="cstat-no" title="statement not covered" >    toolbar.hidden = false;</span>
+<span class="cstat-no" title="statement not covered" >    container.className = "player-management-list";</span>
+    let activeFilter = <span class="cstat-no" title="statement not covered" >"all";</span>
+    const updateList = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >()</span> =&gt; {</span>
+      const query = <span class="cstat-no" title="statement not covered" >$("#player-search").value.trim().toLocaleLowerCase();</span>
+      const filtered = <span class="cstat-no" title="statement not covered" >list.filter(<span class="fstat-no" title="function not covered" >(p</span>layer) =&gt; <span class="cstat-no" title="statement not covered" >(!query || player.name.toLocaleLowerCase().includes(query)) &amp;&amp; (activeFilter === "all" || (activeFilter === "online" &amp;&amp; player.online) || (activeFilter === "offline" &amp;&amp; !player.online) || (activeFilter === "operator" &amp;&amp; player.operator)))</span>;</span>
+<span class="cstat-no" title="statement not covered" >      renderPlayerCards(container, filtered, access);</span>
+    };
+<span class="cstat-no" title="statement not covered" >    $("#player-search").oninput = updateList;</span>
+<span class="cstat-no" title="statement not covered" >    content.querySelectorAll("[data-player-filter]").forEach(<span class="fstat-no" title="function not covered" >(b</span>utton) =&gt; <span class="cstat-no" title="statement not covered" >button.onclick = <span class="fstat-no" title="function not covered" >()</span> =&gt; {</span></span>
+<span class="cstat-no" title="statement not covered" >      activeFilter = button.dataset.playerFilter;</span>
+<span class="cstat-no" title="statement not covered" >      content.querySelectorAll("[data-player-filter]").forEach(<span class="fstat-no" title="function not covered" >(i</span>tem) =&gt; <span class="cstat-no" title="statement not covered" >item.classList.toggle("active", item === button))</span>;</span>
+<span class="cstat-no" title="statement not covered" >      updateList();</span>
+    });
+<span class="cstat-no" title="statement not covered" >    updateList();</span>
+  } catch (error) { const loading = <span class="cstat-no" title="statement not covered" >content.querySelector(".loading-players");</span> <span class="cstat-no" title="statement not covered" >if (loading) <span class="cstat-no" title="statement not covered" >loading.textContent = error.message; </span>else <span class="cstat-no" title="statement not covered" >toast(error.message, true); </span></span>}
+}
+&nbsp;
+function <span class="fstat-no" title="function not covered" >renderPlayerOverview(</span>list) {
+  const overview = <span class="cstat-no" title="statement not covered" >$("#player-overview");</span>
+  const online = <span class="cstat-no" title="statement not covered" >list.filter(<span class="fstat-no" title="function not covered" >(p</span>layer) =&gt; <span class="cstat-no" title="statement not covered" >player.online)</span>.length;</span>
+  const deaths = <span class="cstat-no" title="statement not covered" >list.reduce(<span class="fstat-no" title="function not covered" >(t</span>otal, player) =&gt; <span class="cstat-no" title="statement not covered" >total + Number(player.deaths_count || 0),</span> 0);</span>
+  const seconds = <span class="cstat-no" title="statement not covered" >list.reduce(<span class="fstat-no" title="function not covered" >(t</span>otal, player) =&gt; <span class="cstat-no" title="statement not covered" >total + Number(player.total_play_seconds || 0),</span> 0);</span>
+  const tpl = <span class="cstat-no" title="statement not covered" >$("#tpl-player-overview-stat");</span>
+  const items = <span class="cstat-no" title="statement not covered" >[</span>
+    [String(list.length), t("totalPlayers")],
+    [String(online), t("online")],
+    [String(deaths), t("totalDeaths")],
+    [formatDuration(seconds), t("totalPlayTime")],
+  ];
+<span class="cstat-no" title="statement not covered" >  overview.replaceChildren();</span>
+<span class="cstat-no" title="statement not covered" >  items.forEach(<span class="fstat-no" title="function not covered" >([</span>value, label]) =&gt; {</span>
+    const clone = <span class="cstat-no" title="statement not covered" >tpl.content.cloneNode(true);</span>
+    const span = <span class="cstat-no" title="statement not covered" >clone.querySelector("span");</span>
+<span class="cstat-no" title="statement not covered" >    span.querySelector("b").textContent = value;</span>
+<span class="cstat-no" title="statement not covered" >    span.append(label);</span>
+<span class="cstat-no" title="statement not covered" >    overview.appendChild(clone);</span>
+  });
+<span class="cstat-no" title="statement not covered" >  overview.hidden = false;</span>
+}
+&nbsp;
+function <span class="fstat-no" title="function not covered" >renderPlayerCards(</span>container, list, access = <span class="branch-0 cbranch-no" title="branch not covered" >{})</span> {
+<span class="cstat-no" title="statement not covered" >  container.replaceChildren();</span>
+<span class="cstat-no" title="statement not covered" >  if (!list.length) {</span>
+    // inline: single element, no user data
+<span class="cstat-no" title="statement not covered" >    container.innerHTML = '&lt;p class="no-player-results"&gt;&lt;/p&gt;';</span>
+<span class="cstat-no" title="statement not covered" >    container.querySelector("p").textContent = t("noPlayersFound");</span>
+<span class="cstat-no" title="statement not covered" >    return;</span>
+  }
+  const tpl = <span class="cstat-no" title="statement not covered" >$("#tpl-player-roster-row");</span>
+<span class="cstat-no" title="statement not covered" >  list.forEach(<span class="fstat-no" title="function not covered" >(p</span>layer) =&gt; {</span>
+    const account = <span class="cstat-no" title="statement not covered" >access[player.name.toLocaleLowerCase()];</span>
+    const gameRole = <span class="cstat-no" title="statement not covered" >player.operator ? localized("Operador Minecraft", "Minecraft operator", "Operador de Minecraft") : localized("Membro Minecraft", "Minecraft member", "Miembro de Minecraft");</span>
+    const panelRole = <span class="cstat-no" title="statement not covered" >account?.status === "active" ? `CraftControl · ${account.role}` : localized("Sem acesso ao painel", "No panel access", "Sin acceso al panel");</span>
+    const clone = <span class="cstat-no" title="statement not covered" >tpl.content.cloneNode(true);</span>
+    const article = <span class="cstat-no" title="statement not covered" >clone.querySelector("article");</span>
+<span class="cstat-no" title="statement not covered" >    article.className = `player-roster-row ${player.online ? "is-online" : "is-offline"}`;</span>
+<span class="cstat-no" title="statement not covered" >    clone.querySelector(".player-avatar").textContent = player.name.slice(0, 1).toUpperCase();</span>
+<span class="cstat-no" title="statement not covered" >    clone.querySelector(".player-roster-identity strong").textContent = player.name;</span>
+<span class="cstat-no" title="statement not covered" >    clone.querySelector(".player-roster-identity small").textContent = player.online</span>
+      ? `● ${t("online")} · ${formatDuration(Date.now() / 1000 - player.connected_at)}`
+      : `○ ${t("offline")} · ${formatDate(player.last_seen_at)}`;
+<span class="cstat-no" title="statement not covered" >    clone.querySelector(".game-role-badge").textContent = gameRole;</span>
+    const panelBadge = <span class="cstat-no" title="statement not covered" >clone.querySelector(".panel-role-badge");</span>
+<span class="cstat-no" title="statement not covered" >    panelBadge.textContent = panelRole;</span>
+<span class="cstat-no" title="statement not covered" >    if (account?.status === "active") <span class="cstat-no" title="statement not covered" >panelBadge.classList.add("has-access");</span></span>
+<span class="cstat-no" title="statement not covered" >    clone.querySelector(".player-roster-summary small").textContent = t("playTime");</span>
+<span class="cstat-no" title="statement not covered" >    clone.querySelector(".player-roster-summary b").textContent = formatDuration(player.total_play_seconds);</span>
+    const button = <span class="cstat-no" title="statement not covered" >clone.querySelector(".player-roster-open");</span>
+<span class="cstat-no" title="statement not covered" >    button.onclick = <span class="fstat-no" title="function not covered" >()</span> =&gt; <span class="cstat-no" title="statement not covered" >renderPlayerDetail(player, access[player.name.toLocaleLowerCase()]);</span></span>
+<span class="cstat-no" title="statement not covered" >    container.appendChild(clone);</span>
+  });
+}
+&nbsp;
+}
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-09-03T12:23:20.697Z
+            </div>
+        <script src="../../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../../sorter.js"></script>
+        <script src="../../../block-navigation.js"></script>
+    </body>
+</html>
+    

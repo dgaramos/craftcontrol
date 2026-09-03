@@ -13,7 +13,7 @@ host-agent = "agent:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["host_agent*"]
+include = ["proxy*"]
 
 [tool.setuptools]
 py-modules = ["agent"]

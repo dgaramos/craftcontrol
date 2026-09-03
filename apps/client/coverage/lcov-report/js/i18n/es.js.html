@@ -1,0 +1,433 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for js/i18n/es.js</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">js/i18n</a> es.js</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>0/9</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/2</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/8</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>0/5</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a>
+<a name='L55'></a><a href='#L55'>55</a>
+<a name='L56'></a><a href='#L56'>56</a>
+<a name='L57'></a><a href='#L57'>57</a>
+<a name='L58'></a><a href='#L58'>58</a>
+<a name='L59'></a><a href='#L59'>59</a>
+<a name='L60'></a><a href='#L60'>60</a>
+<a name='L61'></a><a href='#L61'>61</a>
+<a name='L62'></a><a href='#L62'>62</a>
+<a name='L63'></a><a href='#L63'>63</a>
+<a name='L64'></a><a href='#L64'>64</a>
+<a name='L65'></a><a href='#L65'>65</a>
+<a name='L66'></a><a href='#L66'>66</a>
+<a name='L67'></a><a href='#L67'>67</a>
+<a name='L68'></a><a href='#L68'>68</a>
+<a name='L69'></a><a href='#L69'>69</a>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a>
+<a name='L77'></a><a href='#L77'>77</a>
+<a name='L78'></a><a href='#L78'>78</a>
+<a name='L79'></a><a href='#L79'>79</a>
+<a name='L80'></a><a href='#L80'>80</a>
+<a name='L81'></a><a href='#L81'>81</a>
+<a name='L82'></a><a href='#L82'>82</a>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a>
+<a name='L85'></a><a href='#L85'>85</a>
+<a name='L86'></a><a href='#L86'>86</a>
+<a name='L87'></a><a href='#L87'>87</a>
+<a name='L88'></a><a href='#L88'>88</a>
+<a name='L89'></a><a href='#L89'>89</a>
+<a name='L90'></a><a href='#L90'>90</a>
+<a name='L91'></a><a href='#L91'>91</a>
+<a name='L92'></a><a href='#L92'>92</a>
+<a name='L93'></a><a href='#L93'>93</a>
+<a name='L94'></a><a href='#L94'>94</a>
+<a name='L95'></a><a href='#L95'>95</a>
+<a name='L96'></a><a href='#L96'>96</a>
+<a name='L97'></a><a href='#L97'>97</a>
+<a name='L98'></a><a href='#L98'>98</a>
+<a name='L99'></a><a href='#L99'>99</a>
+<a name='L100'></a><a href='#L100'>100</a>
+<a name='L101'></a><a href='#L101'>101</a>
+<a name='L102'></a><a href='#L102'>102</a>
+<a name='L103'></a><a href='#L103'>103</a>
+<a name='L104'></a><a href='#L104'>104</a>
+<a name='L105'></a><a href='#L105'>105</a>
+<a name='L106'></a><a href='#L106'>106</a>
+<a name='L107'></a><a href='#L107'>107</a>
+<a name='L108'></a><a href='#L108'>108</a>
+<a name='L109'></a><a href='#L109'>109</a>
+<a name='L110'></a><a href='#L110'>110</a>
+<a name='L111'></a><a href='#L111'>111</a>
+<a name='L112'></a><a href='#L112'>112</a>
+<a name='L113'></a><a href='#L113'>113</a>
+<a name='L114'></a><a href='#L114'>114</a>
+<a name='L115'></a><a href='#L115'>115</a>
+<a name='L116'></a><a href='#L116'>116</a>
+<a name='L117'></a><a href='#L117'>117</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { en } from "./en.js?v=7";
+&nbsp;
+export const es = <span class="cstat-no" title="statement not covered" >{</span>
+  ...en,
+  language: "Idioma", brandKicker: "CENTRAL DE CONTROL BEDROCK", refresh: "Actualizar", worldState: "ESTADO DEL MUNDO", quickActions: "Acciones rápidas",
+  day: "Día", night: "Noche", clearWeather: "Clima despejado", server: "Servidor", saveChanges: "Guardar cambios", control: "CONTROL", serverOperation: "Operación del servidor",
+  restartNotice: "Los cambios persistentes se aplican al guardar y reiniciar.", start: "Iniciar", restart: "Reiniciar", stop: "Detener", close: "Cerrar",
+  checking: "Comprobando…", online: "En línea", stopped: "Detenido", serverOnline: "Servidor en línea", serverStopped: "Servidor detenido", playersOnline: "jugadores en línea", nobody: "Nadie conectado",
+  awaiting: "Esperando actualización", updated: "Actualizado", enabled: "Activado", disabled: "Desactivado", unknown: "Sin consultar", immediate: "Aplicación inmediata", restartRequired: "Se aplica al guardar y reiniciar",
+  saved: "Guardado. Aplicando en el servidor…", serverUpdated: "Servidor actualizado", noChanges: "No hay cambios pendientes", querying: "Consultando el servidor…", stateUpdated: "Estado actualizado", worldUpdated: "Mundo actualizado", operationDone: "Operación completada",
+  confirmAction: <span class="fstat-no" title="function not covered" >(a</span>ction) =&gt; <span class="cstat-no" title="statement not covered" >`¿${action} el servidor?`,</span> saveCount: <span class="fstat-no" title="function not covered" >(c</span>ount) =&gt; <span class="cstat-no" title="statement not covered" >`Guardar (${count})`,</span> fieldUpdated: <span class="fstat-no" title="function not covered" >(l</span>abel) =&gt; <span class="cstat-no" title="statement not covered" >`${label} actualizado`,</span>
+  timeControls: "Hora y clima", timeControlsHint: "Hora, ciclos y clima", timeOfDay: "Hora del mundo", sunrise: "Amanecer", noon: "Mediodía", sunset: "Atardecer", midnight: "Medianoche",
+  exactTime: "Hora exacta", exactTimeHelp: "Define un valor entre 0 y 24000 ticks.", setTime: "Definir hora",
+  advanceTime: "Avanzar el tiempo", advanceTimeHelp: "Añade de 1 a 240000 ticks al reloj actual.", addTime: "Avanzar",
+  cycles: "Ciclos automáticos", daylightCycle: "Ciclo de día y noche", weatherCycle: "Ciclo climático",
+  timeQueries: "Consultar reloj", daytime: "Ticks del día", gametime: "Tiempo total de juego", days: "Días jugados",
+  queryResult: "Resultado", weatherTitle: "Clima", clear: "Despejado", rain: "Lluvia", thunder: "Tormenta",
+  duration: "Duración opcional en ticks", setWeather: "Aplicar clima", queryWeather: "Consultar clima",
+  resetDays: "Restablecer contador de días", resetDaysHelp: "Establece el tiempo en el tick 0 y reinicia el contador de días mostrado.",
+  resetDaysConfirm: "¿Restablecer el contador de días y fijar el reloj en el tick 0?", timeUpdated: "Tiempo actualizado",
+  queryUnavailable: "El servidor no devolvió un valor legible.",
+  onlinePlayers: "Jugadores en línea", operatorAccess: "Operador", operatorHelp: "Puede usar comandos administrativos dentro del juego.",
+  noOnlinePlayers: "No hay jugadores en línea.", permissionUpdated: "Permiso actualizado",
+  gameModeTitle: "Modo de juego", gameModeHelp: "Establece una preferencia de modo de juego para este jugador. La preferencia se guarda y se aplica inmediatamente si el jugador está en línea. Elija \"Usar predeterminado del servidor\" para quitar la preferencia.",
+  gameModeLabel: "Preferencia configurada", survival: "Supervivencia", creative: "Creativo", adventure: "Aventura",
+  serverDefault: "Usar predeterminado del servidor",
+  gameModeUpdated: "Preferencia de modo de juego guardada", gameModeError: "No se pudo guardar la preferencia de modo de juego",
+  observedGameModeLabel: "Modo observado (ahora)", observedGameModeAbsent: "Modo no observado",
+  preferredGameModeLabel: "Preferencia configurada", preferredGameModeNone: "Sin preferencia establecida",
+  forcedGameModeNotice: "FORCE_GAMEMODE está activado. Bedrock puede restaurar el modo predeterminado del servidor cuando este jugador vuelva a conectarse.",
+  forcedGameModeLink: "Ir a configuración del servidor",
+  allPlayers: "Todos los jugadores", playerHistoryHelp: "Ficha permanente de todos los que han pasado por el servidor.", playersEyebrow: "JUGADORES", selectPlayerPrompt: "Selecciona una persona para abrir su ficha, historial y permisos.",
+  offline: "Desconectado", sessions: "Sesiones", playTime: "Tiempo jugado", deaths: "Muertes", firstSeen: "Primera conexión",
+  lastSeen: "Última conexión", viewHistory: "Ver historial", hideHistory: "Ocultar historial", noHistory: "No hay eventos registrados.",
+  historyUnavailable: "El servidor no devolvió una ficha válida para este jugador.",
+  totalPlayers: "Jugadores", offlinePlayers: "Desconectados", totalDeaths: "Muertes registradas", totalPlayTime: "Tiempo acumulado",
+  searchPlayers: "Buscar jugador", filterAll: "Todos", filterOnline: "En línea", filterOffline: "Desconectados", filterOperators: "Operadores",
+  connectedSince: "Conectado desde", lastDeath: "Última muerte", permission: "Permiso", aliases: "Nombres conocidos",
+  recentSessions: "Sesiones recientes", activeSession: "En curso", normalExit: "Salida normal", inferredExit: "Cierre inferido",
+  derivedDeaths: "Recuento derivado de los mensajes del servidor", noPlayersFound: "Ningún jugador coincide con los filtros.",
+  telemetryStats: "Estadísticas del mundo", authoritative: "Datos estructurados por el behavior pack", playerKills: "Jugadores eliminados", mobKills: "Criaturas eliminadas", blocksBroken: "Bloques rotos", blocksPlaced: "Bloques colocados", damageDealt: "Daño causado", damageTaken: "Daño recibido", distanceTraveled: "Distancia recorrida", dimensionsVisited: "Dimensiones visitadas",
+  deathHistory: "Historial de muertes", noDeaths: "No hay muertes detalladas registradas.", deathCause: "Causa", killedBy: "Responsable", projectile: "Proyectil", telemetrySource: "Behavior pack",
+  home: "Inicio", world: "Mundo", players: "Jugadores", analytics: "Datos", rules: "Reglas", settings: "Servidor",
+  analyticsTitle: "Actividad del servidor", analyticsHelp: "El historial compartido de entradas, salidas, muertes y cambios de permisos.",
+  activityView: "Actividad", deathsView: "Muertes", rankingsView: "Clasificaciones", blocksView: "Bloques", combatView: "Combate", explorationView: "Exploración", trendsView: "Períodos", healthView: "Salud",
+  eventFilter: "Evento", playerFilter: "Jugador", periodFilter: "Período", sourceFilter: "Origen", detailFilter: "Causa o responsable", detailFilterHint: "Ej.: zombie, lava…",
+  everyEvent: "Todos los eventos", joinsOnly: "Entradas", leavesOnly: "Salidas", permissionsOnly: "Permisos", respawnsOnly: "Respawns", dimensionsOnly: "Dimensiones",
+  everyPlayer: "Todos los jugadores", lifetime: "Desde el inicio", last7Days: "Últimos 7 días", last30Days: "Últimos 30 días",
+  everySource: "Todos los orígenes", structuredSource: "Telemetry Pack", serverSource: "Servidor y manager",
+  activityEmpty: "Ningún evento coincide con estos filtros.", eventCount: <span class="fstat-no" title="function not covered" >(c</span>ount) =&gt; <span class="cstat-no" title="statement not covered" >`${count} eventos`,</span> pageCount: <span class="fstat-no" title="function not covered" >(p</span>age, pages) =&gt; <span class="cstat-no" title="statement not covered" >`Página ${page} de ${pages}`,</span> loadedEventCount: <span class="fstat-no" title="function not covered" >(l</span>oaded, total) =&gt; <span class="cstat-no" title="statement not covered" >`${loaded} de ${total} cargados`,</span> loadingMoreActivity: "Cargando más eventos…", loadMoreActivity: "Cargar más eventos", activityTimelineEnd: "Fin de la línea de tiempo",
+  previous: "Anterior", next: "Siguiente", refreshData: "Actualizar datos", sourceStructured: "Estructurado", sourceServer: "Evidencia del servidor", deathDetails: "Detalles de la muerte", viewDetails: "Ver detalles", fromDimension: "Origen", toDimension: "Destino",
+  rankingsTitle: "Clasificaciones y récords", rankingsHelp: "Compara los récords de por vida que el servidor puede demostrar hoy.", lifetimeRecord: "Récord de por vida", leaderboard: "Clasificación", records: "Récords del servidor", noRankingData: "Todavía no hay datos para esta categoría.",
+  categoryActivity: "Actividad", categoryCombat: "Combate", categoryBuilding: "Bloques", categoryExploration: "Exploración", rankPlayTime: "Tiempo jugado", rankSessions: "Sesiones", rankLongestSession: "Sesión más larga", rankDeaths: "Muertes", rankPlayerKills: "Jugadores eliminados", rankMobKills: "Criaturas eliminadas", rankBlocksBroken: "Bloques rotos", rankBlocksPlaced: "Bloques colocados", rankDamageDealt: "Daño causado", rankDamageTaken: "Daño recibido", rankDistance: "Distancia", rankDimensions: "Dimensiones",
+  blocksTitle: "Minería y construcción", blocksHelp: "Descubre qué consumió el mundo, quién minó más y quién construyó más.", miningView: "Minería", buildingView: "Construcción", oresTitle: "Minerales encontrados", topBlocks: "Bloques más frecuentes", favoriteBlocks: "Favoritos de los jugadores", miners: "Mineros", builders: "Constructores", noBlockData: "Todavía no hay bloques registrados por el Telemetry Pack.", blocksTelemetryHint: "Los contadores comienzan después de instalar el Telemetry Pack.", broken: "Rotos", placed: "Colocados", oreRanking: "Clasificación del mineral",
+  oreDiamond: "Diamante", oreIron: "Hierro", oreGold: "Oro", oreCopper: "Cobre", oreCoal: "Carbón", oreRedstone: "Redstone", oreLapis: "Lapislázuli", oreEmerald: "Esmeralda", oreQuartz: "Cuarzo", oreAncient_debris: "Restos antiguos",
+  combatTitle: "Combate del servidor", combatHelp: "Muertes, eliminaciones y daño acumulado con la evidencia disponible en el mundo.", combatEmptyHelp: "Los paneles permanecen visibles y comienzan a rellenarse cuando el Telemetry Pack observe combate.", combatDeaths: "Muertes", combatPlayerKills: "Eliminaciones JcJ", combatMobKills: "Criaturas eliminadas", combatDamageDealt: "Daño causado", combatDamageTaken: "Daño recibido", combatRankings: "Clasificación de combate", deathCauses: "Causas de muerte", lethalOpponents: "Responsables de las muertes", projectiles: "Proyectiles", pvpDuels: "Enfrentamientos JcJ", combatProfiles: "Resumen por jugador", noCombatEvidence: "Todavía no hay evidencias registradas.", telemetryWaiting: "Esperando telemetría", observedDeaths: "Muertes estructuradas observadas",
+  favoriteTargets: "Criaturas favoritas", targetKills: "eliminaciones",
+  explorationTitle: "Exploración del mundo", explorationHelp: "Distancia muestreada, dimensiones, sesiones y viajes de los jugadores.", explorationEmptyHelp: "La expedición completa permanece visible incluso antes del primer dato de movimiento.", dimensionsDiscovered: "Dimensiones descubiertas", dimensionVisits: "Visitas a dimensiones", explorationSessions: "Sesiones", explorerRanking: "Clasificación de exploradores", dimensionMap: "Mapa dimensional", recentJourneys: "Viajes recientes", explorerProfiles: "Exploradores", noExplorationEvidence: "Todavía no hay viajes registrados.", favoriteDimension: "Dimensión favorita", explorationFirstSeen: "Primera visita", explorationLastSeen: "Última visita", horizontalSampled: "Distancia horizontal muestreada; los teletransportes largos se ignoran.", visitCount: "visitas",
+  activeMovementTime: "Tiempo de movimiento activo", dimensionDistance: "Distancia en la dimensión",
+  trendsTitle: "Historial por período", trendsHelp: "Clasificaciones reales, calendario diario y patrones de horas de juego construidos sin reescribir el pasado.", dailyHistory: "HISTORIAL DIARIO", periodDaysLabel: <span class="fstat-no" title="function not covered" >(c</span>ount) =&gt; <span class="cstat-no" title="statement not covered" >`${count} ${count === 1 ? "día" : "días"}`,</span> sevenDays: "7 días", thirtyDays: "30 días", periodRanking: "Clasificación del período", activityCalendar: "Calendario de actividad", sessionHeatmap: "Horas de juego", mostActiveDay: "Día más activo", collectionStarted: "La recopilación diaria comienza con esta versión; los totales de por vida anteriores no se asignan artificialmente a hoy.", noPeriodData: "Todavía no hay actividad registrada en este período.", dailyPlayers: "Jugadores activos", dailyBlocks: "Bloques", dailyKills: "Eliminaciones", lessActive: "Menos", moreActive: "Más", weekdayShort: ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"],
+  worldIntro: "Configuración del mundo", rulesIntro: "Comportamiento del juego", serverIntro: "Infraestructura del servidor", pendingChanges: "CAMBIOS PENDIENTES", reviewChanges: "Revisar cambios", pendingHelp: "Estas configuraciones se guardarán y el servidor solo se reiniciará cuando las apliques.", discardAll: "Descartar todos", applyChanges: "Aplicar cambios", removeChange: "Quitar", currentValue: "Actual", newValue: "Nuevo", reviewCount: <span class="fstat-no" title="function not covered" >(c</span>ount) =&gt; <span class="cstat-no" title="statement not covered" >`Revisar (${count})`,</span> confirmedAt: "Confirmado",
+  telemetryPack: "Telemetry Pack", telemetryPackHelp: "Estadísticas nativas e historial estructurado del mundo.",
+  installedVersion: "Versión instalada", bundledVersion: "Versión disponible", packHealth: "Estado", lastResponse: "Última respuesta",
+  packActive: "Instalado y activo", packInactive: "Desactivado", packMissing: "No instalado", upgradeAvailable: "Actualización disponible",
+  installPack: "Instalar", upgradePack: "Actualizar", disablePack: "Desactivar", rollbackPack: "Restaurar copia",
+  restartPackNotice: "El cambio está listo. Reinicia el servidor Bedrock explícitamente para aplicarlo.",
+  packActionConfirm: "¿Ejecutar esta acción del Telemetry Pack? Se creará una copia de seguridad antes del cambio.",
+  telemetrySequence: "Secuencia", lastSnapshot: "Último snapshot", detectedGaps: "Brechas", missingEvents: "Eventos faltantes",
+  healthy: "Saludable", syncing: "Sincronizando", degraded: "Degradado", waiting: "Esperando",
+  storageVersion: "Versión de almacenamiento", storageStatus: "Migración de estado", migrated: "Migrado", notRequired: "Actual",
+  capabilities: "Capacidades", capabilityFull: "Soporte completo", capabilityLimited: "Soporte parcial",
+  playerJoins: "Entradas", playerLeaves: "Salidas", playerRespawns: "Respawns", deathsAndKills: "Muertes y eliminaciones",
+  damageAggregates: "Daño", dimensionChanges: "Dimensiones",
+  movementSampling: "Distancia", snapshotRequests: "Snapshots",
+  craftControlImage: "Imagen de CraftControl", activeSince: "Activa desde", packObserved: "Pack observado", packInstalledAt: "Archivos actualizados el",
+  packHealthTitle: "Salud del pack", packHealthHelp: "Indicadores de volumen y rendimiento del behavior pack de telemetría activo.", eventVolume: "Volumen de eventos", sequenceHealth: "Salud de la secuencia", noPackHealth: "El telemetry pack aún no está reportando. Instálalo y actívalo para ver los datos de salud.", resetCount: "Reinicios", lastGap: "Última brecha",
+  diagnostics: "Diagnóstico interno", diagnosticsHelp: "Contadores del proceso en tiempo real; no se requiere un servicio externo de observabilidad.", telemetryAccepted: "Eventos aceptados", telemetryRejected: "Eventos rechazados", ingestionDuration: "Ingestión media", sseConnections: "Conexiones SSE activas",
+  ingestionDurationMax: "Ingestión más lenta", sseConnectionsTotal: "Conexiones SSE desde el inicio", sseReconnections: "Reconexiones SSE", runtimeRefreshing: "Reconciliación en curso", yes: "Sí", no: "No",
+  telemetryDetails: "Estado de telemetría", telemetryTopicDiagnostics: "Temas de ingestión (vida del proceso)", telemetryLost: "Envolventes perdidos", persistenceDiagnostics: "Persistencia SQLite", runtimeDiagnostics: "Trabajo del runtime", telemetryDuplicates: "Eventos duplicados", telemetryOld: "Eventos fuera de orden", diagnosticStatus: "Estado", expectedSequence: "Secuencia esperada", sqliteConnections: "Conexiones SQLite", sqliteWaitAverage: "Espera media de SQLite", sqliteWaitMax: "Espera máxima de SQLite", sqliteContentionFailures: "Fallos de contención SQLite", sqliteRetries: "Reintentos SQLite", sqliteDatabaseSize: "Tamaño de la base SQLite", pendingGameruleRefreshes: "Actualizaciones de reglas pendientes", gameruleWorkerRunning: "Worker de reglas en ejecución", snapshotRunning: "Solicitud de snapshot en ejecución",
+  batchDiagnostics: "Diagnósticos de lotes de bloques", batchCount: "Lotes aceptados", batchTotalBlocks: "Total de bloques declarados", batchMaxBlocks: "Lote más grande",
+  snapshotDiagnostics: "Reconciliación de snapshots", snapshotCount: "Snapshots completados", snapshotDurationTotal: "Duración total (ms)", snapshotDurationMax: "Snapshot más largo (ms)", snapshotLastPlayerCount: "Jugadores en el último snapshot",
+  reconciliationDiagnostics: "Trabajo de reconciliación", reconciliationCount: "Reconciliaciones completadas", reconciliationDurationTotal: "Duración total (ms)", reconciliationDurationMax: "Reconciliación más larga (ms)", reconciliationDurationLast: "Última reconciliación (ms)",
+  behaviorPackEyebrow: "Behavior Pack", statusEyebrow: "Estado", volumeEyebrow: "Volumen", telemetryEyebrow: "Telemetría",
+  opStages: "Etapas de la operación",
+  opChanges: "Cambios solicitados",
+  opEvidence: "Detalles técnicos",
+  opObservation: "Datos observados",
+  opFields: "Ver campos",
+  opItems: "Ver elementos",
+  opState_pending: "Preparando operación",
+  opState_running: "Aplicando cambios",
+  opState_confirmed: "Cambios confirmados",
+  opState_failed: "Operación fallida",
+  opState_divergent: "Servidor divergió",
+  opStage_review: "Revisión",
+  opStage_backup_verify: "Copia de seguridad",
+  opStage_prepare: "Preparar",
+  opStage_restart: "Reiniciar",
+  opStage_health_wait: "Verificación de salud",
+  opStage_verify: "Verificar",
+  opStage_confirm: "Confirmar",
+  operationLocked: "Los cambios están bloqueados durante una operación del servidor.",
+  serverRestarting: "Servidor reiniciando",
+  operationDrawerHelp: "Esta operación continúa en segundo plano mientras navegas.",
+  opReconcile: "Reconciliar",
+    opReconcileHelp: "Volver a observar el servidor y actualizar el resultado de esta operación.",
+    opObservedState: "Estado observado del servidor",
+    opReconciliation_applied: "coincide con la configuración solicitada",
+    opReconciliation_diverged: "difiere de la configuración solicitada",
+    opReconciliation_unknown: "no se pudo verificar",
+  opRetry: "Reintentar",
+  opRetryHelp: "Iniciar una nueva operación vinculada con los mismos cambios.",
+  opRetryConflict: "Otra operación ya está en ejecución. Por favor espere e intente de nuevo.",
+  opParentLink: "Reintento de",
+  domainFreshness: "Actualidad de los dominios", domainObservedAt: "Última observación", domainAgeSeconds: "Antigüedad (s)", domainStale: "Obsoleto", domainFresh: "Actualizado",
+};
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-09-03T12:23:20.697Z
+            </div>
+        <script src="../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../sorter.js"></script>
+        <script src="../../block-navigation.js"></script>
+    </body>
+</html>
+    

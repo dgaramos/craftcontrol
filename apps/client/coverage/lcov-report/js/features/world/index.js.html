@@ -1,0 +1,334 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for js/features/world/index.js</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../../prettify.css" />
+    <link rel="stylesheet" href="../../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../../index.html">All files</a> / <a href="index.html">js/features/world</a> index.js</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>0/74</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/21</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/21</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>0/49</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a>
+<a name='L55'></a><a href='#L55'>55</a>
+<a name='L56'></a><a href='#L56'>56</a>
+<a name='L57'></a><a href='#L57'>57</a>
+<a name='L58'></a><a href='#L58'>58</a>
+<a name='L59'></a><a href='#L59'>59</a>
+<a name='L60'></a><a href='#L60'>60</a>
+<a name='L61'></a><a href='#L61'>61</a>
+<a name='L62'></a><a href='#L62'>62</a>
+<a name='L63'></a><a href='#L63'>63</a>
+<a name='L64'></a><a href='#L64'>64</a>
+<a name='L65'></a><a href='#L65'>65</a>
+<a name='L66'></a><a href='#L66'>66</a>
+<a name='L67'></a><a href='#L67'>67</a>
+<a name='L68'></a><a href='#L68'>68</a>
+<a name='L69'></a><a href='#L69'>69</a>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a>
+<a name='L77'></a><a href='#L77'>77</a>
+<a name='L78'></a><a href='#L78'>78</a>
+<a name='L79'></a><a href='#L79'>79</a>
+<a name='L80'></a><a href='#L80'>80</a>
+<a name='L81'></a><a href='#L81'>81</a>
+<a name='L82'></a><a href='#L82'>82</a>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { persistTab } from "../../core/route.js?v=7";
+&nbsp;
+export function <span class="fstat-no" title="function not covered" >createWorldFeature(</span>{ state, content, t, api, $, uiIcon, toast, getSettingsFeature, getNavigation }) {
+function <span class="fstat-no" title="function not covered" >renderTimePanel(</span>) {
+  const presets = <span class="cstat-no" title="statement not covered" >["sunrise", "day", "noon", "sunset", "night", "midnight"];</span>
+  const presetIcons = <span class="cstat-no" title="statement not covered" >{ sunrise: "sun", day: "sun", noon: "sun", sunset: "sun", night: "moon", midnight: "moon" };</span>
+<span class="cstat-no" title="statement not covered" >  content.innerHTML = `</span>
+    &lt;div class="time-screen"&gt;
+      &lt;section class="time-card block-panel"&gt;&lt;h3&gt;${t("timeOfDay")}&lt;/h3&gt;&lt;p&gt;${state.locale === "pt" ? "Escolha um momento predefinido do ciclo completo." : "Choose a preset from the complete daylight cycle."}&lt;/p&gt;&lt;div class="time-presets"&gt;${presets.map(<span class="fstat-no" title="function not covered" >(p</span>reset) =&gt; <span class="cstat-no" title="statement not covered" >`&lt;button type="button" data-time-preset="${preset}"&gt;&lt;span&gt;${uiIcon(presetIcons[preset])}&lt;/span&gt;${t(preset)}&lt;/button&gt;`)</span>.join("")}&lt;/div&gt;&lt;/section&gt;
+      &lt;section class="time-card block-panel"&gt;&lt;h3&gt;${t("exactTime")}&lt;/h3&gt;&lt;p&gt;${t("exactTimeHelp")}&lt;/p&gt;&lt;div class="command-row"&gt;&lt;input id="exact-time" type="number" min="0" max="24000" value="0"&gt;&lt;button type="button" id="set-exact-time"&gt;${t("setTime")}&lt;/button&gt;&lt;/div&gt;&lt;h3 class="subheading"&gt;${t("advanceTime")}&lt;/h3&gt;&lt;p&gt;${t("advanceTimeHelp")}&lt;/p&gt;&lt;div class="command-row"&gt;&lt;input id="add-time" type="number" min="1" max="240000" value="1000"&gt;&lt;button type="button" id="add-time-button"&gt;${t("addTime")}&lt;/button&gt;&lt;/div&gt;&lt;/section&gt;
+      &lt;section class="time-card block-panel"&gt;&lt;h3&gt;${t("cycles")}&lt;/h3&gt;&lt;div class="cycle-row"&gt;&lt;div&gt;&lt;strong&gt;${t("daylightCycle")}&lt;/strong&gt;&lt;small&gt;${state.locale === "pt" ? "Desative para congelar o horário atual." : "Disable to freeze the current time."}&lt;/small&gt;&lt;/div&gt;${getSettingsFeature().booleanControl("time-daylight-cycle", state.gamerules.dodaylightcycle)}&lt;/div&gt;&lt;div class="cycle-row"&gt;&lt;div&gt;&lt;strong&gt;${t("weatherCycle")}&lt;/strong&gt;&lt;small&gt;${state.locale === "pt" ? "Desative para manter o clima escolhido." : "Disable to keep the selected weather."}&lt;/small&gt;&lt;/div&gt;${getSettingsFeature().booleanControl("time-weather-cycle", state.gamerules.doweathercycle)}&lt;/div&gt;&lt;/section&gt;
+      &lt;section class="time-card block-panel"&gt;&lt;h3&gt;${t("weatherTitle")}&lt;/h3&gt;&lt;p&gt;${state.locale === "pt" ? "Escolha o clima e, se quiser, uma duração em ticks." : "Choose the weather and optionally set a duration in ticks."}&lt;/p&gt;&lt;div class="weather-options"&gt;&lt;button data-weather="clear"&gt;${uiIcon("sun")} ${t("clear")}&lt;/button&gt;&lt;button data-weather="rain"&gt;${uiIcon("rain")} ${t("rain")}&lt;/button&gt;&lt;button data-weather="thunder"&gt;${uiIcon("thunder")} ${t("thunder")}&lt;/button&gt;&lt;/div&gt;&lt;input id="weather-duration" type="number" min="1" max="1000000" placeholder="${t("duration")}"&gt;&lt;button id="weather-query" class="secondary wide"&gt;${t("queryWeather")}&lt;/button&gt;&lt;/section&gt;
+      &lt;section class="time-card block-panel"&gt;&lt;h3&gt;${t("timeQueries")}&lt;/h3&gt;&lt;div class="query-buttons"&gt;&lt;button data-time-query="daytime"&gt;${t("daytime")}&lt;/button&gt;&lt;button data-time-query="gametime"&gt;${t("gametime")}&lt;/button&gt;&lt;button data-time-query="day"&gt;${t("days")}&lt;/button&gt;&lt;/div&gt;&lt;output id="time-query-result"&gt;${t("queryResult")}: —&lt;/output&gt;&lt;/section&gt;
+      &lt;section class="time-card danger-zone block-panel"&gt;&lt;h3&gt;${t("resetDays")}&lt;/h3&gt;&lt;p&gt;${t("resetDaysHelp")}&lt;/p&gt;&lt;button id="reset-days" class="danger wide"&gt;${t("resetDays")}&lt;/button&gt;&lt;/section&gt;
+    &lt;/div&gt;`;
+<span class="cstat-no" title="statement not covered" >  bindTimePanel();</span>
+}
+&nbsp;
+const READ_ONLY_TIME_ACTIONS = <span class="cstat-no" title="statement not covered" >new Set(["weather-query", "query"]);</span>
+&nbsp;
+async function <span class="fstat-no" title="function not covered" >runTimeAction(</span>action, payload = <span class="branch-0 cbranch-no" title="branch not covered" >{})</span> {
+  const result = <span class="cstat-no" title="statement not covered" >await api(`/api/time/${action}`, { method: "POST", body: JSON.stringify(payload) });</span>
+<span class="cstat-no" title="statement not covered" >  if (!READ_ONLY_TIME_ACTIONS.has(action)) <span class="cstat-no" title="statement not covered" >toast(t("timeUpdated"));</span></span>
+<span class="cstat-no" title="statement not covered" >  return result;</span>
+}
+&nbsp;
+function <span class="fstat-no" title="function not covered" >bindTimePanel(</span>) {
+  const guardMutation = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(f</span>n) =&gt; <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >as</span>ync (...args) =&gt; {</span></span>
+<span class="cstat-no" title="statement not covered" >    if (state.operationActive) { <span class="cstat-no" title="statement not covered" >toast(t("operationLocked"), true); <span class="cstat-no" title="statement not covered" ></span>return; </span>}</span>
+<span class="cstat-no" title="statement not covered" >    return fn(...args);</span>
+  };
+<span class="cstat-no" title="statement not covered" >  content.querySelectorAll("[data-time-preset]").forEach(<span class="fstat-no" title="function not covered" >(b</span>utton) =&gt; <span class="cstat-no" title="statement not covered" >button.onclick = guardMutation(<span class="fstat-no" title="function not covered" >as</span>ync () =&gt; {</span></span>
+<span class="cstat-no" title="statement not covered" >    try { <span class="cstat-no" title="statement not covered" >await runTimeAction("preset", { value: button.dataset.timePreset }); </span>} catch (error) { <span class="cstat-no" title="statement not covered" >toast(error.message, true); </span>}</span>
+  }));
+<span class="cstat-no" title="statement not covered" >  $("#set-exact-time").onclick = guardMutation(<span class="fstat-no" title="function not covered" >as</span>ync () =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >    try { <span class="cstat-no" title="statement not covered" >await runTimeAction("set", { value: $("#exact-time").value }); </span>} catch (error) { <span class="cstat-no" title="statement not covered" >toast(error.message, true); </span>}</span>
+  });
+<span class="cstat-no" title="statement not covered" >  $("#add-time-button").onclick = guardMutation(<span class="fstat-no" title="function not covered" >as</span>ync () =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >    try { <span class="cstat-no" title="statement not covered" >await runTimeAction("add", { value: $("#add-time").value }); </span>} catch (error) { <span class="cstat-no" title="statement not covered" >toast(error.message, true); </span>}</span>
+  });
+<span class="cstat-no" title="statement not covered" >  [["time-daylight-cycle", "dodaylightcycle"], ["time-weather-cycle", "doweathercycle"]].forEach(<span class="fstat-no" title="function not covered" >([</span>id, rule]) =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >    $(`#${id}`).onchange = <span class="fstat-no" title="function not covered" >as</span>ync (event) =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >      if (state.operationActive) { <span class="cstat-no" title="statement not covered" >toast(t("operationLocked"), true); <span class="cstat-no" title="statement not covered" ></span>renderTimePanel(); <span class="cstat-no" title="statement not covered" ></span>return; </span>}</span>
+<span class="cstat-no" title="statement not covered" >      getSettingsFeature().updateToggleLabel(event.target);</span>
+<span class="cstat-no" title="statement not covered" >      try {</span>
+<span class="cstat-no" title="statement not covered" >        await api(`/api/gamerules/${rule}`, { method: "PUT", body: JSON.stringify({ value: event.target.checked }) });</span>
+<span class="cstat-no" title="statement not covered" >        state.gamerules[rule] = String(event.target.checked);</span>
+      } catch (error) { <span class="cstat-no" title="statement not covered" >toast(error.message, true); <span class="cstat-no" title="statement not covered" ></span>renderTimePanel(); </span>}
+    };
+  });
+<span class="cstat-no" title="statement not covered" >  content.querySelectorAll("[data-weather]").forEach(<span class="fstat-no" title="function not covered" >(b</span>utton) =&gt; <span class="cstat-no" title="statement not covered" >button.onclick = guardMutation(<span class="fstat-no" title="function not covered" >as</span>ync () =&gt; {</span></span>
+<span class="cstat-no" title="statement not covered" >    try { <span class="cstat-no" title="statement not covered" >await runTimeAction("weather", { value: button.dataset.weather, duration: $("#weather-duration").value }); </span>} catch (error) { <span class="cstat-no" title="statement not covered" >toast(error.message, true); </span>}</span>
+  }));
+<span class="cstat-no" title="statement not covered" >  $("#weather-query").onclick = <span class="fstat-no" title="function not covered" >as</span>ync () =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >    try { const result = <span class="cstat-no" title="statement not covered" >await runTimeAction("weather-query");</span> <span class="cstat-no" title="statement not covered" >$("#time-query-result").textContent = `${t("queryResult")}: ${t(result.value) || result.value}`; </span>} catch (error) { <span class="cstat-no" title="statement not covered" >toast(error.message, true); </span>}</span>
+  };
+<span class="cstat-no" title="statement not covered" >  content.querySelectorAll("[data-time-query]").forEach(<span class="fstat-no" title="function not covered" >(b</span>utton) =&gt; <span class="cstat-no" title="statement not covered" >button.onclick = <span class="fstat-no" title="function not covered" >as</span>ync () =&gt; {</span></span>
+<span class="cstat-no" title="statement not covered" >    try {</span>
+      const result = <span class="cstat-no" title="statement not covered" >await runTimeAction("query", { value: button.dataset.timeQuery });</span>
+<span class="cstat-no" title="statement not covered" >      $("#time-query-result").textContent = `${t("queryResult")}: ${result.value ?? t("queryUnavailable")}`;</span>
+    } catch (error) { <span class="cstat-no" title="statement not covered" >toast(error.message, true); </span>}
+  });
+<span class="cstat-no" title="statement not covered" >  $("#reset-days").onclick = guardMutation(<span class="fstat-no" title="function not covered" >as</span>ync () =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >    if (!confirm(t("resetDaysConfirm"))) <span class="cstat-no" title="statement not covered" >return;</span></span>
+<span class="cstat-no" title="statement not covered" >    try { <span class="cstat-no" title="statement not covered" >await runTimeAction("reset-days"); </span>} catch (error) { <span class="cstat-no" title="statement not covered" >toast(error.message, true); </span>}</span>
+  });
+}
+&nbsp;
+&nbsp;
+  const openTimeControls = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >()</span> =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >    state.tab = "__time__";</span>
+<span class="cstat-no" title="statement not covered" >    persistTab(state.tab);</span>
+<span class="cstat-no" title="statement not covered" >    getNavigation().renderTabs();</span>
+<span class="cstat-no" title="statement not covered" >    renderTimePanel();</span>
+<span class="cstat-no" title="statement not covered" >    window.scrollTo({ top: 0, behavior: "smooth" });</span>
+  };
+  const renderWorld = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >()</span> =&gt; {</span>
+    const prefix = <span class="cstat-no" title="statement not covered" >`&lt;button class="section-feature" id="open-time"&gt;&lt;span&gt;${uiIcon("sun")}&lt;/span&gt;&lt;div&gt;&lt;strong&gt;${t("timeControls")}&lt;/strong&gt;&lt;small&gt;${t("timeControlsHint")}&lt;/small&gt;&lt;/div&gt;&lt;b&gt;›&lt;/b&gt;&lt;/button&gt;`;</span>
+<span class="cstat-no" title="statement not covered" >    getSettingsFeature().renderSettingsGroups(["Geral", "Mundo"], prefix);</span>
+<span class="cstat-no" title="statement not covered" >    $("#open-time").onclick = openTimeControls;</span>
+  };
+<span class="cstat-no" title="statement not covered" >  return { renderWorld, renderTimePanel, openTimeControls };</span>
+}
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-09-03T12:23:20.697Z
+            </div>
+        <script src="../../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../../sorter.js"></script>
+        <script src="../../../block-navigation.js"></script>
+    </body>
+</html>
+    

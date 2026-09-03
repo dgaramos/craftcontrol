@@ -404,28 +404,9 @@ até o PR (inclusive via link) autoriza branch, commit, push e abertura do PR;
 merge e deploy continuam exigindo pedido explícito.
 
 The tool-neutral [`.dr-agents/craftcontrol/PROFILE.md`](.dr-agents/craftcontrol/PROFILE.md)
-contains the safeguards specific to Cody DR and Claudio DR reviews. See
-[Agent review profile](docs/dr-agents-profile.md) to use it with portable
-plugins too. Any agent can follow this local profile when it receives the path;
-the profile augments generic review skills and does not trigger review by itself.
-
-### Claude Code skills
-
-If you use Claude Code, this repository ships a set of skills in `.claude/agents/` that encode the project's workflow and conventions. Invoke them with `/skill-name`:
-
-| Skill | When to use |
-|---|---|
-| `$execute-issue <n>` | Executa uma issue do início ao merge — orquestra as três fases abaixo |
-| `$start-issue <n>` | Verifica metadados, lê contexto obrigatório, mapeia código, cria branch |
-| `$implement` | Detecta camada (backend$frontend), carrega skill especializada, implementa e testa |
-| `$handle-pr-findings` | Triagem explícita de findings, correções e respostas nas threads |
-| `$ship-issue` | Commit, PR com metadados, CI, CodeRabbit, sync Gitea |
-| `$review-pr <PR ou ref>` | Revisão cruzada sob demanda ou re-review incremental de um PR/ref — checklist por camada |
-| `$backend` | Padrões Python: DI, Protocols, `is None`, composition root, fakes |
-| `$frontend` | Padrões JS: injeção de deps, helpers compartilhados, ESM, i18n |
-| `$create-issue` | Workshop PM/Dev Hat → cria issue bem formada com todos os metadados |
-| `$manage-project` | Adiciona/lista/audita issues nos project boards |
-| `$manage-milestone` | Atribui/lista/audita milestones, detecta backlog solto |
+contains the safeguards specific to Cody DR and Claudio DR reviews. Any agent
+can follow this local profile when it receives the path; the profile augments
+generic review skills and does not trigger review by itself.
 
 ## License and trademarks
 

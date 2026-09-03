@@ -65,17 +65,7 @@ The package root is reserved for package bootstrap, the production composition r
 
 ## Quality gate
 
-Run these checks before handing off changes:
-
-```bash
-bin/check
-```
-
-The same checks are independently runnable as `bin/check-frontend`,
-`bin/check-backend`, `bin/check-contracts`, and `bin/check-integration`. Keep a
-test in exactly one gate unless a boundary invariant deliberately spans gates.
-
-Update tests and the English `README.md` whenever public behavior, persistence, recovery rules, configuration, or API contracts change.
+Run the quality gate documented in `CONTRIBUTING.md` before handoff.
 
 ## Testing conventions
 

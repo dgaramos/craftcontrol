@@ -1,31 +1,18 @@
 # CraftControl Project Guide
 
-Follow `AGENTS.md` as the authoritative project instruction file. Before working, read `README.md` and all Markdown files in `roadmap/` when present. The `roadmap/` directory is private, ignored planning context and must never be committed, published, or included in deployment copies.
-
-For any PR review, load `.dr-agents/craftcontrol/PROFILE.md` and its
-applicable layer checklists. This local profile supplies CraftControl-specific
-review rules to Claudio DR or any other agent; it augments generic skills and
-never triggers review automatically. Use the `claudio-reviewer` agent if
-the profile is unavailable.
+Follow `AGENTS.md` as the authoritative rule set for this repository.
+Before working, read `README.md` and all Markdown files in `roadmap/` when present.
+The `roadmap/` directory is private planning context — never commit, quote, or publish it.
 
 Key constraints:
 
 - This is Minecraft Bedrock, not Java Edition.
-- The service targets a trusted homelab LAN and manages `itzg/minecraft-bedrock-server`.
-- Preserve the layered Python package under `apps/server/controlplane/`; do not collapse the application into `app.py`.
-- Read and follow `docs/architecture.md`. CraftControl is a modular monolith with layered use cases, meaningful ports and adapters, and an internal event-driven runtime.
-- **Backend test placement:** New test files must mirror the `controlplane/` submodule structure under `apps/server/tests/`. A test for a `core/` module goes in `tests/core/`, a test for a `runtime/` module goes in `tests/runtime/`, and so on. Cross-cutting tests (architecture, composition, CLI, config, brand) stay at the `tests/` root. Never create a new file in the `tests/` root for a single-module concern. Shared helpers belong in `tests/fakes.py` (injectable fakes), `tests/factories.py` (domain object builders), or `tests/conftest.py` (pytest fixtures) — never inlined in a single test module. When testing route authorization, assert the exact capability name using `assert_capability_required` as the model — a 403 alone is not sufficient. The package-level reference is `apps/server/controlplane/README.md`. **Domain model factories:** every domain model dataclass must be constructed via a factory in `tests/factories.py`; never instantiate a model dataclass directly in a test. Add the factory when a new model is introduced and at least one test needs it — do not add factories speculatively.
-- **Backend module placement:** New backend implementation modules must not be created in the `controlplane` package root. Put shared configuration, SQLite support, migrations, event primitives, and validation in `core/`; Bedrock, Docker, Host Agent, and server-file adapters in `server/`; player behavior in `players/`; telemetry in `telemetry/`; backup and operational workflows in `operations/`; supervisors and reconciliation in `runtime/`; request mapping in `http/`; authentication in `auth/`; and durable security records in `audit/`. The root is reserved for bootstrap, composition, CLI, version metadata, and genuine cross-domain contracts. Compatibility facades may preserve an existing import path only; new behavior belongs in the owning module. The architecture-test allowlist is the temporary, reviewed exception list.
-- Use constructor injection and manual composition. Define replaceable boundaries with `typing.Protocol`; do not introduce a DI container, service locator, or one interface per class.
-- Keep dependencies directed from HTTP to application services to ports/adapters. Runtime code must not reach through services into repositories.
-- Preserve event-driven synchronization, SSE, SQLite history, and exporter independence.
-- Player disconnects change status to offline and close sessions; they never delete profiles.
-- XUID stays internal. Player history is durable. Log-derived deaths are explicitly non-authoritative.
-- Keep the UI mobile-first, Minecraft-inspired, understandable to non-specialists,
-  and fully available in the supported locales defined by `AGENTS.md`.
-- Do not expose arbitrary console commands or weaken the existing allowlists.
-- Preserve player-backed local authentication, backend RBAC, one-time hashed invitations, and revocable server-side sessions. Panel roles never imply Minecraft operator status.
+- Preserve the layered Python package under `apps/server/controlplane/`; do not collapse it into `app.py`.
+- Use constructor injection and manual composition; do not introduce a DI container or service locator.
 - Never overwrite `.env`, the SQLite database, or world data.
-- Use `craftcontrol backup` and `docs/backup-and-restore.md` for recovery operations. Never perform a live restore; require explicit confirmation and preserve the pre-restore recovery set.
-- Run the quality gate documented in `AGENTS.md` before handoff.
-- Follow `CONTRIBUTING.md` for the full PR workflow: branch naming, PR title format, metadata requirements, Conventional Commits, and CodeRabbit interaction.
+- Keep all visible UI copy localized in every supported locale defined by `AGENTS.md`.
+- Do not expose arbitrary console commands or weaken existing allowlists.
+- **Backend module placement:** New backend implementation modules must not be created in the `controlplane` package root. Owning modules: `core/`, `server/`, `players/`, `telemetry/`, `operations/`, `runtime/`, `http/`, `auth/`, `audit/`. Compatibility facades may preserve an existing import path only; new behavior belongs in the owning module. The architecture-test allowlist is the temporary, reviewed exception list. See `AGENTS.md` for the full mapping.
+- For any PR review, load `.dr-agents/craftcontrol/PROFILE.md`.
+
+See `AGENTS.md` for architecture boundaries, test placement, module placement, secrets policy, and the quality gate.

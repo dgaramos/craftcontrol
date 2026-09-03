@@ -5,6 +5,16 @@ CraftControl. It strengthens the portable contract; explicit PR/ref input,
 evidence requirements, incremental re-review, and explicit publication
 authorization still apply.
 
+<!-- Portable plugin usage: when using an installed Cody DR or Claudio DR
+plugin, provide the profile path explicitly with the requested PR/ref:
+
+  Review https://github.com/dgaramos/craftcontrol/pull/123 using
+  .dr-agents/craftcontrol/PROFILE.md.
+
+The profile does not contain publisher credentials. If an adapter or the local
+profile is unavailable, use the repository-native review-pr entry point; no
+GitHub App, plugin installation, or PR history is changed by this fallback. -->
+
 ## Project identity
 
 - **Repository:** `dgaramos/craftcontrol`

@@ -102,6 +102,8 @@ The issue number in the title is mandatory.
 
 Follow [`.github/pull_request_template.md`](.github/pull_request_template.md). Fill every section; do not delete sections you leave empty — keep the placeholder comments so reviewers can see what was considered.
 
+The canonical PR template is `.github/pull_request_template.md` (English). `.gitea/pull_request_template.md` is an active Portuguese translation used by the Gitea mirror; update it whenever the structure of the canonical template changes.
+
 ### Metadata
 
 Every issue **and** every PR must have all four of the following set before requesting a review:

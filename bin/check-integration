@@ -11,7 +11,7 @@ bash -n bin/deploy-craftcontrol-backend
 bash -n bin/deploy-craftcontrol-release
 bash -n bin/check-split-auth
 bash -n bin/cutover-craftcontrol-split
-bash -n deploy/host-agent/bin/install-craftcontrol-storage-io-queue
+bash -n deploy/bedrock-proxy/bin/install-craftcontrol-storage-io-queue
 docker compose config --quiet
 docker compose --file docker-compose.split.yml config --quiet
 docker compose --file docker-compose.split.yml build

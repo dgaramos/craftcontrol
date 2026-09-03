@@ -214,6 +214,16 @@ export function makeSettingsDeps(stateOverrides = {}) {
   return { state, $, content, t, escapeHtml, uiIcon, optionLabel, localeTag, groupLabel, toast, api, render: refreshActivePanel, refreshActivePanel, document, elements };
 }
 
+export function makeStorage(initial = {}) {
+  const store = { ...initial };
+  return {
+    getItem: jest.fn((key) => (key in store ? store[key] : null)),
+    setItem: jest.fn((key, value) => { store[key] = String(value); }),
+    removeItem: jest.fn((key) => { delete store[key]; }),
+    _store: store,
+  };
+}
+
 export class FakeEventSource {
   constructor(url) {
     this.url = url;

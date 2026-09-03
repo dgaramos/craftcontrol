@@ -3,15 +3,14 @@ from __future__ import annotations
 
 import os
 import time
-import uuid
 from pathlib import Path
 import tempfile
 
 import store as st
+from helpers import operation_id
 
 
-def _op_id() -> str:
-    return str(uuid.uuid4())
+_op_id = operation_id
 
 
 # ---------------------------------------------------------------------------

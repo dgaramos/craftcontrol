@@ -7,12 +7,12 @@ from unittest.mock import MagicMock
 import pytest
 
 from adapters.docker import DockerComposeRunner, DockerContainerStatus
-from helpers import fake_run
+from helpers import agent_config, fake_run
 from ports import RestartTimeoutError
 
 
 class TestDockerComposeRunner:
-    _CONFIG = {"compose_project": "mc", "compose_file": "/tmp/dc.yml", "bedrock_data": "/tmp/bd"}
+    _CONFIG = agent_config(compose_file="/tmp/dc.yml", bedrock_data="/tmp/bd")
 
     def test_restart_runs_configured_service_and_returns_reference(self) -> None:
         run = fake_run()

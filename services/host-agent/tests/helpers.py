@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import tempfile
 from typing import Any
+import uuid
 from unittest.mock import MagicMock
 
 from adapters.docker import DockerComposeRunner
@@ -12,6 +13,32 @@ from operations import OperationExecutor
 
 def fake_run(returncode: int = 0, stdout: str = "", stderr: str = "") -> MagicMock:
     return MagicMock(return_value=MagicMock(returncode=returncode, stdout=stdout, stderr=stderr))
+
+
+def operation_id() -> str:
+    """Return a unique operation identifier for a test request or record."""
+    return str(uuid.uuid4())
+
+
+def execute_request(
+    intended_state: dict[str, Any] | None = None,
+    **overrides: Any,
+) -> dict[str, Any]:
+    """Build a valid Host Agent execute request with optional overrides."""
+    request = {"operation_id": operation_id(), "intended_state": intended_state or {}}
+    request.update(overrides)
+    return request
+
+
+def agent_config(**overrides: Any) -> dict[str, Any]:
+    """Build the minimal Host Agent runtime configuration used by adapters."""
+    config = {
+        "compose_project": "mc",
+        "compose_file": "/tmp/docker-compose.yml",
+        "bedrock_data": tempfile.mkdtemp(),
+    }
+    config.update(overrides)
+    return config
 
 
 class FakeProbe:
@@ -36,11 +63,7 @@ def make_executor(
     """
     if bedrock_data is None:
         bedrock_data = tempfile.mkdtemp()
-    config = {
-        "compose_project": "mc",
-        "compose_file": "/tmp/docker-compose.yml",
-        "bedrock_data": bedrock_data,
-    }
+    config = agent_config(bedrock_data=bedrock_data)
     runner = DockerComposeRunner(config, subprocess_run=subprocess_run)
     fs = BedrockFileSystem(bedrock_data)
     probe = FakeProbe(probe_result)

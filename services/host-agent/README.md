@@ -71,6 +71,36 @@ in its own environment. The shared secret must match on both sides.
 
 ---
 
+## Operation persistence
+
+The agent retains submitted operation status in its own SQLite database. This
+is intentionally separate from the CraftControl Server database: it supports
+polling and crash recovery for host-side lifecycle work only.
+
+```mermaid
+erDiagram
+    operations {
+        TEXT operation_id PK
+        TEXT status
+        TEXT current_stage
+        TEXT outcome
+        TEXT executor_ref
+        INTEGER health_reached
+        TEXT failed_stage
+        TEXT detail
+        TEXT error_code
+        TEXT exception_type
+        REAL completed_at
+    }
+```
+
+`operations` is the complete Host Agent schema. It has no relational links:
+the agent persists a bounded lifecycle record per operation and keeps its
+working index in memory. Records completed more than ten minutes ago are
+evicted from both the index and SQLite.
+
+---
+
 ## Security model
 
 - All requests require a `Bearer <token>` header matching the shared secret.

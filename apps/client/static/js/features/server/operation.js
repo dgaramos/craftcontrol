@@ -30,7 +30,8 @@ function displayOperationValue(value, formatDate, key = "") {
   return "";
 }
 
-export function createOperationFeature({ api, t, formatDate, uiIcon, toast, storage = localStorage }) {
+export function createOperationFeature({ api, t, formatDate, uiIcon, toast, storage = null }) {
+  const _storage = storage ?? globalThis.localStorage;
   let currentOperation = null;
   let eventSource = null;
   let onUpdate = null;
@@ -49,7 +50,7 @@ export function createOperationFeature({ api, t, formatDate, uiIcon, toast, stor
         const op = JSON.parse(message.data);
         if (op && op.operation_id) {
           currentOperation = op;
-          try { storage.setItem(STORAGE_KEY, op.operation_id); } catch (_) { /* storage unavailable */ }
+          try { _storage.setItem(STORAGE_KEY, op.operation_id); } catch (_) { /* storage unavailable */ }
           if (onUpdate) onUpdate(op);
         }
       } catch (_) { /* ignore malformed SSE payload */ }
@@ -76,10 +77,10 @@ export function createOperationFeature({ api, t, formatDate, uiIcon, toast, stor
       // while the request was in-flight, preserving event-driven freshness.
       if (response.operation && currentOperation === snapshotBefore) {
         currentOperation = response.operation;
-        try { storage.setItem(STORAGE_KEY, response.operation.operation_id); } catch (_) { /* storage unavailable */ }
+        try { _storage.setItem(STORAGE_KEY, response.operation.operation_id); } catch (_) { /* storage unavailable */ }
       } else if (!response.operation && currentOperation === snapshotBefore) {
         currentOperation = null;
-        try { storage.removeItem(STORAGE_KEY); } catch (_) { /* storage unavailable */ }
+        try { _storage.removeItem(STORAGE_KEY); } catch (_) { /* storage unavailable */ }
       }
       return true;
     } catch (_) {
@@ -91,7 +92,7 @@ export function createOperationFeature({ api, t, formatDate, uiIcon, toast, stor
 
   async function loadFromStorage() {
     let storedId = null;
-    try { storedId = storage.getItem(STORAGE_KEY); } catch (_) { /* storage unavailable */ }
+    try { storedId = _storage.getItem(STORAGE_KEY); } catch (_) { /* storage unavailable */ }
     if (!storedId || !UUID_RE.test(storedId)) return;
     try {
       const response = await api(`/api/operations/${storedId}`);
@@ -484,7 +485,7 @@ export function createOperationFeature({ api, t, formatDate, uiIcon, toast, stor
     const response = await api(`/api/operations/${operationId}/reconcile`, { method: "POST" });
     if (response.operation && currentOperation === snapshotBefore) {
       currentOperation = response.operation;
-      try { storage.setItem(STORAGE_KEY, response.operation.operation_id); } catch (_) { /* storage unavailable */ }
+      try { _storage.setItem(STORAGE_KEY, response.operation.operation_id); } catch (_) { /* storage unavailable */ }
       if (onUpdate) onUpdate(currentOperation);
     }
   }
@@ -494,7 +495,7 @@ export function createOperationFeature({ api, t, formatDate, uiIcon, toast, stor
     const response = await api(`/api/operations/${operationId}/retry`, { method: "POST" });
     if (response.operation && currentOperation === snapshotBefore) {
       currentOperation = response.operation;
-      try { storage.setItem(STORAGE_KEY, response.operation.operation_id); } catch (_) { /* storage unavailable */ }
+      try { _storage.setItem(STORAGE_KEY, response.operation.operation_id); } catch (_) { /* storage unavailable */ }
       if (onUpdate) onUpdate(currentOperation);
     }
   }

@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import { getMockDynamicProperty, setMockDynamicProperty } from "@minecraft/server";
 import { STATE_BACKUP_KEY, STATE_KEY, playerStateKey } from "../../behavior_pack/scripts/model.js";
+import { captureConsole } from "./console-capture.mjs";
 
 const legacy = JSON.stringify({ schema: 1, sequence: 9, players: { voncrush: { name: "VonCrush", deaths: 4, blocksBroken: 12 } } });
 setMockDynamicProperty(STATE_KEY, legacy);
-const output = [];
-console.warn = (line) => output.push(String(line));
+const capture = captureConsole("warn");
+const { lines: output } = capture;
 
 await import("../../behavior_pack/scripts/main.js");
 
@@ -22,3 +23,4 @@ assert.ok(output.some((line) => line.includes("[BEDROCK_TELEMETRY_MIGRATION] sto
 const started = output.filter((line) => line.includes("[BEDROCK_TELEMETRY]")).map((line) => JSON.parse(line.slice(line.indexOf("{")))).find((item) => item.type === "telemetry.started");
 assert.equal(started.data.storage.status, "migrated");
 assert.equal(started.data.storage.storageVersion, 3);
+capture.restore();

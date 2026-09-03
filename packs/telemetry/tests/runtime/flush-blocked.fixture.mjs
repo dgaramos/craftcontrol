@@ -2,13 +2,14 @@ import assert from "node:assert/strict";
 import { getMockDynamicProperty, setMockDynamicProperty, world } from "@minecraft/server";
 import { STATE_KEY } from "../../behavior_pack/scripts/model.js";
 import { flush, loadState } from "../../behavior_pack/scripts/adapters/store.js";
+import { captureConsole } from "./console-capture.mjs";
 
 // Arrange: seed corrupt state so loadState() sets blocked = true
 const corrupt = "{not-json";
 setMockDynamicProperty(STATE_KEY, corrupt);
 
-const errors = [];
-console.error = (line) => errors.push(String(line));
+const capture = captureConsole("error");
+const { lines: errors } = capture;
 
 // Trigger loadState to set the blocked flag
 loadState();
@@ -35,3 +36,4 @@ assert.ok(
   errors.some((line) => line.includes("persistence blocked")),
   `expected a "persistence blocked" error log, got: ${JSON.stringify(errors)}`,
 );
+capture.restore();

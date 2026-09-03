@@ -15,9 +15,10 @@
 
 import assert from "node:assert/strict";
 import { world, system } from "@minecraft/server";
+import { captureConsole } from "./console-capture.mjs";
 
-const output = [];
-console.warn = (line) => output.push(String(line));
+const capture = captureConsole("warn");
+const { lines: output } = capture;
 
 await import("../../behavior_pack/scripts/main.js");
 
@@ -176,3 +177,5 @@ function snapshotsFor(name) {
     "standing still must not accumulate distance",
   );
 }
+
+capture.restore();

@@ -93,22 +93,15 @@ O backend roda intencionalmente com um worker Gunicorn e várias threads. Seu br
 ```mermaid
 flowchart TD
     repo["Repositório CraftControl"] --> apps["apps/"]
-    apps --> frontend["frontend/ — imagem Nginx, HTML, CSS e módulos ES nativos"]
-    apps --> backend["backend/ — imagem Flask, composition root e aplicação Python"]
-    repo --> services["services/"]
-    services --> hostagentsvc["host-agent/ — serviço systemd implantado independentemente (nível de host, fora do Docker)"]
+    apps --> frontend["apps/client/ — imagem Nginx, HTML, CSS e módulos ES nativos"]
+    apps --> backend["apps/server/ — imagem Flask, composition root e aplicação Python"]
+    repo --> services["services/host-agent/ — serviço systemd implantado independentemente"]
     repo --> contracts["packages/contracts/ — contrato OpenAPI 3.1 canônico e tipos gerados"]
     repo --> telemetry["packs/telemetry/ — Behavior Pack embutido e ativos de ciclo de vida"]
-    repo --> bin["bin/ — comandos de qualidade, implantação, cutover, backup e recuperação"]
-    repo --> deploy["deploy/ — ativos exclusivos de implantação (unidades systemd, scripts de instalação)"]
-    repo --> docs["docs/ — guias de arquitetura, segurança, telemetria e operações"]
-    repo --> overlay["controlplane/, app.py, wsgi.py — overlays temporários de compatibilidade do backend"]
-    repo --> split["docker-compose.split.yml — topologia de produção dividida ativa"]
-    repo --> combined["docker-compose.yml — topologia combinada de compatibilidade/recuperação"]
     repo --> versions["versions.env — par frontend/backend testado"]
 ```
 
-Os links Python da raiz e a imagem combinada são overlays de compatibilidade. Eles preservam ferramentas existentes e rollback de emergência enquanto a migração continua; código novo pertence a `apps/`.
+Os links Python da raiz e a imagem combinada são compatibility overlays. Eles preservam ferramentas existentes e rollback de emergência; código novo pertence a `apps/`.
 
 ### Módulos do frontend
 
@@ -125,7 +118,7 @@ flowchart TD
     js --> i18n["i18n/ — catálogos PT, EN, ES e terminologia localizada do jogo"]
 ```
 
-`app.js` inicia o composition root. As features possuem markup, bindings e estado local; o core não importa features. Dependências compartilhadas são explícitas, e o portão de interação executa navegação, autenticação, sessões, telemetria individual, análises, responsividade, invalidação SSE e localização.
+As features possuem markup, bindings e estado local; o `core/` não importa `features/`. Veja [Arquitetura](docs/architecture.md) para regras de dependência, consistência de eventos, não-objetivos deliberados e layout-alvo incremental.
 
 ### Camadas do backend
 
@@ -136,15 +129,11 @@ flowchart TD
     manager --> players["players/ — casos de uso de jogadores"]
     manager --> auth["auth/ — contas, sessões, papéis, CSRF e auditoria"]
     manager --> operations["operations/ — fluxos de backup e restauração"]
-    manager --> services["services.py — fachada de orquestração de compatibilidade"]
-    manager --> repository["repository.py — fachada SQLite de compatibilidade"]
-    manager --> runtime["runtime.py — supervisores de logs, Docker e reconciliação"]
+    manager --> runtime["runtime/ — supervisores de logs, Docker e reconciliação"]
     manager --> ports["ports.py — contratos estruturais de fronteiras externas"]
 ```
 
-Rotas traduzem HTTP; casos de uso coordenam comportamento; repositórios possuem a persistência. Adapters isolam Docker, console Bedrock, arquivos e instalação do CraftControl Telemetry Pack. Dependências são montadas manualmente; não há service locator nem framework de DI.
-
-Veja [Arquitetura](docs/architecture.md) para regras de dependência, consistência de eventos, não-objetivos deliberados e layout-alvo incremental.
+Rotas traduzem HTTP; casos de uso coordenam comportamento; repositórios possuem a persistência. Veja [`apps/server/controlplane/README.md`](apps/server/controlplane/README.md) para o layout completo do pacote e regras de arquitetura.
 
 ### Contratos e documentação da API
 
@@ -169,7 +158,7 @@ O Swagger anexa o token CSRF vinculado à sessão a requisições inseguras de �
 
 ## Estado e telemetria orientados por eventos
 
-O CraftControl acompanha logs do Bedrock e eventos de ciclo de vida do Docker, confirma evidências duráveis no SQLite, publica mudanças por SSE, faz atualizações direcionadas e executa uma reconciliação de segurança completa a cada 15 minutos por padrão.
+O CraftControl acompanha logs do Bedrock e eventos de ciclo de vida do Docker, confirma evidências duráveis no SQLite, publica mudanças por SSE, faz atualizações direcionadas e executa uma reconciliação de segurança completa a cada 15 minutos por padrão. Informações obsoletas permanecem visíveis e marcadas em vez de serem substituídas por valores vazios falsos.
 
 ```mermaid
 flowchart LR
@@ -180,27 +169,9 @@ flowchart LR
     broker --> reconciliation["reconciliação direcionada"]
 ```
 
-Valores em cache mantêm timestamps de observação e mudança. Informações obsoletas permanecem visíveis e marcadas em vez de serem substituídas por valores vazios falsos.
+O CraftControl Telemetry Pack opcional (`0.4.0`) emite JSON versionado por schema e suporta snapshots autoritativos e eventos incrementais. Snapshots podem recuperar agregados de toda a vida após indisponibilidade; não podem recriar cada evento perdido, timestamp, causa ou coordenada.
 
-Os diagnósticos de owner incluem contadores de ingestão por tópico durante a
-vida do processo: envelopes aceitos, rejeitados, duplicados, antigos, lacunas
-detectadas e reinicializações do pack. A saúde global da sequência durante a
-vida do processo informa envelopes perdidos por inferência, lacunas e
-reinicializações. Um contador de perdas registra o tamanho de uma lacuna
-observada; não reconstrói eventos ou detalhes ausentes.
-
-O CraftControl Telemetry Pack opcional atualmente é distribuído como `0.4.0`. Ele emite JSON versionado por schema e suporta snapshots autoritativos e eventos incrementais. Mudanças de blocos são agrupadas em lotes `blocks.changed` de cinco segundos. Lacunas de sequência, reinícios, intervalos ausentes, armazenamento bloqueado e capacidades Bedrock parciais degradam a saúde e solicitam um snapshot coalescido. Deltas obsoletos são rejeitados; a saúde volta a saudável somente após reconciliação completa.
-
-Snapshots podem recuperar agregados de toda a vida após indisponibilidade. Eles não podem recriar cada evento histórico perdido, timestamp, causa ou coordenada, e o CraftControl nunca inventa esses detalhes.
-
-A área Servidor informa separadamente a imagem do frontend, imagem do backend, Behavior Pack instalado, tempo de resposta do pack, sequência, snapshot concluído, lacunas, eventos ausentes, migração de armazenamento e métricas suportadas. Instalação, atualização, desativação, remoção, backup e rollback estão disponíveis pela interface e CLI. Mudanças no pack nunca reiniciam o Bedrock automaticamente.
-
-```bash
-docker compose -f docker-compose.split.yml exec craftcontrol-backend craftcontrol telemetry status
-docker compose -f docker-compose.split.yml exec craftcontrol-backend craftcontrol telemetry install
-```
-
-Veja [Integração do CraftControl Telemetry Pack](docs/telemetry-pack.md) para o ciclo de vida e o runbook de recuperação.
+Veja [Arquitetura](docs/architecture.md) para o modelo de eventos e consistência, e [Integração do CraftControl Telemetry Pack](docs/telemetry-pack.md) para o ciclo de vida e o runbook de recuperação.
 
 ## Instalação
 
@@ -214,39 +185,13 @@ configuração, cutover, acesso, verificações pós-instalação e solução de
 
 ## Configuração
 
-| Variável | Padrão | Finalidade |
-| --- | --- | --- |
-| `MANAGER_PORT` | `8082` | Porta pública do frontend |
-| `MINECRAFT_CONTAINER` | `minecraft-bedrock` | Contêiner Bedrock gerenciado pelo CraftControl |
-| `MINECRAFT_PROJECT` | `/minecraft-project` | Projeto Compose Bedrock dentro do backend |
-| `DATABASE_PATH` | `/data/manager.db` | Estado SQLite e histórico de jogadores |
-| `BACKUP_ROOT` | `/data/backups/coordinated` | Conjuntos coordenados de recuperação |
-| `BOOTSTRAP_OPERATOR` | `VonCrush` | Configuração inicial de compatibilidade de operador no jogo |
-| `RECONCILE_SECONDS` | `900` | Intervalo de reconciliação de segurança completa |
-| `AUTH_MODE` | `local` | Autenticação interna; `disabled` é somente compatibilidade de recuperação |
-| `AUTH_COOKIE_SECURE` | `true` | Restringe cookies de sessão a HTTPS |
-| `TZ` | `America/Sao_Paulo` | Fuso horário de runtime e análises |
+O CraftControl é configurado por variáveis de ambiente (`MANAGER_PORT`, `MINECRAFT_CONTAINER`, `DATABASE_PATH`, `HOST_AGENT_URL`, `TZ` e outras) e lê `versions.env` para o par frontend/backend testado.
 
-As versões em execução do frontend e backend vêm de `versions.env`. Nomes antigos de serviço, banco, pacote e variáveis de ambiente continuam suportados como overlays de compatibilidade; caminhos persistentes não são renomeados destrutivamente.
-
-O host agent é opcional. Quando estiver habilitado, configure `HOST_AGENT_URL` e `HOST_AGENT_TOKEN_FILE` para o backend; veja [Host agent](docs/host-agent.md) para a configuração do segredo compartilhado, systemd e caminhos.
-
-O Host Agent opcional possui um instalador idempotente de pré-requisitos. Execute-o como root depois de instalar o serviço systemd; ele verifica a conta do agente, o acesso ao Docker, ACLs restritas, o observador de ACL do `.env` e o sandbox systemd sem reiniciar o Bedrock. Veja [Host Agent](docs/host-agent.md#preferred-idempotent-installer).
+Veja [Configuração](docs/configuration.md) para a referência completa de variáveis, regras de autoridade de configuração Bedrock e configurações de timeout do host agent.
 
 ## Autenticação e acesso
 
-Contas do painel se vinculam a jogadores que o Bedrock já observou. A identidade privada baseada em XUID sobrevive a mudanças de Gamertag; XUIDs nunca aparecem em respostas públicas da API ou na interface.
-
-| Capability | Visualizador | Operador | Proprietário |
-| --- | :---: | :---: | :---: |
-| Ler status, jogadores, histórico e telemetria | Sim | Sim | Sim |
-| Alterar configurações, gamerules, horário e clima | Não | Sim | Sim |
-| Iniciar e reiniciar Bedrock | Não | Sim | Sim |
-| Parar Bedrock | Não | Não | Sim |
-| Alterar permissão de operador no jogo | Não | Sim | Sim |
-| Gerenciar usuários do painel e o Telemetry Pack | Não | Não | Sim |
-
-Permissão Minecraft e papel do CraftControl são independentes. Capabilities da API são a fronteira de segurança; ocultar um controle no navegador não é autorização.
+Contas do painel se vinculam a jogadores que o Bedrock já observou. Três papéis — Visualizador, Operador e Proprietário — controlam o acesso a configurações, comandos de ciclo de vida e gerenciamento de usuários. Permissão Minecraft e papel do CraftControl são independentes.
 
 Gere o primeiro código único de proprietário após esse jogador entrar no Bedrock:
 
@@ -255,11 +200,7 @@ docker compose -f docker-compose.split.yml exec craftcontrol-backend \
   craftcontrol auth bootstrap --player VonCrush
 ```
 
-Proprietários geram códigos de convite ou recuperação a partir do perfil individual de um jogador. Códigos expiram em 15 minutos, funcionam uma vez e são armazenados apenas como hashes. Senhas usam `scrypt` com salt; sessões opacas no servidor têm expiração ociosa e absoluta. Toda mutação autenticada exige token CSRF associado à sessão exata e requisição válida de mesma origem.
-
-Usuários autenticados podem alterar a própria senha pelo controle da conta. O CraftControl verifica a senha atual, revoga as sessões existentes da conta e emite uma sessão nova somente para o navegador que concluiu a alteração.
-
-Veja [Autenticação e autorização locais](docs/authentication.md).
+Veja [Autenticação e autorização locais](docs/authentication.md) para a matriz completa de capabilities, fluxo de convites, política de sessão e detalhes de CSRF.
 
 ## Dados de jogadores e análises
 
@@ -307,22 +248,9 @@ A interface lê `/version.json` do frontend e metadados de release do backend, m
 
 ## Desenvolvimento e portões de qualidade
 
-O CraftControl usa Python 3.12, Flask, Gunicorn, SQLite, Docker SDK para Python, Nginx e JavaScript do navegador sem dependências.
+O CraftControl usa Python 3.12, Flask, Gunicorn, SQLite, Docker SDK para Python, Nginx e JavaScript do navegador sem dependências. GitHub Actions e Gitea Actions executam seis portões de qualidade de modo independente; execuções bem-sucedidas no `main` do Gitea implantam automaticamente pelo runner homelab do repositório.
 
-```bash
-bin/check-frontend       # Sintaxe JS, i18n, testes de interação e contrato visual
-bin/check-backend        # Aplicação Python e testes de persistência
-bin/check-host-agent     # Testes independentes do host agent e relatório de cobertura
-bin/check-contracts      # OpenAPI, superfície de rotas, Swagger, declarações geradas
-bin/check-integration    # Builds Compose, runtime dividido, arquitetura e segurança de deploy
-bin/check                # portão local completo
-```
-
-GitHub Actions e Gitea Actions executam os seis portões de qualidade de modo independente: frontend, backend, host agent, contratos do backend, contratos do frontend e integração. As alterações usam Conventional Commits e a implantação de produção só é aceita a partir de `main` limpo e publicado.
-
-Execuções de qualidade bem-sucedidas no `main` do Gitea implantam automaticamente pelo runner homelab específico do repositório. O workflow invoca o mesmo comando protegido de release usado nas operações manuais; veja [Implantação automatizada no homelab](docs/automated-deployment.md).
-
-Veja [Configuração de desenvolvimento](docs/development-setup.md) para pré-requisitos, configuração de ambiente e guia de tarefas comuns.
+Veja [Contribuição](CONTRIBUTING.md) para os comandos do portão de qualidade (`bin/check` e seus portões independentes), convenções de commit e fluxo de PR. Veja [`apps/server/controlplane/README.md`](apps/server/controlplane/README.md) para o layout do pacote backend e referência de infraestrutura de testes. Veja [Configuração de desenvolvimento](docs/development-setup.md) para pré-requisitos, configuração de ambiente e tarefas comuns.
 
 ## Estado da segurança
 
@@ -358,28 +286,9 @@ descobre o perfil compartilhado do projeto automaticamente.
 As skills locais complementam o plugin: o Codex continua seguindo `AGENTS.md` e as instruções de segurança. Um pedido para executar uma issue até o PR (inclusive via link) autoriza branch, commit, push e abertura do PR; merge e deploy continuam exigindo pedido explícito.
 
 O perfil tool-neutral em [`.dr-agents/craftcontrol/PROFILE.md`](.dr-agents/craftcontrol/PROFILE.md)
-concentra as salvaguardas específicas das revisões Cody DR e Claudio DR. Veja
-[Perfil de revisão de agentes](docs/dr-agents-profile.md) para usá-lo também
-com os plugins portáteis. Qualquer agente pode seguir o perfil local ao receber
-o caminho; ele complementa skills genéricas e não dispara uma revisão sozinho.
-
-### Skills do Claude Code
-
-Se você usa Claude Code, este repositório oferece um conjunto de skills em `.claude/agents/` que codificam o fluxo de trabalho e as convenções do projeto. Invoque-as com `/nome-da-skill`:
-
-| Skill | Quando usar |
-|---|---|
-| `$execute-issue <n>` | Executa uma issue do início ao merge — orquestra as três fases abaixo |
-| `$start-issue <n>` | Verifica metadados, lê contexto obrigatório, mapeia código, cria branch |
-| `$implement` | Detecta camada (backend$frontend), carrega skill especializada, implementa e testa |
-| `$handle-pr-findings` | Triagem explícita de findings, correções e respostas nas threads |
-| `$ship-issue` | Commit, PR com metadados, CI, CodeRabbit, sync Gitea |
-| `$review-pr <n>` | Self-review ou triagem de findings — checklist por camada (backend, frontend, docs) |
-| `$backend` | Padrões Python: DI, Protocols, `is None`, composition root, fakes |
-| `$frontend` | Padrões JS: injeção de deps, ESM, i18n e testes |
-| `$create-issue` | Workshop PM/Dev Hat → cria issue bem formada |
-| `$manage-project` | Adiciona/lista/audita issues nos project boards |
-| `$manage-milestone` | Atribui/lista/audita milestones, detecta backlog solto |
+concentra as salvaguardas específicas das revisões Cody DR e Claudio DR. Qualquer
+agente pode seguir o perfil local ao receber o caminho; ele complementa skills
+genéricas e não dispara uma revisão sozinho.
 
 ## Licença e marcas
 

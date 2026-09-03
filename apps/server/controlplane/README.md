@@ -67,22 +67,7 @@ controlplane/
 
 ---
 
-## Architecture rules
-
-- **Dependencies flow inward:** `http/` → application services → `core/` ports → adapters.
-  Runtime code must not reach through services into repositories.
-- **No DI container.** Use constructor injection. `composition.py` is the single
-  place where concrete adapters are wired together.
-- **Replaceable boundaries via Protocol.** `ports.py` defines `typing.Protocol`
-  interfaces for every replaceable boundary (state store, player store, Bedrock
-  adapter, etc.). Concrete adapter classes satisfy these contracts structurally —
-  no inheritance required. Do not confuse `ports.py` (contracts) with the adapter
-  implementations in `server/`, `players/`, `telemetry/`, etc.
-- **Package root is reserved** for `create_app()`, `compose_manager()`, `ports.py`,
-  `cli.py`, and `version.py`. New behavior belongs in the owning submodule. Compatibility
-  re-exports in the root are temporary and tracked in the architecture-test allowlist.
-- **Event-driven state.** `EventBroker` coordinates cross-domain side-effects.
-  Subscribers must be idempotent; do not rely on delivery order between domains.
+See [Architecture](../../docs/architecture.md) for dependency direction rules, constructor injection policy, Protocol-based boundaries, and the event and consistency model.
 
 ---
 

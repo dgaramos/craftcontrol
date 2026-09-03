@@ -17,13 +17,14 @@ or another agent. The profile augments generic review skills; it does not
 trigger a review automatically. If it is unavailable, use the `claudio-reviewer` agent. Never copy roadmap content, credentials, databases, or
 world data into the profile or review output.
 
+## Documentation principle
+
+Each piece of technical information lives in exactly one authoritative document. READMEs and `AGENTS.md` introduce a topic in one or two sentences and point to the authoritative source; they never duplicate its content. When adding or changing a rule, write it once in the most specific owning document and add a pointer from every entry point that would otherwise contain a copy.
+
 ## Architecture
 
-- Treat `docs/architecture.md` as the authoritative architecture and dependency-direction reference.
+- Treat `docs/architecture.md` as the authoritative reference for dependency direction, constructor injection policy, Protocol-based boundaries, the event and consistency model, and deliberate non-goals.
 - Keep CraftControl a modular monolith: organize by domain, retain layered use cases inside modules, and use ports/adapters only at meaningful persistence and infrastructure boundaries.
-- Inject dependencies through constructors and assemble production implementations in the composition root. Use `typing.Protocol` for replaceable boundaries; do not add a DI framework, service locator, or redundant interface for every concrete service.
-- Runtime supervisors must call application-facing ports and must never reach through a service to its repository or adapter.
-- Keep HTTP mapping in `apps/server/controlplane/http/`, orchestration in `services.py`, event ingestion in `runtime.py`, persistence in `repository.py`, and Bedrock/Docker/filesystem concerns in their adapters.
 - Preserve the internal event broker, persisted operational events, SSE browser updates, targeted refreshes, and periodic full reconciliation.
 - Keep one Gunicorn worker unless the process-local broker and runtime supervisors are redesigned for multiple workers.
 - Do not add browser polling when an event-driven invalidation and targeted reconciliation is sufficient.
@@ -32,13 +33,9 @@ world data into the profile or review output.
 - Use the coordinated backup service for live world/database backups. Hold Bedrock saves only during the copy window, resume in `finally`, use SQLite's backup API, and verify checksums before restore.
 - Restores are offline, explicitly confirmed, and must create a pre-restore recovery copy. Never restore `.env` automatically.
 
-The legacy file locations in the preceding rule are compatibility facades during the modular refactor. New domain modules may live under `http/`, `server/`, `players/`, `telemetry/`, `operations/`, and `runtime/`; do not remove a compatibility import until its callers and tests have migrated.
-
 ### Backend module placement
 
-New backend implementation modules must not be created in the `controlplane` package root. Put code in its owning module: shared configuration, SQLite support, migrations, event primitives, and validation in `core/`; Bedrock, Docker, Host Agent, and server-file adapters in `server/`; player behavior in `players/`; telemetry protocol, persistence, and installation in `telemetry/`; backup and operational workflows in `operations/`; supervisors and reconciliation in `runtime/`; request mapping in `http/`; authentication in `auth/`; and durable security records in `audit/`.
-
-The package root is reserved for package bootstrap, the production composition root, CLI entry points, version metadata, and genuinely cross-domain structural contracts. Compatibility facades may preserve an existing import path only; new behavior belongs in the owning module. Do not create a new root module or add canonical behavior to a facade merely for convenience. The architecture test contains the explicit temporary allowlist for files awaiting the migration issues; update it only when a reviewed architecture decision changes that allowlist.
+New backend implementation modules must not be created in the `controlplane` package root. Owning modules: `core/`, `server/`, `players/`, `telemetry/`, `operations/`, `runtime/`, `http/`, `auth/`, `audit/`. Compatibility facades may preserve an existing import path only; new behavior belongs in the owning module. The architecture-test allowlist is the temporary, reviewed exception list. See [`apps/server/controlplane/README.md`](apps/server/controlplane/README.md) for the full package layout.
 
 ## Player data invariants
 

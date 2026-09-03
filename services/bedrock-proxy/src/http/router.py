@@ -12,14 +12,12 @@ from __future__ import annotations
 
 import logging
 from http.server import BaseHTTPRequestHandler
-from typing import Any, Protocol, TYPE_CHECKING
+from typing import Any, Protocol
 
 from src.auth.auth import verify_bearer_token
 from src.http.handler import EndpointMixin
 from src.ports import ContainerStatusChecker
-
-if TYPE_CHECKING:  # pragma: no cover
-    from src.store.store import OperationRecord
+from src.store.store import OperationRecord
 
 logger = logging.getLogger("bedrock-proxy")
 
@@ -58,7 +56,7 @@ class OperationQueuePort(Protocol):
 
     def enqueue(
         self,
-        record: "OperationRecord",
+        record: OperationRecord,
         store: Any,
         intended_state: dict[str, Any],
         health_timeout: int,

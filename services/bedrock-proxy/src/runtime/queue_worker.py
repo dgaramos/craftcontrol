@@ -16,11 +16,10 @@ import os
 import queue
 import threading
 from dataclasses import dataclass
-from typing import Any, TYPE_CHECKING
+from typing import Any
 
-if TYPE_CHECKING:  # pragma: no cover
-    from src.runtime.operations import OperationExecutor
-    from src.store.store import OperationRecord, OperationStore
+from src.runtime.operations import OperationExecutor
+from src.store.store import OperationRecord, OperationStore
 
 logger = logging.getLogger("bedrock-proxy.queue")
 
@@ -30,8 +29,8 @@ QUEUE_SIZE_DEFAULT = 8
 
 @dataclass
 class _QueuedOperation:
-    record: "OperationRecord"
-    store: "OperationStore"
+    record: OperationRecord
+    store: OperationStore
     intended_state: dict[str, Any]
     health_timeout: int
     restart_timeout: int
@@ -54,7 +53,7 @@ class OperationQueue:
 
     def __init__(
         self,
-        executor: "OperationExecutor",
+        executor: OperationExecutor,
         *,
         workers: int | None = None,
         queue_size: int | None = None,
@@ -104,8 +103,8 @@ class OperationQueue:
 
     def enqueue(
         self,
-        record: "OperationRecord",
-        store: "OperationStore",
+        record: OperationRecord,
+        store: OperationStore,
         intended_state: dict[str, Any],
         health_timeout: int,
         restart_timeout: int,

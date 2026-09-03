@@ -354,7 +354,7 @@ def test_reviewer_publisher_rejects_unexpected_app_before_mutation(tmp_path: Pat
         "PUBLISHER_APP_SLUG": "wrong-app",
         "REVIEW_BODY": "summary",
     }
-    result = subprocess.run([BASH, ".github/scripts/publish-review.sh"], env=env, capture_output=True, text=True)
+    result = subprocess.run([BASH, ".github/scripts/publish-review.sh"], env=env, capture_output=True, text=True, cwd=ROOT)
     assert result.returncode != 0
     assert "unexpected authenticated app" in result.stderr
 
@@ -374,7 +374,7 @@ def test_reviewer_publisher_rejects_changed_head_before_mutation(tmp_path: Path)
         "PUBLISHER_APP_SLUG": "cody-dr",
         "REVIEW_BODY": "summary",
     }
-    result = subprocess.run([BASH, ".github/scripts/publish-review.sh"], env=env, capture_output=True, text=True)
+    result = subprocess.run([BASH, ".github/scripts/publish-review.sh"], env=env, capture_output=True, text=True, cwd=ROOT)
     assert result.returncode != 0
     assert "PR head changed since review" in result.stderr
 
@@ -411,7 +411,7 @@ def test_reviewer_publisher_paginates_thread_validation_before_resolving(tmp_pat
         "PUBLISHER_APP_SLUG": "cody-dr",
         "RESOLVE_THREAD_IDS_JSON": '["thread-two"]',
     }
-    result = subprocess.run([BASH, ".github/scripts/publish-review.sh"], env=env, capture_output=True, text=True)
+    result = subprocess.run([BASH, ".github/scripts/publish-review.sh"], env=env, capture_output=True, text=True, cwd=ROOT)
     assert result.returncode == 0, result.stderr
     assert "after=cursor-one" in call_log.read_text()
     assert "resolveReviewThread" in call_log.read_text()
@@ -437,6 +437,6 @@ def test_reviewer_publisher_rejects_thread_after_all_pages(tmp_path: Path) -> No
         "PUBLISHER_APP_SLUG": "cody-dr",
         "RESOLVE_THREAD_IDS_JSON": '["missing-thread"]',
     }
-    result = subprocess.run([BASH, ".github/scripts/publish-review.sh"], env=env, capture_output=True, text=True)
+    result = subprocess.run([BASH, ".github/scripts/publish-review.sh"], env=env, capture_output=True, text=True, cwd=ROOT)
     assert result.returncode != 0
     assert "resolution target mismatch" in result.stderr

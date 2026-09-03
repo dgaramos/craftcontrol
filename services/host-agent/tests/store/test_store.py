@@ -5,12 +5,7 @@ import os
 import time
 import uuid
 from pathlib import Path
-import sys
 import tempfile
-
-_AGENT_DIR = Path(__file__).resolve().parents[1]
-if str(_AGENT_DIR) not in sys.path:  # pragma: no cover - test bootstrap
-    sys.path.insert(0, str(_AGENT_DIR))
 
 import store as st
 
@@ -87,6 +82,8 @@ class TestSQLitePersistence:
         assert rec is not None
         assert rec.status == "done"
         assert rec.outcome == "ok"
+        s1._conn.close()
+        s2._conn.close()
 
     def test_crash_recovery_marks_running_as_failed(self, tmp_path: Path) -> None:
         db = str(tmp_path / "test.db")
@@ -105,6 +102,8 @@ class TestSQLitePersistence:
         assert rec.outcome == "error"
         assert rec.error_code == "CRASH_RECOVERY"
         assert rec.completed_at is not None
+        s1._conn.close()
+        s2._conn.close()
 
     def test_crash_recovery_does_not_alter_completed_records(self, tmp_path: Path) -> None:
         db = str(tmp_path / "test.db")
@@ -118,6 +117,8 @@ class TestSQLitePersistence:
         rec = s2.get(op_id)
         assert rec is not None
         assert rec.outcome == "ok"
+        s1._conn.close()
+        s2._conn.close()
 
     def test_ttl_eviction_removes_from_sqlite(self, tmp_path: Path) -> None:
         db = str(tmp_path / "test.db")
@@ -134,6 +135,8 @@ class TestSQLitePersistence:
         s2 = st.OperationStore(db_path=db, time_func=lambda: now)
         s2.evict_expired()
         assert s2.get(op_id) is None
+        s1._conn.close()
+        s2._conn.close()
 
     def test_evict_expired_removes_from_sqlite(self, tmp_path: Path) -> None:
         """Evicted records are gone from SQLite so they are absent on reload."""
@@ -155,6 +158,7 @@ class TestSQLitePersistence:
         count = cur.fetchone()[0]
         conn.close()
         assert count == 0
+        s1._conn.close()
 
     def test_health_reached_bool_roundtrip(self, tmp_path: Path) -> None:
         db = str(tmp_path / "test.db")
@@ -168,6 +172,8 @@ class TestSQLitePersistence:
         rec = s2.get(op_id)
         assert rec is not None
         assert rec.health_reached is True
+        s1._conn.close()
+        s2._conn.close()
 
     def test_host_agent_db_env_var(self, tmp_path: Path, monkeypatch) -> None:
         """HOST_AGENT_DB is wired through _load_config."""
@@ -179,10 +185,6 @@ class TestSQLitePersistence:
         monkeypatch.setenv("HOST_AGENT_DB", db_path)
 
         # Reload agent module to pick up env change
-        agent_dir = str(_AGENT_DIR)
-        if agent_dir not in sys.path:
-            sys.path.insert(0, agent_dir)
-
         import importlib
         import agent as ag
         importlib.reload(ag)
@@ -244,7 +246,9 @@ class TestSQLiteErrorPaths:
                 return self
             def __exit__(self, *a):
                 pass
+        original_conn = s._conn
         s._conn = _BrokenConn()
+        original_conn.close()
         # Must not raise
         s.evict_expired()
 

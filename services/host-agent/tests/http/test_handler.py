@@ -8,17 +8,11 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
-import sys
-
-_AGENT_DIR = Path(__file__).resolve().parents[1]
-if str(_AGENT_DIR) not in sys.path:  # pragma: no cover - test bootstrap
-    sys.path.insert(0, str(_AGENT_DIR))
-
 import handler as hd
 import router as rt
 import store as st
 from operations import OperationExecutor
-from helpers import make_executor as _make_executor_base
+from helpers import fake_run, make_executor as _make_executor_base
 
 
 def _make_status_checker(running: bool = True) -> Any:
@@ -330,7 +324,7 @@ class TestExecuteValidation:
         assert status == 400
 
     def test_valid_request_returns_202(self) -> None:
-        executor = _make_executor(subprocess_run=MagicMock(return_value=MagicMock(returncode=0, stdout="", stderr="")))
+        executor = _make_executor(subprocess_run=fake_run())
         store = _make_store()
         status, body = self._execute(
             {"operation_id": _op_id(), "intended_state": {"server_name": "Test"}},
@@ -341,7 +335,7 @@ class TestExecuteValidation:
         assert body["status"] == "accepted"
 
     def test_valid_request_default_timeouts(self) -> None:
-        executor = _make_executor(subprocess_run=MagicMock(return_value=MagicMock(returncode=0, stdout="", stderr="")))
+        executor = _make_executor(subprocess_run=fake_run())
         store = _make_store()
         status, _ = self._execute(
             {"operation_id": _op_id(), "intended_state": {}},
@@ -508,7 +502,7 @@ class TestIntendedStateValueValidation:
         assert "difficulty" in body.get("message", "")
 
     def test_valid_difficulty_accepted(self) -> None:
-        executor = _make_executor(subprocess_run=MagicMock(return_value=MagicMock(returncode=0, stdout="", stderr="")))
+        executor = _make_executor(subprocess_run=fake_run())
         store = _make_store()
         status, body = _call_handler(
             "POST", "/v1/execute",
@@ -539,7 +533,7 @@ class TestIntendedStateValueValidation:
         assert "65535" in body.get("message", "")
 
     def test_server_port_valid_boundary_accepted(self) -> None:
-        executor = _make_executor(subprocess_run=MagicMock(return_value=MagicMock(returncode=0, stdout="", stderr="")))
+        executor = _make_executor(subprocess_run=fake_run())
         store = _make_store()
         status, _ = _call_handler(
             "POST", "/v1/execute",

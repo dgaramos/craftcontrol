@@ -25,10 +25,12 @@ class BedrockFileSystem:
         self,
         bedrock_data: str,
         read_text: Callable[..., str] | None = None,
+        write_text: Callable[..., Any] | None = None,
     ) -> None:
         self._data_dir = Path(bedrock_data)
         # Injectable for testing; defaults to Path.read_text behaviour.
         self._read_text: Callable[..., str] = read_text or (lambda p, **kw: p.read_text(**kw))
+        self._write_text = write_text or (lambda p, text, **kw: p.write_text(text, **kw))
 
     def write_server_properties(self, updates: dict[str, str]) -> None:
         """Merge *updates* (prop_key → rendered value) into server.properties."""
@@ -92,7 +94,7 @@ class BedrockFileSystem:
 
         tmp_file = props_file.with_suffix(".tmp")
         try:
-            tmp_file.write_text(rendered, encoding="utf-8")
+            self._write_text(tmp_file, rendered, encoding="utf-8")
             tmp_file.replace(props_file)
         except OSError as exc:
             try:

@@ -4,14 +4,9 @@ All infrastructure dependencies are injected; no stdlib patching.
 """
 from __future__ import annotations
 
-import sys
 from runpy import run_path
 from pathlib import Path
 from typing import Any, Sequence
-
-_AGENT_DIR = Path(__file__).resolve().parents[1]
-if str(_AGENT_DIR) not in sys.path:  # pragma: no cover
-    sys.path.insert(0, str(_AGENT_DIR))
 
 import pytest
 
@@ -571,7 +566,7 @@ def test_docker_membership_uses_configured_agent_not_invoking_process():
             self.gr_gid = gid
             self.gr_mem = members
 
-    installer = run_path(str(Path(__file__).parents[3] / "deploy/host-agent/bin/install-craftcontrol-host-agent-runtime"))
+    installer = run_path(str(Path(__file__).parents[4] / "deploy/host-agent/bin/install-craftcontrol-host-agent-runtime"))
     is_group_member = installer["_is_group_member"]
     docker_gid = 999
 

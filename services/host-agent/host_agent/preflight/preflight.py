@@ -322,10 +322,11 @@ class Preflight:
                 if not self._dry_run:
                     self._runner.run(cmd)
 
-        # default ACL for new data content
-        default_cmd = ["setfacl", "-R", "-m", f"d:u:{user}:rwX", data]
+        # default ACL for new data content — target directories only so that
+        # setfacl does not fail on regular files (default ACLs are dir-only).
+        default_cmd = ["bash", "-c", f"find {data} -type d | xargs setfacl -m d:u:{user}:rwX"]
         if not self._fs.has_acl(f"d:{data}", user, f"d:u:{user}:rwX"):
-            action = f"apply default ACL: {' '.join(default_cmd)}"
+            action = f"apply default ACL: setfacl d:u:{user}:rwX (dirs under {data})"
             self._planned.append(action)
             if not self._dry_run:
                 self._runner.run(default_cmd)

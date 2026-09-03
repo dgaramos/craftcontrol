@@ -5,6 +5,11 @@ and snapshot shapes stay consistent when the schema evolves.
 """
 from __future__ import annotations
 
+from typing import Any
+
+from controlplane.audit.model import AuditRecord
+from controlplane.core.events import Event
+
 
 def telemetry_envelope(
     event_type: str = "blocks.changed",
@@ -52,3 +57,41 @@ def player_snapshot(
         A dict with ``name``, ``online``, and ``xuid`` keys.
     """
     return {"name": name, "online": online, "xuid": xuid}
+
+
+def audit_record(
+    id: int = 1,
+    occurred_at: float = 1.0,
+    actor: str | None = "alice",
+    action: str = "auth.login",
+    target: str | None = "alice",
+    result: str = "success",
+    metadata: dict[str, Any] | None = None,
+) -> AuditRecord:
+    return AuditRecord(
+        id=id,
+        occurred_at=occurred_at,
+        actor=actor,
+        action=action,
+        target=target,
+        result=result,
+        metadata=metadata if metadata is not None else {},
+    )
+
+
+def event(
+    id: int = 1,
+    topic: str = "server.status",
+    timestamp: float = 1.0,
+    source: str = "test",
+    payload: dict[str, Any] | None = None,
+) -> Event:
+    return Event(
+        id=id,
+        topic=topic,
+        timestamp=timestamp,
+        source=source,
+        payload=payload if payload is not None else {},
+    )
+
+

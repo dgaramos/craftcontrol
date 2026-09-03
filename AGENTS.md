@@ -104,7 +104,11 @@ in a single test module:
 
 - `tests/fakes.py` — injectable fakes that replace production adapters
 - `tests/factories.py` — builder functions for domain objects and protocol
-  envelopes (`telemetry_envelope`, `player_snapshot`, etc.)
+  envelopes (`telemetry_envelope`, `player_snapshot`, `audit_record`, `event`,
+  etc.). Every domain model dataclass must have a factory here. Tests must use
+  the factory instead of constructing the model directly. Add a factory when
+  a new model is introduced; only add it when at least one test actually needs
+  it — do not add factories speculatively.
 - `tests/conftest.py` — pytest fixtures shared across the whole suite
 
 **Capability assertions.** When testing that a route is protected, assert the

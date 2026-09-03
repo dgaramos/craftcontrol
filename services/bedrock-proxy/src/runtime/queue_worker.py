@@ -18,7 +18,7 @@ import threading
 from dataclasses import dataclass
 from typing import Any, TYPE_CHECKING
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from src.runtime.operations import OperationExecutor
     from src.store.store import OperationRecord, OperationStore
 

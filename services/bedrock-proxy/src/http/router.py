@@ -18,7 +18,7 @@ from src.auth.auth import verify_bearer_token
 from src.http.handler import EndpointMixin
 from src.ports import ContainerStatusChecker
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from src.store.store import OperationRecord
 
 logger = logging.getLogger("bedrock-proxy")

@@ -1,18 +1,17 @@
 """Shared helpers for host-agent tests."""
 from __future__ import annotations
 
-import sys
 import tempfile
-from pathlib import Path
 from typing import Any
-
-_AGENT_DIR = Path(__file__).resolve().parents[1]
-if str(_AGENT_DIR) not in sys.path:  # pragma: no cover - test bootstrap
-    sys.path.insert(0, str(_AGENT_DIR))
+from unittest.mock import MagicMock
 
 from adapters.docker import DockerComposeRunner
 from adapters.filesystem import BedrockFileSystem
 from operations import OperationExecutor
+
+
+def fake_run(returncode: int = 0, stdout: str = "", stderr: str = "") -> MagicMock:
+    return MagicMock(return_value=MagicMock(returncode=returncode, stdout=stdout, stderr=stderr))
 
 
 class FakeProbe:
@@ -46,5 +45,3 @@ def make_executor(
     fs = BedrockFileSystem(bedrock_data)
     probe = FakeProbe(probe_result)
     return OperationExecutor(runner, fs, probe)
-
-

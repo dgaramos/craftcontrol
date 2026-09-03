@@ -20,13 +20,6 @@ import pytest
 
 from helpers import make_executor  # noqa: F401
 
-import sys
-from pathlib import Path
-
-_AGENT_DIR = Path(__file__).resolve().parents[1]
-if str(_AGENT_DIR) not in sys.path:
-    sys.path.insert(0, str(_AGENT_DIR))
-
 from queue_worker import OperationQueue
 from store import OperationStore
 from router import build_handler_class

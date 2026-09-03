@@ -11,41 +11,6 @@ if BASH is None:
     raise RuntimeError("bash is required to test the review publisher")
 
 
-def test_backend_cli_module_path_matches_dockerfile_copy_destination() -> None:
-    dockerfile = (ROOT / "apps" / "server" / "controlplane" / "Dockerfile").read_text()
-    entrypoint = (ROOT / "bin" / "craftcontrol").read_text()
-    # The COPY destination and the module name in bin/craftcontrol must agree.
-    # A mismatch produces ModuleNotFoundError at backup/restore time inside the container.
-    assert "COPY apps/server/controlplane/src ./controlplane" in dockerfile
-    assert "COPY apps/server/controlplane/src ./src" not in dockerfile
-    assert "python -m controlplane.cli" in entrypoint
-
-
-def test_backend_deploy_syncs_server_directory_not_stale_backend_alias() -> None:
-    script = (ROOT / "bin" / "deploy-craftcontrol-backend").read_text()
-    # rsync must copy apps/server/ so the Dockerfile and source reach DEPLOY_ROOT.
-    # The old alias apps/backend/ does not exist in git and silently skips all app files.
-    assert "apps/server" in script
-    assert "apps/backend" not in script
-
-
-def test_backend_deploy_backup_runs_inside_container_not_on_host() -> None:
-    script = (ROOT / "bin" / "deploy-craftcontrol-backend").read_text()
-    # Backup must execute via compose exec so it uses the running container's own
-    # craftcontrol binary. Calling the host-side binary fails when module paths differ.
-    assert 'compose exec -T craftcontrol-backend craftcontrol backup create' in script
-    lines_with_backup = [l for l in script.splitlines() if "craftcontrol backup create" in l]
-    assert all("exec" in l for l in lines_with_backup), (
-        "craftcontrol backup create must only appear inside a 'compose exec' call"
-    )
-
-
-def test_split_runtime_gate_exercises_cli_inside_container() -> None:
-    canary = (ROOT / "bin" / "check-split-runtime").read_text()
-    assert "craftcontrol backup list" in canary
-    assert "'backups' in d" in canary
-
-
 def test_component_deploy_canaries_use_the_production_port_default() -> None:
     for script_name in ("deploy-craftcontrol-frontend", "deploy-craftcontrol-backend"):
         script = (ROOT / "bin" / script_name).read_text()
@@ -54,7 +19,7 @@ def test_component_deploy_canaries_use_the_production_port_default() -> None:
 
 
 def test_quality_gates_are_partitioned_and_automated() -> None:
-    gates = ["frontend", "backend", "contracts", "dr-agents", "integration"]
+    gates = ["frontend", "backend", "contracts", "dr-agents", "deploy", "integration"]
     for gate in gates:
         script = ROOT / "bin" / f"check-{gate}"
         assert script.is_file()
@@ -62,11 +27,12 @@ def test_quality_gates_are_partitioned_and_automated() -> None:
     assert (ROOT / "bin" / "check-contracts-frontend").is_file()
     umbrella = (ROOT / "bin" / "check").read_text()
     assert "contracts-frontend" in umbrella
-    assert "frontend" in umbrella and "backend" in umbrella and "contracts" in umbrella and "dr-agents" in umbrella and "integration" in umbrella
+    for name in ("frontend", "backend", "contracts", "dr-agents", "deploy", "integration"):
+        assert name in umbrella
     for workflow in (ROOT / ".github" / "workflows" / "quality.yml", ROOT / ".gitea" / "workflows" / "quality.yml"):
         assert workflow.is_file()
         text = workflow.read_text()
-        for job in ("backend", "contracts-backend", "contracts-frontend", "frontend", "dr-agents", "integration"):
+        for job in ("backend", "contracts-backend", "contracts-frontend", "frontend", "dr-agents", "deploy", "integration"):
             assert job in text
 
 

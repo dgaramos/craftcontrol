@@ -4,7 +4,7 @@ set -euo pipefail
 readonly ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
 
-for gate in frontend backend bedrock-proxy contracts contracts-frontend dr-agents integration; do
+for gate in frontend backend bedrock-proxy contracts contracts-frontend dr-agents deploy integration; do
   "bin/check-$gate"
 done
 

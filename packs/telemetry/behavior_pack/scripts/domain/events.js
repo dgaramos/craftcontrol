@@ -16,39 +16,39 @@ import { subscribeWorldEvent } from "../adapters/capabilities.js";
  * @param {Function} [handlers.onPlayerPlaceBlock]
  * @param {Function} [handlers.onPlayerDimensionChange]
  */
-export function registerEvents(handlers = {}) {
+export function registerEvents(handlers = {}, subscribe = subscribeWorldEvent) {
   // Player lifecycle
-  subscribeWorldEvent("playerJoin", "playerJoins", (event) => {
+  subscribe("playerJoin", "playerJoins", (event) => {
     handlers.onPlayerJoin?.(event);
   });
 
-  subscribeWorldEvent("playerLeave", "playerLeaves", (event) => {
+  subscribe("playerLeave", "playerLeaves", (event) => {
     handlers.onPlayerLeave?.(event);
   });
 
-  subscribeWorldEvent("playerSpawn", "playerRespawns", (event) => {
+  subscribe("playerSpawn", "playerRespawns", (event) => {
     handlers.onPlayerSpawn?.(event);
   });
 
-  subscribeWorldEvent("playerDimensionChange", "dimensionChanges", (event) => {
+  subscribe("playerDimensionChange", "dimensionChanges", (event) => {
     handlers.onPlayerDimensionChange?.(event);
   });
 
   // Combat
-  subscribeWorldEvent("entityDie", "deathsAndKills", (event) => {
+  subscribe("entityDie", "deathsAndKills", (event) => {
     handlers.onEntityDie?.(event);
   });
 
-  subscribeWorldEvent("entityHurt", "damageAggregates", (event) => {
+  subscribe("entityHurt", "damageAggregates", (event) => {
     handlers.onEntityHurt?.(event);
   });
 
   // Block events
-  subscribeWorldEvent("playerBreakBlock", "blocksBroken", (event) => {
+  subscribe("playerBreakBlock", "blocksBroken", (event) => {
     handlers.onPlayerBreakBlock?.(event);
   });
 
-  subscribeWorldEvent("playerPlaceBlock", "blocksPlaced", (event) => {
+  subscribe("playerPlaceBlock", "blocksPlaced", (event) => {
     handlers.onPlayerPlaceBlock?.(event);
   });
 }

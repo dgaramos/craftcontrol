@@ -11,7 +11,7 @@ test("captures a real runtime join, block break, leave, and snapshot flow", () =
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
 });
 
-for (const fixture of ["migration-runtime.fixture.mjs", "v2-migration-runtime.fixture.mjs", "corrupt-runtime.fixture.mjs", "shard-runtime.fixture.mjs", "oversize-shard.fixture.mjs", "capability-runtime.fixture.mjs", "gamemode-runtime.fixture.mjs", "gamemode-unsupported.fixture.mjs", "movement-sampling.fixture.mjs", "flush-blocked.fixture.mjs"]) {
+for (const fixture of ["migration-runtime.fixture.mjs", "v2-migration-runtime.fixture.mjs", "corrupt-runtime.fixture.mjs", "shard-runtime.fixture.mjs", "malformed-shard-runtime.fixture.mjs", "duplicate-shard-runtime.fixture.mjs", "oversize-shard.fixture.mjs", "capability-runtime.fixture.mjs", "gamemode-runtime.fixture.mjs", "gamemode-unsupported.fixture.mjs", "movement-sampling.fixture.mjs", "flush-blocked.fixture.mjs"]) {
   test(`passes runtime fixture ${fixture}`, () => {
     const result = spawnSync(process.execPath, [
       "--no-warnings",

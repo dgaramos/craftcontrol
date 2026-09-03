@@ -31,20 +31,28 @@ remains in the CraftControl Server.
 
 ```
 services/host-agent/
-├── agent.py          # bootstrap entry point, HTTPServer setup
-├── router.py         # request routing and bearer-token authentication
-├── handler.py        # per-endpoint request parsing and response serialisation
-├── operations.py     # OperationExecutor — stage execution and field validation
-├── store.py          # OperationStore — SQLite-backed operation persistence
-├── auth.py           # shared-secret token loading and verification
-├── ports.py          # Protocol definitions for replaceable boundaries
-├── queue_worker.py   # bounded thread pool for sequential operation execution
-├── preflight.py      # startup self-check (filesystem, Docker, token)
+├── agent.py          # sole entry point — bootstraps HTTPServer and imports from host_agent.*
 ├── requirements.txt  # Python dependencies
-└── adapters/
-    ├── docker.py     # DockerAdapter — Compose restart via Docker SDK
-    ├── filesystem.py # FilesystemAdapter — atomic config file writes
-    └── raknet.py     # RakNetAdapter — UDP health probe for Bedrock
+├── pyproject.toml    # package declaration and entry point
+├── Dockerfile        # container image for the host agent
+└── host_agent/       # named Python package
+    ├── ports.py      # Protocol definitions for replaceable boundaries
+    ├── auth/
+    │   └── auth.py   # shared-secret token loading and verification
+    ├── http/
+    │   ├── handler.py  # per-endpoint request parsing and response serialisation
+    │   └── router.py   # request routing and bearer-token authentication
+    ├── runtime/
+    │   ├── operations.py  # OperationExecutor — stage execution and field validation
+    │   └── queue_worker.py  # bounded thread pool for sequential operation execution
+    ├── store/
+    │   └── store.py   # OperationStore — SQLite-backed operation persistence
+    ├── preflight/
+    │   └── preflight.py  # startup self-check (filesystem, Docker, token)
+    └── adapters/
+        ├── docker.py     # DockerAdapter — Compose restart via Docker SDK
+        ├── filesystem.py # FilesystemAdapter — atomic config file writes
+        └── raknet.py     # RakNetAdapter — UDP health probe for Bedrock
 ```
 
 ---

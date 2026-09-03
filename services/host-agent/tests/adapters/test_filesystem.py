@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from adapters.filesystem import BedrockFileSystem
-from operations import _build_updates
+from host_agent.adapters.filesystem import BedrockFileSystem
+from host_agent.runtime.operations import _build_updates
 
 
 class TestBedrockFileSystem:

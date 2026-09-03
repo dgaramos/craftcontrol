@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
 
-from ports import FileSystem
+from host_agent.ports import FileSystem
 
 logger = logging.getLogger("host-agent")
 

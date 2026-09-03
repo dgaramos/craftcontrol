@@ -11,8 +11,8 @@ import logging
 import time
 from typing import Any
 
-from ports import ContainerRunner, FileSystem, HealthProbe, RestartTimeoutError
-from store import OperationRecord, OperationStore
+from host_agent.ports import ContainerRunner, FileSystem, HealthProbe, RestartTimeoutError
+from host_agent.store.store import OperationRecord, OperationStore
 
 logger = logging.getLogger("host-agent")
 

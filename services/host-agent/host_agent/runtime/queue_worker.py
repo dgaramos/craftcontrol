@@ -19,8 +19,8 @@ from dataclasses import dataclass
 from typing import Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from operations import OperationExecutor
-    from store import OperationRecord, OperationStore
+    from host_agent.runtime.operations import OperationExecutor
+    from host_agent.store.store import OperationRecord, OperationStore
 
 logger = logging.getLogger("host-agent.queue")
 

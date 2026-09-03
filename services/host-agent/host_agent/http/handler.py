@@ -10,12 +10,12 @@ import json
 import logging
 from typing import Any
 
-from operations import (
+from host_agent.runtime.operations import (
     OperationExecutor,
     _INTENDED_STATE_FIELDS,
     _validate_intended_state_values,
 )
-from store import OperationStore
+from host_agent.store.store import OperationStore
 
 logger = logging.getLogger("host-agent")
 

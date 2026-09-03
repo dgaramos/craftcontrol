@@ -6,7 +6,7 @@ import subprocess
 import time
 from typing import TYPE_CHECKING, Any, Callable
 
-from ports import ContainerRunner, ContainerStatusChecker, RestartTimeoutError
+from host_agent.ports import ContainerRunner, ContainerStatusChecker, RestartTimeoutError  # noqa: F401
 
 logger = logging.getLogger("host-agent")
 

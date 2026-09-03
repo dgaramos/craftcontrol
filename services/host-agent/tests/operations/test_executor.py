@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 
-import store as st
+import host_agent.store.store as st
 from helpers import fake_run, make_executor, operation_id
 
 

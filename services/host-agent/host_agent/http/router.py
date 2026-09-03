@@ -14,12 +14,12 @@ import logging
 from http.server import BaseHTTPRequestHandler
 from typing import Any, Protocol, TYPE_CHECKING
 
-from auth import verify_bearer_token
-from handler import EndpointMixin
-from ports import ContainerStatusChecker
+from host_agent.auth.auth import verify_bearer_token
+from host_agent.http.handler import EndpointMixin
+from host_agent.ports import ContainerStatusChecker
 
 if TYPE_CHECKING:
-    from store import OperationRecord
+    from host_agent.store.store import OperationRecord
 
 logger = logging.getLogger("host-agent")
 

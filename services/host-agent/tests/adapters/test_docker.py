@@ -6,9 +6,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from adapters.docker import DockerComposeRunner, DockerContainerStatus
+from host_agent.adapters.docker import DockerComposeRunner, DockerContainerStatus
 from helpers import agent_config, fake_run
-from ports import RestartTimeoutError
+from host_agent.ports import RestartTimeoutError
 
 
 class TestDockerComposeRunner:

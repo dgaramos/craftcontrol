@@ -8,7 +8,7 @@ import uuid
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
-from ports import HealthProbe
+from host_agent.ports import HealthProbe
 
 # RakNet constants (also re-exported for callers that need them directly).
 RAKNET_MAGIC = bytes([

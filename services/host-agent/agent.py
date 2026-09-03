@@ -38,12 +38,12 @@ from typing import Any
 # callers that do ``import agent as ha`` continue to work.
 # ---------------------------------------------------------------------------
 
-from store import (  # noqa: F401
+from host_agent.store.store import (  # noqa: F401
     OperationRecord,
     OperationStore,
     RESULT_RETENTION_SECONDS,
 )
-from operations import (  # noqa: F401
+from host_agent.runtime.operations import (  # noqa: F401
     OperationExecutor,
     _validate_intended_state_values,
     _render_field_value,
@@ -55,7 +55,7 @@ from operations import (  # noqa: F401
     _INTENDED_STATE_FIELDS,
     BEDROCK_DEFAULT_PORT,
 )
-from adapters.raknet import (  # noqa: F401
+from host_agent.adapters.raknet import (  # noqa: F401
     RAKNET_MAGIC,
     PROBE_INITIAL_INTERVAL_SECONDS,
     PROBE_MAX_INTERVAL_SECONDS,
@@ -65,9 +65,9 @@ from adapters.raknet import (  # noqa: F401
     _probe_bedrock,
     _wait_for_health,
 )
-from router import AgentHandler, build_handler_class  # noqa: F401
-from queue_worker import OperationQueue  # noqa: F401
-from handler import (  # noqa: F401
+from host_agent.http.router import AgentHandler, build_handler_class  # noqa: F401
+from host_agent.runtime.queue_worker import OperationQueue  # noqa: F401
+from host_agent.http.handler import (  # noqa: F401
     MAX_BODY_BYTES,
     VERSION,
     HEALTH_TIMEOUT_MIN,
@@ -77,7 +77,7 @@ from handler import (  # noqa: F401
     RESTART_TIMEOUT_MAX,
     RESTART_TIMEOUT_DEFAULT,
 )
-from adapters.docker import DockerContainerStatus  # noqa: F401
+from host_agent.adapters.docker import DockerContainerStatus  # noqa: F401
 
 logging.basicConfig(
     level=logging.INFO,
@@ -130,9 +130,9 @@ def _load_config() -> dict[str, str]:
 # ---------------------------------------------------------------------------
 
 def run(*, bind: str, token: str, config: dict[str, str], subprocess_run: Any = None) -> None:
-    from adapters.docker import DockerComposeRunner, DockerContainerStatus
-    from adapters.filesystem import BedrockFileSystem
-    from adapters.raknet import RakNetHealthProbe
+    from host_agent.adapters.docker import DockerComposeRunner, DockerContainerStatus
+    from host_agent.adapters.filesystem import BedrockFileSystem
+    from host_agent.adapters.raknet import RakNetHealthProbe
 
     host, _, port_str = bind.rpartition(":")
     host = host or "0.0.0.0"
@@ -146,7 +146,7 @@ def run(*, bind: str, token: str, config: dict[str, str], subprocess_run: Any = 
     status_checker = DockerContainerStatus(subprocess_run=subprocess_run)
     bedrock_container = config.get("bedrock_container", "minecraft-server")
 
-    from queue_worker import OperationQueue
+    from host_agent.runtime.queue_worker import OperationQueue
     op_queue = OperationQueue(
         executor,
         workers=int(config.get("workers", "1")),

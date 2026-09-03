@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, test, jest } from "@jest/globals";
-import { suppressConsoleError } from "./helpers.mjs";
-import { STATE_KEY, PLAYER_STATE_PREFIX, STATE_BACKUP_KEY, STATE_BACKUP_V1_KEY, STATE_BACKUP_V2_KEY, playerKey, playerStateKey } from "../behavior_pack/scripts/model.js";
-import { STORAGE_VERSION } from "../behavior_pack/scripts/versions.js";
+import { suppressConsoleError } from "../helpers.mjs";
+import { STATE_KEY, PLAYER_STATE_PREFIX, STATE_BACKUP_KEY, STATE_BACKUP_V1_KEY, STATE_BACKUP_V2_KEY, playerKey, playerStateKey } from "../../behavior_pack/scripts/model.js";
+import { STORAGE_VERSION } from "../../behavior_pack/scripts/versions.js";
 
 // store.js uses module-level mutable state. Each test reloads both the mock
 // and store.js together so they share the same fresh `properties` Map.
 async function loadStore() {
   jest.resetModules();
-  const mock = await import("./minecraft-server.mock.js");
-  const store = await import("../behavior_pack/scripts/adapters/store.js");
+  const mock = await import("../minecraft-server.mock.js");
+  const store = await import("../../behavior_pack/scripts/adapters/store.js");
   return { mock, store };
 }
 

@@ -4,7 +4,7 @@ import { world, system } from "@minecraft/server";
 const output = [];
 console.warn = (line) => output.push(String(line));
 
-await import("../behavior_pack/scripts/main.js");
+await import("../../behavior_pack/scripts/main.js");
 
 world.afterEvents.playerJoin.emit({ playerName: "VonCrush" });
 const player = { id: "player-1", name: "VonCrush", typeId: "minecraft:player", location: { x: 0, y: 64, z: 0 }, dimension: { id: "minecraft:overworld" } };

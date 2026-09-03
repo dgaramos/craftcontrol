@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "@jest/globals";
-import { samplePlayerMovement } from "../behavior_pack/scripts/domain/movement.js";
+import { samplePlayerMovement } from "../../behavior_pack/scripts/domain/movement.js";
 
 function makePlayer(id, x, z, dimension = "minecraft:overworld") {
   return { id, name: `Player_${id}`, location: { x, y: 64, z }, dimension: { id: dimension } };

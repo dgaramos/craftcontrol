@@ -48,7 +48,7 @@ beforeEach(async () => {
     readGameMode,
     probeGameModeReading,
     capabilitySnapshot,
-  } = await import("../behavior_pack/scripts/adapters/capabilities.js"));
+  } = await import("../../behavior_pack/scripts/adapters/capabilities.js"));
 });
 
 // ---------------------------------------------------------------------------

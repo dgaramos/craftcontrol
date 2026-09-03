@@ -14,7 +14,7 @@ const player = {
   // intentionally no getGameMode
 };
 
-await import("../behavior_pack/scripts/main.js");
+await import("../../behavior_pack/scripts/main.js");
 
 world.afterEvents.playerJoin.emit({ playerName: "NoGMPlayer" });
 world.afterEvents.playerSpawn.emit({ player, initialSpawn: true });

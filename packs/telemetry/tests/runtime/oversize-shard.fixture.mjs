@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { getMockDynamicProperty, setMockDynamicProperty } from "@minecraft/server";
-import { STATE_KEY, playerStateKey } from "../behavior_pack/scripts/model.js";
+import { STATE_KEY, playerStateKey } from "../../behavior_pack/scripts/model.js";
 
 const shardKey = playerStateKey("voncrush");
 const original = JSON.stringify({ storageVersion: 3, sequence: 1, key: "voncrush", player: { name: "VonCrush", deaths: 2 } });
@@ -9,7 +9,7 @@ setMockDynamicProperty(shardKey, original);
 const errors = [];
 console.error = (line) => errors.push(String(line));
 
-const { flush, mutatePlayer } = await import("../behavior_pack/scripts/adapters/store.js");
+const { flush, mutatePlayer } = await import("../../behavior_pack/scripts/adapters/store.js");
 mutatePlayer("VonCrush", (state) => { state.players.voncrush.oversized = "x".repeat(31000); });
 flush();
 

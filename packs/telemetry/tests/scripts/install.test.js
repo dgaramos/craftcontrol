@@ -10,7 +10,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 test("installer publishes readable pack files and associates the world", () => {
   const temporary = fs.mkdtempSync(path.join(os.tmpdir(), "craftcontrol-telemetry-"));
-  const project = path.resolve(__dirname, "..");
+  const project = path.resolve(__dirname, "../..");
   const world = path.join(temporary, "worlds", "TestWorld");
   const legacy = path.join(temporary, "behavior_packs", "minecraft-bedrock-telemetry");
   fs.mkdirSync(world, { recursive: true });

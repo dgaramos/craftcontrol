@@ -6,7 +6,7 @@ test("captures a real runtime join, block break, leave, and snapshot flow", () =
   const result = spawnSync(process.execPath, [
     "--no-warnings",
     "--experimental-loader=./tests/minecraft-loader.mjs",
-    "./tests/runtime.fixture.mjs",
+    "./tests/runtime/runtime.fixture.mjs",
   ], { cwd: process.cwd(), encoding: "utf8" });
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
 });
@@ -16,7 +16,7 @@ for (const fixture of ["migration-runtime.fixture.mjs", "v2-migration-runtime.fi
     const result = spawnSync(process.execPath, [
       "--no-warnings",
       "--experimental-loader=./tests/minecraft-loader.mjs",
-      `./tests/${fixture}`,
+      `./tests/runtime/${fixture}`,
     ], { cwd: process.cwd(), encoding: "utf8" });
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
   });

@@ -19,6 +19,12 @@ Read `README.md`, `docs/protocol.md`, and every Markdown file under the ignored 
 `world`, `system`, and event signals. All tests import from it via Jest module
 mapping — never mock `@minecraft/server` inline.
 
+**Tests mirror production ownership.** Adapter tests live in
+`tests/adapters/`, domain tests in `tests/domain/`, and full-runtime runners
+and `.fixture.mjs` scenarios in `tests/runtime/`. Keep package-level boundary
+tests for `main.js`, `model.js`, and `migrations.js` at `tests/`; installer
+tests live in `tests/scripts/`.
+
 **`.mjs` fixtures are integration scenarios.** Files like `runtime.fixture.mjs`
 and `flush-blocked.fixture.mjs` run the full pack against the fake runtime and
 assert on observable output (console lines, HTTP calls). Add a new fixture for

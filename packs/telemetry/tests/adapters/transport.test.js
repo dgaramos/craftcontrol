@@ -1,5 +1,5 @@
 import { jest, beforeEach, describe, test, expect } from "@jest/globals";
-import { suppressConsoleWarn } from "./helpers.mjs";
+import { suppressConsoleWarn } from "../helpers.mjs";
 
 // @minecraft/server is resolved to tests/minecraft-server.mock.js via
 // moduleNameMapper in jest.config.js.
@@ -19,14 +19,14 @@ const mockStorageStatus = jest.fn(() => ({ persistenceBlocked: false }));
 const mockCapabilitySnapshot = jest.fn(() => ({}));
 const mockReadGameMode = jest.fn(() => null);
 
-jest.unstable_mockModule("../behavior_pack/scripts/adapters/store.js", () => ({
+jest.unstable_mockModule("../../behavior_pack/scripts/adapters/store.js", () => ({
   nextSequence: mockNextSequence,
   loadState: mockLoadState,
   flush: mockFlush,
   storageStatus: mockStorageStatus,
 }));
 
-jest.unstable_mockModule("../behavior_pack/scripts/adapters/capabilities.js", () => ({
+jest.unstable_mockModule("../../behavior_pack/scripts/adapters/capabilities.js", () => ({
   capabilitySnapshot: mockCapabilitySnapshot,
   readGameMode: mockReadGameMode,
 }));
@@ -36,7 +36,7 @@ jest.unstable_mockModule("../behavior_pack/scripts/adapters/capabilities.js", ()
 // single Jest worker run (no resetModules).
 const { world } = await import("@minecraft/server");
 const { publish, queueBlockChange, publishBlockChanges, publishSnapshot } =
-  await import("../behavior_pack/scripts/adapters/transport.js");
+  await import("../../behavior_pack/scripts/adapters/transport.js");
 
 beforeEach(() => {
   jest.clearAllMocks();

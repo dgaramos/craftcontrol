@@ -66,8 +66,10 @@ flowchart TD
     scripts --> installSh["install.sh — operator-friendly wrapper"]
     scripts --> packageSh["package.sh — .mcpack builder"]
     repo --> tests["tests/"]
-    tests --> modelTest["model.test.js — pure Node.js unit tests"]
-    tests --> runtimeTest["runtime.test.js — simulated Bedrock Script API integration flow"]
+    tests --> adaptersTests["adapters/ — capability, storage and transport tests"]
+    tests --> domainTests["domain/ — event, game mode and movement tests"]
+    tests --> runtimeTests["runtime/ — simulated Bedrock Script API scenarios"]
+    tests --> modelTest["model.test.js — pure statistics model tests"]
 ```
 
 Exact paths remain available as plain text for readers without Mermaid rendering:
@@ -76,7 +78,8 @@ Exact paths remain available as plain text for readers without Mermaid rendering
 behavior_pack/manifest.json
 behavior_pack/scripts/{main.js,migrations.js,model.js,store.js,transport.js}
 scripts/{install.mjs,install.sh,package.sh}
-tests/{model.test.js,runtime.test.js}
+tests/{adapters,domain,runtime,scripts}/
+tests/{main.test.js,model.test.js,migrations.test.js,minecraft-server.mock.js,helpers.mjs}
 ```
 
 ## Requirements

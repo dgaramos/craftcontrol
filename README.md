@@ -315,9 +315,10 @@ até o PR (inclusive via link) autoriza branch, commit, push e abertura do PR;
 merge e deploy continuam exigindo pedido explícito.
 
 The tool-neutral [`.dr-agents/craftcontrol/PROFILE.md`](.dr-agents/craftcontrol/PROFILE.md)
-contains the safeguards specific to Cody DR and Claudio DR reviews. Any agent
-can follow this local profile when it receives the path; the profile augments
-generic review skills and does not trigger review by itself.
+contains the safeguards specific to Cody DR and Claudio DR reviews. Provide the
+profile path explicitly with the requested PR/ref — it does not load
+automatically. The profile augments generic review skills and does not trigger
+review by itself.
 
 ## License and trademarks
 

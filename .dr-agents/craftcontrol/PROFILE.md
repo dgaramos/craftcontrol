@@ -12,7 +12,7 @@ plugin, provide the profile path explicitly with the requested PR/ref:
   .dr-agents/craftcontrol/PROFILE.md.
 
 The profile does not contain publisher credentials. If an adapter or the local
-profile is unavailable, use the repository-native review-pr entry point; no
+profile is unavailable, use the claudio-reviewer agent; no
 GitHub App, plugin installation, or PR history is changed by this fallback. -->
 
 ## Project identity

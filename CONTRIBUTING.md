@@ -150,10 +150,13 @@ a missing local Node installation as a blocker.
 Individual gates are also available:
 
 ```bash
-bin/check-frontend      # JS syntax, i18n, visual contracts
-bin/check-backend       # Python application and persistence tests
-bin/check-contracts     # OpenAPI, route surface, generated declarations
-bin/check-integration   # Compose builds, split runtime, architecture and deploy safety
+bin/check-frontend          # JS syntax, i18n, visual contracts
+bin/check-backend           # Python application and persistence tests
+bin/check-contracts         # OpenAPI, route surface, generated declarations
+bin/check-integration       # Compose builds, split runtime, architecture and deploy safety
+bin/check-host-agent        # Host agent unit and integration tests
+bin/check-contracts-frontend  # Frontend contract declarations
+bin/check-dr-agents         # DR agents profile and workflow checks
 ```
 
 Keep a test in exactly one gate unless a boundary invariant deliberately spans gates. Update tests and `README.md` whenever public behavior, persistence, API contracts, or recovery rules change.

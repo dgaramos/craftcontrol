@@ -82,5 +82,5 @@ test("registerEvents does not throw when a handler is not provided", () => {
 });
 
 test("registerEvents does not throw when no argument is passed", () => {
-  expect(() => registerEvents({}, mockSubscribeWorldEvent)).not.toThrow();
+  expect(() => registerEvents()).not.toThrow();
 });

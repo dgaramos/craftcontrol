@@ -73,7 +73,7 @@ containers. It handles the privileged container lifecycle operations
 (PREPARATION, RESTART, HEALTH_WAIT) so the Server container does not need
 unrestricted Docker socket access for those steps. Installing the agent is
 optional; the Server falls back to direct Docker Compose access when
-`HOST_AGENT_URL` is not set.
+`BEDROCK_PROXY_URL` is not set.
 
 ### 1. Create the OS user
 
@@ -88,7 +88,7 @@ sudo usermod -aG docker craftcontrol-agent
 TOKEN=$(python3 -c "import secrets; print(secrets.token_urlsafe(32), end='')")
 sudo mkdir -p /etc/craftcontrol
 echo -n "$TOKEN" | sudo install -m 0600 -o craftcontrol-agent -g craftcontrol-agent \
-  /dev/stdin /etc/craftcontrol/host-agent-token
+  /dev/stdin /etc/craftcontrol/bedrock-proxy-token
 ```
 
 Keep `$TOKEN` in a secure location — you will need it for the backend
@@ -102,18 +102,18 @@ unit. The agent uses only the Python standard library — no dependency
 installation step is required.
 
 ```bash
-sudo mkdir -p /opt/craftcontrol/host-agent
-sudo cp -r services/host-agent/. /opt/craftcontrol/host-agent/
-sudo cp deploy/host-agent/systemd/craftcontrol-host-agent.service \
+sudo mkdir -p /opt/craftcontrol/bedrock-proxy
+sudo cp -r services/bedrock-proxy/. /opt/craftcontrol/bedrock-proxy/
+sudo cp deploy/bedrock-proxy/systemd/craftcontrol-bedrock-proxy.service \
   /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable --now craftcontrol-host-agent
+sudo systemctl enable --now craftcontrol-bedrock-proxy
 ```
 
 Verify the agent is running:
 
 ```bash
-sudo systemctl status craftcontrol-host-agent
+sudo systemctl status craftcontrol-bedrock-proxy
 curl http://127.0.0.1:7890/v1/health
 ```
 
@@ -122,15 +122,15 @@ curl http://127.0.0.1:7890/v1/health
 Add the following to your `.env` (the token file path is inside the container):
 
 ```dotenv
-HOST_AGENT_URL=http://host-gateway:7890
-HOST_AGENT_TOKEN_FILE=/run/host-agent-token
+BEDROCK_PROXY_URL=http://host-gateway:7890
+BEDROCK_PROXY_TOKEN_FILE=/run/bedrock-proxy-token
 ```
 
 Then add the token file bind mount to `docker-compose.split.yml` under the
 backend service volumes:
 
 ```yaml
-- /etc/craftcontrol/host-agent-token:/run/host-agent-token:ro
+- /etc/craftcontrol/bedrock-proxy-token:/run/bedrock-proxy-token:ro
 ```
 
 The backend reads the token once at startup. The `extra_hosts` entry
@@ -151,7 +151,7 @@ Adjust the interface name to match your Docker bridge (`docker0` is the
 default). The agent binds to `0.0.0.0:7890` by default; the firewall rule
 provides the network isolation.
 
-See `docs/host-agent-contract.md` for the full threat model, token rotation
+See `docs/bedrock-proxy-contract.md` for the full threat model, token rotation
 procedure, and permitted operation list.
 
 ## Validate and run the cutover

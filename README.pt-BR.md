@@ -95,7 +95,7 @@ flowchart TD
     repo["Repositório CraftControl"] --> apps["apps/"]
     apps --> frontend["apps/client/ — imagem Nginx, HTML, CSS e módulos ES nativos"]
     apps --> backend["apps/server/ — imagem Flask, composition root e aplicação Python"]
-    repo --> services["services/host-agent/ — serviço systemd implantado independentemente"]
+    repo --> services["services/bedrock-proxy/ — serviço systemd implantado independentemente"]
     repo --> contracts["packages/contracts/ — contrato OpenAPI 3.1 canônico e tipos gerados"]
     repo --> telemetry["packs/telemetry/ — Behavior Pack embutido e ativos de ciclo de vida"]
     repo --> versions["versions.env — par frontend/backend testado"]

@@ -9,14 +9,14 @@ flowchart TD
     client["Phone / tablet / desktop"] -->|"HTTP + Server-Sent Events"| frontend["CraftControl Client: Nginx + static browser app<br/>public origin; /api and SSE reverse proxy"]
     frontend -->|"private network"| backend["CraftControl Server: Flask modular monolith<br/>routes → use cases → ports → adapters<br/>runtime → SQLite / Docker / files / SSE"]
     backend -->|"console, logs, events (Docker socket)"| bedrock["Minecraft Bedrock Dedicated Server"]
-    backend -->|"ContainerOperations (HTTP, split mode)"| hostagent["CraftControl Host Agent: craftcontrol-host-agent<br/>systemd service on Docker host<br/>PREPARATION · RESTART · HEALTH_WAIT"]
+    backend -->|"ContainerOperations (HTTP, split mode)"| hostagent["CraftControl Host Agent: craftcontrol-bedrock-proxy<br/>systemd service on Docker host<br/>PREPARATION · RESTART · HEALTH_WAIT"]
     hostagent -->|"docker compose, filesystem, UDP probe"| bedrock
     bedrock -. "optional" .-> telemetry["CraftControl Telemetry Pack"]
 ```
 
 The CraftControl Server remains operational without the CraftControl Telemetry Pack, exporter, Prometheus, Grafana, or Loki. SQLite stores durable server state; the Minecraft world remains owned by the Bedrock deployment.
 
-The CraftControl Host Agent is an optional execution boundary. When `HOST_AGENT_URL` is set, the CraftControl Server delegates the `ContainerOperations` lifecycle (writing configuration, restarting the Compose service, and polling the Bedrock health probe) to the `craftcontrol-host-agent` systemd service running on the Docker host outside all containers. The agent owns Docker socket access for those operations. The Docker socket is still mounted in the Server container for Bedrock console operations (`BedrockClient`): attaching to the container, streaming logs, and receiving Docker events. Those responsibilities are not part of the Host Agent contract and remain in the Server directly.
+The CraftControl Host Agent is an optional execution boundary. When `BEDROCK_PROXY_URL` is set, the CraftControl Server delegates the `ContainerOperations` lifecycle (writing configuration, restarting the Compose service, and polling the Bedrock health probe) to the `craftcontrol-bedrock-proxy` systemd service running on the Docker host outside all containers. The agent owns Docker socket access for those operations. The Docker socket is still mounted in the Server container for Bedrock console operations (`BedrockClient`): attaching to the container, streaming logs, and receiving Docker events. Those responsibilities are not part of the Host Agent contract and remain in the Server directly.
 
 ## Architectural style
 
@@ -89,7 +89,7 @@ flowchart TD
     root --> settings["Settings"]
     root --> repositories["SQLite repositories"]
     root --> bedrock["Bedrock console adapter (BedrockClient — Docker socket)"]
-    root --> docker{"HOST_AGENT_URL set?"}
+    root --> docker{"BEDROCK_PROXY_URL set?"}
     docker -->|"yes"| hostagent["HostAgentContainerOperations (HTTP adapter)"]
     docker -->|"no"| compose["DockerOperations (direct Compose adapter)"]
     root --> filesystem["filesystem adapter"]
@@ -98,7 +98,7 @@ flowchart TD
     root --> runtime["runtime supervisors"]
 ```
 
-Production composition selects one `ContainerOperations` implementation at startup based on whether `HOST_AGENT_URL` is set. When the variable is present, `HostAgentContainerOperations` (HTTP adapter) is composed; otherwise `DockerOperations` (direct Compose adapter) is used. Both implement the same `ContainerOperations` port, and no application service or use case changes when the adapter is switched. Tests may inject in-memory repositories, fake clocks, fake consoles, or fake container operations without Docker or a running Bedrock server.
+Production composition selects one `ContainerOperations` implementation at startup based on whether `BEDROCK_PROXY_URL` is set. When the variable is present, `HostAgentContainerOperations` (HTTP adapter) is composed; otherwise `DockerOperations` (direct Compose adapter) is used. Both implement the same `ContainerOperations` port, and no application service or use case changes when the adapter is switched. Tests may inject in-memory repositories, fake clocks, fake consoles, or fake container operations without Docker or a running Bedrock server.
 
 No dependency-injection framework or service locator is used. Dependencies must remain visible in constructors or composition functions.
 

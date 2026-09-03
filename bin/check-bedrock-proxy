@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+readonly ROOT="$(git rev-parse --show-toplevel)"
+readonly PYTHON="${PYTHON:-python3}"
+cd "$ROOT"
+
+"$PYTHON" -m pytest services/bedrock-proxy/tests/ \
+  --cov=services/bedrock-proxy \
+  --cov-report=xml:coverage-bedrock-proxy.xml \
+  -v
+echo "bedrock-proxy gate: ok"

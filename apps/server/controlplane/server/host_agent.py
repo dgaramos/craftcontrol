@@ -5,7 +5,7 @@ replaces ``DockerOperations`` at the ``ContainerOperations`` boundary, routing
 PREPARATION, RESTART, and HEALTH_WAIT stages through the agent instead of
 calling Docker directly from inside the backend container.
 
-See ``docs/host-agent-contract.md`` for the full API contract.
+See ``docs/bedrock-proxy-contract.md`` for the full API contract.
 """
 
 from __future__ import annotations
@@ -204,7 +204,7 @@ class HostAgentContainerOperations:
     Authentication uses a shared secret read once at construction time.  No
     token value is written to logs, error messages, or API responses.
 
-    Unavailability handling follows ``docs/host-agent-contract.md``:
+    Unavailability handling follows ``docs/bedrock-proxy-contract.md``:
 
     - Pre-delivery failures (connection refused, connect timeout) are surfaced
       as a ``RuntimeError`` immediately.

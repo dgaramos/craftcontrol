@@ -109,7 +109,7 @@ flowchart TD
     repo["CraftControl repository"] --> apps["apps/"]
     apps --> frontend["apps/client/ — Nginx image, HTML, CSS, and native ES modules"]
     apps --> backend["apps/server/ — Flask image, composition root, and Python application"]
-    repo --> services["services/host-agent/ — independently deployed systemd service"]
+    repo --> services["services/bedrock-proxy/ — independently deployed systemd service"]
     repo --> contracts["packages/contracts/ — canonical OpenAPI 3.1 contract and generated types"]
     repo --> telemetry["packs/telemetry/ — embedded Behavior Pack and lifecycle assets"]
     repo --> versions["versions.env — tested frontend/backend release pair"]
@@ -198,7 +198,7 @@ layout, configuration, cutover, access, post-install checks, and troubleshooting
 The optional Host Agent has a supported idempotent prerequisite installer. Run
 it as root after installing the systemd service; it verifies the agent account,
 Docker access, scoped ACLs, the `.env` ACL watcher, and the systemd sandbox
-without restarting Bedrock. See [Host Agent](docs/host-agent.md#preferred-idempotent-installer).
+without restarting Bedrock. See [Host Agent](docs/bedrock-proxy.md#preferred-idempotent-installer).
 
 ## Configuration
 
@@ -270,7 +270,7 @@ CraftControl uses Python 3.12, Flask, Gunicorn, SQLite, Docker SDK for Python, N
 ```bash
 bin/check-frontend       # JS syntax, i18n, interaction and visual-contract tests
 bin/check-backend        # Python application and persistence tests
-bin/check-host-agent     # Standalone host-agent tests and coverage report
+bin/check-bedrock-proxy     # Standalone host-agent tests and coverage report
 bin/check-contracts      # OpenAPI, route surface, Swagger, generated declarations
 bin/check-integration    # Compose builds, split runtime, architecture and deploy safety
 bin/check                # complete local gate

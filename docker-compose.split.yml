@@ -23,22 +23,22 @@ services:
       CRAFTCONTROL_VERSION: "${CRAFTCONTROL_BACKEND_VERSION:-0.1.0}"
       # Host agent: the split topology routes privileged container lifecycle
       # operations (PREPARATION, RESTART, HEALTH_WAIT) through the
-      # craftcontrol-host-agent systemd service (docs/host-agent-contract.md).
+      # craftcontrol-bedrock-proxy systemd service (docs/bedrock-proxy-contract.md).
       # The Docker socket is still required for Bedrock console operations
       # (BedrockClient: send, query_state, set_operator, request_telemetry_snapshot)
       # and for the log and Docker-event streams used by EventRuntime.
-      # These operations are not part of the host-agent contract and must
+      # These operations are not part of the bedrock-proxy contract and must
       # reach the Docker daemon directly from inside the backend container.
-      HOST_AGENT_URL: http://host-gateway:7890
-      HOST_AGENT_TOKEN_FILE: /run/host-agent-token
-      HOST_AGENT_RESTART_TIMEOUT_SECONDS: "${HOST_AGENT_RESTART_TIMEOUT_SECONDS:-180}"
+      BEDROCK_PROXY_URL: http://host-gateway:7890
+      BEDROCK_PROXY_TOKEN_FILE: /run/bedrock-proxy-token
+      BEDROCK_PROXY_RESTART_TIMEOUT_SECONDS: "${BEDROCK_PROXY_RESTART_TIMEOUT_SECONDS:-180}"
     extra_hosts:
       - "host-gateway:host-gateway"
     expose:
       - "8082"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /etc/craftcontrol/host-agent-token:/run/host-agent-token:ro
+      - /etc/craftcontrol/bedrock-proxy-token:/run/bedrock-proxy-token:ro
       - ../minecraft-bedrock:/minecraft-project
       - ./data:/data
     security_opt:

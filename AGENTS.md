@@ -129,7 +129,7 @@ When a class or function has no injection point and requires `patch`, add the
 injection point instead of the patch. Reserve `patch` for third-party library
 boundaries that cannot be refactored (e.g. a C-extension with no seam).
 
-This rule applies to both `apps/backend/` and `deploy/host-agent/`.
+This rule applies to both `apps/backend/` and `deploy/bedrock-proxy/`.
 
 ## Production deployment
 

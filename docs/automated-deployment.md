@@ -14,8 +14,8 @@ flowchart LR
 ```
 
 The preflight and container deployment use `bin/deploy-craftcontrol-release`.
-When a revision changes `services/host-agent/` or `deploy/host-agent/`, the
-same job queues a host-agent activation after the container release. The
+When a revision changes `services/bedrock-proxy/` or `deploy/bedrock-proxy/`, the
+same job queues a bedrock-proxy activation after the container release. The
 root-owned host service validates the revision, atomically activates the staged
 agent, and restores the previous agent if its systemd health check fails. This path retains
 the existing guarantees: clean and published GitHub source, validated production
@@ -43,12 +43,12 @@ HTTP endpoint or grant the runner systemd access. Install the two checked-in
 helpers and enable the local path watcher:
 
 ```bash
-sudo install -d -m 0755 /mnt/storage/docker/craftcontrol-host-agent-update
-sudo install -m 0750 deploy/host-agent/bin/craftcontrol-host-agent-update /usr/local/bin/
-sudo install -m 0755 deploy/host-agent/systemd/craftcontrol-host-agent-update.service /etc/systemd/system/
-sudo install -m 0644 deploy/host-agent/systemd/craftcontrol-host-agent-update.path /etc/systemd/system/
+sudo install -d -m 0755 /mnt/storage/docker/craftcontrol-bedrock-proxy-update
+sudo install -m 0750 deploy/bedrock-proxy/bin/craftcontrol-bedrock-proxy-update /usr/local/bin/
+sudo install -m 0755 deploy/bedrock-proxy/systemd/craftcontrol-bedrock-proxy-update.service /etc/systemd/system/
+sudo install -m 0644 deploy/bedrock-proxy/systemd/craftcontrol-bedrock-proxy-update.path /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable --now craftcontrol-host-agent-update.path
+sudo systemctl enable --now craftcontrol-bedrock-proxy-update.path
 ```
 
 The runner writes only a 40-character revision request. The host helper rejects

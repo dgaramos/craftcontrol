@@ -46,7 +46,7 @@ def compose_manager(
         # mount in all topologies, including split-mode with HOST_AGENT_URL set.
         # The host-agent contract covers ContainerOperations only (PREPARATION,
         # RESTART, HEALTH_WAIT); console and log-stream operations are not
-        # delegated to the agent — see docs/host-agent-contract.md.
+        # delegated to the agent — see docs/bedrock-proxy-contract.md.
         bedrock = BedrockClient(
             settings.container,
             list(GAMERULES),

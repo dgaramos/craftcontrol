@@ -153,17 +153,28 @@ class ManagerService:
     # World and time delegates
     # ------------------------------------------------------------------
 
-    def run_world_action(self, action: str) -> None:
-        self._world.run_world_action(action)
+    def run_world_action(self, action: str, actor: str | None = None) -> None:
+        try:
+            self._world.run_world_action(action)
+        except KeyError:
+            self._audit(actor=actor, action="world.action", target=None, result="failure")
+            raise
+        self._audit(actor=actor, action="world.action", target=action, result="success")
 
-    def time_action(self, action: str, payload: Any) -> dict[str, Any]:
-        return self._world.time_action(action, payload)
+    def time_action(self, action: str, payload: Any, actor: str | None = None) -> dict[str, Any]:
+        try:
+            result = self._world.time_action(action, payload)
+        except (KeyError, ValueError):
+            self._audit(actor=actor, action="world.time.action", target=None, result="failure")
+            raise
+        self._audit(actor=actor, action="world.time.action", target=action, result="success")
+        return result
 
     # ------------------------------------------------------------------
     # Settings and gamerules
     # ------------------------------------------------------------------
 
-    def save_settings(self, payload: Any) -> tuple[list[str], str | None]:
+    def save_settings(self, payload: Any, actor: str | None = None) -> tuple[list[str], str | None]:
         """Persist restart-required settings and return the changed keys and operation id.
 
         When an operation service is wired, the change is routed through the
@@ -174,9 +185,11 @@ class ManagerService:
         """
         from ..core.schema import SETTINGS, validate_value
         if not isinstance(payload, dict):
+            self._audit(actor=actor, action="server.settings.changed", target=None, result="failure")
             raise TypeError("Formato inválido")
         changes = {key: validate_value(SETTINGS[key], value) for key, value in payload.items() if key in SETTINGS}
         if not changes:
+            self._audit(actor=actor, action="server.settings.changed", target=None, result="failure")
             raise ValueError("Nenhuma configuração válida")
 
         if self.operation_service is not None:
@@ -187,6 +200,13 @@ class ManagerService:
                 return None
 
             operation = self.operation_service.apply_restart_required(changes, _apply)
+            self._audit(
+                actor=actor,
+                action="server.settings.changed",
+                target=None,
+                result="success",
+                metadata={"changed": sorted(changes)},
+            )
             return list(changes), operation.operation_id
         else:
             # Fallback for contexts where operation tracking is not wired in
@@ -196,6 +216,13 @@ class ManagerService:
             self.repository.store("settings", changes, "server.properties")
             self.broker.publish("state.changed", "manager", {"domains": ["settings"], "keys": list(changes)})
 
+        self._audit(
+            actor=actor,
+            action="server.settings.changed",
+            target=None,
+            result="success",
+            metadata={"changed": sorted(changes)},
+        )
         return list(changes), None
 
     def retry_settings_operation(self, operation_id: str) -> str:
@@ -221,14 +248,39 @@ class ManagerService:
         retry = self.operation_service.retry_operation(operation_id, _apply)
         return retry.operation_id
 
-    def set_gamerule(self, rule: str, value: Any) -> str:
+    # ------------------------------------------------------------------
+    # Audit helper
+    # ------------------------------------------------------------------
+
+    def _audit(
+        self,
+        *,
+        actor: str | None,
+        action: str,
+        target: str | None,
+        result: str,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        """Write a sanitized audit record when audit_service is wired."""
+        if self.audit_service is not None:
+            self.audit_service.write(
+                actor=actor,
+                action=action,
+                target=target,
+                result=result,
+                metadata=metadata or {},
+            )
+
+    def set_gamerule(self, rule: str, value: Any, actor: str | None = None) -> str:
         from ..core.schema import GAMERULES, validate_value
         if rule not in GAMERULES:
+            self._audit(actor=actor, action="server.gamerule.changed", target=None, result="failure")
             raise KeyError(rule)
         validated = validate_value(GAMERULES[rule], value)
         self.bedrock.send(["gamerule", rule, validated])
         self.repository.store("gamerules", {rule: validated}, "manager")
         self.broker.publish("state.changed", "manager", {"domains": ["gamerules"], "keys": [rule]})
+        self._audit(actor=actor, action="server.gamerule.changed", target=rule, result="success", metadata={"value": validated})
         return validated
 
     # ------------------------------------------------------------------
@@ -272,8 +324,15 @@ class ManagerService:
     def period_analytics(self, days: int = 30, limit: int = 10) -> dict[str, Any]:
         return self.player_service.periods(days, limit)
 
-    def set_player_operator(self, player: str, enabled: bool) -> None:
+    def set_player_operator(self, player: str, enabled: bool, actor: str | None = None) -> None:
         self.player_service.set_operator(player, enabled)
+        self._audit(
+            actor=actor,
+            action="players.operator.changed",
+            target=player,
+            result="success",
+            metadata={"enabled": enabled},
+        )
 
     def set_player_game_mode(self, player: str, mode: str) -> str | None:
         return self.player_service.set_game_mode(player, mode)

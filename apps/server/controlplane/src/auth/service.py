@@ -338,18 +338,24 @@ class AuthService:
 
     def suspend(self, player: str, actor: str) -> None:
         now = time.time()
-        with self._connect() as connection:
-            identity = self._resolve_identity(connection, player)
-            account = connection.execute("SELECT role,status FROM panel_accounts WHERE identity=?", (identity,)).fetchone()
-            if not account:
-                raise ValueError("player has no panel access")
-            if account[0] == "owner" and account[1] == "active":
-                owners = connection.execute("SELECT count(*) FROM panel_accounts WHERE role='owner' AND status='active'").fetchone()[0]
-                if owners <= 1:
-                    raise ValueError("cannot suspend the last active owner")
-            connection.execute("UPDATE panel_accounts SET status='suspended',updated_at=? WHERE identity=?", (now, identity))
-            connection.execute("UPDATE panel_sessions SET revoked_at=? WHERE identity=? AND revoked_at IS NULL", (now, identity))
-            self._audit(connection, actor, "auth.access.suspended", identity, "success", {})
+        identity: str | None = None
+        try:
+            with self._connect() as connection:
+                identity = self._resolve_identity(connection, player)
+                account = connection.execute("SELECT role,status FROM panel_accounts WHERE identity=?", (identity,)).fetchone()
+                if not account:
+                    raise ValueError("player has no panel access")
+                if account[0] == "owner" and account[1] == "active":
+                    owners = connection.execute("SELECT count(*) FROM panel_accounts WHERE role='owner' AND status='active'").fetchone()[0]
+                    if owners <= 1:
+                        raise ValueError("cannot suspend the last active owner")
+                connection.execute("UPDATE panel_accounts SET status='suspended',updated_at=? WHERE identity=?", (now, identity))
+                connection.execute("UPDATE panel_sessions SET revoked_at=? WHERE identity=? AND revoked_at IS NULL", (now, identity))
+                self._audit(connection, actor, "auth.access.suspended", identity, "success", {})
+        except ValueError:
+            with self._connect() as audit_conn:
+                self._audit(audit_conn, actor, "auth.access.suspended", identity, "failure", {})
+            raise
 
     def require_capability(self, user: dict[str, Any], capability: str) -> None:
         capabilities = set(user.get("capabilities", []))

@@ -127,7 +127,6 @@ class ProductionFilesystem:
             "--pipe",
             "--quiet",
             f"--property=User={agent_user}",
-            f"--property=Group={agent_user}",
             "--property=NoNewPrivileges=yes",
             "--property=PrivateTmp=yes",
             "--property=ProtectSystem=strict",

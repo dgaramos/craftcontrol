@@ -13,7 +13,7 @@ WORKDIR /app
 COPY apps/server/controlplane/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 COPY apps/server/controlplane/app.py apps/server/controlplane/wsgi.py ./
-COPY apps/server/controlplane/src ./src
+COPY apps/server/controlplane/src ./controlplane
 COPY packages ./packages
 COPY packs ./packs
 COPY bin/craftcontrol /usr/local/bin/craftcontrol

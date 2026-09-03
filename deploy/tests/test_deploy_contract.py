@@ -13,11 +13,10 @@ ROOT = Path(__file__).resolve().parents[2]
 def test_backend_cli_module_path_matches_dockerfile_copy_destination() -> None:
     dockerfile = (ROOT / "apps" / "server" / "controlplane" / "Dockerfile").read_text()
     entrypoint = (ROOT / "bin" / "craftcontrol").read_text()
-    # COPY destination and module name in bin/craftcontrol must agree.
+    # COPY destination and python -m target in bin/craftcontrol must agree.
     # A mismatch produces ModuleNotFoundError at backup/restore time inside the container.
-    assert "COPY apps/server/controlplane/src ./controlplane" in dockerfile
-    assert "COPY apps/server/controlplane/src ./src" not in dockerfile
-    assert "python -m controlplane.cli" in entrypoint
+    assert "COPY apps/server/controlplane/src ./src" in dockerfile
+    assert "python -m src.cli" in entrypoint
 
 
 def test_backend_deploy_syncs_server_directory_not_stale_backend_alias() -> None:

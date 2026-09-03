@@ -115,7 +115,7 @@ jobs:
       - name: Deploy the accepted revision locally
         run: /usr/local/bin/craftcontrol-homelab-deploy "${{ github.sha }}"
 
-      - name: Detect Host Agent changes
+      - name: Detect Bedrock Proxy changes
         id: bedrock-proxy
         shell: bash
         run: |
@@ -127,6 +127,6 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Activate the verified Host Agent revision
+      - name: Activate the verified Bedrock Proxy revision
         if: steps.bedrock-proxy.outputs.changed == 'true'
         run: deploy/bedrock-proxy/bin/craftcontrol-bedrock-proxy-request-update "${{ github.sha }}"

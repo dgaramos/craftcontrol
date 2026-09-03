@@ -190,6 +190,31 @@ def test_auth_bootstrap_no_player_raises(tmp_path: Path) -> None:
 # Main backup tests
 # ---------------------------------------------------------------------------
 
+def test_backup_create_dispatches_to_service(tmp_path: Path, capsys) -> None:
+    """Upgrade-compatibility guard: backup create must dispatch correctly
+    regardless of the outer module name (controlplane vs minecraft_manager).
+    The container's /usr/local/bin/craftcontrol is the canonical backup
+    interface; this test ensures the CLI contract is stable across renames."""
+    settings = SimpleNamespace(
+        database=tmp_path / "db",
+        project=tmp_path,
+        backup_root=tmp_path,
+        container="bedrock",
+        console_wait_seconds=5,
+    )
+    fake_backup = MagicMock()
+    fake_backup.create.return_value = {"action": "create", "backup_id": "b001"}
+    deps = CliDependencies(backup_service_factory=lambda settings: fake_backup)
+
+    from src.cli import main
+    rc = main(["backup", "create"], settings=settings, deps=deps)
+
+    assert rc == 0
+    fake_backup.create.assert_called_once()
+    result = json.loads(capsys.readouterr().out)
+    assert result["action"] == "create"
+
+
 def test_backup_list_prints_json(tmp_path: Path, capsys) -> None:
     settings = SimpleNamespace(
         database=tmp_path / "db",

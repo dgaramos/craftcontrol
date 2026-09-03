@@ -214,6 +214,56 @@ export function makeSettingsDeps(stateOverrides = {}) {
   return { state, $, content, t, escapeHtml, uiIcon, optionLabel, localeTag, groupLabel, toast, api, render: refreshActivePanel, refreshActivePanel, document, elements };
 }
 
+export function makeSharedDeps(stateOverrides = {}) {
+  const elements = {};
+  const $ = jest.fn((sel) => {
+    if (!elements[sel]) elements[sel] = makeEl();
+    return elements[sel];
+  });
+  const state = {
+    locale: "en",
+    analytics: {
+      combatMetric: "mob_kills",
+      explorationMetric: "distance",
+      periodDays: 30,
+      periodMetric: "play_seconds",
+      ...stateOverrides,
+    },
+  };
+  const content = {
+    renderedMarkup: "",
+    children: [],
+    replaceChildren(...children) {
+      this.children = children;
+      this.renderedMarkup = children.filter((c) => typeof c === "string").join("");
+    },
+    querySelectorAll: jest.fn(() => []),
+  };
+  Object.defineProperty(content, "innerHTML", {
+    get: () => content.renderedMarkup,
+    set: (value) => { content.renderedMarkup = String(value); },
+  });
+  const t = (key) => key === "weekdayShort" ? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] : key;
+  const uiIcon = (name) => `<svg icon="${name}"/>`;
+  const escapeHtml = (s) => String(s ?? "").replace(/</g, "&lt;");
+  const gameTermMarkup = (v) => `<span>${String(v)}</span>`;
+  const timelineTimestamp = (ts) => ts ? `<time>${ts}</time>` : "<span>—</span>";
+  const formatRankingValue = (v) => String(v ?? 0);
+  const formatDate = (ts) => ts ? "2024-01-01" : "—";
+  const formatDuration = (s) => `${s ?? 0}s`;
+  const dimensionName = (v) => String(v);
+  const localeTag = () => "en-US";
+  const analyticsViewSwitch = jest.fn(() => "");
+  const bindAnalyticsViewSwitch = jest.fn();
+  const openAnalyticsPlayer = jest.fn();
+  const api = jest.fn().mockRejectedValue(new Error("no api"));
+  return {
+    state, content, t, uiIcon, escapeHtml, gameTermMarkup, timelineTimestamp,
+    formatRankingValue, formatDate, formatDuration, dimensionName, localeTag,
+    analyticsViewSwitch, bindAnalyticsViewSwitch, openAnalyticsPlayer, api, $, elements,
+  };
+}
+
 export function makeStorage(initial = {}) {
   const store = { ...initial };
   return {

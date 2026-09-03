@@ -29,6 +29,23 @@ const envelopes = output
 const blockEvent = envelopes.find((item) => item.type === "blocks.changed");
 const snapshot = envelopes.findLast((item) => item.type === "snapshot.player" && item.player?.name === "VonCrush");
 
+const blockIndex = envelopes.indexOf(blockEvent);
+const snapshotStartedIndex = envelopes.findIndex((item, index) => index > blockIndex && item.type === "snapshot.started");
+const snapshotPlayerIndex = envelopes.findIndex((item, index) => index > snapshotStartedIndex && item.type === "snapshot.player");
+const snapshotFinishedIndex = envelopes.findIndex((item, index) => index > snapshotPlayerIndex && item.type === "snapshot.finished");
+assert.ok(blockIndex < snapshotStartedIndex);
+assert.ok(snapshotStartedIndex < snapshotPlayerIndex);
+assert.ok(snapshotPlayerIndex < snapshotFinishedIndex);
+
+for (const [previous, current] of envelopes.slice(1).map((item, index) => [envelopes[index], item])) {
+  assert.ok(current.sequence >= previous.sequence, "telemetry sequences must not decrease");
+}
+
+const emitted = JSON.stringify(envelopes).toLowerCase();
+for (const forbiddenField of ["xuid", "location", "inventory", "chat"]) {
+  assert.equal(emitted.includes(forbiddenField), false, `telemetry must not emit ${forbiddenField}`);
+}
+
 assert.equal(blockEvent?.data.broken.total, 1);
 assert.equal(blockEvent?.data.broken.byType["minecraft:stone"], 1);
 assert.equal(snapshot?.data.joins, 1);

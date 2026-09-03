@@ -50,9 +50,12 @@ these mounts:
 |---|---|---|
 | `/var/run/docker.sock` | `/var/run/docker.sock` | rw |
 | `/mnt/storage/docker` | `/mnt/storage/docker` | rw |
-| `craftcontrol-github-runner/deploy-craftcontrol.sh` | `/usr/local/bin/craftcontrol-homelab-deploy` | ro |
+| `craftcontrol-github-runner/deploy-craftcontrol.sh` ¹ | `/usr/local/bin/craftcontrol-homelab-deploy` | ro |
 | `craftcontrol-gitea-runner/config.yaml` | `/config.yaml` | ro |
 | `craftcontrol-gitea-runner/data` | `/data` | rw |
+
+¹ Sourced from `deploy/craftcontrol-homelab-deploy.sh` in this repository.
+See step 5 of the reconstruction guide below.
 
 The runner uses the `gitea_default` Docker network so it can reach Gitea by
 service name.
@@ -128,20 +131,25 @@ registration token from the Gitea repository settings
 The token goes in the runner's `data/` directory after first registration;
 it is not stored in the config file.
 
-### 5. Mount the deploy script
+### 5. Install the deploy script
 
-Place the deploy script at
-`craftcontrol-github-runner/deploy-craftcontrol.sh` (see the contents in the
-`craftcontrol-homelab-deploy` call above) and ensure it is executable. The
-runner container mounts it read-only as `/usr/local/bin/craftcontrol-homelab-deploy`.
-
-### 6. Start the runner
+The script is versioned at `deploy/craftcontrol-homelab-deploy.sh`. Copy it
+to the path the runner mounts:
 
 ```bash
-docker compose up -d craftcontrol-gitea-runner
+cp deploy/craftcontrol-homelab-deploy.sh \
+   /mnt/storage/docker/craftcontrol-github-runner/deploy-craftcontrol.sh
+chmod 755 /mnt/storage/docker/craftcontrol-github-runner/deploy-craftcontrol.sh
 ```
 
-Verify the runner appears as online in Gitea (Settings → Actions → Runners).
+The runner container mounts it read-only as `/usr/local/bin/craftcontrol-homelab-deploy`.
+
+### 6. Install the Bedrock Proxy service
+
+Follow `deploy/bedrock-proxy/bin/install-craftcontrol-bedrock-proxy-runtime`
+before starting the backend. The backend container mounts the shared secret
+read-only from `/etc/craftcontrol/bedrock-proxy-token`; the file must exist
+before `docker compose up`.
 
 ### 7. Start the application containers
 
@@ -151,12 +159,35 @@ source versions.env
 docker compose -f docker-compose.split.yml up -d
 ```
 
-### 8. Install the Bedrock Proxy service
+Wait for `craftcontrol-backend` to be healthy before proceeding:
 
-Follow `deploy/bedrock-proxy/bin/install-craftcontrol-bedrock-proxy-runtime`.
-The service listens on a local port and requires a shared secret in
-`/etc/craftcontrol/bedrock-proxy-token`. That file must be present before the
-backend container starts (it is mounted read-only into the container).
+```bash
+docker compose -f docker-compose.split.yml exec -T craftcontrol-backend \
+  craftcontrol backup list
+```
+
+### 8. Start the runner
+
+Start the runner only after the application is healthy. A runner that comes
+online before the backup command works will accept jobs that immediately fail
+at the backup step.
+
+```bash
+docker compose \
+  -f /mnt/storage/docker/craftcontrol-gitea-runner/docker-compose.yml \
+  up -d craftcontrol-gitea-runner
+```
+
+Verify the runner appears as online in Gitea (Settings → Actions → Runners).
+
+### 9. Smoke-test the backup interface
+
+After the runner is online, verify end-to-end:
+
+```bash
+docker compose -f /mnt/storage/docker/craftcontrol/docker-compose.split.yml \
+  exec -T craftcontrol-backend craftcontrol backup list
+```
 
 ## Backup contract
 

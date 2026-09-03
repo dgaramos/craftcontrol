@@ -1,5 +1,6 @@
 from pathlib import Path
 import os
+import re
 import shutil
 import subprocess
 
@@ -18,6 +19,25 @@ def test_component_deploy_canaries_use_the_production_port_default() -> None:
         assert 'frontend_port="${CRAFTCONTROL_SPLIT_PORT:-18082}"' not in script
 
 
+def _workflow_job_ids(text: str) -> list[str]:
+    """Extract top-level job IDs from a workflow YAML without a YAML parser.
+
+    Matches lines of the form ``  <id>:`` at exactly two-space indentation
+    inside the jobs block — sufficient for flat job maps in these files.
+    """
+    in_jobs = False
+    ids = []
+    for line in text.splitlines():
+        if line.rstrip() == "jobs:":
+            in_jobs = True
+            continue
+        if in_jobs:
+            m = re.match(r"^  ([A-Za-z0-9_-]+):\s*$", line)
+            if m:
+                ids.append(m.group(1))
+    return ids
+
+
 def test_quality_gates_are_partitioned_and_automated() -> None:
     gates = ["frontend", "backend", "contracts", "dr-agents", "deploy", "integration"]
     for gate in gates:
@@ -29,11 +49,20 @@ def test_quality_gates_are_partitioned_and_automated() -> None:
     assert "contracts-frontend" in umbrella
     for name in ("frontend", "backend", "contracts", "dr-agents", "deploy", "integration"):
         assert name in umbrella
+    required_jobs = {
+        "backend", "contracts-backend", "contracts-frontend",
+        "frontend", "dr-agents", "check-deploy", "integration",
+    }
     for workflow in (ROOT / ".github" / "workflows" / "quality.yml", ROOT / ".gitea" / "workflows" / "quality.yml"):
         assert workflow.is_file()
         text = workflow.read_text()
-        for job in ("backend", "contracts-backend", "contracts-frontend", "frontend", "dr-agents", "deploy", "integration"):
-            assert job in text
+        job_ids = _workflow_job_ids(text)
+        # No duplicate job IDs — duplicates silently drop one in YAML parsers.
+        assert len(job_ids) == len(set(job_ids)), f"duplicate job IDs in {workflow.name}: {job_ids}"
+        for job in required_jobs:
+            assert job in job_ids, f"job '{job}' missing from {workflow.name}"
+        # check-deploy must block integration.
+        assert "check-deploy" in text[text.index("integration"):text.index("integration") + 200]
 
 
 def test_split_runtime_gate_uses_only_disposable_state() -> None:

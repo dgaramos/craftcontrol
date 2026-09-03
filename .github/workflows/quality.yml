@@ -151,8 +151,8 @@ jobs:
           files: packs/telemetry/junit.xml
           flags: telemetry
 
-  deploy:
-    name: deploy
+  check-deploy:
+    name: check-deploy
     runs-on: ubuntu-latest
     needs: [backend]
     steps:
@@ -174,7 +174,7 @@ jobs:
   integration:
     name: integration
     runs-on: ubuntu-latest
-    needs: [backend, contracts-backend, contracts-frontend, frontend, bedrock-proxy, dr-agents, deploy]
+    needs: [backend, contracts-backend, contracts-frontend, frontend, bedrock-proxy, dr-agents, check-deploy]
     steps:
       - uses: actions/checkout@v4.2.2
         with:

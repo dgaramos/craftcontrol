@@ -42,3 +42,12 @@ def test_split_runtime_gate_exercises_cli_inside_container() -> None:
     canary = (ROOT / "bin" / "check-split-runtime").read_text()
     assert "craftcontrol backup list" in canary
     assert "'backups' in d" in canary
+
+
+def test_homelab_deploy_script_is_versioned_in_repository() -> None:
+    script = ROOT / "deploy" / "craftcontrol-homelab-deploy.sh"
+    assert script.is_file(), "deploy/craftcontrol-homelab-deploy.sh must be tracked in the repo"
+    text = script.read_text()
+    assert "deploy-craftcontrol-release --check" in text
+    assert "deploy-craftcontrol-release" in text
+    assert script.stat().st_mode & 0o111, "deploy script must be executable"

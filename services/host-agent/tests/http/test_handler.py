@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import json
 import time
-import uuid
 from io import BytesIO
 from pathlib import Path
 from typing import Any
@@ -12,7 +11,7 @@ import handler as hd
 import router as rt
 import store as st
 from operations import OperationExecutor
-from helpers import fake_run, make_executor as _make_executor_base
+from helpers import execute_request, fake_run, make_executor as _make_executor_base, operation_id
 
 
 def _make_status_checker(running: bool = True) -> Any:
@@ -24,9 +23,7 @@ def _make_status_checker(running: bool = True) -> Any:
 
 VALID_TOKEN = "test-secret-token-abcdef1234567890"
 
-
-def _op_id() -> str:
-    return str(uuid.uuid4())
+_op_id = operation_id
 
 
 def _make_store() -> st.OperationStore:
@@ -259,7 +256,7 @@ class TestAuthentication:
 
     def test_correct_token_passes(self) -> None:
         store = _make_store()
-        status, body = _call_handler("GET", f"/v1/status/{_op_id()}", token=VALID_TOKEN, store=store)
+        status, body = _call_handler("GET", f"/v1/status/{operation_id()}", token=VALID_TOKEN, store=store)
         assert status == 404
 
     def test_bearer_prefix_required(self) -> None:
@@ -327,7 +324,7 @@ class TestExecuteValidation:
         executor = _make_executor(subprocess_run=fake_run())
         store = _make_store()
         status, body = self._execute(
-            {"operation_id": _op_id(), "intended_state": {"server_name": "Test"}},
+            execute_request({"server_name": "Test"}),
             store=store,
             executor=executor,
         )
@@ -338,7 +335,7 @@ class TestExecuteValidation:
         executor = _make_executor(subprocess_run=fake_run())
         store = _make_store()
         status, _ = self._execute(
-            {"operation_id": _op_id(), "intended_state": {}},
+            execute_request(),
             store=store,
             executor=executor,
         )

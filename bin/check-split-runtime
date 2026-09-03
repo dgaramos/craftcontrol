@@ -75,6 +75,9 @@ sse_headers="$(docker exec "$FRONTEND_CONTAINER" sh -c 'timeout 3 wget -S -O /de
 grep -q 'Content-Type: text/event-stream' <<<"$sse_headers"
 grep -q 'X-Accel-Buffering: no' <<<"$sse_headers"
 
+backup_output="$(docker exec "$BACKEND_CONTAINER" craftcontrol backup list)"
+python3 -c "import json,sys; d=json.loads(sys.stdin.read()); assert 'backups' in d, f'unexpected backup list output: {d}'" <<<"$backup_output"
+
 docker stop --time 1 "$BACKEND_CONTAINER" >/dev/null
 wait_removed "$BACKEND_CONTAINER"
 run_backend

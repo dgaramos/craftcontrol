@@ -1,6 +1,6 @@
 import { test } from "@jest/globals";
 import assert from "node:assert/strict";
-import { emptyState, ensurePlayer, horizontalDistance, incrementMap, observeDimension } from "../behavior_pack/scripts/model.js";
+import { emptyState, ensurePlayer, horizontalDistance, incrementMap, observeDimension, round } from "../behavior_pack/scripts/model.js";
 
 test("creates and updates a persistent player record", () => {
   const state = emptyState();
@@ -21,6 +21,10 @@ test("caps high-cardinality maps to their most frequent values", () => {
 
 test("measures horizontal movement without vertical inflation", () => {
   assert.equal(horizontalDistance({ x: 0, y: 0, z: 0 }, { x: 3, y: 100, z: 4 }), 5);
+});
+
+test("rounds telemetry values to stable precision", () => {
+  assert.equal(round(1.23456789), 1.23);
 });
 
 test("ensurePlayer appends name to aliases when same player returns with a different display name", () => {

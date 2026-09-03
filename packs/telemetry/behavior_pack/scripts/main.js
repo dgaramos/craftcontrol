@@ -7,16 +7,20 @@ import { samplePlayerMovement } from "./domain/movement.js";
 import { trackGameModes, removePlayer } from "./domain/gamemode.js";
 import { registerEvents } from "./domain/events.js";
 
-const positions = new Map();
-const gameModes = new Map();
+const productionDependencies = { system, world, ensurePlayer, incrementMap, observeDimension, round, flush, loadState, mutatePlayer, storageStatus, publish, publishBlockChanges, publishSnapshot, queueBlockChange, capabilitySnapshot, probeGameModeReading, readGameMode, startMovementSampling, subscribeScriptEvents, samplePlayerMovement, trackGameModes, removePlayer, registerEvents };
 
 function playerName(entity) {
   return entity?.typeId === "minecraft:player" ? entity.name : null;
 }
 
-function update(name, callback) {
-  return mutatePlayer(name, (state) => callback(ensurePlayer(state, name)));
-}
+export function startTelemetryRuntime(overrides = {}) {
+  const { system, world, ensurePlayer, incrementMap, observeDimension, round, flush, loadState, mutatePlayer, storageStatus, publish, publishBlockChanges, publishSnapshot, queueBlockChange, capabilitySnapshot, probeGameModeReading, readGameMode, startMovementSampling, subscribeScriptEvents, samplePlayerMovement, trackGameModes, removePlayer, registerEvents } = { ...productionDependencies, ...overrides };
+  const positions = new Map();
+  const gameModes = new Map();
+
+  function update(name, callback) {
+    return mutatePlayer(name, (state) => callback(ensurePlayer(state, name)));
+  }
 
 registerEvents({
   onPlayerJoin(event) {
@@ -121,3 +125,6 @@ system.runTimeout(() => {
   publish("telemetry.started", null, { version: "0.4.0", product: "CraftControl Telemetry Pack", storage: storageStatus(), capabilities: capabilitySnapshot() });
   publishSnapshot();
 }, 1);
+}
+
+startTelemetryRuntime();

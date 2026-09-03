@@ -21,9 +21,7 @@ mapping — never mock `@minecraft/server` inline.
 
 **Tests mirror production ownership.** Adapter tests live in
 `tests/adapters/`, domain tests in `tests/domain/`, and full-runtime runners
-and `.fixture.mjs` scenarios in `tests/runtime/`. Keep package-level boundary
-tests for `main.js`, `model.js`, and `migrations.js` at `tests/`; installer
-tests live in `tests/scripts/`.
+and `.fixture.mjs` scenarios in `tests/runtime/`. Tests for `behavior_pack/scripts/` source files mirror that layout under `tests/scripts/`; this includes `main.test.js`, `migrations.test.js`, and `model.test.js`.
 
 **`.mjs` fixtures are integration scenarios.** Files like `runtime.fixture.mjs`
 and `flush-blocked.fixture.mjs` run the full pack against the fake runtime and

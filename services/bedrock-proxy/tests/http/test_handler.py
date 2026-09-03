@@ -7,10 +7,10 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
-import proxy.http.handler as hd
-import proxy.http.router as rt
-import proxy.store.store as st
-from proxy.runtime.operations import OperationExecutor
+import src.http.handler as hd
+import src.http.router as rt
+import src.store.store as st
+from src.runtime.operations import OperationExecutor
 from helpers import execute_request, fake_run, make_executor as _make_executor_base, operation_id
 
 

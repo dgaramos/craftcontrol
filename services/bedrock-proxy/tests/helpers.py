@@ -6,9 +6,9 @@ from typing import Any
 import uuid
 from unittest.mock import MagicMock
 
-from proxy.adapters.docker import DockerComposeRunner
-from proxy.adapters.filesystem import BedrockFileSystem
-from proxy.runtime.operations import OperationExecutor
+from src.adapters.docker import DockerComposeRunner
+from src.adapters.filesystem import BedrockFileSystem
+from src.runtime.operations import OperationExecutor
 
 
 def fake_run(returncode: int = 0, stdout: str = "", stderr: str = "") -> MagicMock:

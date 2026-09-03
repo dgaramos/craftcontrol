@@ -10,12 +10,12 @@ import json
 import logging
 from typing import Any
 
-from proxy.runtime.operations import (
+from src.runtime.operations import (
     OperationExecutor,
     _INTENDED_STATE_FIELDS,
     _validate_intended_state_values,
 )
-from proxy.store.store import OperationStore
+from src.store.store import OperationStore
 
 logger = logging.getLogger("bedrock-proxy")
 

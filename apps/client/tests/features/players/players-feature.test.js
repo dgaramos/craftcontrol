@@ -2,20 +2,7 @@ import { jest } from "@jest/globals";
 import { createPlayersWorkspace } from "../../../static/js/features/players/workspace.js";
 import { createPlayersFeature } from "../../../static/js/features/players/index.js";
 import { makeEl, makeTemplateStub } from "../../helpers.js";
-
-function makePlayer(overrides = {}) {
-  return {
-    id: "abc123",
-    name: "Alice",
-    online: false,
-    deaths_count: 2,
-    total_play_seconds: 3600,
-    operator: false,
-    last_seen_at: 1000,
-    connected_at: null,
-    ...overrides,
-  };
-}
+import { makePlayer } from "../../factories.js";
 
 // Minimal stubs for the three templates used by workspace.js.
 function makeWorkspaceTemplateStubs() {

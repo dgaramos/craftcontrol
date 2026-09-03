@@ -11,9 +11,9 @@ coverage:
           - frontend
         target: 75%
         threshold: 2%
-      host-agent:
+      bedrock-proxy:
         flags:
-          - host-agent
+          - bedrock-proxy
         target: 85%
         threshold: 2%
       dr-agents:
@@ -37,9 +37,9 @@ coverage:
           - frontend
         target: 65%
         threshold: 5%
-      host-agent:
+      bedrock-proxy:
         flags:
-          - host-agent
+          - bedrock-proxy
         target: 75%
         threshold: 5%
       dr-agents:
@@ -60,9 +60,9 @@ flags:
   frontend:
     paths:
       - apps/client/static/js/
-  host-agent:
+  bedrock-proxy:
     paths:
-      - services/host-agent/
+      - services/bedrock-proxy/
   dr-agents:
     paths:
       - apps/server/tests/test_agent_workflows.py
@@ -117,9 +117,9 @@ component_management:
       paths:
         - apps/client/static/js/features/
     - component_id: host_agent
-      name: "host-agent"
+      name: "bedrock-proxy"
       paths:
-        - services/host-agent/
+        - services/bedrock-proxy/
 
 comment:
   layout: "reach,diff,flags,components"

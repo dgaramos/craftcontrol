@@ -70,14 +70,14 @@ backup first.
 ## CraftControl Host Agent execution boundary
 
 The split topology introduces an optional privileged-execution boundary between
-the backend container and the Docker daemon. When `HOST_AGENT_URL` is set in the
+the backend container and the Docker daemon. When `BEDROCK_PROXY_URL` is set in the
 backend's environment, the composition root wires `HostAgentContainerOperations`
 instead of the direct `DockerOperations` adapter:
 
 ```text
 Backend container
   └── ContainerOperations (HTTP)
-        └── craftcontrol-host-agent (systemd, Docker host)
+        └── craftcontrol-bedrock-proxy (systemd, Docker host)
               ├── PREPARATION — writes configuration files
               ├── RESTART     — docker compose restart minecraft-server
               └── HEALTH_WAIT — Bedrock UDP health probe
@@ -85,13 +85,13 @@ Backend container
 
 The backend still mounts the Docker socket for Bedrock console operations
 (`BedrockClient`): attaching to the container stdin, streaming logs, and
-receiving Docker events. These operations are not part of the host-agent contract
+receiving Docker events. These operations are not part of the bedrock-proxy contract
 and are not delegated.
 
 The two adapters coexist in the codebase. Configuration selects exactly one
 `ContainerOperations` implementation:
 
-| `HOST_AGENT_URL` set? | Adapter |
+| `BEDROCK_PROXY_URL` set? | Adapter |
 |---|---|
 | Yes | `HostAgentContainerOperations` (HTTP, delegates to agent) |
 | No | `DockerOperations` (direct Compose, no agent required) |
@@ -105,21 +105,21 @@ of which adapter is selected.
 
 | Variable | Where set | Description |
 |---|---|---|
-| `HOST_AGENT_URL` | backend environment | Base URL the backend uses to reach the agent, e.g. `http://host-gateway:7890`. |
-| `HOST_AGENT_TOKEN_FILE` | backend environment | Path to the shared-secret file inside the container, e.g. `/run/host-agent-token`. |
-| `HOST_AGENT_HEALTH_TIMEOUT_SECONDS` | backend environment | Health-wait deadline sent to the agent for each lifecycle operation. Default `300`; accepted range: 10–600. |
-| `HOST_AGENT_RESTART_TIMEOUT_SECONDS` | backend environment | Compose restart deadline sent to the agent for each lifecycle operation. Default `180`; accepted range: 10–300. |
+| `BEDROCK_PROXY_URL` | backend environment | Base URL the backend uses to reach the agent, e.g. `http://host-gateway:7890`. |
+| `BEDROCK_PROXY_TOKEN_FILE` | backend environment | Path to the shared-secret file inside the container, e.g. `/run/bedrock-proxy-token`. |
+| `BEDROCK_PROXY_HEALTH_TIMEOUT_SECONDS` | backend environment | Health-wait deadline sent to the agent for each lifecycle operation. Default `300`; accepted range: 10–600. |
+| `BEDROCK_PROXY_RESTART_TIMEOUT_SECONDS` | backend environment | Compose restart deadline sent to the agent for each lifecycle operation. Default `180`; accepted range: 10–300. |
 
 The token file is mounted from the host via a bind mount or Docker secret. Its
 value must match the secret file read by the agent on the host side. See
-`docs/host-agent-contract.md` for key distribution and token rotation procedures.
+`docs/bedrock-proxy-contract.md` for key distribution and token rotation procedures.
 
 Never set the token value as a plain environment variable; always use a file
 mount. No token value may appear in logs, API responses, or the `.env` file.
 
 ### Failure behavior
 
-The backend follows the failure protocol described in `docs/host-agent-contract.md`:
+The backend follows the failure protocol described in `docs/bedrock-proxy-contract.md`:
 
 - **Pre-delivery failures** (connection refused, connect timeout before TCP handshake) — the request was never delivered; the operation is failed immediately with `error_code: executor_internal_error`.
 - **Post-delivery ambiguous failures** (read-phase timeout after TCP handshake, or an OSError after delivery) — the request may have been delivered; the backend retries `GET /v1/status/{operation_id}` up to three times before concluding the result is ambiguous and failing the operation with `error_code: executor_internal_error`.

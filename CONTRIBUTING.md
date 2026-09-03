@@ -154,7 +154,7 @@ bin/check-frontend          # JS syntax, i18n, visual contracts
 bin/check-backend           # Python application and persistence tests
 bin/check-contracts         # OpenAPI, route surface, generated declarations
 bin/check-integration       # Compose builds, split runtime, architecture and deploy safety
-bin/check-host-agent        # Host agent unit and integration tests
+bin/check-bedrock-proxy        # Host agent unit and integration tests
 bin/check-contracts-frontend  # Frontend contract declarations
 bin/check-dr-agents         # DR agents profile and workflow checks
 ```

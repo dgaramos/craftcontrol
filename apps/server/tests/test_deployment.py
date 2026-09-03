@@ -108,8 +108,8 @@ def test_successful_main_quality_run_triggers_the_guarded_homelab_release() -> N
     assert "runs-on: [self-hosted, homelab, craftcontrol]" in workflow
     assert "craftcontrol-homelab-production" in workflow
     assert "/usr/local/bin/craftcontrol-homelab-deploy" in workflow
-    assert "craftcontrol-host-agent-request-update" in workflow
-    assert "deploy/host-agent services/host-agent" in workflow
+    assert "craftcontrol-bedrock-proxy-request-update" in workflow
+    assert "deploy/bedrock-proxy services/bedrock-proxy" in workflow
     assert "Gitea-hosted runners never receive Docker or LAN access" in runbook
 
 
@@ -171,25 +171,25 @@ def test_split_backend_reaches_host_agent_and_mounts_docker_socket() -> None:
     split = (ROOT / "docker-compose.split.yml").read_text()
     backend = split.split("  craftcontrol-backend:", 1)[1].split("  craftcontrol-frontend:", 1)[0]
     # Exact URL — must not be configurable via env substitution in this file.
-    assert "HOST_AGENT_URL: http://host-gateway:7890" in backend
+    assert "BEDROCK_PROXY_URL: http://host-gateway:7890" in backend
     # Token file must be hard-coded to the volume mount destination with no
     # env substitution; overriding it via .env would silently break the adapter.
-    assert "HOST_AGENT_TOKEN_FILE: /run/host-agent-token" in backend
+    assert "BEDROCK_PROXY_TOKEN_FILE: /run/bedrock-proxy-token" in backend
     assert "${HOST_AGENT_TOKEN_FILE" not in backend
     # extra_hosts mapping must use the special Docker host-gateway value.
     assert "host-gateway:host-gateway" in backend
     # Volume must bind-mount the token at the path the adapter reads.
-    assert "/etc/craftcontrol/host-agent-token:/run/host-agent-token:ro" in backend
+    assert "/etc/craftcontrol/bedrock-proxy-token:/run/bedrock-proxy-token:ro" in backend
     # Docker socket must be mounted read-only for BedrockClient and EventRuntime.
     assert "/var/run/docker.sock:/var/run/docker.sock:ro" in backend
 
 
 def test_host_agent_systemd_unit_is_present_and_well_formed() -> None:
-    unit = (ROOT / "deploy" / "host-agent" / "systemd" / "craftcontrol-host-agent.service").read_text()
+    unit = (ROOT / "deploy" / "bedrock-proxy" / "systemd" / "craftcontrol-bedrock-proxy.service").read_text()
     assert "User=craftcontrol-agent" in unit
     assert "Group=craftcontrol-agent" in unit
     # Full ExecStart path — partial checks would miss wrong interpreter or path.
-    assert "ExecStart=/usr/bin/python3 /opt/craftcontrol/host-agent/agent.py" in unit
+    assert "ExecStart=/usr/bin/python3 /opt/craftcontrol/bedrock-proxy/agent.py" in unit
     assert "Restart=on-failure" in unit
     assert "WantedBy=multi-user.target" in unit
     assert "docker.service" in unit
@@ -198,23 +198,23 @@ def test_host_agent_systemd_unit_is_present_and_well_formed() -> None:
     # ReadWritePaths must match HOST_AGENT_BEDROCK_DATA exactly.
     assert "ReadWritePaths=/opt/minecraft-bedrock" in unit
     # Secret file path must match the host-side token location.
-    assert "HOST_AGENT_SECRET_FILE=/etc/craftcontrol/host-agent-token" in unit
+    assert "BEDROCK_PROXY_SECRET_FILE=/etc/craftcontrol/bedrock-proxy-token" in unit
 
 
 def test_host_agent_coverage_is_scoped_to_the_service_boundary() -> None:
-    gate = (ROOT / "bin" / "check-host-agent").read_text()
+    gate = (ROOT / "bin" / "check-bedrock-proxy").read_text()
     workflow = (ROOT / ".github" / "workflows" / "quality.yml").read_text()
     codecov = (ROOT / "codecov.yml").read_text()
 
-    assert "services/host-agent/tests/" in gate
-    assert "--cov=services/host-agent" in gate
-    assert "--cov=deploy/host-agent" not in gate
-    assert "files: coverage-host-agent.xml" in workflow
-    assert "flags: host-agent" in workflow
+    assert "services/bedrock-proxy/tests/" in gate
+    assert "--cov=services/bedrock-proxy" in gate
+    assert "--cov=deploy/bedrock-proxy" not in gate
+    assert "files: coverage-bedrock-proxy.xml" in workflow
+    assert "flags: bedrock-proxy" in workflow
     assert "component_id: host_agent" in codecov
-    assert 'name: "host-agent"' in codecov
-    assert "- services/host-agent/" in codecov
-    assert "- deploy/host-agent/" not in codecov
+    assert 'name: "bedrock-proxy"' in codecov
+    assert "- services/bedrock-proxy/" in codecov
+    assert "- deploy/bedrock-proxy/" not in codecov
 
 
 def test_frontend_proxy_preserves_same_origin_and_sse_streaming() -> None:

@@ -45,8 +45,8 @@ jobs:
       - run: python -m pip install -r apps/server/requirements.txt
       - run: bin/check-contracts-frontend
 
-  host-agent:
-    name: host-agent
+  bedrock-proxy:
+    name: bedrock-proxy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -55,7 +55,7 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: python -m pip install -r apps/server/requirements.txt
-      - run: bin/check-host-agent
+      - run: bin/check-bedrock-proxy
 
   frontend:
     name: frontend
@@ -82,7 +82,7 @@ jobs:
   integration:
     name: integration
     runs-on: ubuntu-latest
-    needs: [backend, contracts-backend, contracts-frontend, frontend, host-agent, dr-agents]
+    needs: [backend, contracts-backend, contracts-frontend, frontend, bedrock-proxy, dr-agents]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -116,17 +116,17 @@ jobs:
         run: /usr/local/bin/craftcontrol-homelab-deploy "${{ github.sha }}"
 
       - name: Detect Host Agent changes
-        id: host-agent
+        id: bedrock-proxy
         shell: bash
         run: |
           before="${{ github.event.before }}"
           if [[ "$before" =~ ^0+$ ]]; then before="${{ github.sha }}^"; fi
-          if git diff --quiet "$before" "${{ github.sha }}" -- deploy/host-agent services/host-agent; then
+          if git diff --quiet "$before" "${{ github.sha }}" -- deploy/bedrock-proxy services/bedrock-proxy; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Activate the verified Host Agent revision
-        if: steps.host-agent.outputs.changed == 'true'
-        run: deploy/host-agent/bin/craftcontrol-host-agent-request-update "${{ github.sha }}"
+        if: steps.bedrock-proxy.outputs.changed == 'true'
+        run: deploy/bedrock-proxy/bin/craftcontrol-bedrock-proxy-request-update "${{ github.sha }}"

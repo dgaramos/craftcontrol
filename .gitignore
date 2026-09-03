@@ -20,3 +20,8 @@ apps/frontend/node_modules/
 apps/frontend/coverage/
 test-results/
 apps/frontend/junit.xml
+.coverage *
+apps/client/coverage/
+apps/client/junit.xml
+apps/server/.coverage *
+apps/server/minecraft_manager/

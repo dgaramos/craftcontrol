@@ -1,0 +1,50 @@
+[Unit]
+Description=CraftControl Host Agent
+Documentation=https://github.com/dgaramos/craftcontrol/blob/main/docs/bedrock-proxy-contract.md
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=craftcontrol-agent
+Group=craftcontrol-agent
+
+# Restrict access to the Docker socket via group membership in `docker`.
+# The OS user craftcontrol-agent must be added to the docker group:
+#   sudo usermod -aG docker craftcontrol-agent
+
+ExecStart=/usr/bin/python3 /opt/craftcontrol/bedrock-proxy/agent.py
+
+# Override these via /etc/craftcontrol/bedrock-proxy.env or a drop-in.
+Environment=BEDROCK_PROXY_BIND=0.0.0.0:7890
+Environment=BEDROCK_PROXY_SECRET_FILE=/etc/craftcontrol/bedrock-proxy-token
+Environment=BEDROCK_PROXY_COMPOSE_PROJECT=minecraft-bedrock
+Environment=BEDROCK_PROXY_COMPOSE_FILE=/opt/craftcontrol/docker-compose.yml
+Environment=BEDROCK_PROXY_BEDROCK_DATA=/opt/minecraft-bedrock
+
+EnvironmentFile=-/etc/craftcontrol/bedrock-proxy.env
+
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=craftcontrol-bedrock-proxy
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+# Allow the agent to read its token file, write Bedrock config, and persist
+# operation state to SQLite.
+# IMPORTANT: ReadWritePaths must match BEDROCK_PROXY_BEDROCK_DATA and BEDROCK_PROXY_DB
+# (parent directory) exactly.  If you override either variable via
+# /etc/craftcontrol/bedrock-proxy.env or a drop-in, add a matching
+# ReadWritePaths= line in a drop-in unit
+# (e.g. /etc/systemd/system/craftcontrol-bedrock-proxy.service.d/paths.conf)
+# to keep ProtectSystem=strict from blocking the write.
+ReadWritePaths=/opt/minecraft-bedrock /var/lib/craftcontrol
+ReadOnlyPaths=/etc/craftcontrol /opt/craftcontrol/docker-compose.yml
+
+[Install]
+WantedBy=multi-user.target

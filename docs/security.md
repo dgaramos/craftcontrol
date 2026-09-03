@@ -83,7 +83,7 @@ CraftControl is **not** hardened for public-internet deployments without additio
 
 ## Host agent authentication boundary
 
-The split topology introduces a `craftcontrol-host-agent` systemd service that
+The split topology introduces a `craftcontrol-bedrock-proxy` systemd service that
 runs on the Docker host outside all containers. It owns Docker socket access for
 the operations it executes. The explicit allowlist for `PREPARATION` includes
 staging and validating the Compose project file and writing Bedrock configuration
@@ -96,7 +96,7 @@ shared-secret bearer token carried in the `Authorization` header. The token is
 read from a file at startup and compared using constant-time comparison; it never
 appears in environment variables, logs, or API responses. The agent's threat
 model and token rotation procedure are documented in
-`docs/host-agent-contract.md`.
+`docs/bedrock-proxy-contract.md`.
 
 The backend still mounts the Docker socket for Bedrock console operations
 (attaching, log streaming, Docker events). These remain a direct socket
@@ -108,7 +108,7 @@ dependency and are not mitigated by the host agent.
 
 1. **Partial Docker socket access** — The backend container still mounts the
    Docker socket for `BedrockClient` console and log operations. A compromised
-   backend process retains Docker access through that path. The host-agent
+   backend process retains Docker access through that path. The bedrock-proxy
    adapter reduces the Docker footprint for server lifecycle operations when
    configured, but the socket mount cannot be removed entirely while console and
    log streaming remain direct socket operations. Mitigation: run on a dedicated

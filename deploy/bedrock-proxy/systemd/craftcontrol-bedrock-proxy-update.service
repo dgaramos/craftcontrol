@@ -1,0 +1,8 @@
+[Unit]
+Description=Apply a queued CraftControl Host Agent release
+After=network.target craftcontrol-bedrock-proxy.service
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/bin/craftcontrol-bedrock-proxy-update

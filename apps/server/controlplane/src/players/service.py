@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-import time
 from typing import Any
 
 from ..ports import EventPublisher, PlayerStore, ServerConfiguration, ServerConsole
@@ -51,7 +50,7 @@ class PlayerService:
         self.events.publish("state.changed", "bedrock-log", {"domains": ["players", "server"]})
 
     def record_derived_death(self, player: str, cause: str, raw: str) -> bool:
-        fingerprint = hashlib.sha256(f"{raw}|{int(time.time() / 3)}".encode()).hexdigest()
+        fingerprint = hashlib.sha256(raw.encode()).hexdigest()
         inserted = self.repository.record_player_death(player, cause, raw, "bedrock-log", fingerprint)
         if inserted:
             self.events.publish("player.death", "bedrock-log", {"player": player, "cause": cause, "derived": True})

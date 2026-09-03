@@ -3,14 +3,8 @@ import { suppressConsoleWarn } from "../helpers.mjs";
 import { capturedTelemetryRecords } from "../factories.mjs";
 
 // @minecraft/server is resolved to tests/minecraft-server.mock.js via
-// moduleNameMapper in jest.config.js.
-//
-// store.js and capabilities.js are replaced with controlled stubs using
-// jest.unstable_mockModule, which must be declared before any dynamic import
-// of the modules that depend on them.
-//
-// The module-level pendingBlocks Map in transport.js is drained in beforeEach
-// by calling publishBlockChanges(), which calls pendingBlocks.clear().
+// moduleNameMapper in jest.config.js. Transport collaborators are injected
+// directly, so this test does not replace internal pack modules.
 
 const mockNextSequence = jest.fn(() => 1);
 const mockLoadState = jest.fn(() => ({ sequence: 0, players: {} }));
@@ -20,23 +14,8 @@ const mockStorageStatus = jest.fn(() => ({ persistenceBlocked: false }));
 const mockCapabilitySnapshot = jest.fn(() => ({}));
 const mockReadGameMode = jest.fn(() => null);
 
-jest.unstable_mockModule("../../behavior_pack/scripts/adapters/store.js", () => ({
-  nextSequence: mockNextSequence,
-  loadState: mockLoadState,
-  flush: mockFlush,
-  storageStatus: mockStorageStatus,
-}));
-
-jest.unstable_mockModule("../../behavior_pack/scripts/adapters/capabilities.js", () => ({
-  capabilitySnapshot: mockCapabilitySnapshot,
-  readGameMode: mockReadGameMode,
-}));
-
-// Import the modules once. transport.js gets the same world object we hold a
-// reference to because all imports share the same module instance within a
-// single Jest worker run (no resetModules).
 const { world } = await import("@minecraft/server");
-const { publish, queueBlockChange, publishBlockChanges, publishSnapshot } =
+const { configureTransport, resetTransport, publish, queueBlockChange, publishBlockChanges, publishSnapshot } =
   await import("../../behavior_pack/scripts/adapters/transport.js");
 
 beforeEach(() => {
@@ -46,9 +25,17 @@ beforeEach(() => {
   mockStorageStatus.mockReturnValue({ persistenceBlocked: false });
   mockCapabilitySnapshot.mockReturnValue({});
   mockReadGameMode.mockReturnValue(null);
-  // Drain the module-level pendingBlocks so each test starts clean.
   world.players = [];
-  publishBlockChanges();
+  resetTransport();
+  configureTransport({
+    world,
+    nextSequence: mockNextSequence,
+    loadState: mockLoadState,
+    flush: mockFlush,
+    storageStatus: mockStorageStatus,
+    capabilitySnapshot: mockCapabilitySnapshot,
+    readGameMode: mockReadGameMode,
+  });
 });
 
 // ---------------------------------------------------------------------------

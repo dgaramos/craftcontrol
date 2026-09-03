@@ -161,3 +161,120 @@ describe("booleanControl — select type via inputFor via playerSettingsMarkup",
     expect(html).toContain("normal");
   });
 });
+
+describe("createSettingsFeature — renderChangesDrawer", () => {
+  test("closes drawer when no changes", () => {
+    const deps = makeDeps();
+    const { renderChangesDrawer } = createSettingsFeature(deps);
+    renderChangesDrawer();
+    expect(deps.$).toHaveBeenCalledWith("#changes-drawer");
+    const drawerEl = deps.$("#changes-drawer");
+    expect(drawerEl.close).toHaveBeenCalled();
+  });
+
+  test("renders change entries to #changes-list", () => {
+    const deps = makeDeps({
+      changes: { difficulty: "hard" },
+      config: { difficulty: "normal" },
+      schema: {
+        settings: {
+          difficulty: {
+            group: "Geral",
+            label: "Difficulty",
+            label_en: "Difficulty",
+            description: "d",
+            description_en: "d",
+            type: "select",
+            options: ["easy", "normal", "hard"],
+          },
+        },
+        gamerules: {},
+      },
+    });
+    const { renderChangesDrawer } = createSettingsFeature(deps);
+    renderChangesDrawer();
+    const listEl = deps.$("#changes-list");
+    expect(listEl.innerHTML).toContain("difficulty");
+  });
+});
+
+describe("createSettingsFeature — updateSaveLabel", () => {
+  test("hides save button when no changes", () => {
+    const deps = makeDeps();
+    const saveEl = { hidden: false, textContent: "" };
+    deps.$ = jest.fn((sel) => {
+      if (sel === "#save") return saveEl;
+      if (sel === "#save-label") return { textContent: "" };
+      if (sel === "#changes-drawer") return { open: false };
+      return { hidden: false };
+    });
+    const { updateSaveLabel } = createSettingsFeature(deps);
+    updateSaveLabel();
+    expect(saveEl.hidden).toBe(true);
+  });
+
+  test("shows save button when changes present", () => {
+    const deps = makeDeps({ changes: { foo: "bar" } });
+    const saveEl = { hidden: true, textContent: "" };
+    deps.$ = jest.fn((sel) => {
+      if (sel === "#save") return saveEl;
+      if (sel === "#save-label") return { textContent: "" };
+      if (sel === "#changes-drawer") return { open: false };
+      return { hidden: false };
+    });
+    const { updateSaveLabel } = createSettingsFeature(deps);
+    updateSaveLabel();
+    expect(saveEl.hidden).toBe(false);
+  });
+});
+
+describe("createSettingsFeature — renderSettingsGroups", () => {
+  test("sets content.innerHTML and calls bindSegmentedControls", () => {
+    const deps = makeDeps({
+      tab: "world",
+      schema: {
+        settings: {},
+        gamerules: {},
+      },
+    });
+    const { renderSettingsGroups } = createSettingsFeature(deps);
+    renderSettingsGroups(["Geral"]);
+    expect(deps.content.innerHTML).toContain("accordion-list");
+    expect(deps.content.querySelectorAll).toHaveBeenCalledWith(".segmented");
+  });
+
+  test("uses rulesIntro title for rules tab", () => {
+    const deps = makeDeps({
+      tab: "rules",
+      schema: { settings: {}, gamerules: {} },
+    });
+    const { renderSettingsGroups } = createSettingsFeature(deps);
+    renderSettingsGroups(["Interface"]);
+    expect(deps.content.innerHTML).toContain("rulesIntro");
+  });
+
+  test("renders settings from schema in accordion", () => {
+    const deps = makeDeps({
+      tab: "world",
+      schema: {
+        settings: {
+          seed: {
+            group: "Mundo",
+            label: "Seed",
+            label_en: "Seed",
+            description: "World seed",
+            description_en: "World seed",
+            type: "text",
+          },
+        },
+        gamerules: {},
+      },
+      config: { seed: "42" },
+      domains: { settings: { observed_at: 1700000000 } },
+    });
+    const { renderSettingsGroups } = createSettingsFeature(deps);
+    renderSettingsGroups(["Mundo"]);
+    expect(deps.content.innerHTML).toContain("Seed");
+    expect(deps.content.innerHTML).toContain('value="42"');
+  });
+});

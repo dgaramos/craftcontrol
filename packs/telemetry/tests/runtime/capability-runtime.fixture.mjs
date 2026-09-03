@@ -6,7 +6,7 @@ delete world.afterEvents.playerDimensionChange;
 const output = [];
 console.warn = (line) => output.push(String(line));
 
-await import("../behavior_pack/scripts/main.js");
+await import("../../behavior_pack/scripts/main.js");
 
 const envelopes = output.filter((line) => line.includes("[BEDROCK_TELEMETRY]")).map((line) => JSON.parse(line.slice(line.indexOf("{"))));
 const started = envelopes.find((item) => item.type === "telemetry.started");

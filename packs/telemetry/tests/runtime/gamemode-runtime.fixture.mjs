@@ -15,7 +15,7 @@ const player = {
   getGameMode: () => "survival",
 };
 
-await import("../behavior_pack/scripts/main.js");
+await import("../../behavior_pack/scripts/main.js");
 
 // --- join + spawn ---
 world.afterEvents.playerJoin.emit({ playerName: "TestPlayer" });

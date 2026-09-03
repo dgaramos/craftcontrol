@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { getMockDynamicProperty, setMockDynamicProperty } from "@minecraft/server";
-import { STATE_BACKUP_KEY, STATE_KEY, playerStateKey } from "../behavior_pack/scripts/model.js";
+import { STATE_BACKUP_KEY, STATE_KEY, playerStateKey } from "../../behavior_pack/scripts/model.js";
 
 const legacy = JSON.stringify({ schema: 1, sequence: 9, players: { voncrush: { name: "VonCrush", deaths: 4, blocksBroken: 12 } } });
 setMockDynamicProperty(STATE_KEY, legacy);
 const output = [];
 console.warn = (line) => output.push(String(line));
 
-await import("../behavior_pack/scripts/main.js");
+await import("../../behavior_pack/scripts/main.js");
 
 const migrated = JSON.parse(getMockDynamicProperty(STATE_KEY));
 const shard = JSON.parse(getMockDynamicProperty(playerStateKey("voncrush")));

@@ -2,11 +2,11 @@ import { jest, beforeEach, test, expect } from "@jest/globals";
 
 const mockSubscribeWorldEvent = jest.fn();
 
-jest.unstable_mockModule("../behavior_pack/scripts/adapters/capabilities.js", () => ({
+jest.unstable_mockModule("../../behavior_pack/scripts/adapters/capabilities.js", () => ({
   subscribeWorldEvent: mockSubscribeWorldEvent,
 }));
 
-const { registerEvents } = await import("../behavior_pack/scripts/domain/events.js");
+const { registerEvents } = await import("../../behavior_pack/scripts/domain/events.js");
 
 const EXPECTED_SIGNALS = [
   "playerJoin",

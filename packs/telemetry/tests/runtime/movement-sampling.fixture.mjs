@@ -19,7 +19,7 @@ import { world, system } from "@minecraft/server";
 const output = [];
 console.warn = (line) => output.push(String(line));
 
-await import("../behavior_pack/scripts/main.js");
+await import("../../behavior_pack/scripts/main.js");
 
 const overworld = "minecraft:overworld";
 const nether = "minecraft:nether";

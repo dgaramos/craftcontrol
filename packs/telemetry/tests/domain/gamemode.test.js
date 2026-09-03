@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "@jest/globals";
-import { trackGameModes, removePlayer } from "../behavior_pack/scripts/domain/gamemode.js";
+import { trackGameModes, removePlayer } from "../../behavior_pack/scripts/domain/gamemode.js";
 
 function makePlayer(id, name, gameMode) {
   return {

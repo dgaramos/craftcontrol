@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { getMockDynamicProperty, setMockDynamicProperty, world } from "@minecraft/server";
-import { STATE_KEY } from "../behavior_pack/scripts/model.js";
-import { flush, loadState } from "../behavior_pack/scripts/adapters/store.js";
+import { STATE_KEY } from "../../behavior_pack/scripts/model.js";
+import { flush, loadState } from "../../behavior_pack/scripts/adapters/store.js";
 
 // Arrange: seed corrupt state so loadState() sets blocked = true
 const corrupt = "{not-json";

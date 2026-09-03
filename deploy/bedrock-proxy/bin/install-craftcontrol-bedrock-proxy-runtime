@@ -72,9 +72,18 @@ class ProductionFilesystem:
         # Look for default: prefix when checking default ACLs
         if perms.startswith("d:"):
             target = f"default:user:{user}:"
+            required = perms[len("d:u:" + user + ":"):]  # extract perm chars after d:u:<user>:
         else:
             target = f"user:{user}:"
-        return any(line.startswith(target) for line in out.splitlines())
+            required = perms[len("u:" + user + ":"):]  # extract perm chars after u:<user>:
+        for line in out.splitlines():
+            if line.startswith(target):
+                actual = line[len(target):]
+                # Check each required permission char is present (case-insensitive X/x)
+                return all(
+                    c.lower() in actual.lower() for c in required if c != "-"
+                )
+        return False
 
     def dropin_path(self, service: str) -> str:
         return f"/etc/systemd/system/{service}.service.d/runtime-paths.conf"

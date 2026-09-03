@@ -14,6 +14,7 @@ from controlplane.audit.model import AuditRecord
 from controlplane.audit.repository import SQLiteAuditRepository
 from controlplane.audit.service import AuditService
 from conftest import make_operation_db
+from factories import audit_record
 
 
 def _db(tmp_path: Path) -> Path:
@@ -27,15 +28,7 @@ def _db(tmp_path: Path) -> Path:
 
 class TestAuditRecord:
     def test_fields_are_accessible(self) -> None:
-        record = AuditRecord(
-            id=1,
-            occurred_at=1_000_000.0,
-            actor="alice",
-            action="auth.login",
-            target="alice",
-            result="success",
-            metadata={"ip": "127.0.0.1"},
-        )
+        record = audit_record(id=1, occurred_at=1_000_000.0, metadata={"ip": "127.0.0.1"})
         assert record.id == 1
         assert record.occurred_at == 1_000_000.0
         assert record.actor == "alice"
@@ -45,15 +38,7 @@ class TestAuditRecord:
         assert record.metadata == {"ip": "127.0.0.1"}
 
     def test_actor_and_target_may_be_none(self) -> None:
-        record = AuditRecord(
-            id=2,
-            occurred_at=1_000_001.0,
-            actor=None,
-            action="auth.login",
-            target=None,
-            result="denied",
-            metadata={},
-        )
+        record = audit_record(id=2, occurred_at=1_000_001.0, actor=None, target=None, result="denied")
         assert record.actor is None
         assert record.target is None
 
@@ -229,7 +214,7 @@ class TestAuditService:
     def test_query_delegates_to_port(self) -> None:
         port = FakeAuditPort()
         port._records = [
-            AuditRecord(id=1, occurred_at=1.0, actor="alice", action="auth.login", target="alice", result="success", metadata={})
+            audit_record()
         ]
         service = AuditService(port)
         result = service.query(page=1, page_size=20)

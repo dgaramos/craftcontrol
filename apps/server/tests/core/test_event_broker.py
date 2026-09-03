@@ -10,6 +10,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from controlplane.core.events import Event, EventBroker
+from factories import event
 
 
 @pytest.fixture
@@ -85,7 +86,7 @@ def test_publish_delivers_to_active_subscriber(broker: EventBroker) -> None:
 
 def test_publish_skips_full_subscriber_queue(broker: EventBroker) -> None:
     full_q: queue.Queue[Event] = queue.Queue(maxsize=1)
-    dummy_event = Event(0, "fill", 0.0, "test", {})
+    dummy_event = event(id=0, topic="fill", timestamp=0.0)
     full_q.put_nowait(dummy_event)
     with broker._lock:
         broker._subscribers.add(full_q)

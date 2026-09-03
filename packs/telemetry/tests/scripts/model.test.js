@@ -1,6 +1,6 @@
 import { test } from "@jest/globals";
 import assert from "node:assert/strict";
-import { emptyState, ensurePlayer, horizontalDistance, incrementMap, observeDimension, round } from "../behavior_pack/scripts/model.js";
+import { emptyState, ensurePlayer, horizontalDistance, incrementMap, observeDimension, round } from "../../behavior_pack/scripts/model.js";
 
 test("creates and updates a persistent player record", () => {
   const state = emptyState();

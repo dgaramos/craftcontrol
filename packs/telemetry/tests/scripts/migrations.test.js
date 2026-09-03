@@ -1,7 +1,7 @@
 import { test } from "@jest/globals";
 import assert from "node:assert/strict";
-import { migrateShardedV2, migrateState } from "../behavior_pack/scripts/migrations.js";
-import { playerShard, playerSnapshot, storageMetadata } from "./factories.mjs";
+import { migrateShardedV2, migrateState } from "../../behavior_pack/scripts/migrations.js";
+import { playerShard, playerSnapshot, storageMetadata } from "../factories.mjs";
 
 test("migrates legacy schema state without resetting counters", () => {
   const legacy = {
@@ -46,8 +46,8 @@ test("rejects unknown and future storage versions", () => {
   assert.throws(() => migrateState({ schema: 99, sequence: 0, players: {} }), /unrecognized legacy/);
 });
 
-import { validatePlayerShard } from "../behavior_pack/scripts/migrations.js";
-import { STORAGE_VERSION } from "../behavior_pack/scripts/versions.js";
+import { validatePlayerShard } from "../../behavior_pack/scripts/migrations.js";
+import { STORAGE_VERSION } from "../../behavior_pack/scripts/versions.js";
 
 test("validatePlayerShard rejects wrong storageVersion", () => {
   assert.throws(() => validatePlayerShard({ storageVersion: STORAGE_VERSION - 1, key: "voncrush", sequence: 1, player: {} }), /unsupported player shard version/);

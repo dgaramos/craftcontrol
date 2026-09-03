@@ -1,6 +1,6 @@
 import { jest, beforeEach, test, expect } from "@jest/globals";
 import { world } from "@minecraft/server";
-import { startTelemetryRuntime } from "../behavior_pack/scripts/main.js";
+import { startTelemetryRuntime } from "../../behavior_pack/scripts/main.js";
 
 const emptyStats = () => ({ joins: 0, deaths: 0, playerKills: 0, mobKills: 0, killsByType: {}, damageTaken: 0, damageDealt: 0, blocksBroken: 0, brokenByType: {}, blocksPlaced: 0, placedByType: {}, distance: 0, distanceByDimension: {}, activeTimeByDimension: {} });
 const mockSystem = { run: jest.fn(), runTimeout: jest.fn() };

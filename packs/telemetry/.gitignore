@@ -1,7 +1,2 @@
-node_modules/
-dist/
-*.mcpack
-.DS_Store
-roadmap/
-coverage/
 junit.xml
+coverage/

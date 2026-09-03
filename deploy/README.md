@@ -25,10 +25,9 @@ against a live container.
 
 ## Upgrade path
 
-When deploying a new image that renames a Python module (e.g.
-`minecraft_manager` → `controlplane`), running the backup on the host fails
-because the host binary and the running container may use different module
-paths. The deploy script must follow this order:
+When deploying a new image whose Python module layout differs from the
+currently running one, running the backup on the host fails because the host
+binary and the running container may use different module paths. The deploy script must follow this order:
 
 1. Run `docker exec <container> craftcontrol backup create` against the
    **currently running container** to create a pre-upgrade backup using that

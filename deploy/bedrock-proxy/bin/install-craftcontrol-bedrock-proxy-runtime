@@ -32,7 +32,7 @@ _AGENT_SRC = _REPO_ROOT / "services" / "bedrock-proxy"
 if str(_AGENT_SRC) not in sys.path:
     sys.path.insert(0, str(_AGENT_SRC))
 
-from proxy.preflight.preflight import (  # noqa: E402
+from src.preflight.preflight import (  # noqa: E402
     FakeFilesystem,
     Preflight,
     ProductionRunner,

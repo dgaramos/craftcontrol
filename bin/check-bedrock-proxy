@@ -6,7 +6,7 @@ readonly PYTHON="${PYTHON:-python3}"
 cd "$ROOT"
 
 "$PYTHON" -m pytest services/bedrock-proxy/tests/ \
-  --cov=services/bedrock-proxy \
+  --cov=services/bedrock-proxy/src \
   --cov-report=xml:coverage-bedrock-proxy.xml \
   -v
 echo "bedrock-proxy gate: ok"

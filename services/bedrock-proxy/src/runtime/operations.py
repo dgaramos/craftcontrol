@@ -11,8 +11,8 @@ import logging
 import time
 from typing import Any
 
-from proxy.ports import ContainerRunner, FileSystem, HealthProbe, RestartTimeoutError
-from proxy.store.store import OperationRecord, OperationStore
+from src.ports import ContainerRunner, FileSystem, HealthProbe, RestartTimeoutError
+from src.store.store import OperationRecord, OperationStore
 
 logger = logging.getLogger("bedrock-proxy")
 

@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from proxy.adapters.filesystem import BedrockFileSystem
-from proxy.runtime.operations import _build_updates
+from src.adapters.filesystem import BedrockFileSystem
+from src.runtime.operations import _build_updates
 
 
 class TestBedrockFileSystem:

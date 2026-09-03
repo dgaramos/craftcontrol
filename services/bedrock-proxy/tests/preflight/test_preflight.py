@@ -10,7 +10,7 @@ from typing import Any, Sequence
 
 import pytest
 
-from proxy.preflight.preflight import (
+from src.preflight.preflight import (
     Preflight,
     PreflightResult,
     SystemInfo,

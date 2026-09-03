@@ -20,9 +20,9 @@ import pytest
 
 from helpers import make_executor  # noqa: F401
 
-from proxy.runtime.queue_worker import OperationQueue
-from proxy.store.store import OperationStore
-from proxy.http.router import build_handler_class
+from src.runtime.queue_worker import OperationQueue
+from src.store.store import OperationStore
+from src.http.router import build_handler_class
 
 
 # ---------------------------------------------------------------------------
@@ -194,7 +194,7 @@ def _start_test_server(tmp_path, executor=None, workers=1, queue_size=8):
     op_queue = OperationQueue(executor, workers=workers, queue_size=queue_size)
     op_queue.start()
 
-    from proxy.adapters.docker import DockerContainerStatus
+    from src.adapters.docker import DockerContainerStatus
     status_checker = DockerContainerStatus(subprocess_run=_noop_subprocess)
 
     handler_class = build_handler_class(

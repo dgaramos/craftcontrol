@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
 
-from proxy.ports import FileSystem
+from src.ports import FileSystem
 
 logger = logging.getLogger("bedrock-proxy")
 

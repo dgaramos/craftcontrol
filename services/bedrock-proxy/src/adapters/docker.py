@@ -6,7 +6,7 @@ import subprocess
 import time
 from typing import TYPE_CHECKING, Any, Callable
 
-from proxy.ports import ContainerRunner, ContainerStatusChecker, RestartTimeoutError  # noqa: F401
+from src.ports import ContainerRunner, ContainerStatusChecker, RestartTimeoutError  # noqa: F401
 
 logger = logging.getLogger("bedrock-proxy")
 

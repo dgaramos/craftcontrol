@@ -19,8 +19,8 @@ from dataclasses import dataclass
 from typing import Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from proxy.runtime.operations import OperationExecutor
-    from proxy.store.store import OperationRecord, OperationStore
+    from src.runtime.operations import OperationExecutor
+    from src.store.store import OperationRecord, OperationStore
 
 logger = logging.getLogger("bedrock-proxy.queue")
 

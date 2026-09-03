@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test, jest } from "@jest/globals";
 import { suppressConsoleError } from "../helpers.mjs";
+import { playerShard, playerSnapshot, storageMetadata } from "../factories.mjs";
 import { STATE_KEY, PLAYER_STATE_PREFIX, STATE_BACKUP_KEY, STATE_BACKUP_V1_KEY, STATE_BACKUP_V2_KEY, playerKey, playerStateKey } from "../../behavior_pack/scripts/model.js";
 import { STORAGE_VERSION } from "../../behavior_pack/scripts/versions.js";
 
@@ -32,17 +33,11 @@ describe("loadState", () => {
   test("loads sharded v3 state from dynamic properties", async () => {
     const { mock, store } = await loadStore();
     const key = playerKey("VonCrush");
-    mock.setMockDynamicProperty(STATE_KEY, JSON.stringify({ storageVersion: 3, sequence: 5 }));
-    mock.setMockDynamicProperty(playerStateKey(key), JSON.stringify({
-      storageVersion: 3, sequence: 5, key,
-      player: {
-        name: "VonCrush", aliases: ["VonCrush"], firstSeenAt: 1, lastSeenAt: 2,
-        joins: 2, deaths: 1, playerKills: 0, mobKills: 3, blocksBroken: 10, blocksPlaced: 5,
-        damageDealt: 0, damageTaken: 0, distance: 0, dimensions: {}, brokenByType: {},
-        placedByType: {}, killsByType: {}, distanceByDimension: {}, activeTimeByDimension: {},
-        firstDimensionVisitAt: {}, lastDimensionVisitAt: {},
-      },
-    }));
+    mock.setMockDynamicProperty(STATE_KEY, JSON.stringify(storageMetadata({ sequence: 5 })));
+    mock.setMockDynamicProperty(playerStateKey(key), JSON.stringify(playerShard({
+      sequence: 5, key,
+      player: playerSnapshot({ firstSeenAt: 1, lastSeenAt: 2, joins: 2, deaths: 1, mobKills: 3, blocksBroken: 10, blocksPlaced: 5 }),
+    })));
 
     const state = store.loadState();
     expect(state.sequence).toBe(5);
@@ -152,13 +147,7 @@ describe("mutatePlayer", () => {
     const state = store.loadState();
     const name = "VonCrush";
     const key = playerKey(name);
-    state.players[key] = {
-      name, aliases: [name], firstSeenAt: 0, lastSeenAt: 0,
-      joins: 0, deaths: 0, playerKills: 0, mobKills: 0, blocksBroken: 0, blocksPlaced: 0,
-      damageDealt: 0, damageTaken: 0, distance: 0, dimensions: {}, brokenByType: {},
-      placedByType: {}, killsByType: {}, distanceByDimension: {}, activeTimeByDimension: {},
-      firstDimensionVisitAt: {}, lastDimensionVisitAt: {},
-    };
+    state.players[key] = playerSnapshot({ name });
     store.mutatePlayer(name, (s) => { s.players[key].deaths += 1; });
     store.flush();
     const shardRaw = mock.getMockDynamicProperty(playerStateKey(key));
@@ -195,13 +184,7 @@ describe("flush", () => {
     const state = store.loadState();
     const name = "TestPlayer";
     const key = playerKey(name);
-    state.players[key] = {
-      name, aliases: [name], firstSeenAt: 0, lastSeenAt: 0,
-      joins: 0, deaths: 0, playerKills: 0, mobKills: 0, blocksBroken: 0, blocksPlaced: 0,
-      damageDealt: 0, damageTaken: 0, distance: 0, dimensions: {}, brokenByType: {},
-      placedByType: {}, killsByType: {}, distanceByDimension: {}, activeTimeByDimension: {},
-      firstDimensionVisitAt: {}, lastDimensionVisitAt: {},
-    };
+    state.players[key] = playerSnapshot({ name });
     store.mutatePlayer(name, (s) => { s.players[key].joins += 1; });
     store.flush();
     expect(typeof mock.getMockDynamicProperty(STATE_KEY)).toBe("string");

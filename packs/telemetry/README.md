@@ -79,7 +79,7 @@ behavior_pack/manifest.json
 behavior_pack/scripts/{main.js,migrations.js,model.js,store.js,transport.js}
 scripts/{install.mjs,install.sh,package.sh}
 tests/{adapters,domain,runtime,scripts}/
-tests/{main.test.js,model.test.js,migrations.test.js,minecraft-server.mock.js,helpers.mjs}
+tests/{main.test.js,model.test.js,migrations.test.js,minecraft-server.mock.js,helpers.mjs,factories.mjs}
 ```
 
 ## Requirements

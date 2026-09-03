@@ -492,3 +492,86 @@ def test_audit_details_never_contain_secrets(auth_db) -> None:
         details_text = _json.dumps(details).lower()
         for bad in forbidden:
             assert bad not in details_text, f"Secret '{bad}' found in audit details: {details_str}"
+
+
+# ---------------------------------------------------------------------------
+# Audit trail tests for create_invitation and suspend (issue #266)
+# ---------------------------------------------------------------------------
+
+def _audit_rows_with_details(db_path: Path) -> list[tuple]:
+    with sqlite3.connect(db_path) as conn:
+        return conn.execute(
+            "SELECT actor_identity, action, target, result, details FROM audit_log ORDER BY occurred_at"
+        ).fetchall()
+
+
+def test_invite_emits_audit_on_success(auth_db) -> None:
+    path, auth = auth_db
+    # Bootstrap an owner to act as the inviter
+    invitation_bootstrap = auth.bootstrap("VonCrush")
+    auth.claim("VonCrush", invitation_bootstrap, "a sufficiently long password")
+    before = len(_audit_rows_with_details(path))
+
+    auth.create_invitation("Nicole", "viewer", actor="VonCrush")
+
+    rows = _audit_rows_with_details(path)
+    new_rows = rows[before:]
+    assert len(new_rows) == 1
+    actor, action, target, result, _ = new_rows[0]
+    assert action == "auth.invitation.created"
+    assert result == "success"
+    assert target is not None  # internal identity for Nicole
+    assert actor == "VonCrush"
+
+
+def test_invite_audit_contains_role_not_secret(auth_db) -> None:
+    import json as _json
+    path, auth = auth_db
+    before = len(_audit_rows_with_details(path))
+
+    auth.create_invitation("Nicole", "operator", actor="VonCrush")
+
+    rows = _audit_rows_with_details(path)
+    new_rows = rows[before:]
+    assert len(new_rows) == 1
+    _, _, _, _, details_str = new_rows[0]
+    details = _json.loads(details_str)
+    assert details.get("role") == "operator"
+    # No secrets must appear in the stored details
+    forbidden = {"password", "token_hash", "password_hash"}
+    for bad in forbidden:
+        assert bad not in _json.dumps(details).lower()
+
+
+def test_suspend_emits_audit_on_success(auth_db) -> None:
+    path, auth = auth_db
+    # Create Nicole as a real user first
+    invitation = auth.create_invitation("Nicole", "viewer")
+    auth.claim("Nicole", invitation, "a sufficiently long password")
+    before = len(_audit_rows_with_details(path))
+
+    auth.suspend("Nicole", "VonCrush")
+
+    rows = _audit_rows_with_details(path)
+    new_rows = rows[before:]
+    assert len(new_rows) == 1
+    actor, action, target, result, _ = new_rows[0]
+    assert action == "auth.access.suspended"
+    assert result == "success"
+    assert target is not None  # internal identity for Nicole
+    assert actor == "VonCrush"
+
+
+def test_suspend_nonexistent_user_emits_failure_audit(auth_db) -> None:
+    path, auth = auth_db
+    before = len(_audit_rows_with_details(path))
+
+    with pytest.raises(ValueError):
+        auth.suspend("ghost-player", "VonCrush")
+
+    rows = _audit_rows_with_details(path)
+    new_rows = rows[before:]
+    assert len(new_rows) == 1
+    _, action, _, result, _ = new_rows[0]
+    assert action == "auth.access.suspended"
+    assert result == "failure"

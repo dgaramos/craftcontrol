@@ -1,10 +1,15 @@
 from __future__ import annotations
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, g, jsonify, request
 from werkzeug.exceptions import BadRequest
 
 from .dependencies import manager
 from ..auth.http import require
+
+
+def _actor() -> str | None:
+    user = getattr(g, "user", None)
+    return user.get("id") if user else None
 
 players_api = Blueprint("players_api", __name__)
 
@@ -30,7 +35,7 @@ def player_operator(player: str):
         enabled = payload.get("enabled")
         if not isinstance(enabled, bool):
             raise ValueError("valor booleano inválido")
-        manager().set_player_operator(player, enabled)
+        manager().set_player_operator(player, enabled, actor=_actor())
     except (AttributeError, TypeError, ValueError) as error:
         return jsonify(error=str(error)), 400
     except Exception as error:

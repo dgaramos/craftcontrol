@@ -308,7 +308,7 @@ def test_player_operator_enable_returns_ok(client, service: MagicMock) -> None:
     data = resp.get_json()
     assert data["ok"] is True
     assert data["operator"] is True
-    service.set_player_operator.assert_called_once_with("VonCrush", True)
+    service.set_player_operator.assert_called_once_with("VonCrush", True, actor="disabled")
 
 
 def test_player_operator_invalid_value_returns_400(client) -> None:

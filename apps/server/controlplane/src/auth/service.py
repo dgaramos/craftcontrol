@@ -338,6 +338,7 @@ class AuthService:
 
     def suspend(self, player: str, actor: str) -> None:
         now = time.time()
+        identity: str | None = None
         try:
             with self._connect() as connection:
                 identity = self._resolve_identity(connection, player)
@@ -353,7 +354,7 @@ class AuthService:
                 self._audit(connection, actor, "auth.access.suspended", identity, "success", {})
         except ValueError:
             with self._connect() as audit_conn:
-                self._audit(audit_conn, actor, "auth.access.suspended", player, "failure", {})
+                self._audit(audit_conn, actor, "auth.access.suspended", identity, "failure", {})
             raise
 
     def require_capability(self, user: dict[str, Any], capability: str) -> None:

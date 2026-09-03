@@ -157,7 +157,7 @@ class ManagerService:
         try:
             self._world.run_world_action(action)
         except KeyError:
-            self._audit(actor=actor, action="world.action", target=action, result="failure")
+            self._audit(actor=actor, action="world.action", target=None, result="failure")
             raise
         self._audit(actor=actor, action="world.action", target=action, result="success")
 
@@ -165,7 +165,7 @@ class ManagerService:
         try:
             result = self._world.time_action(action, payload)
         except (KeyError, ValueError):
-            self._audit(actor=actor, action="world.time.action", target=action, result="failure")
+            self._audit(actor=actor, action="world.time.action", target=None, result="failure")
             raise
         self._audit(actor=actor, action="world.time.action", target=action, result="success")
         return result
@@ -274,7 +274,7 @@ class ManagerService:
     def set_gamerule(self, rule: str, value: Any, actor: str | None = None) -> str:
         from ..core.schema import GAMERULES, validate_value
         if rule not in GAMERULES:
-            self._audit(actor=actor, action="server.gamerule.changed", target=rule, result="failure")
+            self._audit(actor=actor, action="server.gamerule.changed", target=None, result="failure")
             raise KeyError(rule)
         validated = validate_value(GAMERULES[rule], value)
         self.bedrock.send(["gamerule", rule, validated])

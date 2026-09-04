@@ -379,8 +379,8 @@ describe("createAuditFeature — outcomeClass all branches", () => {
     });
     const { renderAuditPanel } = createAuditFeature(deps);
     await renderAuditPanel();
-    // The td should have an empty class attribute
-    expect(deps.content.innerHTML).toContain('class=""');
+    // Unknown outcomes get the neutral badge class
+    expect(deps.content.innerHTML).toContain('audit-outcome--neutral');
   });
 });
 

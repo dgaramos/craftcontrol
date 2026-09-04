@@ -96,10 +96,12 @@ done
   || fail "frontend unexpectedly received the persistent data mount"
 
 frontend_port="${CRAFTCONTROL_SPLIT_PORT:-8082}"
-curl --fail --silent --show-error "http://127.0.0.1:$frontend_port/healthz" >/dev/null
-curl --fail --silent --show-error "http://127.0.0.1:$frontend_port/version.json" | grep "\"version\":\"$deployed_version\"" >/dev/null
-curl --fail --silent --show-error "http://127.0.0.1:$frontend_port/api/health" >/dev/null
-[[ "$(curl --silent --output /dev/null --write-out '%{http_code}' "http://127.0.0.1:$frontend_port/api/auth/me")" == "401" ]] \
+_frontend_host="$(ip route show default 2>/dev/null | awk 'NR==1{print $3}')"
+_frontend_host="${_frontend_host:-127.0.0.1}"
+curl --fail --silent --show-error "http://${_frontend_host}:$frontend_port/healthz" >/dev/null
+curl --fail --silent --show-error "http://${_frontend_host}:$frontend_port/version.json" | grep "\"version\":\"$deployed_version\"" >/dev/null
+curl --fail --silent --show-error "http://${_frontend_host}:$frontend_port/api/health" >/dev/null
+[[ "$(curl --silent --output /dev/null --write-out '%{http_code}' "http://${_frontend_host}:$frontend_port/api/auth/me")" == "401" ]] \
   || fail "anonymous authentication canary did not return 401"
 
 echo "frontend deploy complete: version=$deployed_version backend=unchanged persistent-mounts=isolated"

@@ -45,3 +45,27 @@ API shape; feature tests (`*-feature.test.js`) verify behaviour. Keep them
 separate so a contract change doesn't force rewriting behaviour tests.
 
 Run `../../bin/check-frontend` and `git diff --check` before handoff.
+
+## Local development
+
+A zero-dependency dev proxy serves the frontend against any running backend:
+
+```bash
+# First-time setup — copy and edit the env file:
+cp apps/client/.env.example apps/client/.env
+# edit CRAFTCONTROL_BACKEND to point at your backend
+
+# Or manage it with the local-env dotfiles tool (no .env file needed):
+local-env set CRAFTCONTROL_BACKEND http://192.168.15.50:8082
+
+# Start the proxy (from the repo root):
+cd apps/client && npm run dev
+# → http://localhost:3333
+```
+
+The proxy serves `apps/client/static/` and `apps/client/templates/` locally and
+forwards `/api/*` and `/metrics` to the configured backend. Changes to CSS and JS
+are picked up on the next browser reload — no rebuild required.
+
+`PORT` overrides the default listen port (3333). Both vars can also be exported
+directly in the shell; env vars take precedence over the `.env` file.

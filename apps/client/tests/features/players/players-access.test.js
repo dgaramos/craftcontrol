@@ -129,7 +129,7 @@ describe("panelAccessDetailMarkup — owner, active account", () => {
 
   test("compact card uses player-access-compact class", () => {
     const html = getAccess().panelAccessDetailMarkup({ name: "Hero" }, null, "Panel Access");
-    expect(html).toContain("player-access-compact");
+    expect(html).toContain("player-panel-card");
   });
 });
 

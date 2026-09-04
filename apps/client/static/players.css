@@ -124,11 +124,19 @@
 .player-detail-loading { padding: 40px; text-align: center; color: var(--muted); }
 .player-detail-screen { display: grid; gap: 12px; }
 .player-back { justify-self: start; }
-.player-detail-hero { display: flex; align-items: center; flex-wrap: wrap; gap: 18px; padding: 20px; }
-.player-detail-hero .player-data-link { margin-left: auto; white-space: nowrap; }
+.player-detail-hero { padding: 20px; display: grid; gap: 0; }
+.player-detail-identity { display: flex; align-items: center; gap: 18px; }
+.player-detail-identity-copy { flex: 1; min-width: 0; }
+.player-detail-identity .player-data-link { margin-left: auto; white-space: nowrap; flex: 0 0 auto; }
 .player-avatar.large { width: 68px; height: 68px; font-size: 1.7rem; }
 .player-detail-hero h2 { margin: 4px 0; font-size: 1.55rem; }
 .player-detail-hero p { margin: 0; color: var(--muted); }
+.player-detail-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,.07); }
+.player-panel-card { display: grid; gap: 0; background: #0b0f0c; border: 2px solid #293029; }
+.player-panel-header { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 2px solid #293029; }
+.player-panel-title { font-size: .62rem; font-weight: 900; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.player-panel-body { display: grid; gap: 14px; padding: 14px; }
+.player-operator-row { display: flex; align-items: center; gap: 10px; }
 .player-detail-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .player-detail-stats span { min-width: 0; padding: 14px; background: #111612; border: 2px solid #080a08; }
 .player-detail-stats small, .player-detail-stats b { display: block; }
@@ -259,8 +267,8 @@
   .player-roster-summary { display: none; }
   .player-history-grid { grid-template-columns: 1fr; }
   .player-detail-stats { grid-template-columns: repeat(2, 1fr); }
-  .player-detail-hero { align-items: flex-start; flex-wrap: wrap; }
-  .player-detail-hero .player-data-link { width: 100%; margin-left: 0; }
+  .player-detail-panels { grid-template-columns: 1fr; }
+  .player-detail-identity .player-data-link { display: none; }
   .player-history-grid .profile-facts { grid-column: auto; }
   .event-history .timeline-item { grid-template-columns: 14px minmax(0, 1fr); align-items: start; }
   .timeline-timestamp { grid-column: 2; grid-row: 2; display: flex; min-width: 0; gap: 6px; padding: 0; text-align: left; border: 0; }

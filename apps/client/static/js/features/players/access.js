@@ -13,9 +13,46 @@ function panelAccessHeroRow(profile, account) {
 
 function panelAccessDetailMarkup(profile, account, title) {
   if (state.user?.role !== "owner") return "";
-  const action = account?.status === "active" ? (state.locale === "pt" ? "Gerar recuperação" : "Generate recovery") : (state.locale === "pt" ? "Gerar acesso" : "Generate access");
-  const suspendBtn = account?.status === "active" ? `<button id="detail-access-suspend" class="danger" type="button">${state.locale === "pt" ? "Suspender acesso" : "Suspend access"}</button>` : "";
-  return `<section class="player-access-compact block-panel"><span class="admin-scope panel-scope">CRAFTCONTROL</span><div class="panel-access-actions"><button id="detail-access-invite" class="primary" type="button">${action}</button>${suspendBtn}</div><div id="detail-access-code" class="access-code" hidden><code></code><button type="button">${state.locale === "pt" ? "Copiar código" : "Copy code"}</button><small>${state.locale === "pt" ? "Mostrado uma única vez. Expira em 15 minutos." : "Shown once. Expires in 15 minutes."}</small></div></section>`;
+  const pt = state.locale === "pt";
+  const es = state.locale === "es";
+  const roleLabel = pt ? "Papel" : es ? "Rol" : "Role";
+  const actionsLabel = pt ? "Ações" : es ? "Acciones" : "Actions";
+  const action = account?.status === "active"
+    ? (pt ? "Gerar recuperação" : es ? "Generar recuperación" : "Generate recovery")
+    : (pt ? "Gerar acesso" : es ? "Generar acceso" : "Generate access");
+  const suspendBtn = account?.status === "active"
+    ? `<button id="detail-access-suspend" class="danger" type="button">${pt ? "Suspender acesso" : es ? "Suspender acceso" : "Suspend access"}</button>`
+    : "";
+  return [
+    `<div class="player-panel-card">`,
+    `<div class="player-panel-header">`,
+    `<span class="admin-scope panel-scope">CRAFTCONTROL</span>`,
+    `<span class="player-panel-title">${pt ? "Acesso ao painel" : es ? "Acceso al panel" : "Panel access"}</span>`,
+    `</div>`,
+    `<div class="player-panel-body">`,
+    `<div class="hero-attr-control">`,
+    `<span class="hero-attr-label">${roleLabel}</span>`,
+    `<select id="detail-access-role" class="gamemode-select">`,
+    `<option value="viewer" ${account?.role === "viewer" ? "selected" : ""}>Viewer · ${pt ? "somente leitura" : es ? "solo lectura" : "read only"}</option>`,
+    `<option value="operator" ${account?.role === "operator" ? "selected" : ""}>Operator · ${pt ? "gerencia o servidor" : es ? "gestiona el servidor" : "manages server"}</option>`,
+    `<option value="owner" ${account?.role === "owner" ? "selected" : ""}>Owner · ${pt ? "controle completo" : es ? "control total" : "full control"}</option>`,
+    `</select>`,
+    `</div>`,
+    `<div class="hero-attr-control">`,
+    `<span class="hero-attr-label">${actionsLabel}</span>`,
+    `<div class="panel-access-actions">`,
+    `<button id="detail-access-invite" class="primary" type="button">${action}</button>`,
+    suspendBtn,
+    `</div>`,
+    `</div>`,
+    `<div id="detail-access-code" class="access-code" hidden>`,
+    `<code></code>`,
+    `<button type="button">${pt ? "Copiar código" : es ? "Copiar código" : "Copy code"}</button>`,
+    `<small>${pt ? "Mostrado uma única vez. Expira em 15 minutos." : es ? "Mostrado una vez. Expira en 15 minutos." : "Shown once. Expires in 15 minutes."}</small>`,
+    `</div>`,
+    `</div>`,
+    `</div>`,
+  ].join("");
 }
 
 function bindPlayerAccess(profile, account) {

@@ -41,6 +41,7 @@ def install_auth(app: Flask, service: AuthService, mode: str, secure_cookie: boo
         g.user = service.authenticate(request.cookies.get(COOKIE_NAME))
         public = (
             request.path == "/" or request.path.startswith("/static/") or request.path == "/api/health"
+            or request.path == "/metrics"
             or request.path in {"/api/auth/me", *CSRF_EXEMPT_PATHS}
         )
         if g.user is None:

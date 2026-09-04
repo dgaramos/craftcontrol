@@ -261,8 +261,8 @@ async function loadDiagnostics() {
     // -- Key Metrics heading --
     const kpiSection = document.createElement("div");
     kpiSection.className = "diag-section";
-    const kpiHeading = document.createElement("h4");
-    kpiHeading.className = "diag-section-heading";
+    const kpiHeading = document.createElement("h3");
+    kpiHeading.className = "diag-metrics-heading";
     kpiHeading.textContent = t("diagKeyMetrics");
     kpiSection.append(kpiHeading, kpiGrid);
 

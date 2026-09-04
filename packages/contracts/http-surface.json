@@ -325,6 +325,13 @@
       "owner": "backend"
     },
     {
+      "path": "/metrics",
+      "methods": [
+        "GET"
+      ],
+      "owner": "backend"
+    },
+    {
       "path": "/static/<path:filename>",
       "methods": [
         "GET"

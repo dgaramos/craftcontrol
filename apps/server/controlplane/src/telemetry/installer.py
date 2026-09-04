@@ -3,13 +3,19 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 import json
+import logging
 import os
 from pathlib import Path
 import shutil
 import tempfile
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ..server.files import ServerFiles
+
+if TYPE_CHECKING:
+    from ..audit import AuditService
+
+LOGGER = logging.getLogger(__name__)
 
 
 PACK_ID = "8c916948-76c6-4aa5-91e0-97671dfd3830"
@@ -35,7 +41,7 @@ class TelemetryPackStatus:
 
 
 class TelemetryPackInstaller:
-    def __init__(self, project: Path, source: Path) -> None:
+    def __init__(self, project: Path, source: Path, audit_service: "AuditService | None" = None) -> None:
         self.project = project.resolve()
         self.data = self.project / "data"
         self.source = source.resolve()
@@ -43,14 +49,15 @@ class TelemetryPackInstaller:
         if self.manifest["header"].get("uuid") != PACK_ID:
             raise ValueError("Telemetry pack UUID does not match CraftControl's allowlist")
         self.version = self._version(self.manifest["header"].get("version"))
+        self._audit_service = audit_service
 
     @classmethod
-    def bundled(cls, project: Path) -> "TelemetryPackInstaller":
+    def bundled(cls, project: Path, audit_service: "AuditService | None" = None) -> "TelemetryPackInstaller":
         here = Path(__file__).resolve()
         for parent in here.parents:
             candidate = parent / "packs" / "telemetry" / "behavior_pack"
             if candidate.is_dir():
-                return cls(project, candidate)
+                return cls(project, candidate, audit_service=audit_service)
         raise FileNotFoundError("Telemetry behavior pack not found relative to installer")
 
     def status(self, world: str | None = None) -> TelemetryPackStatus:
@@ -96,7 +103,9 @@ class TelemetryPackInstaller:
                 shutil.rmtree(staging)
             self._restore_backup(backup)
             raise
-        return {"changed": True, "action": "install", "status": self.status(world_name).to_dict(), "backup": backup.name, "restart_required": True}
+        result = {"changed": True, "action": "install", "status": self.status(world_name).to_dict(), "backup": backup.name, "restart_required": True}
+        self._audit_write("telemetry.installed", None, "ok", {"world": world_name, "version": self.version})
+        return result
 
     def disable(self, world: str | None = None) -> dict[str, Any]:
         world_name, world_directory = self._world(world)
@@ -105,7 +114,9 @@ class TelemetryPackInstaller:
             return {"changed": False, "action": "disable", "status": self.status(world_name).to_dict(), "backup": None, "restart_required": False}
         backup = self._backup(world_name, world_directory)
         self._write_associations(world_directory, [item for item in associations if item.get("pack_id") != PACK_ID])
-        return {"changed": True, "action": "disable", "status": self.status(world_name).to_dict(), "backup": backup.name, "restart_required": True}
+        result = {"changed": True, "action": "disable", "status": self.status(world_name).to_dict(), "backup": backup.name, "restart_required": True}
+        self._audit_write("telemetry.disabled", None, "ok", {"world": world_name})
+        return result
 
     def remove(self, world: str | None = None) -> dict[str, Any]:
         world_name, world_directory = self._world(world)
@@ -117,7 +128,24 @@ class TelemetryPackInstaller:
         for destination in (self._destination, self._legacy_destination):
             if destination.exists():
                 shutil.rmtree(destination)
-        return {"changed": True, "action": "remove", "status": self.status(world_name).to_dict(), "backup": backup.name, "restart_required": True}
+        result = {"changed": True, "action": "remove", "status": self.status(world_name).to_dict(), "backup": backup.name, "restart_required": True}
+        self._audit_write("telemetry.removed", None, "ok", {"world": world_name})
+        return result
+
+    def _audit_write(self, action: str, target: str | None, result: str, metadata: dict) -> None:
+        """Write a sanitized audit record, swallowing errors to preserve pack safety guarantees."""
+        if self._audit_service is None:
+            return
+        try:
+            self._audit_service.write(
+                actor="system",
+                action=action,
+                target=target,
+                result=result,
+                metadata=metadata,
+            )
+        except Exception:
+            LOGGER.warning("telemetry audit write failed action=%s", action, exc_info=True)
 
     def latest_backup_name(self) -> str | None:
         """Return the name of the most recent backup directory, or None if no backups exist."""

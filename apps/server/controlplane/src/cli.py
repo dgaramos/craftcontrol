@@ -10,6 +10,7 @@ from .core.config import Settings
 from .server.console import BedrockClient
 from .operations.backup import BackupService, docker_container_running
 from .auth.service import AuthService
+from .audit import SQLiteAuditRepository, AuditService
 from .core.repository import StateRepository
 from .telemetry.installer import TelemetryPackInstaller
 
@@ -57,10 +58,14 @@ class CliDependencies:
             settings.backup_root,
             BedrockClient(settings.container, [], settings.console_wait_seconds),
             lambda: docker_container_running(settings.container),
+            audit_service=AuditService(SQLiteAuditRepository(settings.database)),
         )
     )
     installer_factory: Callable[[Settings, Path], _Installer] = field(
-        default=lambda settings, project: TelemetryPackInstaller.bundled(project)
+        default=lambda settings, project: TelemetryPackInstaller.bundled(
+            project,
+            audit_service=AuditService(SQLiteAuditRepository(settings.database)),
+        )
     )
 
 

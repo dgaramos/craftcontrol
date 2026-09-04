@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from contextlib import contextmanager
 import hashlib
 import json
+import logging
 import os
 from pathlib import Path
 import shutil
@@ -12,10 +13,15 @@ import subprocess
 import tarfile
 import tempfile
 import time
-from typing import Callable, Iterator
+from typing import TYPE_CHECKING, Callable, Iterator
 
 from ..core.sqlite import _record_connection_wait, _record_contention_failure
 from ..ports import ServerConsole
+
+if TYPE_CHECKING:
+    from ..audit import AuditService
+
+LOGGER = logging.getLogger(__name__)
 
 
 class BackupService:
@@ -38,6 +44,7 @@ class BackupService:
         console: ServerConsole,
         server_running: Callable[[], bool],
         sqlite_connect: Callable[[Path], sqlite3.Connection] | None = None,
+        audit_service: "AuditService | None" = None,
     ) -> None:
         self.database = database.resolve()
         self.project = project.resolve()
@@ -45,6 +52,7 @@ class BackupService:
         self.console = console
         self.server_running = server_running
         self._sqlite_connect = sqlite_connect or self._default_sqlite_connect
+        self._audit_service = audit_service
 
     def create(self, world: str | None = None) -> dict[str, object]:
         world_dir = self._world_directory(world)
@@ -74,7 +82,9 @@ class BackupService:
             finally:
                 if held:
                     self.console.send(["save", "resume"])
-        return self.verify(destination.name)
+        result = self.verify(destination.name)
+        self._audit_write("backup.created", identifier, "ok", {"world": result.get("manifest", {}).get("world", "")})
+        return result
 
     def list(self) -> list[dict[str, object]]:
         if not self.backup_root.exists():
@@ -126,7 +136,9 @@ class BackupService:
             directory = self._backup_directory(identifier)
             shutil.rmtree(directory)
             deleted.append(identifier)
-        return {"ok": True, "deleted": deleted, "candidates": [], "dry_run": False}
+        result = {"ok": True, "deleted": deleted, "candidates": [], "dry_run": False}
+        self._audit_write("backup.pruned", None, "ok", {"deleted_count": len(deleted)})
+        return result
 
     def restore(self, identifier: str, confirmed: bool = False) -> dict[str, object]:
         if not confirmed:
@@ -162,7 +174,29 @@ class BackupService:
             sidecar = Path(f"{self.database}{suffix}")
             if sidecar.exists():
                 sidecar.unlink()
+        self._audit_write("backup.restored", identifier, "ok", {"world": world_name})
         return {"ok": True, "id": identifier, "world": world_name, "recovery": str(recovery_root)}
+
+    def _audit_write(
+        self,
+        action: str,
+        target: str | None,
+        result: str,
+        metadata: dict,
+    ) -> None:
+        """Write a sanitized audit record, swallowing errors to preserve recovery semantics."""
+        if self._audit_service is None:
+            return
+        try:
+            self._audit_service.write(
+                actor="system",
+                action=action,
+                target=target,
+                result=result,
+                metadata=metadata,
+            )
+        except Exception:
+            LOGGER.warning("backup audit write failed action=%s", action, exc_info=True)
 
     def _world_directory(self, world: str | None) -> Path:
         worlds = (self.project / "data" / "worlds").resolve()

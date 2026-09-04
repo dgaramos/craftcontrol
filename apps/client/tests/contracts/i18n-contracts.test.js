@@ -73,7 +73,7 @@ describe("i18n contracts — SVG sprite usage in game-terms.js", () => {
   });
 
   test("game-terms.js uses craftcontrol-ui.svg sprite", () => {
-    expect(gameTermsSource).toContain("/static/craftcontrol-ui.svg#ui-");
+    expect(gameTermsSource).toMatch(/\/static\/craftcontrol-ui\.svg(\?[^#"]*)?#ui-/);
   });
 
   test("game-terms.js exports blockTermMarkup function", () => {

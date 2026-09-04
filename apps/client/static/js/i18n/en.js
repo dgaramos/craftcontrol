@@ -127,5 +127,5 @@ export const en = {
     opParentLink: "Retry of",
     domainFreshness: "Domain freshness", domainObservedAt: "Last observed", domainAgeSeconds: "Age (s)", domainStale: "Stale", domainFresh: "Fresh",
     audit: "Audit", auditTitle: "Audit history", auditActor: "Actor", auditAction: "Action", auditTarget: "Target", auditResult: "Outcome", auditDate: "Date", auditFilterAll: "All", auditEmpty: "No audit records match the current filters.", auditPrev: "Previous", auditNext: "Next", auditApply: "Apply filters",
-    diagUpdatedAt: "Updated at", diagDashboard: "Dashboard", diagKeyMetrics: "Key Metrics", diagRuntimeSection: "Runtime & Reconciliation",
+    diagUpdatedAt: "Updated at", diagDashboard: "Diagnostics", diagDashboardEyebrow: "HEALTH", diagDashboardHelp: "Live metrics from the telemetry pipeline and runtime.", diagKeyMetrics: "Key Metrics", diagRuntimeSection: "Runtime & Reconciliation",
   };

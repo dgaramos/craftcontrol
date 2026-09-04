@@ -2,7 +2,7 @@ import { createOperationFeature } from "./operation.js?v=13";
 
 export function createServerFeature({ state, content, t, api, $, escapeHtml, uiIcon, formatDate, toast, getSettingsFeature }) {
 function telemetryPackMarkup() {
-  return `<section class="telemetry-pack-card block-panel"><div><span class="eyebrow">CRAFTCONTROL</span><h3>${t("telemetryPack")}</h3><p>${t("telemetryPackHelp")}</p></div><div id="telemetry-pack-state" class="telemetry-pack-state">${t("checking")}</div><details id="diagnostics-details" class="telemetry-pack-diagnostics diag-details"><summary>${t("diagDashboard")}</summary><div id="diagnostics-state" class="diag-details-body"></div></details></section>`;
+  return `<section class="telemetry-pack-card block-panel"><div><span class="eyebrow">CRAFTCONTROL</span><h3>${t("telemetryPack")}</h3><p>${t("telemetryPackHelp")}</p></div><div id="telemetry-pack-state" class="telemetry-pack-state">${t("checking")}</div><details id="diagnostics-details" class="telemetry-pack-diagnostics diag-details"><summary><div class="diag-summary-header"><div><span class="eyebrow">${t("diagDashboardEyebrow")}</span><h3 class="diag-summary-title">${t("diagDashboard")}</h3><p class="diag-summary-sub">${t("diagDashboardHelp")}</p></div><span class="diag-summary-toggle"></span></div></summary><div id="diagnostics-state" class="diag-details-body"></div></details></section>`;
 }
 
 function formatBytes(n) {

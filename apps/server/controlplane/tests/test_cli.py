@@ -254,13 +254,22 @@ def test_backup_restore_without_yes_raises(tmp_path: Path) -> None:
 # Main telemetry tests
 # ---------------------------------------------------------------------------
 
+def _noop_repo_factory(settings):
+    repo = MagicMock()
+    repo.initialize.return_value = None
+    return repo
+
+
 def test_telemetry_status_prints_json(tmp_path: Path, capsys) -> None:
     settings = SimpleNamespace(project=tmp_path)
     fake_status = MagicMock()
     fake_status.to_dict.return_value = {"installed": False}
     fake_installer = MagicMock()
     fake_installer.status.return_value = fake_status
-    deps = CliDependencies(installer_factory=lambda settings, project: fake_installer)
+    deps = CliDependencies(
+        repository_factory=_noop_repo_factory,
+        installer_factory=lambda settings, project: fake_installer,
+    )
 
     from src.cli import main
     rc = main(["telemetry", "status"], settings=settings, deps=deps)
@@ -272,7 +281,10 @@ def test_telemetry_status_prints_json(tmp_path: Path, capsys) -> None:
 
 def test_telemetry_remove_without_yes_raises(tmp_path: Path) -> None:
     settings = SimpleNamespace(project=tmp_path)
-    deps = CliDependencies(installer_factory=lambda settings, project: MagicMock())
+    deps = CliDependencies(
+        repository_factory=_noop_repo_factory,
+        installer_factory=lambda settings, project: MagicMock(),
+    )
 
     from src.cli import main
     with pytest.raises(SystemExit):
@@ -281,7 +293,10 @@ def test_telemetry_remove_without_yes_raises(tmp_path: Path) -> None:
 
 def test_telemetry_rollback_without_yes_raises(tmp_path: Path) -> None:
     settings = SimpleNamespace(project=tmp_path)
-    deps = CliDependencies(installer_factory=lambda settings, project: MagicMock())
+    deps = CliDependencies(
+        repository_factory=_noop_repo_factory,
+        installer_factory=lambda settings, project: MagicMock(),
+    )
 
     from src.cli import main
     with pytest.raises(SystemExit):
@@ -292,7 +307,10 @@ def test_telemetry_install_prints_json(tmp_path: Path, capsys) -> None:
     settings = SimpleNamespace(project=tmp_path)
     fake_installer = MagicMock()
     fake_installer.install.return_value = {"changed": True}
-    deps = CliDependencies(installer_factory=lambda settings, project: fake_installer)
+    deps = CliDependencies(
+        repository_factory=_noop_repo_factory,
+        installer_factory=lambda settings, project: fake_installer,
+    )
 
     from src.cli import main
     rc = main(["telemetry", "install"], settings=settings, deps=deps)
@@ -306,7 +324,10 @@ def test_telemetry_disable_prints_json(tmp_path: Path, capsys) -> None:
     settings = SimpleNamespace(project=tmp_path)
     fake_installer = MagicMock()
     fake_installer.disable.return_value = {"changed": False, "action": "disable"}
-    deps = CliDependencies(installer_factory=lambda settings, project: fake_installer)
+    deps = CliDependencies(
+        repository_factory=_noop_repo_factory,
+        installer_factory=lambda settings, project: fake_installer,
+    )
 
     from src.cli import main
     rc = main(["telemetry", "disable"], settings=settings, deps=deps)

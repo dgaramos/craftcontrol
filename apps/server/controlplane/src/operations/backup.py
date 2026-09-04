@@ -167,6 +167,7 @@ class BackupService:
                 os.replace(world_target, old_world)
             os.replace(restored_world, world_target)
 
+        preserved_audit = self._extract_audit_rows()
         database_staging = self.database.with_name(f".{self.database.name}.restore")
         shutil.copy2(directory / "manager.db", database_staging)
         os.replace(database_staging, self.database)
@@ -174,8 +175,34 @@ class BackupService:
             sidecar = Path(f"{self.database}{suffix}")
             if sidecar.exists():
                 sidecar.unlink()
+        self._replay_audit_rows(preserved_audit)
         self._audit_write("backup.restored", identifier, "ok", {"world": world_name})
         return {"ok": True, "id": identifier, "world": world_name, "recovery": str(recovery_root)}
+
+    def _extract_audit_rows(self) -> list[tuple]:
+        """Read all audit_log rows from the current database before a restore replaces it."""
+        try:
+            with sqlite3.connect(self.database) as conn:
+                return conn.execute(
+                    "SELECT occurred_at, actor_identity, action, target, result, details FROM audit_log ORDER BY id"
+                ).fetchall()
+        except Exception:
+            LOGGER.warning("could not preserve audit_log before restore", exc_info=True)
+            return []
+
+    def _replay_audit_rows(self, rows: list[tuple]) -> None:
+        """Re-insert preserved audit rows into the restored database."""
+        if not rows:
+            return
+        try:
+            with sqlite3.connect(self.database) as conn:
+                conn.executemany(
+                    "INSERT OR IGNORE INTO audit_log(occurred_at, actor_identity, action, target, result, details)"
+                    " VALUES (?,?,?,?,?,?)",
+                    rows,
+                )
+        except Exception:
+            LOGGER.warning("could not replay audit_log after restore", exc_info=True)
 
     def _audit_write(
         self,

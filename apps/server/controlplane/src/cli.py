@@ -140,6 +140,7 @@ def main(
         return 0
 
     if arguments.command == "backup":
+        deps.repository_factory(settings).initialize()
         service = deps.backup_service_factory(settings)
         if arguments.action == "create":
             result = service.create(arguments.world)
@@ -158,6 +159,7 @@ def main(
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0
 
+    deps.repository_factory(settings).initialize()
     project = arguments.project or settings.project
     installer = deps.installer_factory(settings, project)
     if arguments.action == "status":

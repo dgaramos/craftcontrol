@@ -74,7 +74,7 @@ class TestBackupAudit:
     def test_restore_writes_audit_record(self, tmp_path: Path) -> None:
         """Happy path: restore writes a backup.restored audit record."""
         port = FakeAuditPort()
-        service, _, project, backup_root = _make_service(tmp_path, port)
+        service, _, _project, _backup_root = _make_service(tmp_path, port)
         # Create a backup first so we have something to restore from
         result = service.create()
         identifier = result["id"]

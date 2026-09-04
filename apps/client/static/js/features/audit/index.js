@@ -11,6 +11,8 @@ export function createAuditFeature({ state, content, t, api, $, escapeHtml, toas
   let page = 1;
   let actorFilter = "";
   let actionFilter = "";
+  // Incremented on every render call; response handlers check it to discard stale results.
+  let renderGeneration = 0;
 
   // ------------------------------------------------------------------
   // Rendering helpers
@@ -118,6 +120,7 @@ export function createAuditFeature({ state, content, t, api, $, escapeHtml, toas
   // ------------------------------------------------------------------
 
   async function renderAuditPanel() {
+    const generation = ++renderGeneration;
     const params = new URLSearchParams({ page: String(page), page_size: "25" });
     if (actorFilter) params.set("actor", actorFilter);
     if (actionFilter) params.set("action", actionFilter);
@@ -126,9 +129,11 @@ export function createAuditFeature({ state, content, t, api, $, escapeHtml, toas
     try {
       data = await api(`/api/audit?${params.toString()}`);
     } catch (err) {
+      if (generation !== renderGeneration) return;
       toast(err.message, true);
       return;
     }
+    if (generation !== renderGeneration) return;
 
     content.innerHTML = `
       <section class="audit-panel">

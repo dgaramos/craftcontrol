@@ -321,14 +321,16 @@ describe("createAuditFeature — pagination", () => {
       await Promise.resolve();
     }
 
-    const urls = deps.api.mock.calls.map(([url]) => url);
-    expect(urls.some((url) => url.includes("page=2"))).toBe(true);
+    // Call 0: initial render (page=1), call 1: after next (page=2)
+    expect(deps.api.mock.calls[0][0]).toContain("page=1");
+    expect(deps.api.mock.calls[1][0]).toContain("page=2");
   });
 
   test("clicking prev decrements page and re-fetches", async () => {
     const deps = makeAuditDeps();
     deps.api = jest.fn()
       .mockResolvedValueOnce({ records: [makeRecord()], total: 50, page: 1, page_size: 25, pages: 2 })
+      .mockResolvedValueOnce({ records: [makeRecord()], total: 50, page: 2, page_size: 25, pages: 2 })
       .mockResolvedValue({ records: [], total: 50, page: 1, page_size: 25, pages: 2 });
 
     const cache = {};
@@ -346,9 +348,10 @@ describe("createAuditFeature — pagination", () => {
     const prevBtn = cache["#audit-prev-btn"];
     if (prevBtn && prevBtn.onclick) { prevBtn.onclick(); await Promise.resolve(); }
 
-    const urls = deps.api.mock.calls.map(([url]) => url);
-    // Should have called with page=1 at least once (first or after prev)
-    expect(urls.some((url) => url.includes("page=1"))).toBe(true);
+    // Call 0: page=1, call 1: next → page=2, call 2: prev → page=1
+    expect(deps.api.mock.calls[0][0]).toContain("page=1");
+    expect(deps.api.mock.calls[1][0]).toContain("page=2");
+    expect(deps.api.mock.calls[2][0]).toContain("page=1");
   });
 });
 

@@ -68,9 +68,9 @@ describe("createServerFeature", () => {
     expect(rendered).toContain("healthy");
     expect(rendered).toContain("persistenceDiagnostics");
     expect(rendered).toContain("sqliteWaitAverage");
-    expect(rendered).toContain("1.5 ms");
+    expect(rendered).toContain("2 ms");
     expect(rendered).toContain("sqliteRetries");
-    expect(rendered).toContain("1024 B");
+    expect(rendered).toContain("1.0 KB");
     expect(rendered).toContain("diagRuntimeSection");
     expect(rendered).toContain("pendingGameruleRefreshes");
   });
@@ -358,9 +358,9 @@ describe("createServerFeature", () => {
     const rendered = deps.elements["#diagnostics-state"].children.map((c) => c.textContent).join(" ");
     expect(rendered).toContain("diagRuntimeSection");
     expect(rendered).toContain("reconciliationCount");
-    expect(rendered).toContain("350.5 ms");
+    expect(rendered).toContain("351 ms");
     expect(rendered).toContain("120 ms");
-    expect(rendered).toContain("45.2 ms");
+    expect(rendered).toContain("45 ms");
   });
 
   test("domain freshness sub-panel renders with empty domains without errors", async () => {
@@ -558,5 +558,88 @@ describe("createServerFeature — loadFrontendVersion", () => {
     const { loadFrontendVersion } = createServerFeature(deps);
     await expect(loadFrontendVersion()).resolves.toBeUndefined();
     expect(state.frontendVersion).toBeNull();
+  });
+
+  test("diagnostics: invalid last_snapshot_at (null, string, NaN) does not throw", async () => {
+    const deps = makeDeps();
+    deps.elements["#diagnostics-state"] = makeEl();
+    for (const bad of [null, "not-a-number", NaN, undefined]) {
+      deps.api = jest.fn().mockResolvedValue({
+        telemetry: { by_topic: {} }, persistence: {}, runtime: {},
+        telemetry_state: { last_snapshot_at: bad },
+      });
+      await expect(createServerFeature(deps).loadDiagnostics()).resolves.toBeUndefined();
+    }
+  });
+
+  function diagText(deps) {
+    return deps.elements["#diagnostics-state"].children.map((c) => c.textContent || c.innerHTML || "").join(" ");
+  }
+
+  function diagInnerHTML(deps) {
+    return deps.elements["#diagnostics-state"].children.map((c) => {
+      if (typeof c.innerHTML === "string") return c.innerHTML;
+      if (typeof c.textContent === "string") return c.textContent;
+      return "";
+    }).join(" ");
+  }
+
+  test("diagnostics: makeTopicsTable highlights rejected > 0 with anomaly class", async () => {
+    const deps = makeDeps();
+    deps.elements["#diagnostics-state"] = makeEl();
+    deps.api = jest.fn().mockResolvedValue({
+      telemetry: { by_topic: { "player.joined": { accepted: 5, rejected: 2, duplicates: 0, out_of_order: 0 } } },
+      persistence: {}, runtime: {}, telemetry_state: {},
+    });
+    await createServerFeature(deps).loadDiagnostics();
+    // topicsSection is a real jsdom element — find it among the children stored by the replaceChildren mock
+    const topicsSection = deps.elements["#diagnostics-state"].children.find(
+      (c) => c?.innerHTML?.includes("diag-topics")
+    );
+    expect(topicsSection?.innerHTML ?? "").toContain("diag-topic-anomaly");
+  });
+
+  test("diagnostics: makeTopicsTable reads v.duplicates field", async () => {
+    const deps = makeDeps();
+    deps.elements["#diagnostics-state"] = makeEl();
+    deps.api = jest.fn().mockResolvedValue({
+      telemetry: { by_topic: { "snap.started": { accepted: 1, rejected: 0, duplicates: 3, out_of_order: 0 } } },
+      persistence: {}, runtime: {}, telemetry_state: {},
+    });
+    await createServerFeature(deps).loadDiagnostics();
+    const topicsSection = deps.elements["#diagnostics-state"].children.find(
+      (c) => c?.innerHTML?.includes("diag-topics")
+    );
+    expect(topicsSection?.innerHTML ?? "").toContain(">3<");
+  });
+
+  test("diagnostics: formatRelativeTime clamps negative diff to 0 (no throw on future timestamp)", async () => {
+    const deps = makeDeps();
+    deps.elements["#diagnostics-state"] = makeEl();
+    const futureTs = Math.floor(Date.now() / 1000) + 600;
+    deps.api = jest.fn().mockResolvedValue({
+      telemetry: { by_topic: {} }, persistence: {}, runtime: {},
+      telemetry_state: { last_snapshot_at: futureTs },
+    });
+    // Must not throw; snapshot tile must render a value starting with "0"
+    await expect(createServerFeature(deps).loadDiagnostics()).resolves.toBeUndefined();
+    const kpiSection = deps.elements["#diagnostics-state"].children.find(
+      (c) => c?.innerHTML?.includes("diag-kpi-grid")
+    );
+    // t() returns the key literal in tests, so formatRelativeTime produces "0timeAgoSeconds"
+    expect(kpiSection?.innerHTML ?? "").toContain(">0timeAgoSeconds<");
+  });
+
+  test("diagnostics: formatAge boundary at exactly 60s shows minutes format", async () => {
+    const deps = makeDeps();
+    deps.elements["#diagnostics-state"] = makeEl();
+    deps.api = jest.fn().mockResolvedValue({
+      telemetry: { by_topic: {} }, persistence: {}, runtime: {},
+      telemetry_state: {},
+      domains: { telemetry: { age_seconds: 60, stale: false } },
+    });
+    await createServerFeature(deps).loadDiagnostics();
+    const rendered = diagText(deps);
+    expect(rendered).toContain("1m 0s");
   });
 });

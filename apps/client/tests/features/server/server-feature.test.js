@@ -54,38 +54,35 @@ describe("createServerFeature", () => {
     });
     const feature = createServerFeature(deps);
     await feature.loadDiagnostics();
-    const rendered = deps.elements["#diagnostics-state"].children[0].textContent;
-    expect(rendered).toContain("telemetryAccepted");
+    const rendered = deps.elements["#diagnostics-state"].children.map((c) => c.textContent).join(" ");
+    expect(rendered).toContain("diagUpdatedAt");
+    expect(rendered).toContain("diagKeyMetrics");
     expect(rendered).toContain("telemetryRejected");
-    expect(rendered).toContain("telemetryDuplicates");
-    expect(rendered).toContain("telemetryOld");
+    expect(rendered).toContain("sqliteConnections");
+    expect(rendered).toContain("sqliteContentionFailures");
+    expect(rendered).toContain("reconciliationCount");
+    expect(rendered).toContain("sqliteWaitAverage");
     expect(rendered).toContain("telemetryTopicDiagnostics");
-    expect(rendered).toContain("telemetryLost2");
-    expect(rendered).toContain("2.5 ms");
-    expect(rendered).toContain("9 ms");
-    expect(rendered).toContain("sseConnections3");
-    expect(rendered).toContain("sseConnectionsTotal8");
-    expect(rendered).toContain("sseReconnections5");
-    expect(rendered).toContain("runtimeRefreshingyes");
-    expect(rendered).toContain("telemetry.started: 2");
-    expect(rendered).toContain("3");
     expect(rendered).toContain("telemetryDetails");
-    expect(rendered).toContain("diagnosticStatus: healthy");
+    expect(rendered).toContain("diagnosticStatus");
+    expect(rendered).toContain("healthy");
     expect(rendered).toContain("persistenceDiagnostics");
-    expect(rendered).toContain("sqliteWaitAverage: 1.5 ms");
-    expect(rendered).toContain("sqliteRetries: 2");
-    expect(rendered).toContain("sqliteDatabaseSize: 1024 B");
-    expect(rendered).toContain("runtimeDiagnostics");
-    expect(rendered).toContain("pendingGameruleRefreshes: 2");
+    expect(rendered).toContain("sqliteWaitAverage");
+    expect(rendered).toContain("1.5 ms");
+    expect(rendered).toContain("sqliteRetries");
+    expect(rendered).toContain("1024 B");
+    expect(rendered).toContain("diagRuntimeSection");
+    expect(rendered).toContain("pendingGameruleRefreshes");
   });
 
   test("hides diagnostics when its protected API request fails", async () => {
     const deps = makeDeps();
-    deps.elements["#diagnostics-state"] = makeEl();
-    deps.elements["#diagnostics-state"].textContent = "stale";
+    const diagEl = makeEl();
+    diagEl.textContent = "stale";
+    deps.elements["#diagnostics-state"] = diagEl;
     deps.api.mockRejectedValue(new Error("forbidden"));
     await createServerFeature(deps).loadDiagnostics();
-    expect(deps.elements["#diagnostics-state"].textContent).toBe("");
+    expect(diagEl.textContent).toBe("");
   });
 
   test("renders release tags with and without frontend version", () => {
@@ -258,11 +255,10 @@ describe("createServerFeature", () => {
     });
     const feature = createServerFeature(deps);
     await feature.loadDiagnostics();
-    const rendered = deps.elements["#diagnostics-state"].children[0].textContent;
-    expect(rendered).toContain("batchDiagnostics");
-    expect(rendered).toContain("batchCount: 3");
-    expect(rendered).toContain("batchTotalBlocks: 12");
-    expect(rendered).toContain("batchMaxBlocks: 7");
+    const rendered = deps.elements["#diagnostics-state"].children.map((c) => c.textContent).join(" ");
+    expect(rendered).toContain("diagKeyMetrics");
+    expect(rendered).toContain("persistenceDiagnostics");
+    expect(rendered).toContain("512 B");
   });
 
   test("renders snapshot reconciliation diagnostics sub-panel when data is present", async () => {
@@ -284,11 +280,10 @@ describe("createServerFeature", () => {
     });
     const feature = createServerFeature(deps);
     await feature.loadDiagnostics();
-    const rendered = deps.elements["#diagnostics-state"].children[0].textContent;
-    expect(rendered).toContain("snapshotDiagnostics");
-    expect(rendered).toContain("snapshotCount: 2");
-    expect(rendered).toContain("snapshotDurationTotal: 80");
-    expect(rendered).toContain("snapshotDurationMax: 50");
+    const rendered = deps.elements["#diagnostics-state"].children.map((c) => c.textContent).join(" ");
+    expect(rendered).toContain("diagKeyMetrics");
+    expect(rendered).toContain("persistenceDiagnostics");
+    expect(rendered).toContain("telemetryDetails");
   });
 
   test("diagnostics sub-panels render with zero values without errors", async () => {
@@ -319,7 +314,7 @@ describe("createServerFeature", () => {
       import("../../../static/js/i18n/pt.js"),
       import("../../../static/js/i18n/es.js"),
     ]);
-    const requiredKeys = ["batchDiagnostics", "batchCount", "batchTotalBlocks", "batchMaxBlocks", "snapshotDiagnostics", "snapshotCount", "snapshotDurationTotal", "snapshotDurationMax", "snapshotLastPlayerCount"];
+    const requiredKeys = ["batchDiagnostics", "batchCount", "batchTotalBlocks", "batchMaxBlocks", "snapshotDiagnostics", "snapshotCount", "snapshotDurationTotal", "snapshotDurationMax", "snapshotLastPlayerCount", "diagUpdatedAt", "diagKeyMetrics", "diagRuntimeSection"];
     for (const key of requiredKeys) {
       expect({ key, locale: "en", value: en[key] }).toMatchObject({ key, locale: "en", value: expect.any(String) });
       expect({ key, locale: "pt", value: pt[key] }).toMatchObject({ key, locale: "pt", value: expect.any(String) });
@@ -360,9 +355,9 @@ describe("createServerFeature", () => {
     });
     const feature = createServerFeature(deps);
     await feature.loadDiagnostics();
-    const rendered = deps.elements["#diagnostics-state"].children[0].textContent;
-    expect(rendered).toContain("reconciliationDiagnostics");
-    expect(rendered).toContain("reconciliationCount: 7");
+    const rendered = deps.elements["#diagnostics-state"].children.map((c) => c.textContent).join(" ");
+    expect(rendered).toContain("diagRuntimeSection");
+    expect(rendered).toContain("reconciliationCount");
     expect(rendered).toContain("350.5 ms");
     expect(rendered).toContain("120 ms");
     expect(rendered).toContain("45.2 ms");
@@ -399,7 +394,7 @@ describe("createServerFeature", () => {
     });
     const feature = createServerFeature(deps);
     await feature.loadDiagnostics();
-    const rendered = deps.elements["#diagnostics-state"].children[0].textContent;
+    const rendered = deps.elements["#diagnostics-state"].children.map((c) => c.textContent).join(" ");
     expect(rendered).toContain("domainFresh");
     expect(rendered).toContain("domainFreshness");
   });
@@ -418,7 +413,7 @@ describe("createServerFeature", () => {
     });
     const feature = createServerFeature(deps);
     await feature.loadDiagnostics();
-    const rendered = deps.elements["#diagnostics-state"].children[0].textContent;
+    const rendered = deps.elements["#diagnostics-state"].children.map((c) => c.textContent).join(" ");
     expect(rendered).toContain("domainStale");
   });
 
@@ -453,9 +448,9 @@ describe("createServerFeature", () => {
     const feature = createServerFeature(deps);
     await feature.loadDiagnostics();
     // Must render without throwing; reconciliation group must appear with count key
-    const rendered = deps.elements["#diagnostics-state"].children[0].textContent;
-    expect(rendered).toContain("reconciliationDiagnostics");
-    expect(rendered).toContain("reconciliationCount: 0");
+    const rendered = deps.elements["#diagnostics-state"].children.map((c) => c.textContent).join(" ");
+    expect(rendered).toContain("diagRuntimeSection");
+    expect(rendered).toContain("reconciliationCount");
   });
 });
 

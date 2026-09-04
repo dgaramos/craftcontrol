@@ -495,3 +495,35 @@ dialog.drawer { position: fixed; inset: auto 0 0; width: min(100%, 680px); max-h
   .telemetry-pack-card { grid-template-columns: minmax(14rem, .8fr) minmax(0, 1.2fr); align-items: start; }
   .telemetry-pack-state dl { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
+
+/* Diagnostics dashboard — .diag-* namespace */
+.diag-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: .85rem; }
+.diag-kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .65rem; margin-bottom: 1.1rem; }
+.diag-tile { padding: .7rem; background: rgba(0, 0, 0, .12); border-left: 3px solid transparent; }
+.diag-tile--warn { border-left-color: var(--copper-light); }
+.diag-tile--alert { border-left-color: var(--danger); }
+.diag-tile-label { color: var(--muted); font-size: .75rem; display: block; }
+.diag-tile-value { margin: .25rem 0 0; font-weight: 900; display: block; overflow-wrap: anywhere; }
+.diag-tile-flag { display: inline-block; margin-left: .35rem; font-weight: 900; font-size: .8rem; }
+.diag-tile--warn .diag-tile-flag { color: var(--copper-light); }
+.diag-tile--alert .diag-tile-flag { color: var(--danger); }
+.diag-section { margin-bottom: 1rem; }
+.diag-section-heading { font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 .5rem; }
+.diag-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; }
+.diag-detail-grid div { padding: .7rem; background: rgba(0, 0, 0, .12); }
+.diag-detail-grid dt { color: var(--muted); font-size: .75rem; }
+.diag-detail-grid dd { margin: .25rem 0 0; font-weight: 700; overflow-wrap: anywhere; }
+.diag-domain-list { display: grid; gap: .4rem; }
+.diag-domain-row { display: flex; align-items: center; gap: .6rem; }
+.diag-domain-name { font-weight: 700; min-width: 6rem; }
+.diag-domain-age { color: var(--muted); font-size: .82rem; }
+.diag-status-ok { color: var(--emerald); }
+.diag-status-degraded { color: var(--copper-light); }
+.diag-status-error { color: var(--danger); }
+.freshness-fresh { background: #8bd66f; color: #071006; }
+.freshness-stale { background: #f4c95d; color: #211b0a; }
+
+@media (max-width: 520px) {
+  .diag-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .diag-detail-grid { grid-template-columns: 1fr; }
+}

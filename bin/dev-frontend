@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Starts the CraftControl frontend dev proxy.
+# Usage: bin/dev-frontend [backend-url]
+# The backend URL defaults to CRAFTCONTROL_BACKEND env var, then http://localhost:8082.
+
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+CLIENT="$REPO_ROOT/apps/client"
+
+if [[ ! -f "$CLIENT/package.json" ]]; then
+  echo "error: apps/client/package.json not found — are you in the craftcontrol repo?" >&2
+  exit 1
+fi
+
+if [[ -n "${1:-}" ]]; then
+  export CRAFTCONTROL_BACKEND="$1"
+fi
+
+exec node --env-file-if-exists="$CLIENT/.env" "$CLIENT/scripts/dev-proxy.mjs"

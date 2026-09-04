@@ -29,6 +29,7 @@ from .lifecycle import (
 )
 from ..ports import ContainerOperations, EventPublisher, OperationStore, ServerConfiguration, ThreadFactory
 from ..core.schema import PROPERTY_NAMES, SETTINGS, validate_value
+from ..audit import AuditService
 
 LOGGER = logging.getLogger(__name__)
 
@@ -65,6 +66,7 @@ class ServerOperationService:
         health_timeout: int = DEFAULT_HEALTH_TIMEOUT_SECONDS,
         restart_timeout: int = 180,
         refresh_observed_settings: Callable[[], None] | None = None,
+        audit_service: AuditService | None = None,
     ) -> None:
         self._repo = operation_repository
         self._docker = docker
@@ -75,6 +77,7 @@ class ServerOperationService:
         self._restart_timeout = restart_timeout
         self._refresh_observed_settings = refresh_observed_settings
         self._thread_factory = thread_factory
+        self._audit_service = audit_service
         # Protects the check-then-create sequence on this process.
         self._lock = threading.Lock()
         self._reconcile_startup_orphans()
@@ -391,6 +394,7 @@ class ServerOperationService:
                 operation.diverge("effective configuration differs from requested changes", evidence=evidence)
                 self._repo.save(operation)
                 self._publish(operation)
+                self._audit_terminal(operation, "operation.divergent")
                 LOGGER.warning(
                     "server_operation divergent operation_id=%s differences=%s",
                     operation.operation_id,
@@ -404,6 +408,7 @@ class ServerOperationService:
             operation.confirm(evidence={"confirmed_at": _now(), "last_confirmed_at": _now()})
             self._repo.save(operation)
             self._publish(operation)
+            self._audit_terminal(operation, "operation.confirmed")
             LOGGER.info(
                 "server_operation confirmed operation_id=%s changes=%s",
                 operation.operation_id,
@@ -448,10 +453,26 @@ class ServerOperationService:
             self._reconcile_failed_operation(operation)
         self._repo.save(operation)
         self._publish(operation)
+        self._audit_terminal(operation, "operation.failed")
         LOGGER.warning(
             "server_operation failed operation_id=%s stage=%s error=%s",
             operation.operation_id, stage.value, error,
         )
+
+    def _audit_terminal(self, operation: ServerOperation, action: str) -> None:
+        """Write a sanitized audit record for a terminal operation state."""
+        if self._audit_service is None:
+            return
+        try:
+            self._audit_service.write(
+                actor="system",
+                action=action,
+                target=operation.operation_id,
+                result=operation.state.value,
+                metadata={"changes": sorted(operation.requested_changes)},
+            )
+        except Exception:
+            LOGGER.warning("server_operation audit write failed operation_id=%s", operation.operation_id, exc_info=True)
 
     def _reconcile_failed_operation(self, operation: ServerOperation) -> None:
         """Attach read-only observed configuration to a failed operation.

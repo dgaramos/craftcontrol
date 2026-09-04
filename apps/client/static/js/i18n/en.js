@@ -124,4 +124,5 @@ export const en = {
     opRetryConflict: "Another operation is already running. Please wait and try again.",
     opParentLink: "Retry of",
     domainFreshness: "Domain freshness", domainObservedAt: "Last observed", domainAgeSeconds: "Age (s)", domainStale: "Stale", domainFresh: "Fresh",
+    audit: "Audit", auditTitle: "Audit history", auditActor: "Actor", auditAction: "Action", auditTarget: "Target", auditResult: "Outcome", auditDate: "Date", auditFilterAll: "All", auditEmpty: "No audit records match the current filters.", auditPrev: "Previous", auditNext: "Next", auditApply: "Apply filters",
   };

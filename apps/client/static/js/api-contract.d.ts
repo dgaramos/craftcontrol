@@ -1,6 +1,6 @@
 // Generated from packages/contracts/openapi.json.
 // Do not edit by hand; run: python packages/contracts/generate_types.py --write
-export const contractVersion: "1.1.0";
+export const contractVersion: "1.2.0";
 
 export type Error = { error: string; capability?: string; };
 export type User = { id: string; name: string; role: "viewer" | "operator" | "owner"; capabilities: Array<string>; };
@@ -43,3 +43,5 @@ export type TelemetryPackStatus = TelemetryPackBaseStatus & { health: string; ap
 export type TelemetryPackActionResult = { changed: boolean; action: "install" | "upgrade" | "disable" | "rollback"; status: TelemetryPackBaseStatus; backup: string | null; restart_required: boolean; };
 export type ServerOperation = { operation_id?: string; server_id?: string; state?: "pending" | "running" | "confirmed" | "failed" | "divergent"; requested_changes?: { [key: string]: unknown; }; stages?: Array<OperationStageRecord>; created_at?: string; updated_at?: string; completed_at?: string | null; terminal_error?: string | null; observation?: { [key: string]: unknown; }; correlation_id?: string | null; parent_operation_id?: string | null; };
 export type OperationStageRecord = { stage?: string; result?: "pending" | "running" | "completed" | "failed" | "skipped"; started_at?: string | null; completed_at?: string | null; evidence?: { [key: string]: unknown; }; error?: string | null; };
+export type AuditRecord = { id: number; occurred_at: number; actor: string | null; action: string; target: string | null; result: string; metadata: { [key: string]: unknown; }; };
+export type AuditPage = { records: Array<AuditRecord>; total: number; page: number; page_size: number; pages: number; };

@@ -75,7 +75,7 @@ export function createGameTerms({ getLocale, escapeHtml }) {
   function uiIcon(name, label = "", className = "") {
     const safeName = /^[a-z0-9-]+$/.test(name) ? name : "blocks";
     const accessible = label ? ` role="img" aria-label="${escapeHtml(label)}"` : " aria-hidden=\"true\"";
-    return `<svg class="cc-icon cc-icon-${safeName} ${className}" viewBox="0 0 24 24"${accessible}><use href="/static/craftcontrol-ui.svg#ui-${safeName}"></use></svg>`;
+    return `<svg class="cc-icon cc-icon-${safeName} ${className}" viewBox="0 0 24 24"${accessible}><use href="/static/craftcontrol-ui.svg?v=8#ui-${safeName}"></use></svg>`;
   }
 
   const gameTerms = {

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "CraftControl API",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "description": "Same-origin API for CraftControl. Authentication uses an HttpOnly session cookie. Every non-safe authenticated request also requires the session-bound X-CSRF-Token returned by /api/auth/me. Swagger UI obtains that token for Try it out requests; backend capabilities remain authoritative."
   },
   "servers": [
@@ -1722,6 +1722,102 @@
           }
         }
       }
+    },
+    "/api/audit": {
+      "get": {
+        "tags": [
+          "audit"
+        ],
+        "summary": "List audit records (owner only)",
+        "description": "Returns a paginated, filtered page of sanitized audit records. Accessible only by owners.",
+        "operationId": "listAuditRecords",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "minimum": 1
+            },
+            "description": "One-based page number."
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 25,
+              "minimum": 1,
+              "maximum": 100
+            },
+            "description": "Maximum records per page (1-100)."
+          },
+          {
+            "name": "actor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter to records from this actor identity."
+          },
+          {
+            "name": "action",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter to records with this action name."
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated audit records.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query parameters.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Insufficient capability (audit.view required).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2506,7 +2602,7 @@
                 "type": "null"
               }
             ],
-            "description": "Game mode preference configured by the panel operator. Null means no preference \u2014 the server default applies. Managed exclusively by the panel, never inferred from telemetry."
+            "description": "Game mode preference configured by the panel operator. Null means no preference — the server default applies. Managed exclusively by the panel, never inferred from telemetry."
           }
         }
       },
@@ -3233,6 +3329,87 @@
           "error": {
             "type": "string",
             "nullable": true
+          }
+        }
+      },
+      "AuditRecord": {
+        "type": "object",
+        "description": "A single sanitized audit record capturing an administrative action.",
+        "required": [
+          "id",
+          "occurred_at",
+          "actor",
+          "action",
+          "target",
+          "result",
+          "metadata"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Unique record identifier."
+          },
+          "occurred_at": {
+            "type": "number",
+            "description": "UNIX timestamp of the event."
+          },
+          "actor": {
+            "type": "string",
+            "nullable": true,
+            "description": "Identity of the actor, or null for system actions."
+          },
+          "action": {
+            "type": "string",
+            "description": "Machine-readable action name (e.g. auth.login)."
+          },
+          "target": {
+            "type": "string",
+            "nullable": true,
+            "description": "Affected resource or identity."
+          },
+          "result": {
+            "type": "string",
+            "description": "Outcome: success, denied, failure, etc."
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Sanitized contextual details. Never contains credentials or secrets."
+          }
+        }
+      },
+      "AuditPage": {
+        "type": "object",
+        "description": "Paginated list of audit records.",
+        "required": [
+          "records",
+          "total",
+          "page",
+          "page_size",
+          "pages"
+        ],
+        "properties": {
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditRecord"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "description": "Total matching records."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Current page number (one-based)."
+          },
+          "page_size": {
+            "type": "integer",
+            "description": "Maximum records per page."
+          },
+          "pages": {
+            "type": "integer",
+            "description": "Total pages."
           }
         }
       }

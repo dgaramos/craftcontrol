@@ -54,6 +54,12 @@
       "owner": "backend"
     },
     {
+      "path": "/api/audit",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
       "path": "/api/auth/access",
       "methods": [
         "GET"
@@ -129,6 +135,13 @@
       "methods": [
         "GET",
         "PUT"
+      ],
+      "owner": "backend"
+    },
+    {
+      "path": "/api/diagnostics",
+      "methods": [
+        "GET"
       ],
       "owner": "backend"
     },
@@ -252,13 +265,6 @@
       "path": "/api/refresh",
       "methods": [
         "POST"
-      ],
-      "owner": "backend"
-    },
-    {
-      "path": "/api/diagnostics",
-      "methods": [
-        "GET"
       ],
       "owner": "backend"
     },

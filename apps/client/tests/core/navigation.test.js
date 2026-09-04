@@ -129,6 +129,15 @@ describe("createNavigation — renderTabs", () => {
     expect(tFn).toHaveBeenCalledWith("settings");
   });
 
+  test("audit button uses the dedicated audit icon", () => {
+    const { state, $, t, render, tabsEl } = makeEnv("audit");
+    state.tabs.push("audit");
+    const uiIcon = jest.fn((name) => name);
+    createNavigation({ state, $, t, uiIcon, render }).renderTabs();
+    expect(uiIcon).toHaveBeenCalledWith("audit");
+    expect(tabsEl._buttons.find((btn) => btn.dataset.tab === "audit").querySelector("i").innerHTML).toBe("audit");
+  });
+
   test("clicking players button sets tab to __players__", () => {
     const { state, $, t, uiIcon, render, tabsEl } = makeEnv("home");
     const nav = createNavigation({ state, $, t, uiIcon, render });

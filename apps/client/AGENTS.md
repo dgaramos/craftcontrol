@@ -56,7 +56,7 @@ cp apps/client/.env.example apps/client/.env
 # edit CRAFTCONTROL_BACKEND to point at your backend
 
 # Or manage it with the local-env dotfiles tool (no .env file needed):
-local-env set CRAFTCONTROL_BACKEND http://192.168.15.50:8082
+local-env set CRAFTCONTROL_BACKEND http://<backend-host>:8082
 
 # Start the proxy (from the repo root):
 cd apps/client && npm run dev

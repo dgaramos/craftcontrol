@@ -10,7 +10,7 @@
  * Usage:
  *   node scripts/dev-proxy.mjs [backend-url]
  *   npm run dev                              # uses .env if present
- *   CRAFTCONTROL_BACKEND=http://192.168.15.50:8082 npm run dev
+ *   CRAFTCONTROL_BACKEND=http://<backend-host>:8082 npm run dev
  *
  * Copy .env.example → .env and fill in your backend URL; the server picks it
  * up automatically (no dotenv dependency needed — export vars in your shell or

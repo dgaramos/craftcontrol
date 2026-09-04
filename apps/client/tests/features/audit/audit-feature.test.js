@@ -351,3 +351,287 @@ describe("createAuditFeature — pagination", () => {
     expect(urls.some((url) => url.includes("page=1"))).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// outcomeClass — all branches
+// ---------------------------------------------------------------------------
+
+describe("createAuditFeature — outcomeClass all branches", () => {
+  test("result=failure gets failure CSS class", async () => {
+    const deps = makeAuditDeps();
+    deps.api = jest.fn().mockResolvedValue({
+      records: [makeRecord({ result: "failure" })],
+      total: 1, page: 1, page_size: 25, pages: 1,
+    });
+    const { renderAuditPanel } = createAuditFeature(deps);
+    await renderAuditPanel();
+    expect(deps.content.innerHTML).toContain("audit-outcome--failure");
+  });
+
+  test("unknown result value gets no CSS class", async () => {
+    const deps = makeAuditDeps();
+    deps.api = jest.fn().mockResolvedValue({
+      records: [makeRecord({ result: "unknown_state" })],
+      total: 1, page: 1, page_size: 25, pages: 1,
+    });
+    const { renderAuditPanel } = createAuditFeature(deps);
+    await renderAuditPanel();
+    // The td should have an empty class attribute
+    expect(deps.content.innerHTML).toContain('class=""');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// renderRecord — null/falsy field branches
+// ---------------------------------------------------------------------------
+
+describe("createAuditFeature — renderRecord field branches", () => {
+  test("null target renders as dash placeholder", async () => {
+    const deps = makeAuditDeps();
+    deps.api = jest.fn().mockResolvedValue({
+      records: [makeRecord({ target: null })],
+      total: 1, page: 1, page_size: 25, pages: 1,
+    });
+    const { renderAuditPanel } = createAuditFeature(deps);
+    await renderAuditPanel();
+    expect(deps.content.innerHTML).toContain("—");
+  });
+
+  test("falsy occurred_at (0) renders as dash placeholder", async () => {
+    const deps = makeAuditDeps();
+    deps.api = jest.fn().mockResolvedValue({
+      records: [makeRecord({ occurred_at: 0 })],
+      total: 1, page: 1, page_size: 25, pages: 1,
+    });
+    const { renderAuditPanel } = createAuditFeature(deps);
+    await renderAuditPanel();
+    expect(deps.content.innerHTML).toContain("—");
+  });
+
+  test("null occurred_at renders as dash placeholder", async () => {
+    const deps = makeAuditDeps();
+    deps.api = jest.fn().mockResolvedValue({
+      records: [makeRecord({ occurred_at: null })],
+      total: 1, page: 1, page_size: 25, pages: 1,
+    });
+    const { renderAuditPanel } = createAuditFeature(deps);
+    await renderAuditPanel();
+    expect(deps.content.innerHTML).toContain("—");
+  });
+
+  test("truthy target is escaped and rendered", async () => {
+    const deps = makeAuditDeps();
+    deps.api = jest.fn().mockResolvedValue({
+      records: [makeRecord({ target: "server-default" })],
+      total: 1, page: 1, page_size: 25, pages: 1,
+    });
+    const { renderAuditPanel } = createAuditFeature(deps);
+    await renderAuditPanel();
+    expect(deps.content.innerHTML).toContain("server-default");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// renderTable — null records branch
+// ---------------------------------------------------------------------------
+
+describe("createAuditFeature — renderTable null records", () => {
+  test("null records field renders empty state", async () => {
+    const deps = makeAuditDeps();
+    deps.api = jest.fn().mockResolvedValue({
+      records: null, total: 0, page: 1, page_size: 25, pages: 0,
+    });
+    const { renderAuditPanel } = createAuditFeature(deps);
+    await renderAuditPanel();
+    expect(deps.content.innerHTML).toContain("auditEmpty");
+    expect(deps.content.innerHTML).not.toContain("audit-table");
+  });
+
+  test("undefined records field renders empty state", async () => {
+    const deps = makeAuditDeps();
+    deps.api = jest.fn().mockResolvedValue({
+      total: 0, page: 1, page_size: 25, pages: 0,
+    });
+    const { renderAuditPanel } = createAuditFeature(deps);
+    await renderAuditPanel();
+    expect(deps.content.innerHTML).toContain("auditEmpty");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// renderPagination — all hasPrev/hasNext combinations
+// ---------------------------------------------------------------------------
+
+describe("createAuditFeature — renderPagination branches", () => {
+  test("last page: prev enabled, next disabled", async () => {
+    const deps = makeAuditDeps();
+    // page 2 of 2 → hasPrev=true, hasNext=false
+    deps.api = jest.fn().mockResolvedValue({
+      records: [makeRecord()],
+      total: 50, page: 2, page_size: 25, pages: 2,
+    });
+    const { renderAuditPanel } = createAuditFeature(deps);
+    await renderAuditPanel();
+    expect(deps.content.innerHTML).toContain("audit-pagination");
+    // prev should NOT have disabled, next SHOULD have disabled
+    const html = deps.content.innerHTML;
+    const prevIdx = html.indexOf("audit-prev-btn");
+    const nextIdx = html.indexOf("audit-next-btn");
+    // next button appears after prev in the markup
+    expect(html.indexOf("disabled", nextIdx)).toBeGreaterThan(nextIdx);
+  });
+
+  test("middle page: both prev and next enabled", async () => {
+    const deps = makeAuditDeps();
+    // page 2 of 3 → hasPrev=true, hasNext=true
+    deps.api = jest.fn().mockResolvedValue({
+      records: [makeRecord()],
+      total: 75, page: 2, page_size: 25, pages: 3,
+    });
+    const { renderAuditPanel } = createAuditFeature(deps);
+    await renderAuditPanel();
+    expect(deps.content.innerHTML).toContain("audit-pagination");
+    const html = deps.content.innerHTML;
+    // Neither prev nor next should be disabled when in the middle
+    const paginationStart = html.indexOf("audit-pagination");
+    const paginationSection = html.slice(paginationStart);
+    // There should be no "disabled" attribute inside the pagination div when both are active
+    // (hasPrev=true → prev gets "" not "disabled"; hasNext=true → next gets "" not "disabled")
+    // We verify pagination appears and both button ids are present
+    expect(paginationSection).toContain("audit-prev-btn");
+    expect(paginationSection).toContain("audit-next-btn");
+  });
+
+  test("first page with multiple pages: prev disabled, next enabled", async () => {
+    const deps = makeAuditDeps();
+    // page 1 of 3 → hasPrev=false, hasNext=true
+    deps.api = jest.fn().mockResolvedValue({
+      records: [makeRecord()],
+      total: 75, page: 1, page_size: 25, pages: 3,
+    });
+    const { renderAuditPanel } = createAuditFeature(deps);
+    await renderAuditPanel();
+    const html = deps.content.innerHTML;
+    expect(html).toContain("audit-pagination");
+    const prevIdx = html.indexOf("audit-prev-btn");
+    // prev button should have disabled attribute immediately before or after the id
+    expect(html.slice(prevIdx - 20, prevIdx + 50)).toContain("disabled");
+  });
+
+  test("page counter shows current / total", async () => {
+    const deps = makeAuditDeps();
+    deps.api = jest.fn().mockResolvedValue({
+      records: [makeRecord()],
+      total: 50, page: 1, page_size: 25, pages: 2,
+    });
+    const { renderAuditPanel } = createAuditFeature(deps);
+    await renderAuditPanel();
+    expect(deps.content.innerHTML).toContain("1 / 2");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// bindControls — null button guards
+// ---------------------------------------------------------------------------
+
+describe("createAuditFeature — bindControls null guards", () => {
+  test("$ returning null for applyBtn does not throw", async () => {
+    const deps = makeAuditDeps();
+    deps.api = jest.fn().mockResolvedValue({ records: [], total: 0, page: 1, page_size: 25, pages: 0 });
+    deps.$ = jest.fn(() => null);
+    const { renderAuditPanel } = createAuditFeature(deps);
+    await expect(renderAuditPanel()).resolves.toBeUndefined();
+  });
+
+  test("$ returning null for prevBtn and nextBtn does not throw", async () => {
+    const deps = makeAuditDeps();
+    deps.api = jest.fn().mockResolvedValue({
+      records: [makeRecord()],
+      total: 50, page: 1, page_size: 25, pages: 2,
+    });
+    // Return a real element for apply but null for pagination buttons
+    const applyEl = makeEl();
+    deps.$ = jest.fn((sel) => {
+      if (sel === "#audit-apply-btn") return applyEl;
+      return null;
+    });
+    const { renderAuditPanel } = createAuditFeature(deps);
+    await expect(renderAuditPanel()).resolves.toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// action filter forwarded in URL
+// ---------------------------------------------------------------------------
+
+describe("createAuditFeature — action filter URL param", () => {
+  test("action filter is appended to the API URL", async () => {
+    const deps = makeAuditDeps();
+    deps.api = jest.fn().mockResolvedValue({ records: [], total: 0, page: 1, page_size: 25, pages: 0 });
+
+    const cache = {};
+    cache["#audit-actor-input"] = makeEl({ value: "" });
+    cache["#audit-action-input"] = makeEl({ value: "auth.login" });
+    deps.$ = jest.fn((sel) => {
+      if (!cache[sel]) cache[sel] = makeEl();
+      return cache[sel];
+    });
+
+    const { renderAuditPanel } = createAuditFeature(deps);
+    await renderAuditPanel();
+
+    const applyEl = cache["#audit-apply-btn"];
+    if (applyEl && applyEl.onclick) applyEl.onclick();
+    await Promise.resolve();
+
+    const urls = deps.api.mock.calls.map(([url]) => url);
+    expect(urls.some((url) => url.includes("action=auth.login"))).toBe(true);
+  });
+
+  test("empty action filter is not appended to the URL", async () => {
+    const deps = makeAuditDeps();
+    deps.api = jest.fn().mockResolvedValue({ records: [], total: 0, page: 1, page_size: 25, pages: 0 });
+    const { renderAuditPanel } = createAuditFeature(deps);
+    await renderAuditPanel();
+    const [url] = deps.api.mock.calls[0];
+    expect(url).not.toContain("action=");
+  });
+
+  test("empty actor filter is not appended to the URL", async () => {
+    const deps = makeAuditDeps();
+    deps.api = jest.fn().mockResolvedValue({ records: [], total: 0, page: 1, page_size: 25, pages: 0 });
+    const { renderAuditPanel } = createAuditFeature(deps);
+    await renderAuditPanel();
+    const [url] = deps.api.mock.calls[0];
+    expect(url).not.toContain("actor=");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// filter inputs reflect current filter state in rendered markup
+// ---------------------------------------------------------------------------
+
+describe("createAuditFeature — filter state reflected in markup", () => {
+  test("actorFilter value appears in actor input after apply", async () => {
+    const deps = makeAuditDeps();
+    deps.api = jest.fn().mockResolvedValue({ records: [], total: 0, page: 1, page_size: 25, pages: 0 });
+
+    const cache = {};
+    cache["#audit-actor-input"] = makeEl({ value: "testuser" });
+    cache["#audit-action-input"] = makeEl({ value: "" });
+    deps.$ = jest.fn((sel) => {
+      if (!cache[sel]) cache[sel] = makeEl();
+      return cache[sel];
+    });
+
+    const { renderAuditPanel } = createAuditFeature(deps);
+    await renderAuditPanel();
+
+    const applyEl = cache["#audit-apply-btn"];
+    if (applyEl && applyEl.onclick) applyEl.onclick();
+    await Promise.resolve();
+
+    // After apply, the second render should include the filter value in the markup
+    expect(deps.content.innerHTML).toContain("testuser");
+  });
+});

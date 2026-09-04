@@ -117,10 +117,13 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`Dev proxy running:`);
   console.log(`  http://localhost:${PORT}`);
+  const hostname = os.hostname();
+  const mdns = hostname.endsWith(".local") ? hostname : `${hostname}.local`;
+  console.log(`  http://${mdns}:${PORT}  ← phone/tablet (mDNS)`);
   for (const iface of Object.values(os.networkInterfaces())) {
     for (const addr of iface) {
       if (addr.family === "IPv4" && !addr.internal) {
-        console.log(`  http://${addr.address}:${PORT}  ← phone/tablet`);
+        console.log(`  http://${addr.address}:${PORT}  ← phone/tablet (IP)`);
       }
     }
   }

@@ -26,17 +26,18 @@ function formatCount(n) {
 
 function formatAge(seconds) {
   if (seconds == null) return "—";
-  if (seconds < 60) return Math.round(seconds) + "s";
-  if (seconds < 3600) return Math.floor(seconds / 60) + "m " + Math.round(seconds % 60) + "s";
-  return Math.floor(seconds / 3600) + "h " + Math.floor((seconds % 3600) / 60) + "m";
+  const s = Math.round(seconds);
+  if (s < 60) return s + "s";
+  if (s < 3600) return Math.floor(s / 60) + "m " + (s % 60) + "s";
+  return Math.floor(s / 3600) + "h " + Math.floor((s % 3600) / 60) + "m";
 }
 
 function formatRelativeTime(isoString) {
   if (!isoString) return "—";
-  const diff = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000);
-  if (diff < 60) return diff + "s ago";
-  if (diff < 3600) return Math.floor(diff / 60) + "m ago";
-  return Math.floor(diff / 3600) + "h ago";
+  const diff = Math.max(0, Math.floor((Date.now() - new Date(isoString).getTime()) / 1000));
+  if (diff < 60) return diff + t("timeAgoSeconds");
+  if (diff < 3600) return Math.floor(diff / 60) + t("timeAgoMinutes");
+  return Math.floor(diff / 3600) + t("timeAgoHours");
 }
 
 async function loadDiagnostics() {
@@ -99,9 +100,10 @@ async function loadDiagnostics() {
     let snapshotAnomalyClass = null;
     let snapshotDisplay = "—";
     let snapshotIso = null;
-    if (telemetryState.last_snapshot_at != null) {
-      const ageSeconds = (Date.now() / 1000) - telemetryState.last_snapshot_at;
-      snapshotIso = new Date(telemetryState.last_snapshot_at * 1000).toISOString();
+    const snapshotTs = Number(telemetryState.last_snapshot_at);
+    if (Number.isFinite(snapshotTs) && snapshotTs > 0) {
+      const ageSeconds = (Date.now() / 1000) - snapshotTs;
+      snapshotIso = new Date(snapshotTs * 1000).toISOString();
       snapshotDisplay = formatRelativeTime(snapshotIso);
       if (ageSeconds > 900) snapshotAnomalyClass = "alert";
       else if (ageSeconds > 300) snapshotAnomalyClass = "warn";
@@ -162,11 +164,11 @@ async function loadDiagnostics() {
           <td>${escapeHtml(topic)}</td>
           <td>${formatCount(v.accepted)}</td>
           <td${rejClass}>${formatCount(v.rejected)}</td>
-          <td>${formatCount(v.duplicate)}</td>
+          <td>${formatCount(v.duplicates)}</td>
           <td>${formatCount(v.out_of_order)}</td>
         </tr>`;
       }).join("");
-      return `<div class="diag-topics-scroll">
+      return `<div class="diag-topics-scroll" tabindex="0" role="region" aria-label="${escapeHtml(t("telemetryTopic"))}">
         <table class="diag-topics-table">
           <thead><tr>
             <th>${escapeHtml(t("telemetryTopic"))}</th>

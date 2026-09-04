@@ -197,7 +197,7 @@ export function startApplication() {
     const languageNames = { pt: "Português", en: "English", es: "Español" };
     const languageFlags = { pt: "br", en: "us", es: "es" };
     $("#language span").textContent = languageNames[state.locale];
-    $("#language use").setAttribute("href", `/static/craftcontrol-ui.svg?v=7#ui-flag-${languageFlags[state.locale]}`);
+    $("#language use").setAttribute("href", `/static/craftcontrol-ui.svg?v=8#ui-flag-${languageFlags[state.locale]}`);
     $("#language").setAttribute("aria-label", t("language"));
     $("#close-operation-drawer").setAttribute("aria-label", t("close"));
     document.querySelectorAll("[data-locale]").forEach((option) => option.setAttribute("aria-selected", String(option.dataset.locale === state.locale)));

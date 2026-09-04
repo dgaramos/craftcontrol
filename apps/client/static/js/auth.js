@@ -9,7 +9,7 @@ const copy = {
 };
 
 function passwordInput(words, name, autocomplete, minimum = "") {
-  return `<span class="password-control"><input name="${name}" type="password" ${minimum} autocomplete="${autocomplete}" required><button class="password-toggle" type="button" aria-label="${words.showPassword}" title="${words.showPassword}" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=7#ui-eye"></use></svg></button></span>`;
+  return `<span class="password-control"><input name="${name}" type="password" ${minimum} autocomplete="${autocomplete}" required><button class="password-toggle" type="button" aria-label="${words.showPassword}" title="${words.showPassword}" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=8#ui-eye"></use></svg></button></span>`;
 }
 
 export async function requireSession() {

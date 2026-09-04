@@ -1,14 +1,23 @@
 #!/usr/bin/env node
 /**
- * Local dev server: serves apps/client/static/ and proxies /api/* to a remote backend.
+ * Local dev server — serves the frontend statically and proxies /api/* to a
+ * running CraftControl backend (local, homelab, or any reachable host).
+ *
+ * Configuration (env vars take precedence over CLI args):
+ *   CRAFTCONTROL_BACKEND   Backend base URL   (default: http://localhost:8082)
+ *   PORT                   Local listen port  (default: 3333)
  *
  * Usage:
- *   node apps/client/scripts/dev-proxy.mjs [backend-url]
+ *   node scripts/dev-proxy.mjs [backend-url]
+ *   npm run dev                              # loads .env if present
+ *   CRAFTCONTROL_BACKEND=http://<backend-host>:8082 npm run dev
  *
- * Example (homelab):
- *   node apps/client/scripts/dev-proxy.mjs http://192.168.15.50:8080
+ * Copy .env.example → .env and fill in your backend URL; the server picks it
+ * up automatically (no dotenv dependency needed — export vars in your shell or
+ * use `local-env set CRAFTCONTROL_BACKEND <url>` from the dotfiles toolchain).
  *
- * Serves on http://localhost:3333
+ * Security note: this server is intended for local development only.
+ * Do not expose it on a public network interface.
  */
 import http from "http";
 import https from "https";
@@ -16,10 +25,20 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
-const BACKEND = process.argv[2] || "http://192.168.15.50:8080";
+const BACKEND = process.env.CRAFTCONTROL_BACKEND || process.argv[2] || "http://localhost:8082";
 const PORT = parseInt(process.env.PORT || "3333", 10);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const STATIC_ROOT = path.resolve(__dirname, "../static");
+const TEMPLATES_ROOT = path.resolve(__dirname, "../templates");
+
+// Warn when the configured backend uses plain HTTP over a non-loopback host,
+// since the proxy forwards Authorization and Cookie headers verbatim.
+const backendHost = new URL(BACKEND).hostname;
+const isLoopback = backendHost === "localhost" || backendHost === "127.0.0.1" || backendHost === "::1";
+if (!isLoopback && !BACKEND.startsWith("https://")) {
+  console.warn(`[warn] CRAFTCONTROL_BACKEND is a non-loopback HTTP URL (${BACKEND}).`);
+  console.warn("       Credentials will be forwarded in cleartext. Use HTTPS for remote backends.");
+}
 
 const MIME = {
   ".html": "text/html",
@@ -56,28 +75,30 @@ function proxy(req, res) {
 }
 
 function serveStatic(req, res) {
-  let urlPath = req.url.split("?")[0];
-  // SPA fallback: non-asset paths → index.html
-  const ext = path.extname(urlPath);
-  const filePath = ext
-    ? path.join(STATIC_ROOT, urlPath)
-    : path.join(STATIC_ROOT, "index.html");
+  const rawPath = req.url.split("?")[0].replace(/^\/static\//, "/");
 
-  fs.readFile(filePath, (err, data) => {
-    if (err) {
-      if (!ext) {
-        // try index.html at the requested path level
-        fs.readFile(path.join(STATIC_ROOT, "index.html"), (err2, d2) => {
-          if (err2) { res.writeHead(404); res.end("Not found"); return; }
-          res.writeHead(200, { "Content-Type": "text/html" });
-          res.end(d2);
-        });
-      } else {
-        res.writeHead(404);
-        res.end("Not found");
-      }
-      return;
-    }
+  // Resolve and guard against path traversal.
+  const resolved = path.resolve(STATIC_ROOT, "." + rawPath);
+  if (!resolved.startsWith(STATIC_ROOT + path.sep) && resolved !== STATIC_ROOT) {
+    res.writeHead(400);
+    res.end("Bad Request");
+    return;
+  }
+
+  const ext = path.extname(rawPath);
+
+  // Non-asset paths and explicit /index.html → SPA entry point.
+  if (!ext || rawPath === "/index.html") {
+    fs.readFile(path.join(TEMPLATES_ROOT, "index.html"), (err, data) => {
+      if (err) { res.writeHead(404); res.end("Not found"); return; }
+      res.writeHead(200, { "Content-Type": "text/html" });
+      res.end(data);
+    });
+    return;
+  }
+
+  fs.readFile(resolved, (err, data) => {
+    if (err) { res.writeHead(404); res.end("Not found"); return; }
     const mime = MIME[ext] || "application/octet-stream";
     res.writeHead(200, { "Content-Type": mime });
     res.end(data);

@@ -14,42 +14,60 @@ GET /metrics
 The endpoint uses the [Prometheus text exposition format (0.0.4)][prom-format].
 It contains no PII and no player XUIDs.
 
+### What is exported
+
+| Metric | Type | Description |
+|---|---|---|
+| `craftcontrol_domain_age_seconds` | gauge | Age of each event-sourced domain snapshot |
+| `craftcontrol_sequence_gap_total` | counter | Cumulative sequence gaps detected |
+| `craftcontrol_telemetry_events_total` | counter | Accepted / rejected / duplicate events per topic |
+| `craftcontrol_sqlite_contentions_total` | counter | SQLite write contention failures |
+| `craftcontrol_sqlite_wait_ms` | gauge | Average and max connection wait time |
+| `craftcontrol_db_size_bytes` | gauge | SQLite database file size |
+| `craftcontrol_reconciliation_duration_ms` | gauge | Reconciliation loop duration (last, max, total) |
+| `craftcontrol_last_snapshot_age_seconds` | gauge | Seconds since the last world snapshot |
+
 ### Authentication
 
 By default the endpoint is public. To require a bearer token, set the
-`SCRAPE_SECRET` environment variable in the backend container. Prometheus
-must then send it as `Authorization: Bearer <secret>`.
+`SCRAPE_SECRET` environment variable on the backend. Scrapers must then send:
 
-Without `SCRAPE_SECRET` the endpoint is open — suitable for homelab
-deployments where Prometheus and CraftControl are on the same private network.
+```
+Authorization: Bearer <secret>
+```
+
+Without `SCRAPE_SECRET` the endpoint is open — appropriate for deployments
+where the scraper and the service share a private network.
 
 ### nginx proxy
 
-The frontend container (nginx) proxies `/metrics` to the backend. No special
-configuration is needed on the scraper side: target the frontend host and
-port (e.g. `192.168.15.50:8082`) directly.
+When running behind the bundled nginx frontend, `/metrics` is proxied to the
+backend automatically. Target the frontend host and port from your scraper —
+no direct access to the backend container is needed.
 
-## Prometheus scrape job
+## Prometheus
 
-Add a job to your `prometheus.yml`:
+Add a scrape job to your `prometheus.yml`:
 
 ```yaml
-- job_name: 'craftcontrol'
-  static_configs:
-    - targets: ['<host>:<port>']   # frontend host:port, e.g. 192.168.15.50:8082
+scrape_configs:
+  - job_name: 'craftcontrol'
+    static_configs:
+      - targets: ['<host>:<port>']
 ```
 
 If `SCRAPE_SECRET` is set:
 
 ```yaml
-- job_name: 'craftcontrol'
-  authorization:
-    credentials: '<secret>'
-  static_configs:
-    - targets: ['<host>:<port>']
+scrape_configs:
+  - job_name: 'craftcontrol'
+    authorization:
+      credentials: '<secret>'
+    static_configs:
+      - targets: ['<host>:<port>']
 ```
 
-Reload Prometheus after editing (`kill -HUP <pid>` or the `/-/reload` endpoint).
+Reload Prometheus after editing (`kill -HUP <pid>` or `POST /-/reload`).
 
 ## Grafana dashboard
 
@@ -59,16 +77,19 @@ The dashboard JSON is versioned at:
 infra/grafana/dashboards/craftcontrol-health.json
 ```
 
+Import it once and it stays in your Grafana instance. Re-import to pick up
+updates shipped in new versions.
+
 ### Importing
 
 1. Open Grafana → **Dashboards** → **Import**.
 2. Upload `craftcontrol-health.json` or paste its contents.
-3. Select your Prometheus datasource when prompted (the dashboard variable is
-   named `DS_PROMETHEUS`).
+3. Select your Prometheus datasource when prompted (the variable is named
+   `DS_PROMETHEUS`).
 4. Click **Import**.
 
-The dashboard UID is `craftcontrol-health`. Importing again with the same UID
-will offer an overwrite prompt — safe to confirm when updating.
+The dashboard UID is `craftcontrol-health`. Re-importing with the same UID
+shows an overwrite prompt — safe to confirm.
 
 ### Panels
 
@@ -79,12 +100,7 @@ will offer an overwrite prompt — safe to confirm when updating.
 | Reconciliation & Snapshots | Reconciliation run count, last snapshot age |
 | SQLite | Connection pool waits, contention failures, retries |
 
-Refresh interval: 30 s. Timezone: `America/Sao_Paulo` (configurable in dashboard settings).
-
-### Datasource UID
-
-The dashboard references the datasource by the variable `DS_PROMETHEUS`. At
-import time Grafana maps this to whichever datasource you select. If you need
-to re-point it later, edit the variable in **Dashboard settings → Variables**.
+Default refresh: 30 s. Default timezone: `America/Sao_Paulo` — change it in
+**Dashboard settings → Time** after import if needed.
 
 [prom-format]: https://prometheus.io/docs/instrumenting/exposition_formats/

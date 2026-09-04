@@ -500,8 +500,25 @@ dialog.drawer { position: fixed; inset: auto 0 0; width: min(100%, 680px); max-h
 @media (min-width: 760px) {
   .telemetry-pack-card { grid-template-columns: 240px 1fr; align-items: start; }
   .telemetry-pack-state dl { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  #diagnostics-state { grid-column: 1 / -1; }
+  .telemetry-pack-diagnostics { grid-column: 1 / -1; }
 }
+
+/* Diagnostics collapsible panel */
+.diag-details { margin-top: 1rem; border-top: 1px solid rgba(255,255,255,.07); padding-top: .85rem; }
+.diag-details > summary {
+  display: flex; align-items: center; gap: .5rem;
+  list-style: none; cursor: pointer; user-select: none;
+  font-size: .8rem; font-weight: 900; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--muted);
+  padding: .25rem 0;
+}
+.diag-details > summary::-webkit-details-marker { display: none; }
+.diag-details > summary::before {
+  content: "▶"; font-size: .6rem; transition: transform .15s;
+}
+.diag-details[open] > summary::before { transform: rotate(90deg); }
+.diag-details > summary:hover { color: #c9cec9; }
+.diag-details-body { padding-top: .85rem; }
 
 /* Diagnostics dashboard — .diag-* namespace */
 .diag-metrics-heading { font-size: 1rem; font-weight: 700; margin: 0 0 .65rem; border-bottom: 1px solid rgba(255,255,255,.08); padding-bottom: .4rem; }
@@ -533,8 +550,8 @@ dialog.drawer { position: fixed; inset: auto 0 0; width: min(100%, 680px); max-h
 .diag-status-ok { color: var(--emerald); }
 .diag-status-degraded { color: var(--copper-light); }
 .diag-status-error { color: var(--danger); }
-.freshness-fresh { background: #8bd66f; color: #071006; }
-.freshness-stale { background: #f4c95d; color: #211b0a; }
+.freshness-fresh { background: #8bd66f; color: #071006; padding: .25rem .6rem; font-size: .68rem; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; }
+.freshness-stale { background: #f4c95d; color: #211b0a; padding: .25rem .6rem; font-size: .68rem; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; }
 .diag-topics-scroll { overflow-x: auto; }
 .diag-topics-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
 .diag-topics-table th { color: var(--muted); font-size: .72rem; text-transform: uppercase;

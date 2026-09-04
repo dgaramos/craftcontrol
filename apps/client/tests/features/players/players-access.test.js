@@ -12,38 +12,95 @@ function makeDeps(locale = "en", role = "owner") {
   return { state, escapeHtml, t, $, api, toast, renderPlayersPanel };
 }
 
-function getMarkup(deps = makeDeps()) {
-  const { panelAccessDetailMarkup } = createPlayerAccess(deps);
-  return panelAccessDetailMarkup;
+function getAccess(deps = makeDeps()) {
+  return createPlayerAccess(deps);
 }
 
-describe("panelAccessDetailMarkup — non-owner viewer", () => {
-  test("shows read-only message for non-owner", () => {
+// ── panelAccessHeroRow ──────────────────────────────────────────────────────
+
+describe("panelAccessHeroRow — non-owner viewer", () => {
+  test("shows read-only badge and no-access label for non-owner with no account", () => {
     const deps = makeDeps("en", "operator");
-    const { panelAccessDetailMarkup } = createPlayerAccess(deps);
-    const html = panelAccessDetailMarkup({ name: "P" }, null, "Panel Access");
-    expect(html).toContain("Only owners can manage panel access.");
+    const { panelAccessHeroRow } = createPlayerAccess(deps);
+    const html = panelAccessHeroRow({ name: "P" }, null);
+    expect(html).toContain("read-only-badge");
     expect(html).toContain("No access");
   });
 
-  test("shows pt read-only message", () => {
+  test("shows pt no-access label", () => {
     const deps = makeDeps("pt", "viewer");
-    const { panelAccessDetailMarkup } = createPlayerAccess(deps);
-    const html = panelAccessDetailMarkup({ name: "P" }, null, "Acesso");
-    expect(html).toContain("Somente owners podem gerenciar acesso ao painel.");
+    const { panelAccessHeroRow } = createPlayerAccess(deps);
+    const html = panelAccessHeroRow({ name: "P" }, null);
+    expect(html).toContain("Sem acesso");
   });
 
-  test("shows an active account role to non-owners", () => {
+  test("shows active account role to non-owners", () => {
     const deps = makeDeps("en", "viewer");
-    expect(createPlayerAccess(deps).panelAccessDetailMarkup({ name: "P" }, { status: "active", role: "operator" }, "Access")).toContain("operator");
+    const { panelAccessHeroRow } = createPlayerAccess(deps);
+    const html = panelAccessHeroRow({ name: "P" }, { status: "active", role: "operator", active_sessions: 0 });
+    expect(html).toContain("operator");
+  });
+
+  test("shows session count in hero row", () => {
+    const deps = makeDeps("en", "viewer");
+    const { panelAccessHeroRow } = createPlayerAccess(deps);
+    const html = panelAccessHeroRow({ name: "P" }, { status: "active", role: "viewer", active_sessions: 3 });
+    expect(html).toContain("3 active sessions");
+  });
+});
+
+describe("panelAccessHeroRow — owner", () => {
+  test("shows role select for owner", () => {
+    const deps = makeDeps("en", "owner");
+    const { panelAccessHeroRow } = createPlayerAccess(deps);
+    const html = panelAccessHeroRow({ name: "Hero" }, null);
+    expect(html).toContain('id="detail-access-role"');
+  });
+
+  test("pre-selects viewer role", () => {
+    const account = { status: "active", role: "viewer", active_sessions: 1 };
+    const { panelAccessHeroRow } = getAccess();
+    const html = panelAccessHeroRow({ name: "Hero" }, account);
+    expect(html).toContain('value="viewer" selected');
+    expect(html).toContain("1 active session");
+  });
+
+  test("pre-selects operator role", () => {
+    const account = { status: "active", role: "operator", active_sessions: 0 };
+    const { panelAccessHeroRow } = getAccess();
+    const html = panelAccessHeroRow({ name: "Hero" }, account);
+    expect(html).toContain('value="operator" selected');
+  });
+
+  test("shows correct role in select", () => {
+    const account = { status: "active", role: "owner", active_sessions: 2 };
+    const { panelAccessHeroRow } = getAccess();
+    const html = panelAccessHeroRow({ name: "Hero" }, account);
+    expect(html).toContain('value="owner" selected');
+    expect(html).toContain("2 active sessions");
+  });
+});
+
+// ── panelAccessDetailMarkup ─────────────────────────────────────────────────
+
+describe("panelAccessDetailMarkup — non-owner", () => {
+  test("returns empty string for non-owner", () => {
+    const deps = makeDeps("en", "operator");
+    const { panelAccessDetailMarkup } = createPlayerAccess(deps);
+    expect(panelAccessDetailMarkup({ name: "P" }, null, "Panel Access")).toBe("");
+  });
+
+  test("returns empty string for viewer", () => {
+    const deps = makeDeps("pt", "viewer");
+    const { panelAccessDetailMarkup } = createPlayerAccess(deps);
+    expect(panelAccessDetailMarkup({ name: "P" }, null, "Acesso")).toBe("");
   });
 });
 
 describe("panelAccessDetailMarkup — owner, no account", () => {
   test("shows Generate access button", () => {
-    const html = getMarkup()({ name: "Hero" }, null, "Panel Access");
+    const html = getAccess().panelAccessDetailMarkup({ name: "Hero" }, null, "Panel Access");
     expect(html).toContain("Generate access");
-    expect(html).toContain("No active access");
     expect(html).not.toContain("Suspend access");
   });
 
@@ -58,25 +115,25 @@ describe("panelAccessDetailMarkup — owner, no account", () => {
 describe("panelAccessDetailMarkup — owner, active account", () => {
   test("shows Generate recovery and Suspend access buttons", () => {
     const account = { status: "active", role: "viewer", active_sessions: 1 };
-    const html = getMarkup()({ name: "Hero" }, account, "Panel Access");
+    const html = getAccess().panelAccessDetailMarkup({ name: "Hero" }, account, "Panel Access");
     expect(html).toContain("Generate recovery");
     expect(html).toContain("Suspend access");
-    expect(html).toContain("viewer");
-    expect(html).toContain("1 active sessions");
   });
 
-  test("operator role appears in select", () => {
+  test("compact card contains invite and access-code elements", () => {
     const account = { status: "active", role: "operator", active_sessions: 0 };
-    const html = getMarkup()({ name: "Hero" }, account, "Panel Access");
-    expect(html).toContain('value="operator"');
+    const html = getAccess().panelAccessDetailMarkup({ name: "Hero" }, account, "Panel Access");
+    expect(html).toContain('id="detail-access-invite"');
+    expect(html).toContain('id="detail-access-code"');
   });
 
-  test("shows correct role in status", () => {
-    const account = { status: "active", role: "owner", active_sessions: 2 };
-    const html = getMarkup()({ name: "Hero" }, account, "Panel Access");
-    expect(html).toContain("owner");
+  test("compact card uses player-access-compact class", () => {
+    const html = getAccess().panelAccessDetailMarkup({ name: "Hero" }, null, "Panel Access");
+    expect(html).toContain("player-access-compact");
   });
 });
+
+// ── bindPlayerAccess ────────────────────────────────────────────────────────
 
 describe("createPlayerAccess — bindPlayerAccess", () => {
   test("returns without binding when invite element is absent", () => {

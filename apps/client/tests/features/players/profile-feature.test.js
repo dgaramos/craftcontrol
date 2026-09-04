@@ -15,7 +15,7 @@ function makeDeps() {
     t: (key) => key, localized: (pt, en) => en, escapeHtml: (value) => String(value),
     formatDate: () => "2024-01-01", formatDuration: (value) => `${value}s`,
     playerDataMarkup: jest.fn(() => ""), profileMarkup: jest.fn(() => ""),
-    panelAccessDetailMarkup: jest.fn(() => ""), renderPlayersPanel: jest.fn(), renderAnalyticsPanel: jest.fn(),
+    panelAccessDetailMarkup: jest.fn(() => ""), panelAccessHeroRow: jest.fn(() => ""), renderPlayersPanel: jest.fn(), renderAnalyticsPanel: jest.fn(),
     toast: jest.fn(), bindPlayerAccess: jest.fn(),
     getSettingsFeature: () => ({ booleanControl: jest.fn(() => ""), updateToggleLabel: jest.fn() }),
     getNavigation: () => ({ renderTabs: jest.fn() }),
@@ -89,63 +89,47 @@ describe("createPlayerProfile", () => {
     expect(deps.state.tab).toBe("settings");
   });
 
-  test("apply game mode button calls API and shows toast on success", async () => {
+  test("game mode select onchange calls API and shows toast on success", async () => {
     const deps = makeDeps();
-    const applyBtn = makeEl();
-    const modeSelect = { value: "creative" };
-    deps.elements["#detail-gamemode-apply"] = applyBtn;
+    const modeSelect = makeEl();
+    modeSelect.value = "creative";
     deps.elements["#detail-gamemode-select"] = modeSelect;
     deps.api = jest.fn()
       .mockResolvedValueOnce({ profile: { name: "Alice", history: [], online: true, connected_at: 100, operator: false } })
       .mockResolvedValueOnce({ ok: true });
     await createPlayerProfile(deps)({ id: "player-1" }, {});
-    await applyBtn.onclick();
+    await modeSelect.onchange({ target: { value: "creative" } });
     expect(deps.api).toHaveBeenCalledWith(
       "/api/players/Alice/gamemode",
       expect.objectContaining({ method: "PUT" })
     );
     expect(deps.toast).toHaveBeenCalledWith("gameModeUpdated");
-    expect(applyBtn.disabled).toBe(false);
   });
 
-  test("apply game mode button shows error toast on API failure", async () => {
+  test("game mode select onchange shows error toast on API failure", async () => {
     const deps = makeDeps();
-    const applyBtn = makeEl();
-    const modeSelect = { value: "survival" };
-    deps.elements["#detail-gamemode-apply"] = applyBtn;
+    const modeSelect = makeEl();
+    modeSelect.value = "survival";
     deps.elements["#detail-gamemode-select"] = modeSelect;
     deps.api = jest.fn()
       .mockResolvedValueOnce({ profile: { name: "Alice", history: [], online: true, connected_at: 100, operator: false } })
       .mockRejectedValueOnce(new Error("server error"));
     await createPlayerProfile(deps)({ id: "player-1" }, {});
-    await applyBtn.onclick();
+    await modeSelect.onchange({ target: { value: "survival" } });
     expect(deps.toast).toHaveBeenCalledWith("server error", true);
-    expect(applyBtn.disabled).toBe(false);
   });
 
-  test("shows game mode section even when player is offline", async () => {
+  test("game mode select is always rendered regardless of online state", async () => {
     const deps = makeDeps();
-    const gameModeCard = makeEl();
-    gameModeCard.hidden = true;
     deps.api = jest.fn().mockResolvedValue({ profile: { name: "Alice", history: [], online: false, operator: false } });
-    deps.$ = jest.fn((selector) => {
-      if (selector === "#detail-gamemode-card") return gameModeCard;
-      return deps.elements[selector] ||= makeEl();
-    });
     await createPlayerProfile(deps)({ id: "player-1" }, {});
-    expect(gameModeCard.hidden).toBe(false);
+    expect(deps.content.innerHTML).toContain("detail-gamemode-select");
   });
 
-  test("shows game mode section when player is online", async () => {
+  test("game mode select is rendered when player is online", async () => {
     const deps = makeDeps();
-    const gameModeCard = makeEl();
-    gameModeCard.hidden = true;
-    deps.$ = jest.fn((selector) => {
-      if (selector === "#detail-gamemode-card") return gameModeCard;
-      return deps.elements[selector] ||= makeEl();
-    });
     await createPlayerProfile(deps)({ id: "player-1" }, {});
-    expect(gameModeCard.hidden).toBe(false);
+    expect(deps.content.innerHTML).toContain("detail-gamemode-select");
   });
 
   test("shows observed game mode when telemetry provides it", async () => {
@@ -195,17 +179,16 @@ describe("createPlayerProfile", () => {
     expect(deps.content.innerHTML).toContain("detail-gamemode-server-default");
   });
 
-  test("apply button sends server_default body when that option is selected", async () => {
+  test("game mode onchange sends server_default body when that option is selected", async () => {
     const deps = makeDeps();
-    const applyBtn = makeEl();
-    const modeSelect = { value: "server_default" };
-    deps.elements["#detail-gamemode-apply"] = applyBtn;
+    const modeSelect = makeEl();
+    modeSelect.value = "server_default";
     deps.elements["#detail-gamemode-select"] = modeSelect;
     deps.api = jest.fn()
       .mockResolvedValueOnce({ profile: { name: "Alice", history: [], online: true, connected_at: 100, operator: false } })
       .mockResolvedValueOnce({ ok: true });
     await createPlayerProfile(deps)({ id: "player-1" }, {});
-    await applyBtn.onclick();
+    await modeSelect.onchange({ target: { value: "server_default" } });
     expect(deps.api).toHaveBeenCalledWith(
       "/api/players/Alice/gamemode",
       expect.objectContaining({ body: JSON.stringify({ mode: "server_default" }) })
@@ -233,17 +216,15 @@ describe("createPlayerProfile", () => {
     expect(preferredStatusEl.textContent).toBe("preferredGameModeNone");
   });
 
-  test("apply game mode button does nothing when select is missing", async () => {
+  test("game mode onchange is not registered when select is missing", async () => {
     const deps = makeDeps();
-    const applyBtn = makeEl();
-    deps.elements["#detail-gamemode-apply"] = applyBtn;
     deps.$ = jest.fn((selector) => {
       if (selector === "#detail-gamemode-select") return null;
       return deps.elements[selector] ||= makeEl();
     });
     deps.api = jest.fn().mockResolvedValue({ profile: { name: "Alice", history: [], online: true, connected_at: 100, operator: false } });
     await createPlayerProfile(deps)({ id: "player-1" }, {});
-    await applyBtn.onclick();
+    // No onchange registered; only the initial profile fetch call
     expect(deps.api).toHaveBeenCalledTimes(1);
   });
 });

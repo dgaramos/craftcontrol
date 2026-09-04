@@ -134,22 +134,33 @@
 .player-detail-stats small, .player-detail-stats b { display: block; }
 .player-detail-stats small { color: var(--muted); font-size: .62rem; font-weight: 900; text-transform: uppercase; }
 .player-detail-stats b { overflow: hidden; margin-top: 6px; color: var(--sand); text-overflow: ellipsis; }
-.player-admin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.player-admin-card { padding: 18px; }
-.player-admin-card h3 { margin: 7px 0; }
-.player-admin-card > p { min-height: 44px; color: var(--muted); font-size: .78rem; }
-.player-minecraft-card { grid-column: 1 / -1; padding: 18px; }
-.player-minecraft-sections { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-top: 12px; }
-.player-minecraft-section { padding: 4px 0; }
-.player-minecraft-section h3 { margin: 0 0 6px; }
-.player-minecraft-section > p { color: var(--muted); font-size: .78rem; margin: 0 0 12px; min-height: 44px; }
-.player-minecraft-divider { width: 1px; background: rgba(255,255,255,.07); margin: 0 20px; }
-@media (max-width: 520px) {
-  .player-minecraft-sections { grid-template-columns: 1fr; }
-  .player-minecraft-divider { width: auto; height: 1px; margin: 16px 0; }
+.player-detail-hero-attrs {
+  width: 100%;
+  display: grid;
+  gap: 10px;
+  padding-top: 14px;
+  margin-top: 14px;
+  border-top: 1px solid rgba(255,255,255,.07);
+}
+.player-detail-hero-attrs-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.player-detail-hero-attrs-row .admin-scope { flex: 0 0 auto; }
+.hero-attr-label {
+  font-size: .72rem; font-weight: 900;
+  color: var(--muted); text-transform: uppercase; letter-spacing: .04em;
+}
+.gamemode-select.compact {
+  min-height: 34px; padding: 0 8px;
+  width: auto; font-size: .72rem;
 }
 .gamemode-select { min-height: 46px; padding: 0 10px; color: #fff; background: #0b0f0c; border: 2px solid #48564d; width: 100%; font: inherit; cursor: pointer; }
 .gamemode-select:focus { outline: 2px solid var(--grass-light); }
+.player-access-compact { padding: 18px; }
+.player-access-compact .panel-access-actions { margin-top: 12px; }
 .admin-scope { display: inline-block; padding: 4px 7px; font-size: .58rem; font-weight: 900; letter-spacing: .08em; }
 .game-scope { color: #f8dc9a; background: #493914; }
 .panel-scope { color: #a9e6ff; background: #123b49; }
@@ -242,7 +253,7 @@
   .player-roster-open { grid-template-columns: auto 1fr auto; }
   .player-roster-badges { grid-column: 2 / -1; justify-content: flex-start; }
   .player-roster-summary { display: none; }
-  .player-admin-grid, .player-history-grid { grid-template-columns: 1fr; }
+  .player-history-grid { grid-template-columns: 1fr; }
   .player-detail-stats { grid-template-columns: repeat(2, 1fr); }
   .player-detail-hero { align-items: flex-start; flex-wrap: wrap; }
   .player-detail-hero .player-data-link { width: 100%; margin-left: 0; }

@@ -129,21 +129,27 @@ button > .cc-icon { width: 21px; height: 21px; margin-right: 5px; }
 
 nav {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 5px;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
   position: sticky;
   top: 73px;
   z-index: 9;
-  padding: 11px 12px 13px;
+  padding: 10px 12px 12px;
   overflow: visible;
   background: linear-gradient(#0c120ff2 76%, transparent);
 }
 nav::-webkit-scrollbar { display: none; }
-nav button { min-width: 104px; flex: 1 0 auto; padding: 10px 12px; color: #c9cec9; white-space: nowrap; }
-nav button { min-width: 0; padding: 8px 2px; font-size: .64rem; white-space: normal; }
+nav button { min-width: 0; padding: 7px 4px; font-size: .62rem; white-space: normal; color: #c9cec9; }
 nav button i { display: block; margin-bottom: 3px; color: #8e998f; font-size: 1rem; font-style: normal; }
-nav button i .cc-icon { width: 27px; height: 27px; }
+nav button i .cc-icon { width: 26px; height: 26px; }
 nav button span { display: block; overflow: hidden; text-overflow: ellipsis; }
+nav button:not(.active):hover {
+  color: #e8ede8;
+  background: rgba(255,255,255,.06);
+  border-top-color: #3a4a3b;
+  border-left-color: #2e3d2f;
+}
+nav button:not(.active):hover i { color: #b0c9b0; }
 nav button.active {
   color: #fff;
   background: linear-gradient(#579e38, #377928);
@@ -395,8 +401,8 @@ dialog.drawer { position: fixed; inset: auto 0 0; width: min(100%, 680px); max-h
 
 @media (min-width: 720px) {
   .topbar { padding-left: 30px; padding-right: 30px; }
-  nav { top: 73px; width: min(720px, 100%); margin: 0 auto; }
-  nav button { font-size: .72rem; }
+  nav { top: 73px; width: min(760px, 100%); margin: 0 auto; }
+  nav button { font-size: .72rem; padding: 8px 6px; }
   .hero { padding: 35px 16px 16px; }
   .overview-grid { grid-template-columns: 1.15fr 1fr .85fr; }
   .time-launch { grid-column: auto; }

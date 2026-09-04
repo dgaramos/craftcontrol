@@ -329,7 +329,15 @@
       "methods": [
         "GET"
       ],
-      "owner": "backend"
+      "owner": "backend",
+      "auth": "bearer_optional",
+      "csrf_exempt": true,
+      "response_content_type": "text/plain; version=0.0.4",
+      "responses": {
+        "200": {"description": "Prometheus text exposition (no PII, no XUIDs)"},
+        "401": {"description": "Bearer token required but missing or invalid"}
+      },
+      "pagination": false
     },
     {
       "path": "/static/<path:filename>",

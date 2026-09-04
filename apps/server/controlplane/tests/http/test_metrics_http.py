@@ -14,7 +14,8 @@ TDD criteria:
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+import os
+from unittest.mock import MagicMock, patch
 
 import pytest
 from flask import Flask
@@ -73,8 +74,18 @@ def _make_metrics_app(*, secret: str | None = None) -> Flask:
     app.config["TESTING"] = True
     if secret is not None:
         app.config[_SCRAPE_SECRET_ENV] = secret
+    else:
+        # Ensure a SCRAPE_SECRET in the process environment doesn't leak into
+        # tests that expect the endpoint to be open.
+        app.config.pop(_SCRAPE_SECRET_ENV, None)
     app.register_blueprint(metrics_api)
     return app
+
+
+@pytest.fixture(autouse=True)
+def _isolate_scrape_secret(monkeypatch):
+    """Remove SCRAPE_SECRET from os.environ for every test in this module."""
+    monkeypatch.delenv("SCRAPE_SECRET", raising=False)
 
 
 def _get(app: Flask, headers: dict | None = None) -> object:

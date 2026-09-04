@@ -71,10 +71,14 @@ def _counter(name: str, value: float | int | None, labels: dict[str, str] | None
     return _gauge(name, value, labels)
 
 
+def _escape_label(v: str) -> str:
+    return v.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
+
+
 def _labels(labels: dict[str, str] | None) -> str:
     if not labels:
         return ""
-    parts = ", ".join(f'{k}="{v}"' for k, v in labels.items())
+    parts = ", ".join(f'{k}="{_escape_label(v)}"' for k, v in labels.items())
     return "{" + parts + "}"
 
 

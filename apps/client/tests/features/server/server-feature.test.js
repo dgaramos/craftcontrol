@@ -68,9 +68,9 @@ describe("createServerFeature", () => {
     expect(rendered).toContain("healthy");
     expect(rendered).toContain("persistenceDiagnostics");
     expect(rendered).toContain("sqliteWaitAverage");
-    expect(rendered).toContain("1.5 ms");
+    expect(rendered).toContain("2 ms");
     expect(rendered).toContain("sqliteRetries");
-    expect(rendered).toContain("1024 B");
+    expect(rendered).toContain("1.0 KB");
     expect(rendered).toContain("diagRuntimeSection");
     expect(rendered).toContain("pendingGameruleRefreshes");
   });
@@ -358,9 +358,9 @@ describe("createServerFeature", () => {
     const rendered = deps.elements["#diagnostics-state"].children.map((c) => c.textContent).join(" ");
     expect(rendered).toContain("diagRuntimeSection");
     expect(rendered).toContain("reconciliationCount");
-    expect(rendered).toContain("350.5 ms");
+    expect(rendered).toContain("351 ms");
     expect(rendered).toContain("120 ms");
-    expect(rendered).toContain("45.2 ms");
+    expect(rendered).toContain("45 ms");
   });
 
   test("domain freshness sub-panel renders with empty domains without errors", async () => {

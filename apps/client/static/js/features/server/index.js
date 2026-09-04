@@ -5,6 +5,40 @@ function telemetryPackMarkup() {
   return `<section class="telemetry-pack-card block-panel"><div><span class="eyebrow">CRAFTCONTROL</span><h3>${t("telemetryPack")}</h3><p>${t("telemetryPackHelp")}</p></div><div id="telemetry-pack-state" class="telemetry-pack-state">${t("checking")}</div><div id="diagnostics-state" class="telemetry-pack-state"></div></section>`;
 }
 
+function formatBytes(n) {
+  if (n == null) return "—";
+  if (n < 1024) return n + " B";
+  if (n < 1048576) return (n / 1024).toFixed(1) + " KB";
+  if (n < 1073741824) return (n / 1048576).toFixed(1) + " MB";
+  return (n / 1073741824).toFixed(2) + " GB";
+}
+
+function formatMs(n) {
+  if (n == null) return "—";
+  if (n < 1000) return Math.round(n) + " ms";
+  return (n / 1000).toFixed(1) + " s";
+}
+
+function formatCount(n) {
+  if (n == null) return "—";
+  return Number(n).toLocaleString();
+}
+
+function formatAge(seconds) {
+  if (seconds == null) return "—";
+  if (seconds < 60) return Math.round(seconds) + "s";
+  if (seconds < 3600) return Math.floor(seconds / 60) + "m " + Math.round(seconds % 60) + "s";
+  return Math.floor(seconds / 3600) + "h " + Math.floor((seconds % 3600) / 60) + "m";
+}
+
+function formatRelativeTime(isoString) {
+  if (!isoString) return "—";
+  const diff = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000);
+  if (diff < 60) return diff + "s ago";
+  if (diff < 3600) return Math.floor(diff / 60) + "m ago";
+  return Math.floor(diff / 3600) + "h ago";
+}
+
 async function loadDiagnostics() {
   const target = $("#diagnostics-state");
   if (!target) return;
@@ -64,22 +98,30 @@ async function loadDiagnostics() {
     // Last snapshot age in seconds
     let snapshotAnomalyClass = null;
     let snapshotDisplay = "—";
+    let snapshotIso = null;
     if (telemetryState.last_snapshot_at != null) {
       const ageSeconds = (Date.now() / 1000) - telemetryState.last_snapshot_at;
-      snapshotDisplay = formatDate(telemetryState.last_snapshot_at);
+      snapshotIso = new Date(telemetryState.last_snapshot_at * 1000).toISOString();
+      snapshotDisplay = formatRelativeTime(snapshotIso);
       if (ageSeconds > 900) snapshotAnomalyClass = "alert";
       else if (ageSeconds > 300) snapshotAnomalyClass = "warn";
+    }
+
+    function makeTileWithTitle(labelKey, value, anomaly, titleAttr) {
+      const tile = makeTile(labelKey, value, anomaly);
+      if (titleAttr) tile.querySelector(".diag-tile-value").title = titleAttr;
+      return tile;
     }
 
     const kpiGrid = document.createElement("dl");
     kpiGrid.className = "diag-kpi-grid";
     kpiGrid.append(
-      makeTile("sqliteConnections", connections, connections > 5 ? "warn" : null),
-      makeTile("sqliteContentionFailures", contentionFailures, contentionFailures > 0 ? "alert" : null),
-      makeTile("telemetryRejected", rejected, rejected > 0 ? "warn" : null),
-      makeTile("reconciliationCount", reconciliationCount, null),
-      makeTile("lastSnapshot", snapshotDisplay, snapshotAnomalyClass),
-      makeTile("sqliteWaitAverage", `${waitAvg} ms`, waitAvg > 200 ? "alert" : waitAvg > 50 ? "warn" : null),
+      makeTile("sqliteConnections", formatCount(connections), connections > 5 ? "warn" : null),
+      makeTile("sqliteContentionFailures", formatCount(contentionFailures), contentionFailures > 0 ? "alert" : null),
+      makeTile("telemetryRejected", formatCount(rejected), rejected > 0 ? "warn" : null),
+      makeTile("reconciliationCount", formatCount(reconciliationCount), null),
+      makeTileWithTitle("lastSnapshot", snapshotDisplay, snapshotAnomalyClass, snapshotIso),
+      makeTile("sqliteWaitAverage", formatMs(waitAvg), waitAvg > 200 ? "alert" : waitAvg > 50 ? "warn" : null),
     );
 
     // -- Section builder (detail grid) --
@@ -110,22 +152,44 @@ async function loadDiagnostics() {
     }
 
     // -- Ingestion Topics --
-    const topicMetrics = Object.entries(telemetry.by_topic || {});
+    function makeTopicsTable(byTopic) {
+      const topics = Object.entries(byTopic).sort(([a], [b]) => a.localeCompare(b));
+      if (!topics.length) return "";
+      const rows = topics.map(([topic, v]) => {
+        const rej = Number(v.rejected || 0);
+        const rejClass = rej > 0 ? ' class="diag-topic-anomaly"' : "";
+        return `<tr>
+          <td>${escapeHtml(topic)}</td>
+          <td>${formatCount(v.accepted)}</td>
+          <td${rejClass}>${formatCount(v.rejected)}</td>
+          <td>${formatCount(v.duplicate)}</td>
+          <td>${formatCount(v.out_of_order)}</td>
+        </tr>`;
+      }).join("");
+      return `<div class="diag-topics-scroll">
+        <table class="diag-topics-table">
+          <thead><tr>
+            <th>${escapeHtml(t("telemetryTopic"))}</th>
+            <th>${escapeHtml(t("telemetryAccepted"))}</th>
+            <th>${escapeHtml(t("telemetryRejected"))}</th>
+            <th>${escapeHtml(t("telemetryDuplicates"))}</th>
+            <th>${escapeHtml(t("telemetryOld"))}</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+    }
+
+    const byTopic = telemetry.by_topic || {};
     let topicsSection = null;
-    if (topicMetrics.length) {
+    if (Object.keys(byTopic).length) {
       topicsSection = document.createElement("div");
       topicsSection.className = "diag-section";
       const topicsHeading = document.createElement("h4");
       topicsHeading.className = "diag-section-heading";
       topicsHeading.textContent = t("telemetryTopicDiagnostics");
       topicsSection.append(topicsHeading);
-      topicMetrics.forEach(([topic, values]) => {
-        const row = document.createElement("small");
-        row.className = "muted";
-        row.style.display = "block";
-        row.textContent = `${escapeHtml(topic)}: ${t("telemetryAccepted")} ${values.accepted ?? 0}, ${t("telemetryRejected")} ${values.rejected ?? 0}, ${t("telemetryDuplicates")} ${values.duplicates ?? 0}, ${t("telemetryOld")} ${values.old ?? 0}`;
-        topicsSection.append(row);
-      });
+      topicsSection.insertAdjacentHTML("beforeend", makeTopicsTable(byTopic));
     }
 
     // -- Domain Freshness --
@@ -151,7 +215,7 @@ async function loadDiagnostics() {
         badge.textContent = info.stale ? t("domainStale") : t("domainFresh");
         const age = document.createElement("span");
         age.className = "diag-domain-age muted";
-        age.textContent = info.age_seconds != null ? `${Math.round(info.age_seconds)}s` : "—";
+        age.textContent = formatAge(info.age_seconds);
         row.append(nameEl, badge, age);
         domainList.append(row);
       });
@@ -165,19 +229,19 @@ async function loadDiagnostics() {
       { key: "gamerule_worker_running", labelKey: "gameruleWorkerRunning", format: (v) => v ? t("yes") : t("no") },
       { key: "snapshot_running", labelKey: "snapshotRunning", format: (v) => v ? t("yes") : t("no") },
       { key: "count", labelKey: "reconciliationCount" },
-      { key: "duration_ms_total", labelKey: "reconciliationDurationTotal", format: (v) => `${v} ms` },
-      { key: "duration_ms_max", labelKey: "reconciliationDurationMax", format: (v) => `${v} ms` },
-      { key: "duration_ms_last", labelKey: "reconciliationDurationLast", format: (v) => `${v} ms` },
+      { key: "duration_ms_total", labelKey: "reconciliationDurationTotal", format: formatMs },
+      { key: "duration_ms_max", labelKey: "reconciliationDurationMax", format: formatMs },
+      { key: "duration_ms_last", labelKey: "reconciliationDurationLast", format: formatMs },
     ], { ...runtime, ...reconciliation });
 
     // -- SQLite Persistence --
     const sqliteSection = makeSection("persistenceDiagnostics", [
       { key: "connections", labelKey: "sqliteConnections" },
-      { key: "wait_ms_average", labelKey: "sqliteWaitAverage", format: (v) => `${v} ms` },
-      { key: "wait_ms_max", labelKey: "sqliteWaitMax", format: (v) => `${v} ms` },
+      { key: "wait_ms_average", labelKey: "sqliteWaitAverage", format: formatMs },
+      { key: "wait_ms_max", labelKey: "sqliteWaitMax", format: formatMs },
       { key: "contention_failures", labelKey: "sqliteContentionFailures" },
       { key: "retries", labelKey: "sqliteRetries" },
-      { key: "database_size_bytes", labelKey: "sqliteDatabaseSize", format: (v) => `${v} B` },
+      { key: "database_size_bytes", labelKey: "sqliteDatabaseSize", format: formatBytes },
     ], persistence);
 
     // -- Telemetry State --

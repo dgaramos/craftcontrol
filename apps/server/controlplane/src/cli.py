@@ -10,6 +10,7 @@ from .core.config import Settings
 from .server.console import BedrockClient
 from .operations.backup import BackupService, docker_container_running
 from .auth.service import AuthService
+from .audit import SQLiteAuditRepository, AuditService
 from .core.repository import StateRepository
 from .telemetry.installer import TelemetryPackInstaller
 
@@ -57,10 +58,14 @@ class CliDependencies:
             settings.backup_root,
             BedrockClient(settings.container, [], settings.console_wait_seconds),
             lambda: docker_container_running(settings.container),
+            audit_service=AuditService(SQLiteAuditRepository(settings.database)),
         )
     )
     installer_factory: Callable[[Settings, Path], _Installer] = field(
-        default=lambda settings, project: TelemetryPackInstaller.bundled(project)
+        default=lambda settings, project: TelemetryPackInstaller.bundled(
+            project,
+            audit_service=AuditService(SQLiteAuditRepository(settings.database)),
+        )
     )
 
 
@@ -135,6 +140,7 @@ def main(
         return 0
 
     if arguments.command == "backup":
+        deps.repository_factory(settings).initialize()
         service = deps.backup_service_factory(settings)
         if arguments.action == "create":
             result = service.create(arguments.world)
@@ -153,6 +159,7 @@ def main(
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0
 
+    deps.repository_factory(settings).initialize()
     project = arguments.project or settings.project
     installer = deps.installer_factory(settings, project)
     if arguments.action == "status":

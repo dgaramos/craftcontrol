@@ -13,4 +13,5 @@ def manager() -> ManagerService:
 
 
 def telemetry_installer() -> TelemetryPackInstaller:
-    return TelemetryPackInstaller.bundled(manager().files.env_file.parent)
+    mgr = manager()
+    return TelemetryPackInstaller.bundled(mgr.files.env_file.parent, audit_service=mgr.audit_service)

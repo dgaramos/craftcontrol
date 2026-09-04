@@ -78,6 +78,8 @@ def compose_manager(
         player_service=players,
         telemetry_service=telemetry,
     )
+    audit_repo = SQLiteAuditRepository(settings.database)
+    audit = AuditService(audit_repo)
     operation_repo = SQLiteOperationRepository(settings.database)
     operation_service = ServerOperationService(
         operation_repository=operation_repo,
@@ -89,9 +91,8 @@ def compose_manager(
         refresh_observed_settings=reconciliation.refresh_settings_from_properties,
         health_timeout=settings.host_agent_health_timeout_seconds,
         restart_timeout=settings.host_agent_restart_timeout_seconds,
+        audit_service=audit,
     )
-    audit_repo = SQLiteAuditRepository(settings.database)
-    audit = AuditService(audit_repo)
     manager = ManagerService(
         repository=repository,
         files=files,

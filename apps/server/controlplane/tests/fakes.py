@@ -60,6 +60,29 @@ class FakeRuntime:
         self.started = True
 
 
+class FakeAuditPort:
+    """Minimal in-memory AuditPort for injection into tests."""
+
+    def __init__(self) -> None:
+        self.records: list[dict] = []
+
+    def write(
+        self,
+        *,
+        actor: str | None,
+        action: str,
+        target: str | None,
+        result: str,
+        metadata: dict,
+    ) -> None:
+        self.records.append(
+            {"actor": actor, "action": action, "target": target, "result": result, "metadata": metadata}
+        )
+
+    def query(self, *, page: int, page_size: int, actor=None, action=None) -> dict:
+        return {"records": self.records, "total": len(self.records), "page": page, "page_size": page_size, "pages": 1}
+
+
 class FakeConsole:
     def __init__(self) -> None:
         self.commands: list[list[str]] = []

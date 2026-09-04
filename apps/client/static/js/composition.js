@@ -14,6 +14,7 @@ import { createRulesFeature } from "./features/rules/index.js?v=7";
 import { createServerFeature } from "./features/server/index.js?v=13";
 import { startAuthenticatedApplication } from "./features/auth/bootstrap.js?v=7";
 import { createSettingsFeature } from "./features/settings/index.js?v=7";
+import { createAuditFeature } from "./features/audit/index.js?v=1";
 import { createI18n } from "./i18n/index.js?v=8";
 import { createGameTerms } from "./i18n/game-terms.js?v=7";
 
@@ -44,6 +45,7 @@ export function startApplication() {
     if (state.tab === "__time__") return getWorldFeature().renderTimePanel();
     if (state.tab === "__players__") return renderPlayersPanel();
     if (state.tab === "analytics") return renderAnalyticsPanel();
+    if (state.tab === "audit") return getAuditFeature().renderAuditPanel();
     if (state.tab === "home") { content.innerHTML = ""; return; }
     if (state.tab === "world") getWorldFeature().renderWorld();
     else if (state.tab === "rules") getRulesFeature().renderRules();
@@ -53,6 +55,7 @@ export function startApplication() {
   let worldFeature = null;
   let rulesFeature = null;
   let serverFeature = null;
+  let auditFeature = null;
 
   function getWorldFeature() {
     if (!worldFeature) worldFeature = createWorldFeature({ state, content, t, api, $, uiIcon, toast, getSettingsFeature, getNavigation });
@@ -67,6 +70,11 @@ export function startApplication() {
   function getServerFeature() {
     if (!serverFeature) serverFeature = createServerFeature({ state, content, t, api, $, escapeHtml, uiIcon, formatDate, toast, getSettingsFeature });
     return serverFeature;
+  }
+
+  function getAuditFeature() {
+    if (!auditFeature) auditFeature = createAuditFeature({ state, content, t, api, $, escapeHtml, toast, formatDate, uiIcon });
+    return auditFeature;
   }
 
   function formatDate(timestamp) {
@@ -325,6 +333,13 @@ export function startApplication() {
       $("#server-dialog").close();
       setTimeout(async () => setStatus(await api("/api/status")), 1500);
     } catch (error) { toast(error.message, true); }
+  });
+
+  // Inject the audit tab for owners only, once user identity is known.
+  state.subscribe("user", (user) => {
+    if (user?.role === "owner" && !state.tabs.includes("audit")) {
+      state.tabs = [...state.tabs, "audit"];
+    }
   });
 
   startAuthenticatedApplication({ requireSession, state, boot, toast });

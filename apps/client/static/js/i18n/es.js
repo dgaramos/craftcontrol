@@ -113,4 +113,5 @@ export const es = {
   opRetryConflict: "Otra operación ya está en ejecución. Por favor espere e intente de nuevo.",
   opParentLink: "Reintento de",
   domainFreshness: "Actualidad de los dominios", domainObservedAt: "Última observación", domainAgeSeconds: "Antigüedad (s)", domainStale: "Obsoleto", domainFresh: "Actualizado",
+  audit: "Auditoría", auditTitle: "Historial de auditoría", auditActor: "Actor", auditAction: "Acción", auditTarget: "Objetivo", auditResult: "Resultado", auditDate: "Fecha", auditFilterAll: "Todos", auditEmpty: "No hay registros de auditoría que coincidan con los filtros.", auditPrev: "Anterior", auditNext: "Siguiente", auditApply: "Aplicar filtros",
 };

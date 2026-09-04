@@ -1,7 +1,7 @@
 import { persistTab } from "./route.js?v=7";
 
 export function createNavigation({ state, $, t, uiIcon }) {
-  const icons = { home: "home", world: "world", players: "players", analytics: "data", rules: "rules", server: "server" };
+  const icons = { home: "home", world: "world", players: "players", analytics: "data", rules: "rules", server: "server", audit: "server" };
 
   function resetVerticalScroll() {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });

@@ -114,4 +114,5 @@ export const es = {
   opParentLink: "Reintento de",
   domainFreshness: "Actualidad de los dominios", domainObservedAt: "Última observación", domainAgeSeconds: "Antigüedad (s)", domainStale: "Obsoleto", domainFresh: "Actualizado",
   audit: "Auditoría", auditTitle: "Historial de auditoría", auditActor: "Actor", auditAction: "Acción", auditTarget: "Objetivo", auditResult: "Resultado", auditDate: "Fecha", auditFilterAll: "Todos", auditEmpty: "No hay registros de auditoría que coincidan con los filtros.", auditPrev: "Anterior", auditNext: "Siguiente", auditApply: "Aplicar filtros",
+  diagUpdatedAt: "Actualizado a las", diagKeyMetrics: "Métricas clave", diagRuntimeSection: "Runtime y reconciliación",
 };

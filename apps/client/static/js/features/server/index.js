@@ -8,142 +8,210 @@ function telemetryPackMarkup() {
 async function loadDiagnostics() {
   const target = $("#diagnostics-state");
   if (!target) return;
+
+  const existingBtn = target.querySelector("#diag-refresh");
+  if (existingBtn) existingBtn.disabled = true;
+
   try {
     const result = await api("/api/diagnostics");
     const telemetry = result.telemetry || {};
-    const broker = result.broker || {};
-    const section = document.createElement("section");
-    section.className = "capability-panel";
-    const heading = document.createElement("div");
-    const title = document.createElement("strong");
-    title.textContent = t("diagnostics");
-    const help = document.createElement("small");
-    help.textContent = t("diagnosticsHelp");
-    heading.append(title, help);
-    const metrics = document.createElement("dl");
-    const groups = [];
-    const add = (label, value) => {
-      const item = document.createElement("div");
-      const term = document.createElement("dt");
-      term.textContent = label;
-      const detail = document.createElement("dd");
-      detail.textContent = String(value);
-      item.append(term, detail);
-      metrics.append(item);
-    };
-    add(t("telemetryAccepted"), telemetry.accepted || 0);
-    add(t("telemetryRejected"), telemetry.rejected || 0);
-    add(t("telemetryDuplicates"), telemetry.duplicates || 0);
-    add(t("telemetryOld"), telemetry.old || 0);
-    const sequence = telemetry.sequence || {};
-    add(t("telemetryLost"), sequence.lost || 0);
-    add(t("detectedGaps"), sequence.gaps || 0);
-    add(t("resetCount"), sequence.resets || 0);
-    const topicMetrics = Object.entries(telemetry.by_topic || {});
-    if (topicMetrics.length) {
-      const topicGroup = document.createElement("div");
-      const label = document.createElement("strong");
-      label.textContent = t("telemetryTopicDiagnostics");
-      topicGroup.append(label);
-      topicMetrics.forEach(([topic, values]) => {
-        const item = document.createElement("small");
-        item.textContent = `${topic}: ${t("telemetryAccepted")} ${values.accepted}, ${t("telemetryRejected")} ${values.rejected}, ${t("telemetryDuplicates")} ${values.duplicates}, ${t("telemetryOld")} ${values.old}, ${t("detectedGaps")} ${values.gaps}, ${t("resetCount")} ${values.resets}`;
-        topicGroup.append(item);
-      });
-      groups.push(topicGroup);
+    const persistence = result.persistence || {};
+    const runtime = result.runtime || {};
+    const reconciliation = runtime.reconciliation || {};
+    const telemetryState = result.telemetry_state || {};
+
+    // -- Toolbar --
+    const toolbar = document.createElement("div");
+    toolbar.className = "diag-toolbar";
+    const stamp = document.createElement("small");
+    stamp.className = "muted";
+    stamp.id = "diag-updated-at";
+    stamp.textContent = `${t("diagUpdatedAt")} ${new Date().toLocaleTimeString()}`;
+    const btn = document.createElement("button");
+    btn.className = "secondary diag-refresh-btn";
+    btn.id = "diag-refresh";
+    btn.textContent = `↻ ${t("refresh")}`;
+    btn.addEventListener("click", () => loadDiagnostics());
+    toolbar.append(stamp, btn);
+
+    // -- KPI tiles --
+    function makeTile(labelKey, value, anomaly) {
+      const tile = document.createElement("div");
+      tile.className = "diag-tile" + (anomaly === "alert" ? " diag-tile--alert" : anomaly === "warn" ? " diag-tile--warn" : "");
+      const label = document.createElement("dt");
+      label.className = "diag-tile-label";
+      label.textContent = t(labelKey);
+      const val = document.createElement("dd");
+      val.className = "diag-tile-value";
+      val.textContent = String(value ?? "—");
+      tile.append(label, val);
+      if (anomaly) {
+        const flag = document.createElement("span");
+        flag.className = "diag-tile-flag";
+        flag.setAttribute("aria-label", "anomaly");
+        flag.textContent = "!";
+        tile.append(flag);
+      }
+      return tile;
     }
-    add(t("ingestionDuration"), `${telemetry.ingestion_duration_ms_average || 0} ms`);
-    add(t("ingestionDurationMax"), `${telemetry.ingestion_duration_ms_max || 0} ms`);
-    add(t("sseConnections"), broker.sse_connections || 0);
-    add(t("sseConnectionsTotal"), broker.sse_connections_total || 0);
-    add(t("sseReconnections"), broker.sse_reconnections || 0);
-    add(t("runtimeRefreshing"), result.runtime_refreshing ? t("yes") : t("no"));
-    const addGroup = (title, values, definitions) => {
-      if (!values || !definitions.some(({ key }) => values[key] !== null && values[key] !== undefined)) return;
-      const group = document.createElement("div");
-      const label = document.createElement("strong");
-      label.textContent = title;
-      group.append(label);
-      definitions.forEach(({ key, label, format }) => {
-        const value = values[key];
-        if (value === null || value === undefined) return;
-        const item = document.createElement("small");
-        item.textContent = `${t(label)}: ${format ? format(value) : value}`;
-        group.append(item);
+
+    const connections = persistence.connections ?? 0;
+    const contentionFailures = persistence.contention_failures ?? 0;
+    const rejected = telemetry.rejected ?? 0;
+    const reconciliationCount = reconciliation.count ?? 0;
+    const waitAvg = persistence.wait_ms_average ?? 0;
+
+    // Last snapshot age in seconds
+    let snapshotAnomalyClass = null;
+    let snapshotDisplay = "—";
+    if (telemetryState.last_snapshot_at != null) {
+      const ageSeconds = (Date.now() / 1000) - telemetryState.last_snapshot_at;
+      snapshotDisplay = formatDate(telemetryState.last_snapshot_at);
+      if (ageSeconds > 900) snapshotAnomalyClass = "alert";
+      else if (ageSeconds > 300) snapshotAnomalyClass = "warn";
+    }
+
+    const kpiGrid = document.createElement("dl");
+    kpiGrid.className = "diag-kpi-grid";
+    kpiGrid.append(
+      makeTile("sqliteConnections", connections, connections > 5 ? "warn" : null),
+      makeTile("sqliteContentionFailures", contentionFailures, contentionFailures > 0 ? "alert" : null),
+      makeTile("telemetryRejected", rejected, rejected > 0 ? "warn" : null),
+      makeTile("reconciliationCount", reconciliationCount, null),
+      makeTile("lastSnapshot", snapshotDisplay, snapshotAnomalyClass),
+      makeTile("sqliteWaitAverage", `${waitAvg} ms`, waitAvg > 200 ? "alert" : waitAvg > 50 ? "warn" : null),
+    );
+
+    // -- Section builder (detail grid) --
+    function makeSection(headingKey, definitions, values) {
+      if (!values) return null;
+      const hasData = definitions.some(({ key }) => values[key] != null);
+      if (!hasData) return null;
+      const section = document.createElement("div");
+      section.className = "diag-section";
+      const heading = document.createElement("h4");
+      heading.className = "diag-section-heading";
+      heading.textContent = t(headingKey);
+      const grid = document.createElement("dl");
+      grid.className = "diag-detail-grid";
+      definitions.forEach(({ key, labelKey, format }) => {
+        const raw = values[key];
+        if (raw == null) return;
+        const cell = document.createElement("div");
+        const term = document.createElement("dt");
+        term.textContent = t(labelKey);
+        const detail = document.createElement("dd");
+        detail.textContent = format ? format(raw) : String(raw);
+        cell.append(term, detail);
+        grid.append(cell);
       });
-      groups.push(group);
-    };
-    addGroup(t("telemetryDetails"), result.telemetry_state, [
-      { key: "status", label: "diagnosticStatus" },
-      { key: "sequence", label: "telemetrySequence" },
-      { key: "expected_sequence", label: "expectedSequence" },
-      { key: "gap_count", label: "detectedGaps" },
-      { key: "missing_events", label: "missingEvents" },
-      { key: "reset_count", label: "resetCount" },
-      { key: "last_snapshot_at", label: "lastSnapshot", format: formatDate },
-      { key: "last_event_at", label: "lastResponse", format: formatDate },
-    ]);
-    addGroup(t("persistenceDiagnostics"), result.persistence, [
-      { key: "connections", label: "sqliteConnections" },
-      { key: "wait_ms_average", label: "sqliteWaitAverage", format: (value) => `${value} ms` },
-      { key: "wait_ms_max", label: "sqliteWaitMax", format: (value) => `${value} ms` },
-      { key: "contention_failures", label: "sqliteContentionFailures" },
-      { key: "retries", label: "sqliteRetries" },
-      { key: "database_size_bytes", label: "sqliteDatabaseSize", format: (value) => `${value} B` },
-    ]);
-    addGroup(t("runtimeDiagnostics"), result.runtime, [
-      { key: "refreshing", label: "runtimeRefreshing", format: (value) => value ? t("yes") : t("no") },
-      { key: "pending_gamerule_refreshes", label: "pendingGameruleRefreshes" },
-      { key: "gamerule_worker_running", label: "gameruleWorkerRunning", format: (value) => value ? t("yes") : t("no") },
-      { key: "snapshot_running", label: "snapshotRunning", format: (value) => value ? t("yes") : t("no") },
-    ]);
-    addGroup(t("batchDiagnostics"), telemetry.blocks, [
-      { key: "count", label: "batchCount" },
-      { key: "total_blocks_declared", label: "batchTotalBlocks" },
-      { key: "max_blocks_declared", label: "batchMaxBlocks" },
-    ]);
-    addGroup(t("reconciliationDiagnostics"), result.runtime?.reconciliation, [
-      { key: "count", label: "reconciliationCount" },
-      { key: "duration_ms_total", label: "reconciliationDurationTotal", format: (value) => `${value} ms` },
-      { key: "duration_ms_max", label: "reconciliationDurationMax", format: (value) => `${value} ms` },
-      { key: "duration_ms_last", label: "reconciliationDurationLast", format: (value) => `${value} ms` },
-    ]);
-    addGroup(t("snapshotDiagnostics"), telemetry.snapshots, [
-      { key: "count", label: "snapshotCount" },
-      { key: "duration_ms_total", label: "snapshotDurationTotal" },
-      { key: "duration_ms_max", label: "snapshotDurationMax" },
-      { key: "last_player_count", label: "snapshotLastPlayerCount" },
-    ]);
+      section.append(heading, grid);
+      return section;
+    }
+
+    // -- Ingestion Topics --
+    const topicMetrics = Object.entries(telemetry.by_topic || {});
+    let topicsSection = null;
+    if (topicMetrics.length) {
+      topicsSection = document.createElement("div");
+      topicsSection.className = "diag-section";
+      const topicsHeading = document.createElement("h4");
+      topicsHeading.className = "diag-section-heading";
+      topicsHeading.textContent = t("telemetryTopicDiagnostics");
+      topicsSection.append(topicsHeading);
+      topicMetrics.forEach(([topic, values]) => {
+        const row = document.createElement("small");
+        row.className = "muted";
+        row.style.display = "block";
+        row.textContent = `${escapeHtml(topic)}: ${t("telemetryAccepted")} ${values.accepted ?? 0}, ${t("telemetryRejected")} ${values.rejected ?? 0}, ${t("telemetryDuplicates")} ${values.duplicates ?? 0}, ${t("telemetryOld")} ${values.old ?? 0}`;
+        topicsSection.append(row);
+      });
+    }
+
+    // -- Domain Freshness --
     const domains = result.domains || {};
     const domainEntries = Object.entries(domains);
+    let domainsSection = null;
     if (domainEntries.length) {
-      const domainGroup = document.createElement("div");
-      const domainLabel = document.createElement("strong");
-      domainLabel.textContent = t("domainFreshness");
-      domainGroup.append(domainLabel);
+      domainsSection = document.createElement("div");
+      domainsSection.className = "diag-section";
+      const domainsHeading = document.createElement("h4");
+      domainsHeading.className = "diag-section-heading";
+      domainsHeading.textContent = t("domainFreshness");
+      const domainList = document.createElement("div");
+      domainList.className = "diag-domain-list";
       domainEntries.forEach(([name, info]) => {
-        const row = document.createElement("small");
-        const badge = info.stale ? t("domainStale") : t("domainFresh");
-        const observed = info.observed_at != null ? new Date(info.observed_at * 1000).toLocaleTimeString() : "—";
-        const age = info.age_seconds != null ? `${Math.round(info.age_seconds)}s` : "—";
-        row.textContent = `${name}: ${badge} — ${t("domainObservedAt")}: ${observed}, ${t("domainAgeSeconds")}: ${age}`;
-        domainGroup.append(row);
+        const row = document.createElement("div");
+        row.className = "diag-domain-row";
+        const nameEl = document.createElement("span");
+        nameEl.className = "diag-domain-name";
+        nameEl.textContent = name;
+        const badge = document.createElement("span");
+        badge.className = `badge ${info.stale ? "freshness-stale" : "freshness-fresh"}`;
+        badge.textContent = info.stale ? t("domainStale") : t("domainFresh");
+        const age = document.createElement("span");
+        age.className = "diag-domain-age muted";
+        age.textContent = info.age_seconds != null ? `${Math.round(info.age_seconds)}s` : "—";
+        row.append(nameEl, badge, age);
+        domainList.append(row);
       });
-      groups.push(domainGroup);
+      domainsSection.append(domainsHeading, domainList);
     }
-    section.append(heading, metrics, ...groups);
-    const topics = Object.entries(broker.events_by_topic || {});
-    if (topics.length) {
-      const list = document.createElement("ul");
-      topics.forEach(([topic, count]) => {
-        const item = document.createElement("li");
-        item.textContent = `${topic}: ${count}`;
-        list.append(item);
-      });
-      section.append(list);
-    }
-    target.replaceChildren(section);
-  } catch (_) { target.textContent = ""; }
+
+    // -- Runtime & Reconciliation --
+    const runtimeSection = makeSection("diagRuntimeSection", [
+      { key: "refreshing", labelKey: "runtimeRefreshing", format: (v) => v ? t("yes") : t("no") },
+      { key: "pending_gamerule_refreshes", labelKey: "pendingGameruleRefreshes" },
+      { key: "gamerule_worker_running", labelKey: "gameruleWorkerRunning", format: (v) => v ? t("yes") : t("no") },
+      { key: "snapshot_running", labelKey: "snapshotRunning", format: (v) => v ? t("yes") : t("no") },
+      { key: "count", labelKey: "reconciliationCount" },
+      { key: "duration_ms_total", labelKey: "reconciliationDurationTotal", format: (v) => `${v} ms` },
+      { key: "duration_ms_max", labelKey: "reconciliationDurationMax", format: (v) => `${v} ms` },
+      { key: "duration_ms_last", labelKey: "reconciliationDurationLast", format: (v) => `${v} ms` },
+    ], { ...runtime, ...reconciliation });
+
+    // -- SQLite Persistence --
+    const sqliteSection = makeSection("persistenceDiagnostics", [
+      { key: "connections", labelKey: "sqliteConnections" },
+      { key: "wait_ms_average", labelKey: "sqliteWaitAverage", format: (v) => `${v} ms` },
+      { key: "wait_ms_max", labelKey: "sqliteWaitMax", format: (v) => `${v} ms` },
+      { key: "contention_failures", labelKey: "sqliteContentionFailures" },
+      { key: "retries", labelKey: "sqliteRetries" },
+      { key: "database_size_bytes", labelKey: "sqliteDatabaseSize", format: (v) => `${v} B` },
+    ], persistence);
+
+    // -- Telemetry State --
+    const telemetrySection = makeSection("telemetryDetails", [
+      { key: "status", labelKey: "diagnosticStatus" },
+      { key: "sequence", labelKey: "telemetrySequence" },
+      { key: "expected_sequence", labelKey: "expectedSequence" },
+      { key: "gap_count", labelKey: "detectedGaps" },
+      { key: "missing_events", labelKey: "missingEvents" },
+      { key: "reset_count", labelKey: "resetCount" },
+      { key: "last_snapshot_at", labelKey: "lastSnapshot", format: formatDate },
+      { key: "last_event_at", labelKey: "lastResponse", format: formatDate },
+    ], telemetryState);
+
+    // -- Key Metrics heading --
+    const kpiSection = document.createElement("div");
+    kpiSection.className = "diag-section";
+    const kpiHeading = document.createElement("h4");
+    kpiHeading.className = "diag-section-heading";
+    kpiHeading.textContent = t("diagKeyMetrics");
+    kpiSection.append(kpiHeading, kpiGrid);
+
+    // -- Assemble --
+    const children = [toolbar, kpiSection];
+    if (topicsSection) children.push(topicsSection);
+    if (domainsSection) children.push(domainsSection);
+    if (runtimeSection) children.push(runtimeSection);
+    if (sqliteSection) children.push(sqliteSection);
+    if (telemetrySection) children.push(telemetrySection);
+    target.replaceChildren(...children);
+  } catch (_) {
+    if (existingBtn) existingBtn.disabled = false;
+    else target.textContent = "";
+  }
 }
 
 async function loadTelemetryPack() {

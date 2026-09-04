@@ -138,6 +138,18 @@
 .player-admin-card { padding: 18px; }
 .player-admin-card h3 { margin: 7px 0; }
 .player-admin-card > p { min-height: 44px; color: var(--muted); font-size: .78rem; }
+.player-minecraft-card { grid-column: 1 / -1; padding: 18px; }
+.player-minecraft-sections { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-top: 12px; }
+.player-minecraft-section { padding: 4px 0; }
+.player-minecraft-section h3 { margin: 0 0 6px; }
+.player-minecraft-section > p { color: var(--muted); font-size: .78rem; margin: 0 0 12px; min-height: 44px; }
+.player-minecraft-divider { width: 1px; background: rgba(255,255,255,.07); margin: 0 20px; }
+@media (max-width: 520px) {
+  .player-minecraft-sections { grid-template-columns: 1fr; }
+  .player-minecraft-divider { width: auto; height: 1px; margin: 16px 0; }
+}
+.gamemode-select { min-height: 46px; padding: 0 10px; color: #fff; background: #0b0f0c; border: 2px solid #48564d; width: 100%; font: inherit; cursor: pointer; }
+.gamemode-select:focus { outline: 2px solid var(--grass-light); }
 .admin-scope { display: inline-block; padding: 4px 7px; font-size: .58rem; font-weight: 900; letter-spacing: .08em; }
 .game-scope { color: #f8dc9a; background: #493914; }
 .panel-scope { color: #a9e6ff; background: #123b49; }

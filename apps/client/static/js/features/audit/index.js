@@ -21,7 +21,7 @@ export function createAuditFeature({ state, content, t, api, $, escapeHtml, toas
   function outcomeClass(result) {
     if (result === "success") return "audit-outcome--success";
     if (result === "denied" || result === "failure") return "audit-outcome--failure";
-    return "";
+    return "audit-outcome--neutral";
   }
 
   function renderRecord(rec) {
@@ -33,10 +33,10 @@ export function createAuditFeature({ state, content, t, api, $, escapeHtml, toas
     return `
       <tr>
         <td>${actor}</td>
-        <td><code>${action}</code></td>
-        <td>${target}</td>
-        <td class="${outcomeClass(rec.result)}">${result}</td>
-        <td>${date}</td>
+        <td><span class="audit-action-code">${action}</span></td>
+        <td><span class="audit-target" title="${target}">${target}</span></td>
+        <td><span class="audit-outcome ${outcomeClass(rec.result)}">${result}</span></td>
+        <td class="audit-date">${date}</td>
       </tr>`;
   }
 
@@ -69,7 +69,7 @@ export function createAuditFeature({ state, content, t, api, $, escapeHtml, toas
 
   function renderTable(data) {
     if (!data.records || data.records.length === 0) {
-      return `<p class="audit-empty">${escapeHtml(t("auditEmpty"))}</p>`;
+      return `<div class="audit-empty"><span>—</span>${escapeHtml(t("auditEmpty"))}</div>`;
     }
     const rows = data.records.map(renderRecord).join("");
     return `
@@ -137,9 +137,19 @@ export function createAuditFeature({ state, content, t, api, $, escapeHtml, toas
 
     content.innerHTML = `
       <section class="audit-panel">
-        <h2 class="audit-heading">${escapeHtml(t("auditTitle"))}</h2>
-        ${renderFilters()}
-        ${renderTable(data)}
+        <div class="block-panel hero">
+          <div class="grass-edge"></div>
+          <div class="audit-hero">
+            <div>
+              <span class="eyebrow">CRAFTCONTROL</span>
+              <h2>${escapeHtml(t("auditTitle"))}</h2>
+            </div>
+          </div>
+        </div>
+        <div class="block-panel" style="padding:0;overflow:hidden;">
+          ${renderFilters()}
+          ${renderTable(data)}
+        </div>
       </section>`;
 
     bindControls();

@@ -195,3 +195,9 @@ See `deploy/README.md` for the canonical backup interface. The short version:
 always run backup via `docker exec` against the running container, never via
 the host-side `craftcontrol` binary. The container image always ships
 `/usr/local/bin/craftcontrol` matching its own Python module layout.
+
+## Observability
+
+CraftControl exposes a Prometheus metrics endpoint at `/metrics` (proxied
+through nginx). See [`docs/observability.md`](observability.md) for the
+Prometheus scrape configuration and Grafana dashboard import instructions.

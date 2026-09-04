@@ -124,7 +124,7 @@
 .player-detail-loading { padding: 40px; text-align: center; color: var(--muted); }
 .player-detail-screen { display: grid; gap: 12px; }
 .player-back { justify-self: start; }
-.player-detail-hero { display: flex; align-items: center; gap: 18px; padding: 20px; }
+.player-detail-hero { display: flex; align-items: center; flex-wrap: wrap; gap: 18px; padding: 20px; }
 .player-detail-hero .player-data-link { margin-left: auto; white-space: nowrap; }
 .player-avatar.large { width: 68px; height: 68px; font-size: 1.7rem; }
 .player-detail-hero h2 { margin: 4px 0; font-size: 1.55rem; }
@@ -152,6 +152,10 @@
 .hero-attr-label {
   font-size: .72rem; font-weight: 900;
   color: var(--muted); text-transform: uppercase; letter-spacing: .04em;
+}
+.hero-attr-control {
+  display: flex; flex-direction: column; gap: 4px;
+  cursor: default;
 }
 .gamemode-select.compact {
   min-height: 34px; padding: 0 8px;

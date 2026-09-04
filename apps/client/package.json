@@ -2,7 +2,8 @@
   "name": "craftcontrol-frontend",
   "type": "module",
   "scripts": {
-    "test": "node --experimental-vm-modules node_modules/.bin/jest --coverage"
+    "test": "node --experimental-vm-modules node_modules/.bin/jest --coverage",
+    "dev": "node scripts/dev-proxy.mjs"
   },
   "devDependencies": {
     "jest": "^29.7.0",

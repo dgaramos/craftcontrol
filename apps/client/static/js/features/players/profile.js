@@ -32,14 +32,19 @@ return async function renderPlayerDetail(player, account, back = renderPlayersPa
       `<div class="player-detail-hero-attrs">`,
       `<div class="player-detail-hero-attrs-row">`,
       `<span class="admin-scope game-scope">MINECRAFT</span>`,
+      `<label class="hero-attr-control" title="${escapeHtml ? escapeHtml(operatorTooltip) : operatorTooltip}">`,
       `<span class="hero-attr-label" id="detail-role-label"></span>`,
-      `<div id="detail-operator-control" title="${escapeHtml ? escapeHtml(operatorTooltip) : operatorTooltip}"></div>`,
+      `<div id="detail-operator-control"></div>`,
+      `</label>`,
+      `<label class="hero-attr-control" id="detail-gamemode-label-wrap">`,
+      `<span class="hero-attr-label" id="detail-gamemode-label"></span>`,
       `<select class="gamemode-select compact" id="detail-gamemode-select">`,
       `<option value="server_default" id="detail-gamemode-server-default"></option>`,
       `<option value="survival" id="detail-gamemode-survival"></option>`,
       `<option value="creative" id="detail-gamemode-creative"></option>`,
       `<option value="adventure" id="detail-gamemode-adventure"></option>`,
       `</select>`,
+      `</label>`,
       `<div id="detail-gamemode-force-notice" hidden></div>`,
       `</div>`,
       `<div class="player-detail-hero-attrs-row" id="detail-craftcontrol-row">`,
@@ -87,6 +92,8 @@ return async function renderPlayerDetail(player, account, back = renderPlayersPa
     $("#detail-role-label").textContent = profile.operator
       ? localized("Operador", "Operator", "Operador")
       : localized("Membro", "Member", "Miembro");
+    const gameModeLabel = $("#detail-gamemode-label");
+    if (gameModeLabel) gameModeLabel.textContent = localized("Modo de jogo", "Game mode", "Modo de juego");
     $("#detail-operator-control").innerHTML = getSettingsFeature().booleanControl("detail-operator", profile.operator);
     $("#detail-panel-access").innerHTML = panelAccessDetailMarkup(profile, account, "");
 

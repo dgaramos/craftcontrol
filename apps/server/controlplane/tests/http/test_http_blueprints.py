@@ -66,9 +66,11 @@ def test_docs_endpoint_registered(routes) -> None:
 
 
 def test_all_routes_are_under_api_prefix_or_root(routes) -> None:
+    # /metrics is a deliberate exception: Prometheus convention places it at the root.
+    _allowed_root_paths = {"/", "/metrics"}
     for path in routes:
         assert (
-            path.startswith("/api/") or path == "/" or path.startswith("/static/")
+            path.startswith("/api/") or path in _allowed_root_paths or path.startswith("/static/")
         ), f"Unexpected route outside /api/ prefix: {path}"
 
 

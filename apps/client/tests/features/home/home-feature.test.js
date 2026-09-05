@@ -9,6 +9,7 @@ function makeDeps(overrides = {}) {
   };
   const content = {
     innerHTML: "",
+    querySelector: jest.fn(() => makeEl()),
     querySelectorAll(selector) {
       if (selector === "[data-home-gamemode]") return buttons.modes;
       if (selector === "[data-home-tab]") return buttons.tabs;
@@ -17,7 +18,7 @@ function makeDeps(overrides = {}) {
   };
   const state = { config: { GAMEMODE: "survival" }, changes: {}, ...overrides.state };
   const getSettingsFeature = () => ({ updateSaveLabel: overrides.updateSaveLabel || (() => {}) });
-  return { state, content, t: (key) => key, getSettingsFeature, buttons };
+  return { state, content, t: (key) => key, uiIcon: (name) => `<svg data-icon="${name}"></svg>`, getSettingsFeature, openTimeControls: jest.fn(), buttons };
 }
 
 describe("createHomeFeature", () => {
@@ -50,5 +51,16 @@ describe("createHomeFeature", () => {
     deps.buttons.tabs[0].onclick();
 
     expect(deps.state.tab).toBe("rules");
+  });
+
+  test("time action opens the existing time controls", () => {
+    const deps = makeDeps();
+    const timeButton = makeEl();
+    deps.content.querySelector = jest.fn(() => timeButton);
+    createHomeFeature(deps).render();
+
+    timeButton.onclick();
+
+    expect(deps.openTimeControls).toHaveBeenCalled();
   });
 });

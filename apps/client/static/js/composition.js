@@ -15,7 +15,7 @@ import { createServerFeature } from "./features/server/index.js?v=13";
 import { startAuthenticatedApplication } from "./features/auth/bootstrap.js?v=7";
 import { createSettingsFeature } from "./features/settings/index.js?v=7";
 import { createAuditFeature } from "./features/audit/index.js?v=1";
-import { createHomeFeature } from "./features/home/index.js?v=2";
+import { createHomeFeature } from "./features/home/index.js?v=3";
 import { createI18n } from "./i18n/index.js?v=9";
 import { createGameTerms } from "./i18n/game-terms.js?v=7";
 
@@ -63,7 +63,7 @@ export function startApplication() {
   let homeFeature = null;
 
   function getHomeFeature() {
-    if (!homeFeature) homeFeature = createHomeFeature({ state, content, t, getSettingsFeature });
+    if (!homeFeature) homeFeature = createHomeFeature({ state, content, t, uiIcon, getSettingsFeature, openTimeControls: () => getWorldFeature().openTimeControls() });
     return homeFeature;
   }
 
@@ -196,7 +196,7 @@ export function startApplication() {
     state.online = snapshot.online || 0;
     state.maxPlayers = snapshot.max_players || 0;
     if (snapshot.updated_at !== undefined) state.updatedAt = snapshot.updated_at || 0;
-    $("#players-summary").textContent = `${state.online} / ${state.maxPlayers || "?"} ${t("playersOnline")}`;
+    $("#players-summary").textContent = `${state.online} / ${state.maxPlayers || "?"}`;
     $("#players-list").textContent = state.players.length ? state.players.join(" · ") : t("nobody");
     $("#updated-at").textContent = state.updatedAt ? `${t("updated")} ${new Date(state.updatedAt * 1000).toLocaleTimeString(localeTag())}` : t("awaiting");
   }
@@ -204,13 +204,20 @@ export function startApplication() {
   function showWorld(snapshot) {
     state.world = snapshot.world || {};
     $("#world-day").textContent = state.world.day ?? "—";
-    $("#world-time").textContent = state.world.daytime ?? "—";
+    const daytime = Number(state.world.daytime);
+    if (Number.isFinite(daytime)) {
+      const minutes = Math.round((((daytime + 6000) % 24000) / 1000) * 60);
+      const hour = Math.floor(minutes / 60) % 24;
+      const minute = minutes % 60;
+      $("#world-time").textContent = new Intl.DateTimeFormat(localeTag(), { hour: "numeric", minute: "2-digit" }).format(new Date(2000, 0, 1, hour, minute));
+    } else $("#world-time").textContent = "—";
     $("#world-weather").textContent = state.world.weather ? t(state.world.weather) : "—";
   }
 
   function updateBrand() {
     const name = state.config.SERVER_NAME || "Minecraft Bedrock";
     $("#instance-name").textContent = name;
+    $("#hero-instance-name").textContent = name;
     document.title = `CraftControl · ${name}`;
   }
 
@@ -336,7 +343,6 @@ export function startApplication() {
   $("#manage-sessions-btn").onclick = () => { closeProfileSheet(); showSessions(); };
   $("#change-password-btn").onclick = () => { closeProfileSheet(); showPasswordChange(); };
 
-  $("#time-controls").onclick = () => getWorldFeature().openTimeControls();
 
   $("#open-players").onclick = () => getNavigation().openPlayers();
 

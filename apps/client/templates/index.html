@@ -8,7 +8,7 @@
     <title>CraftControl · Bedrock control center</title>
     <link rel="icon" href="/static/craftcontrol-mark.svg" type="image/svg+xml">
     <link rel="manifest" href="/static/site.webmanifest">
-    <link rel="stylesheet" href="/static/app.css?v=31">
+    <link rel="stylesheet" href="/static/app.css?v=32">
     <link rel="stylesheet" href="/static/players.css?v=25">
     <link rel="stylesheet" href="/static/analytics.css?v=12">
     <link rel="stylesheet" href="/static/auth.css?v=7">
@@ -44,18 +44,18 @@
         <div class="overview-grid">
           <div class="overview-item server-overview">
             <div class="shield"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-shield"></use></svg></div>
-            <div><span class="eyebrow" data-i18n="worldState">ESTADO DO MUNDO</span><h2 id="server-state-title">Consultando servidor</h2></div>
+            <div><span id="hero-instance-name" class="eyebrow" data-i18n="worldState">ESTADO DO MUNDO</span><h2 id="server-state-title">Consultando servidor</h2></div>
           </div>
           <button id="open-players" class="overview-item players-card" type="button" aria-label="Abrir jogadores e históricos">
-            <div class="player-count"><span class="pixel-icon"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-players"></use></svg></span><strong id="players-summary">0 jogadores online</strong></div>
-            <div id="players-list">Ninguém conectado</div>
-            <small id="updated-at">Aguardando atualização</small>
+            <small data-i18n="players">Jogadores</small>
+            <div class="player-count"><strong id="players-summary">0 / 0</strong></div>
+            <div id="players-list" hidden>Ninguém conectado</div>
+            <small id="updated-at" hidden>Aguardando atualização</small>
             <span class="players-card-arrow" aria-hidden="true">›</span>
           </button>
-          <button id="time-controls" class="overview-item time-launch" type="button"><span><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-sun"></use></svg></span><b data-i18n="timeControls">Tempo e clima</b><small data-i18n="timeControlsHint">Horário, ciclos e clima</small></button>
           <div class="world-summary" aria-live="polite">
-            <div><small data-i18n="days">Dias jogados</small><strong id="world-day">—</strong></div>
-            <div><small data-i18n="daytime">Ticks do dia</small><strong id="world-time">—</strong></div>
+            <div><small data-i18n="day">Dia</small><strong id="world-day">—</strong></div>
+            <div><small data-i18n="timeOfDay">Horário do mundo</small><strong id="world-time">—</strong></div>
             <div><small data-i18n="weatherTitle">Clima</small><strong id="world-weather">—</strong></div>
           </div>
         </div>
@@ -203,6 +203,6 @@
     </div>
   </div>
 
-  <script type="module" src="/static/app.js?v=76"></script>
+  <script type="module" src="/static/app.js?v=77"></script>
   </body>
 </html>

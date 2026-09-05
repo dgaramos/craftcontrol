@@ -430,6 +430,7 @@ main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; width: min(
 .danger-zone { border-top-color: #8f4039; }
 .danger-zone h3 { color: #ff9389; }
 
+footer[hidden] { display: none !important; }
 footer {
   position: fixed;
   left: 0;

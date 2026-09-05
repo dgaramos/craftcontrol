@@ -29,7 +29,7 @@ export const en = {
     onlinePlayers: "Online players", operatorAccess: "Operator", operatorHelp: "Can use administrative commands in the game.",
     noOnlinePlayers: "No players are online right now.", permissionUpdated: "Permission updated",
     gameModeTitle: "Game mode", gameModeHelp: "Set a game mode preference for this player. The preference is persisted and applied immediately when the player is online. Choose \"Use server default\" to clear the override.",
-    gameModeLabel: "Configured preference", survival: "Survival", creative: "Creative", adventure: "Adventure",
+    gameModeLabel: "Game mode", survival: "Survival", creative: "Creative", adventure: "Adventure",
     serverDefault: "Use server default",
     gameModeUpdated: "Game mode preference saved", gameModeError: "Could not save game mode preference",
     observedGameModeLabel: "Observed mode (now)", observedGameModeAbsent: "Mode not observed",

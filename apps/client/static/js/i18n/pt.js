@@ -29,7 +29,7 @@ export const pt = {
     onlinePlayers: "Jogadores online", operatorAccess: "Operador", operatorHelp: "Pode usar comandos administrativos dentro do jogo.",
     noOnlinePlayers: "Nenhum jogador online no momento.", permissionUpdated: "Permissão atualizada",
     gameModeTitle: "Modo de jogo", gameModeHelp: "Define uma preferência de modo de jogo para este jogador. A preferência é salva e aplicada imediatamente quando o jogador estiver online. Escolha \"Usar padrão do servidor\" para remover a preferência.",
-    gameModeLabel: "Preferência configurada", survival: "Sobrevivência", creative: "Criativo", adventure: "Aventura",
+    gameModeLabel: "Modo de jogo", survival: "Sobrevivência", creative: "Criativo", adventure: "Aventura",
     serverDefault: "Usar padrão do servidor",
     gameModeUpdated: "Preferência de modo de jogo salva", gameModeError: "Não foi possível salvar a preferência de modo de jogo",
     observedGameModeLabel: "Modo observado (agora)", observedGameModeAbsent: "Modo não observado",

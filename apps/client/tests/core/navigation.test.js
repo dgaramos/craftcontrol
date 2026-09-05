@@ -332,11 +332,9 @@ describe("createNavigation — renderBottomNav", () => {
       const { state, $, t, uiIcon, bottomNavEl } = makeEnv(tab);
       const nav = createNavigation({ state, $, t, uiIcon });
       nav.renderBottomNav();
-      // For internal tabs, none of the 3 bottom-nav buttons should be active
-      // (they all fall back to 'home' mapping via _bottomNavActive)
-      // Actually per spec: home is the fallback for internal tabs
-      const homeBtn = bottomNavEl._buttons.find((b) => b.dataset.tab === "home");
-      expect(homeBtn.className).toBe("active");
+      // Internal tabs are reached via the top horizontal nav; the bottom-nav
+      // must not highlight any of the 3 visible buttons (home/players/server).
+      bottomNavEl._buttons.forEach((btn) => expect(btn.className).toBe(""));
     }
   });
 });

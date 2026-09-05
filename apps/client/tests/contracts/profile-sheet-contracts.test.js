@@ -73,8 +73,10 @@ describe("profile sheet contracts — locale buttons in sheet", () => {
   });
 });
 
-describe("profile sheet contracts — old language-picker hidden", () => {
-  test("index.html marks the topbar #language-picker as hidden", () => {
-    expect(indexTemplate).toMatch(/id="language-picker"[^>]*hidden/);
+describe("profile sheet contracts — old language-picker removed", () => {
+  test("index.html does not render the legacy topbar #language-picker", () => {
+    // The language picker was removed from the topbar; locale switching now
+    // lives exclusively in #profile-sheet via [data-locale] buttons.
+    expect(indexTemplate).not.toContain('id="language-picker"');
   });
 });

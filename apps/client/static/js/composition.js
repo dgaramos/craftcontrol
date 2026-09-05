@@ -15,6 +15,7 @@ import { createServerFeature } from "./features/server/index.js?v=13";
 import { startAuthenticatedApplication } from "./features/auth/bootstrap.js?v=7";
 import { createSettingsFeature } from "./features/settings/index.js?v=7";
 import { createAuditFeature } from "./features/audit/index.js?v=1";
+import { createHomeFeature } from "./features/home/index.js?v=1";
 import { createI18n } from "./i18n/index.js?v=8";
 import { createGameTerms } from "./i18n/game-terms.js?v=7";
 
@@ -49,7 +50,7 @@ export function startApplication() {
     if (state.tab === "__players__") return renderPlayersPanel();
     if (state.tab === "analytics") return renderAnalyticsPanel();
     if (state.tab === "audit") return getAuditFeature().renderAuditPanel();
-    if (state.tab === "home") { content.innerHTML = ""; return; }
+    if (state.tab === "home") return getHomeFeature().render();
     if (state.tab === "world") getWorldFeature().renderWorld();
     else if (state.tab === "rules") getRulesFeature().renderRules();
     else if (state.tab === "server") { getServerFeature().renderServer(); getServerFeature().loadDiagnostics(); }
@@ -59,6 +60,12 @@ export function startApplication() {
   let rulesFeature = null;
   let serverFeature = null;
   let auditFeature = null;
+  let homeFeature = null;
+
+  function getHomeFeature() {
+    if (!homeFeature) homeFeature = createHomeFeature({ state, content, t, getSettingsFeature });
+    return homeFeature;
+  }
 
   function getWorldFeature() {
     if (!worldFeature) worldFeature = createWorldFeature({ state, content, t, api, $, uiIcon, toast, getSettingsFeature, getNavigation });

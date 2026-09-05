@@ -350,6 +350,13 @@ main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; width: min(
 .quick-actions .day { background: linear-gradient(#ae7a1e, #805711); border-top-color: #efc04b; }
 .quick-actions .night { background: linear-gradient(#233e68, #142744); border-top-color: #5479aa; }
 .quick-actions .weather { background: linear-gradient(#3278a5, #235376); border-top-color: #6db9e7; }
+.home-actions { display: grid; gap: 10px; margin: 0 0 12px; padding: 13px; }
+.home-actions h3 { margin: 3px 0 0; }
+.home-game-modes, .home-shortcuts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+.home-game-modes button { min-height: var(--game-mode-btn-min-height); padding: 6px 4px; font-size: .7rem; }
+.home-game-modes button.active { color: #071006; background: linear-gradient(#80cc52, #4d9d35); border-top-color: #b2f080; border-left-color: #8ed460; }
+.home-shortcuts { margin-bottom: 12px; }
+.home-shortcuts button { min-width: 0; min-height: 58px; padding: 8px 4px; font-size: .7rem; }
 
 .group { margin: 0 0 24px; }
 .group-title { margin: 0 0 10px 4px; color: var(--text); font-size: 1.05rem; font-weight: 900; text-shadow: 2px 2px 0 #000; }

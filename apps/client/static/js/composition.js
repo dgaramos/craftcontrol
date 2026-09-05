@@ -413,5 +413,8 @@ export function startApplication() {
     }
   });
 
+  // Draw the mobile shell and its local actions before authentication and
+  // backend boot complete. This keeps Home usable during an API reconnect.
+  applyLocale();
   startAuthenticatedApplication({ requireSession, state, boot, toast });
 }

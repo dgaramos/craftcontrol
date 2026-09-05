@@ -51,6 +51,30 @@ describe("feature contracts — world/rules/server/auth boundaries", () => {
     expect(script).toContain("getServerFeature().renderServer()");
   });
 
+  test("composition.js routes analytics tab to renderAnalyticsPanel", () => {
+    const script = frontendScript();
+    expect(script).toContain('state.tab === "analytics"');
+    expect(script).toContain("renderAnalyticsPanel()");
+  });
+
+  test("composition.js routes audit tab to getAuditFeature().renderAuditPanel", () => {
+    const script = frontendScript();
+    expect(script).toContain('state.tab === "audit"');
+    expect(script).toContain("getAuditFeature().renderAuditPanel()");
+  });
+
+  test("composition.js routes __time__ tab to getWorldFeature().renderTimePanel", () => {
+    const script = frontendScript();
+    expect(script).toContain('state.tab === "__time__"');
+    expect(script).toContain("getWorldFeature().renderTimePanel()");
+  });
+
+  test("composition.js routes __players__ tab to renderPlayersPanel", () => {
+    const script = frontendScript();
+    expect(script).toContain('state.tab === "__players__"');
+    expect(script).toContain("renderPlayersPanel()");
+  });
+
   test("composition.js does not inline renderTimePanel", () => {
     const script = frontendScript();
     expect(script).not.toContain("function renderTimePanel");

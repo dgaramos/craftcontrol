@@ -9,9 +9,13 @@ export function createNavigation({ state, $, t, uiIcon }) {
 
   function _bottomNavActive() {
     // Maps state.tab to the data-tab value used on #bottom-nav buttons.
+    // Internal tabs (world, analytics, rules, audit, __time__) are reached via
+    // the top horizontal nav; none of the 3 bottom-nav buttons should appear
+    // active for them, so return null.
     if (state.tab === "__players__") return "__players__";
     if (state.tab === "server") return "server";
-    return "home";
+    if (state.tab === "home") return "home";
+    return null;
   }
 
   function renderBottomNav() {

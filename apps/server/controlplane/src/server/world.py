@@ -6,7 +6,7 @@ import re
 from types import MappingProxyType
 from typing import Any
 
-from ..ports import EventPublisher, ServerConsole
+from ..ports import EventPublisher, ServerConsole, StateStore
 
 
 class WorldQueryError(Exception):
@@ -31,9 +31,16 @@ class WorldService:
     # Deterministic priority order for weather-query: most severe first.
     WEATHER_QUERY_ORDER: tuple[str, ...] = ("thunder", "rain", "clear")
 
-    def __init__(self, bedrock: ServerConsole, broker: EventPublisher) -> None:
+    def __init__(self, bedrock: ServerConsole, broker: EventPublisher, state_store: StateStore | None = None) -> None:
         self.bedrock = bedrock
         self.broker = broker
+        self.state_store = state_store
+
+    def _observe_world(self, values: dict[str, str], action: str, domains: list[str] | None = None) -> None:
+        """Persist only values confirmed by a console response or mutation."""
+        if self.state_store is not None:
+            self.state_store.store("world", values, "manager")
+        self.broker.publish("state.changed", "manager", {"domains": domains or ["world"], "action": action})
 
     def query_world_state(self) -> dict[str, str]:
         """Query current time and weather from the Bedrock console.
@@ -92,7 +99,10 @@ class WorldService:
             query = payload["value"]
             output = self.bedrock.send_and_read(["time", "query", query])
             numbers = re.findall(r"-?\d+", output)
-            return {"action": action, "query": query, "value": int(numbers[-1]) if numbers else None}
+            value = int(numbers[-1]) if numbers else None
+            if value is not None:
+                self._observe_world({query: str(value)}, action)
+            return {"action": action, "query": query, "value": value}
         if action == "weather" and payload.get("value") in self.WEATHER_TYPES:
             weather = payload["value"]
             parts = ["weather", weather]
@@ -103,11 +113,13 @@ class WorldService:
                     raise ValueError("valor fora do intervalo")
                 parts.append(str(ticks))
             self.bedrock.send(parts)
-            self.broker.publish("state.changed", "manager", {"domains": ["weather"], "action": action})
+            self._observe_world({"weather": weather}, action, ["weather", "world"])
             return {"action": action, "value": weather, "duration": duration}
         if action == "weather-query":
             output = self.bedrock.send_and_read(["weather", "query"])
             lowered = output.lower()
             weather = next((w for w in self.WEATHER_QUERY_ORDER if w in lowered), "unknown")
+            if weather != "unknown":
+                self._observe_world({"weather": weather}, action)
             return {"action": action, "value": weather}
         raise KeyError(action)

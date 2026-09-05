@@ -361,7 +361,7 @@ main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; width: min(
 .home-time-action strong { max-width: 7ch; font-family: Oxanium, ui-monospace, monospace; font-size: 13px; font-weight: 800; line-height: 1.2; }
 .home-action-icon { margin-bottom: 5px; color: #5d3c04; }
 .home-action-icon .cc-icon { width: 30px; height: 30px; }
-.home-mode-card { display: grid; align-content: center; gap: 7px; min-height: 72px; padding: 10px; }
+.home-mode-card { display: grid; align-content: center; gap: 7px; min-height: 72px; padding: 10px; border: 3px solid #080a08; border-top-color: var(--stone-light); border-left-color: var(--stone-light); background: linear-gradient(#303631, #202521); box-shadow: 0 4px 0 #080a08; }
 .home-mode-heading { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 6px; }
 .home-mode-heading > span { color: var(--water); }
 .home-mode-heading .cc-icon { width: 20px; height: 20px; }

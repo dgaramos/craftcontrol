@@ -1,7 +1,7 @@
 export const en = {
     language: "Language",
     brandKicker: "BEDROCK CONTROL CENTER",
-    refresh: "Refresh", worldState: "WORLD STATE", quickActions: "Quick actions",
+    refresh: "Refresh", refreshAriaLabel: "Refresh", profileAriaLabel: "Profile", worldState: "WORLD STATE", quickActions: "Quick actions",
     day: "Day", night: "Night", clearWeather: "Clear weather", server: "Server",
     saveChanges: "Save changes", control: "CONTROL", serverOperation: "Server operation",
     restartNotice: "Persistent changes take effect after applying and restarting.",

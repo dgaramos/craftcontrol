@@ -2,7 +2,7 @@ import { en } from "./en.js?v=7";
 
 export const es = {
   ...en,
-  language: "Idioma", brandKicker: "CENTRAL DE CONTROL BEDROCK", refresh: "Actualizar", worldState: "ESTADO DEL MUNDO", quickActions: "Acciones rápidas",
+  language: "Idioma", brandKicker: "CENTRAL DE CONTROL BEDROCK", refresh: "Actualizar", refreshAriaLabel: "Actualizar", profileAriaLabel: "Perfil", worldState: "ESTADO DEL MUNDO", quickActions: "Acciones rápidas",
   day: "Día", night: "Noche", clearWeather: "Clima despejado", server: "Servidor", saveChanges: "Guardar cambios", control: "CONTROL", serverOperation: "Operación del servidor",
   restartNotice: "Los cambios persistentes se aplican al guardar y reiniciar.", start: "Iniciar", restart: "Reiniciar", stop: "Detener", close: "Cerrar",
   checking: "Comprobando…", online: "En línea", stopped: "Detenido", serverOnline: "Servidor en línea", serverStopped: "Servidor detenido", playersOnline: "jugadores en línea", nobody: "Nadie conectado",

@@ -1,7 +1,7 @@
 export const pt = {
     language: "Idioma",
     brandKicker: "CENTRAL BEDROCK",
-    refresh: "Atualizar", worldState: "ESTADO DO MUNDO", quickActions: "Ações rápidas",
+    refresh: "Atualizar", refreshAriaLabel: "Atualizar estado", profileAriaLabel: "Perfil", worldState: "ESTADO DO MUNDO", quickActions: "Ações rápidas",
     day: "Dia", night: "Noite", clearWeather: "Clima limpo", server: "Servidor",
     saveChanges: "Salvar alterações", control: "CONTROLE", serverOperation: "Operação do servidor",
     restartNotice: "Alterações persistentes entram em vigor ao aplicar e reiniciar.",

@@ -69,6 +69,12 @@ describe("brand contracts — CSRF and API versioning", () => {
 });
 
 describe("brand contracts — mobile scroll behaviour", () => {
+  test("scopes legacy sticky navigation styles to #tabs", () => {
+    const css = readFileSync(join(STATIC, "app.css"), "utf8");
+    expect(css).toContain("#tabs {\n  display: grid;");
+    expect(css).not.toMatch(/(?:^|\n)nav\s*\{/);
+  });
+
   test("app.css sets overscroll-behavior-y: none", () => {
     const css = readFileSync(join(STATIC, "app.css"), "utf8");
     expect(css).toContain("overscroll-behavior-y: none");
@@ -89,14 +95,14 @@ describe("brand contracts — mobile scroll behaviour", () => {
     expect(nav).toContain('window.scrollTo({ top: 0, left: 0, behavior: "auto" })');
   });
 
-  test("index.html references app.css?v=28", () => {
+  test("index.html references app.css?v=30", () => {
     const template = readFileSync(join(FRONTEND, "templates", "index.html"), "utf8");
-    expect(template).toContain("/static/app.css?v=28");
+    expect(template).toContain("/static/app.css?v=30");
   });
 
-  test("index.html references app.js?v=71", () => {
+  test("index.html references app.js?v=74", () => {
     const template = readFileSync(join(FRONTEND, "templates", "index.html"), "utf8");
-    expect(template).toContain("/static/app.js?v=71");
+    expect(template).toContain("/static/app.js?v=74");
   });
 });
 

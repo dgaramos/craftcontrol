@@ -1,6 +1,6 @@
 import { api } from "./api.js?v=7";
 import { connectEventStream } from "./events.js";
-import { requireSession } from "./auth.js?v=8";
+import { requireSession, showSessions, showPasswordChange } from "./auth.js?v=8";
 import { state } from "./core/state.js?v=7";
 import { $, escapeHtml } from "./core/dom.js?v=7";
 import { connectInvalidation } from "./core/invalidation.js?v=7";
@@ -40,8 +40,11 @@ export function startApplication() {
   function playerSettingsMarkup(...args) { return getSettingsFeature().playerSettingsMarkup(...args); }
 
   function refreshActivePanel() {
-    if (!state.schema) return;
     $("#hero").hidden = state.tab !== "home";
+    if (!state.schema) {
+      content.innerHTML = state.tab === "home" ? "" : `<section class="panel-pending block-panel" role="status">${t("querying")}</section>`;
+      return;
+    }
     if (state.tab === "__time__") return getWorldFeature().renderTimePanel();
     if (state.tab === "__players__") return renderPlayersPanel();
     if (state.tab === "analytics") return renderAnalyticsPanel();
@@ -148,6 +151,12 @@ export function startApplication() {
   }
 
   const { blockTermMarkup, blockIcon, dimensionName, gameTermMarkup, gameIcon, gameLabel, uiIcon } = createGameTerms({ getLocale: () => state.locale, escapeHtml });
+
+  // Navigation must stay available while boot waits for the backend (or when it
+  // is unavailable). Its previous lazy initialization only happened after the
+  // initial API requests completed, leaving the bottom nav without handlers.
+  getNavigation();
+
   function oreLabel(ore) {
     return t(`ore${ore.charAt(0).toUpperCase()}${ore.slice(1)}`);
   }
@@ -240,7 +249,7 @@ export function startApplication() {
   }
 
   state.subscribe("tab", () => {
-    getNavigation().renderTabs();
+    getNavigation().renderBottomNav();
     refreshActivePanel();
   });
   state.subscribe("operationActive", () => {
@@ -307,6 +316,8 @@ export function startApplication() {
     try { await api("/api/auth/logout", { method: "POST" }); window.location.reload(); }
     catch { toast(t("requestFailed") || "Sign out failed", true); }
   };
+  $("#manage-sessions-btn").onclick = () => { closeProfileSheet(); showSessions(); };
+  $("#change-password-btn").onclick = () => { closeProfileSheet(); showPasswordChange(); };
 
   $("#time-controls").onclick = () => getWorldFeature().openTimeControls();
 

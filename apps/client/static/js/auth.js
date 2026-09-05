@@ -84,7 +84,7 @@ function showAuth() {
   render(window.location.hash === "#/first-access" ? "claim" : "login");
 }
 
-async function showSessions() {
+export async function showSessions() {
   const words = copy[locale()];
   const dialog = document.querySelector("#account-dialog");
   let data;
@@ -118,7 +118,7 @@ async function showSessions() {
   dialog.showModal();
 }
 
-function showPasswordChange() {
+export function showPasswordChange() {
   const words = copy[locale()];
   const dialog = document.querySelector("#account-dialog");
   dialog.setAttribute("aria-label", words.changePasswordTitle);

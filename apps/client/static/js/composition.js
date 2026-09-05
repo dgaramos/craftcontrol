@@ -271,8 +271,39 @@ export function startApplication() {
     $("#language").setAttribute("aria-expanded", "false");
   });
   document.addEventListener("click", (event) => {
-    if (!event.target.closest("#language-picker")) { $("#language-menu").hidden = true; $("#language").setAttribute("aria-expanded", "false"); }
+    if (!event.target.closest("#language-picker")) { if ($("#language-menu")) { $("#language-menu").hidden = true; $("#language").setAttribute("aria-expanded", "false"); } }
   });
+
+  function openProfileSheet() {
+    const sheet = $("#profile-sheet");
+    if (!sheet) return;
+    const user = state.user;
+    if (user) {
+      const initial = (user.name || "").charAt(0).toUpperCase();
+      const profileInitial = $("#profile-initial");
+      if (profileInitial) profileInitial.textContent = initial;
+      const sheetInitial = $("#profile-sheet-initial");
+      if (sheetInitial) sheetInitial.textContent = initial;
+      const sheetName = $("#profile-sheet-name");
+      if (sheetName) sheetName.textContent = user.name || "";
+      const sheetRole = $("#profile-sheet-role");
+      if (sheetRole) sheetRole.textContent = user.role || "";
+    }
+    sheet.hidden = false;
+  }
+
+  function closeProfileSheet() {
+    const sheet = $("#profile-sheet");
+    if (sheet) sheet.hidden = true;
+  }
+
+  $("#profile-btn").onclick = openProfileSheet;
+  $("#profile-sheet").querySelector(".bottom-sheet-backdrop").onclick = closeProfileSheet;
+
+  $("#sign-out-btn").onclick = async () => {
+    try { await api("/api/auth/logout", { method: "POST" }); window.location.reload(); }
+    catch { toast(t("requestFailed") || "Sign out failed", true); }
+  };
 
   $("#time-controls").onclick = () => getWorldFeature().openTimeControls();
 

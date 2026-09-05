@@ -258,6 +258,7 @@ export function startApplication() {
     if (["world", "rules", "server", "__time__"].includes(state.tab)) refreshActivePanel();
   });
   state.subscribe("schema", refreshActivePanel);
+  state.subscribe("changes", () => getSettingsFeature().updateSaveLabel());
 
   $("#language").onclick = () => {
     const menu = $("#language-menu");

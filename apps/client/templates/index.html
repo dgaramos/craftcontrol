@@ -8,7 +8,7 @@
     <title>CraftControl · Bedrock control center</title>
     <link rel="icon" href="/static/craftcontrol-mark.svg" type="image/svg+xml">
     <link rel="manifest" href="/static/site.webmanifest">
-    <link rel="stylesheet" href="/static/app.css?v=34">
+    <link rel="stylesheet" href="/static/app.css?v=35">
     <link rel="stylesheet" href="/static/players.css?v=25">
     <link rel="stylesheet" href="/static/analytics.css?v=12">
     <link rel="stylesheet" href="/static/auth.css?v=7">
@@ -41,7 +41,8 @@
     <main>
       <section id="hero" class="hero block-panel">
         <div class="grass-edge" aria-hidden="true"></div>
-        <div class="overview-grid">
+        <div class="home-hero-content">
+          <div class="home-hero-row">
           <div class="overview-item server-overview">
             <div class="shield"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-shield"></use></svg></div>
             <div><span id="hero-instance-name" class="eyebrow" data-i18n="worldState">ESTADO DO MUNDO</span><h2 id="server-state-title">Consultando servidor</h2></div>
@@ -53,10 +54,11 @@
             <small id="updated-at" hidden>Aguardando atualização</small>
             <span class="players-card-arrow" aria-hidden="true">›</span>
           </button>
+          </div>
           <div class="world-summary" aria-live="polite">
             <div><small data-i18n="homeDay">Dia</small><strong id="world-day">—</strong></div>
-            <div><small data-i18n="homeTime">Hora</small><strong id="world-time">—</strong></div>
-            <div><small data-i18n="homeWeather">Clima</small><strong id="world-weather">—</strong></div>
+            <div><small data-i18n="homeTime">Hora</small><span class="world-value"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-sun"></use></svg><strong id="world-time">—</strong></span></div>
+            <div class="world-weather"><small data-i18n="homeWeather">Clima</small><span class="world-value"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-sun"></use></svg><strong id="world-weather">—</strong></span></div>
           </div>
         </div>
       </section>
@@ -203,6 +205,6 @@
     </div>
   </div>
 
-  <script type="module" src="/static/app.js?v=80"></script>
+  <script type="module" src="/static/app.js?v=81"></script>
   </body>
 </html>

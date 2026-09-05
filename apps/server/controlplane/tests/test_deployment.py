@@ -191,6 +191,12 @@ def test_split_images_isolate_privileged_backend_from_frontend() -> None:
     assert 'org.opencontainers.image.title="CraftControl Server"' in backend_dockerfile
 
 
+def test_backend_healthcheck_bounds_its_http_request_before_docker_timeout() -> None:
+    dockerfile = (ROOT / "apps" / "server" / "controlplane" / "Dockerfile").read_text()
+    assert "HEALTHCHECK --interval=30s --timeout=3s" in dockerfile
+    assert "wget -T 2 -q -O /dev/null http://127.0.0.1:8082/api/health" in dockerfile
+
+
 def test_split_backend_reaches_host_agent_and_mounts_docker_socket() -> None:
     """Split-mode backend must configure the host agent AND mount the Docker socket.
 

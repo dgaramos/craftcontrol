@@ -42,15 +42,17 @@ export function startApplication() {
 
   function refreshActivePanel() {
     $("#hero").hidden = state.tab !== "home";
+    // Home remains useful while the backend is reconnecting: its time shortcut,
+    // game-mode review and navigation do not depend on the schema response.
+    if (state.tab === "home") return getHomeFeature().render();
     if (!state.schema) {
-      content.innerHTML = state.tab === "home" ? "" : `<section class="panel-pending block-panel" role="status">${t("querying")}</section>`;
+      content.innerHTML = `<section class="panel-pending block-panel" role="status">${t("querying")}</section>`;
       return;
     }
     if (state.tab === "__time__") return getWorldFeature().renderTimePanel();
     if (state.tab === "__players__") return renderPlayersPanel();
     if (state.tab === "analytics") return renderAnalyticsPanel();
     if (state.tab === "audit") return getAuditFeature().renderAuditPanel();
-    if (state.tab === "home") return getHomeFeature().render();
     if (state.tab === "world") getWorldFeature().renderWorld();
     else if (state.tab === "rules") getRulesFeature().renderRules();
     else if (state.tab === "server") { getServerFeature().renderServer(); getServerFeature().loadDiagnostics(); }

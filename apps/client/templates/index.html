@@ -15,6 +15,7 @@
   </head>
   <body>
     <div id="auth-overlay" hidden></div>
+    <div class="shell">
     <header id="topbar" class="topbar">
       <div class="topbar-brand">
         <img src="/static/craftcontrol-mark.svg" width="24" height="24" class="topbar-mark" alt="" aria-hidden="true">
@@ -30,8 +31,6 @@
         <span id="status" class="status-label" data-i18n="online">Online</span>
       </div>
       <div class="topbar-actions">
-        <div id="identity" hidden></div>
-        <div id="language-picker" class="language-picker" hidden><button id="language" type="button" aria-haspopup="listbox" aria-expanded="false"><svg class="language-flag" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=2#ui-flag-br"></use></svg><span>Português</span><b aria-hidden="true">▾</b></button><div id="language-menu" role="listbox" hidden><button type="button" role="option" data-locale="pt"><svg class="language-flag" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=2#ui-flag-br"></use></svg>Português</button><button type="button" role="option" data-locale="en"><svg class="language-flag" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=2#ui-flag-us"></use></svg>English</button><button type="button" role="option" data-locale="es"><svg class="language-flag" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=2#ui-flag-es"></use></svg>Español</button></div></div>
         <button id="refresh" class="topbar-btn" type="button" aria-label="Atualizar estado" data-i18n-aria="refreshAriaLabel"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-refresh"></use></svg></button>
         <button id="profile-btn" class="topbar-btn topbar-profile" type="button" aria-label="Perfil" data-i18n-aria="profileAriaLabel"><span id="profile-initial" aria-hidden="true"></span><span id="profile-dot" class="topbar-notif-dot" hidden aria-hidden="true"></span></button>
       </div>
@@ -80,6 +79,7 @@
         <span class="bottom-nav-label" data-i18n="navServer">Servidor</span>
       </button>
     </nav>
+    </div><!-- /.shell -->
 
     <div id="toast" role="status"></div>
     <footer>
@@ -114,18 +114,6 @@
     </dialog>
     <dialog id="account-dialog"></dialog>
   <!-- ── Native templates ──────────────────────────────────────────────────── -->
-
-  <!-- tpl-identity: topbar user chip (name, role, logout button) -->
-  <template id="tpl-identity">
-    <span></span>
-    <small></small>
-    <button id="logout" type="button">
-      <svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=8#ui-logout"></use></svg>
-      <span></span>
-    </button>
-    <button id="change-password" type="button"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=8#ui-password"></use></svg><span></span></button>
-    <button id="manage-sessions" type="button"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=8#ui-sessions"></use></svg><span></span></button>
-  </template>
 
   <!-- tpl-nav-tab: one navigation tab button -->
   <template id="tpl-nav-tab">

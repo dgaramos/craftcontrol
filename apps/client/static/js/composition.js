@@ -260,19 +260,21 @@ export function startApplication() {
   state.subscribe("schema", refreshActivePanel);
   state.subscribe("changes", () => getSettingsFeature().updateSaveLabel());
 
-  $("#language").onclick = () => {
-    const menu = $("#language-menu");
-    menu.hidden = !menu.hidden;
-    $("#language").setAttribute("aria-expanded", String(!menu.hidden));
-  };
+  const languageBtn = $("#language");
+  if (languageBtn) {
+    languageBtn.onclick = () => {
+      const menu = $("#language-menu");
+      if (!menu) return;
+      menu.hidden = !menu.hidden;
+      languageBtn.setAttribute("aria-expanded", String(!menu.hidden));
+    };
+    document.addEventListener("click", (event) => {
+      if (!event.target.closest("#language-picker")) { const menu = $("#language-menu"); if (menu) { menu.hidden = true; languageBtn.setAttribute("aria-expanded", "false"); } }
+    });
+  }
   document.querySelectorAll("[data-locale]").forEach((option) => option.onclick = () => {
     state.locale = ["pt", "en", "es"].includes(option.dataset.locale) ? option.dataset.locale : "pt";
     localStorage.setItem("craftcontrol-locale", state.locale);
-    $("#language-menu").hidden = true;
-    $("#language").setAttribute("aria-expanded", "false");
-  });
-  document.addEventListener("click", (event) => {
-    if (!event.target.closest("#language-picker")) { if ($("#language-menu")) { $("#language-menu").hidden = true; $("#language").setAttribute("aria-expanded", "false"); } }
   });
 
   function openProfileSheet() {

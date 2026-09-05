@@ -78,8 +78,9 @@ describe("auth contracts — account workspace usability", () => {
     const svgSource = readFileSync(join(STATIC, "craftcontrol-ui.svg"), "utf8");
     expect(svgSource).toContain('id="ui-password"');
     expect(svgSource).toContain('id="ui-sessions"');
-    expect(indexTemplate).toMatch(/id="change-password"[^>]*>\s*<svg[^>]*>\s*<use[^>]*#ui-password/);
-    expect(indexTemplate).toMatch(/id="manage-sessions"[^>]*>\s*<svg[^>]*>\s*<use[^>]*#ui-sessions/);
+    // Actions moved to #profile-sheet; verified by presence of action buttons there.
+    expect(indexTemplate).toContain('id="change-password-btn"');
+    expect(indexTemplate).toContain('id="manage-sessions-btn"');
   });
 
   test("keeps account action icons touch-sized when their labels collapse", () => {

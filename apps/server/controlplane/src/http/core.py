@@ -5,6 +5,7 @@ import json
 from flask import Blueprint, Response, jsonify, render_template, request, stream_with_context
 
 from ..core.schema import GAMERULES, SETTINGS
+from ..core.events import StreamCapacityError
 from ..auth.http import require
 from .dependencies import manager
 
@@ -13,6 +14,7 @@ core_api = Blueprint("core_api", __name__)
 
 @core_api.get("/api/health")
 def health():
+    """Answer the container health check without touching runtime state."""
     return jsonify(ok=True)
 
 
@@ -49,14 +51,20 @@ def refresh():
 
 @core_api.get("/api/events")
 def events():
+    """Open a bounded SSE stream, preserving capacity for ordinary API calls."""
     try:
         after_id = int(request.headers.get("Last-Event-ID", "0") or 0)
     except ValueError:
         after_id = 0
 
+    try:
+        stream = manager().broker.stream(after_id)
+    except StreamCapacityError:
+        return jsonify(error="SSE connection capacity reached"), 503
+
     @stream_with_context
     def generate():
-        for event in manager().broker.stream(after_id):
+        for event in stream:
             if event is None:
                 yield ": keepalive\n\n"
                 continue
@@ -68,7 +76,11 @@ def events():
             }, ensure_ascii=False)
             yield f"id: {event.id}\nevent: state\ndata: {payload}\n\n"
 
-    return Response(generate(), mimetype="text/event-stream", headers={
+    response = Response(generate(), mimetype="text/event-stream", headers={
         "Cache-Control": "no-cache",
         "X-Accel-Buffering": "no",
     })
+    close = getattr(stream, "close", None)
+    if close:
+        response.call_on_close(close)
+    return response

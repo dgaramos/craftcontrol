@@ -122,6 +122,25 @@ Confirme que o frontend está saudável e que o proxy reverso aponta para a `MAN
 
 Confirme que o backend está saudável. O navegador deve usar a origem pública do frontend, e não um endereço ou porta do backend, para preservar cookies de sessão, validação CSRF e a fronteira SSE.
 
+### O backend fica unhealthy após reconexões do navegador
+
+Antes de reiniciar, verifique a saúde do backend e os contadores SSE limitados:
+
+```bash
+curl --max-time 3 http://127.0.0.1:8082/api/health
+docker compose -f docker-compose.split.yml logs --tail=200 craftcontrol-backend
+```
+
+Se o endpoint de saúde continuar indisponível, reinicie somente o serviço de
+backend e confirme a resposta antes de reabrir sessões no navegador. Não rode
+um comando Compose sem as proteções e não recrie o serviço Bedrock para esta
+falha.
+
+```bash
+docker compose -f docker-compose.split.yml restart craftcontrol-backend
+curl --max-time 3 http://127.0.0.1:8082/api/health
+```
+
 ### O CraftControl não consegue gerenciar o Bedrock
 
 Verifique `MINECRAFT_CONTAINER` e `MINECRAFT_PROJECT`, depois execute novamente `bin/cutover-craftcontrol-split --check`. Não contorne uma falha de validação de montagem alterando arquivos no diretório do mundo.

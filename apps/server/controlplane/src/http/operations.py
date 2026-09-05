@@ -17,6 +17,7 @@ from flask import Blueprint, Response, jsonify, request, stream_with_context
 
 from .dependencies import manager
 from ..auth.http import require
+from ..core.events import StreamCapacityError
 from ..operations.service import ConflictingOperationError
 
 operations_api = Blueprint("operations_api", __name__)
@@ -90,9 +91,14 @@ def stream_operations():
     except ValueError:
         after_id = 0
 
+    try:
+        stream = manager().broker.stream(after_id)
+    except StreamCapacityError:
+        return jsonify(error="SSE connection capacity reached"), 503
+
     @stream_with_context
     def generate():
-        for event in manager().broker.stream(after_id):
+        for event in stream:
             if event is None:
                 yield ": keepalive\n\n"
                 continue
@@ -102,10 +108,14 @@ def stream_operations():
             payload = json.dumps(event.payload, ensure_ascii=False)
             yield f"id: {event.id}\nevent: operation\ndata: {payload}\n\n"
 
-    return Response(generate(), mimetype="text/event-stream", headers={
+    response = Response(generate(), mimetype="text/event-stream", headers={
         "Cache-Control": "no-cache",
         "X-Accel-Buffering": "no",
     })
+    close = getattr(stream, "close", None)
+    if close:
+        response.call_on_close(close)
+    return response
 
 
 @operations_api.post("/api/operations/<operation_id>/reconcile")

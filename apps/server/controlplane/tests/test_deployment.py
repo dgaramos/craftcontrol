@@ -203,7 +203,7 @@ def test_backend_uses_one_cooperative_worker_for_sse_connections() -> None:
     assert '"--worker-class=gevent"' in dockerfile
     assert '"--worker-connections=256"' in dockerfile
     assert '"--workers=1"' in dockerfile
-    assert "gevent==" in requirements
+    assert any(line.strip() == "gevent==24.11.1" for line in requirements.splitlines())
 
 
 def test_split_backend_reaches_host_agent_and_mounts_docker_socket() -> None:

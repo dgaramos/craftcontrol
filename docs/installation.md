@@ -251,6 +251,25 @@ Confirm that the backend container is healthy. The browser must use the public
 frontend origin, not a backend address or port. This preserves session cookies,
 CSRF validation, and the SSE proxy boundary.
 
+### The backend becomes unhealthy after browser reconnects
+
+Inspect the backend health and its bounded SSE counters before restarting it:
+
+```bash
+curl --max-time 3 http://127.0.0.1:8082/api/health
+docker compose -f docker-compose.split.yml logs --tail=200 craftcontrol-backend
+```
+
+If the health endpoint remains unavailable, restart only the backend service,
+then confirm the endpoint responds before reopening browser sessions. Do not run
+an unguarded Compose command and do not recreate the Bedrock service for this
+failure.
+
+```bash
+docker compose -f docker-compose.split.yml restart craftcontrol-backend
+curl --max-time 3 http://127.0.0.1:8082/api/health
+```
+
 ### CraftControl cannot manage Bedrock
 
 Verify `MINECRAFT_CONTAINER` and `MINECRAFT_PROJECT` against the existing

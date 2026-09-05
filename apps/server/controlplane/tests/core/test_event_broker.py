@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from src.core.events import Event, EventBroker
+from src.core.events import Event, EventBroker, StreamCapacityError
 from factories import event
 
 
@@ -161,6 +161,16 @@ def test_repeatedly_closed_streams_do_not_accumulate_subscribers(broker: EventBr
     diagnostics = broker.diagnostics()
     assert diagnostics["sse_connections"] == 0
     assert len(broker._subscribers) == 0
+
+
+def test_stream_capacity_reserves_connections_for_non_stream_requests(broker: EventBroker) -> None:
+    broker = EventBroker(broker.repository, heartbeat_seconds=0, max_stream_connections=1)
+    first = broker.stream()
+    with pytest.raises(StreamCapacityError):
+        broker.stream()
+    assert next(first) is None
+    first.close()
+    broker.stream().close()
 
 
 # ---------------------------------------------------------------------------

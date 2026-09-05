@@ -274,7 +274,10 @@ nav button.active {
 }
 nav button.active i { color: #dcffc7; }
 
-main { flex: 1; overflow-y: auto; overflow-x: hidden; width: min(940px, 100%); margin: 0 auto; padding: 2px 13px 24px; }
+/* Ensure #tabs (legacy nav, kept for JS compatibility) never appears */
+#tabs { display: none !important; }
+
+main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; width: min(940px, 100%); margin: 0 auto; padding: 2px 13px 24px; }
 .block-panel, .card {
   position: relative;
   border: 4px solid #080a08;

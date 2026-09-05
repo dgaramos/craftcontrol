@@ -23,7 +23,7 @@ export function createNavigation({ state, $, t, uiIcon }) {
     if (!nav) return;
     const active = _bottomNavActive();
     nav.querySelectorAll("button[data-tab]").forEach((btn) => {
-      btn.className = btn.dataset.tab === active ? "active" : "";
+      btn.classList.toggle("active", btn.dataset.tab === active);
     });
   }
 

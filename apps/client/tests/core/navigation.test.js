@@ -57,12 +57,22 @@ function makeTabsElement() {
 }
 
 function makeBottomNavButton(tab) {
-  return {
+  const btn = {
     dataset: { tab },
     className: "",
     onclick: null,
     click() { if (this.onclick) this.onclick(); },
   };
+  btn.classList = {
+    toggle(cls, force) {
+      const classes = btn.className.split(" ").filter(Boolean).filter((c) => c !== cls);
+      const add = force !== undefined ? force : !btn.className.split(" ").includes(cls);
+      if (add) classes.push(cls);
+      btn.className = classes.join(" ");
+    },
+    contains(cls) { return btn.className.split(" ").includes(cls); },
+  };
+  return btn;
 }
 
 function makeBottomNavElement() {

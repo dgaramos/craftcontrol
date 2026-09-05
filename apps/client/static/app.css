@@ -334,6 +334,58 @@ footer {
 footer.has-pending { grid-template-columns: 1fr 1.8fr; }
 footer button span { display: inline-block; margin-right: 6px; color: var(--grass-light); }
 footer button span .cc-icon { width: 22px; height: 22px; }
+
+/* ── Bottom nav (Phase 1 mobile shell) ───────────────────────────────────── */
+.bottom-nav {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  flex-shrink: 0;
+  background: #0c120ff2;
+  border-top: 1px solid #2a3330;
+  padding-bottom: env(safe-area-inset-bottom);
+  backdrop-filter: blur(14px);
+}
+.bottom-nav-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: var(--tap-target-min);
+  padding: 8px 4px;
+  color: var(--color-inactive-nav);
+  background: transparent;
+  border: none;
+  border-top: 2px solid transparent;
+  font-size: 0;
+  cursor: pointer;
+  transition: color 0.1s, border-top-color 0.1s;
+}
+.bottom-nav-tab .cc-icon {
+  width: 24px;
+  height: 24px;
+}
+.bottom-nav-label {
+  display: block;
+  font-family: Oxanium, ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+.bottom-nav-tab.active {
+  color: var(--color-active-nav);
+  border-top-color: var(--color-active-nav);
+  background: linear-gradient(#1d1a0f40, transparent);
+}
+.bottom-nav-tab:not(.active):hover {
+  color: var(--muted);
+}
 .primary { color: #071006; background: linear-gradient(#78c34d, #4b9c34); border-top-color: #acf17a; border-left-color: #8ad45c; text-shadow: 1px 1px 0 #a5e77a; }
 .secondary { background: linear-gradient(#343a35, #232824); }
 .danger { color: #fff; background: linear-gradient(#8b2b25, #5c1a17); border-top-color: #d95a50; }

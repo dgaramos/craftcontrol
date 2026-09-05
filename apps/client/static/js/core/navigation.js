@@ -7,6 +7,35 @@ export function createNavigation({ state, $, t, uiIcon }) {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }
 
+  function _bottomNavActive() {
+    // Maps state.tab to the data-tab value used on #bottom-nav buttons.
+    if (state.tab === "__players__") return "__players__";
+    if (state.tab === "server") return "server";
+    return "home";
+  }
+
+  function _syncBottomNav() {
+    const nav = $("#bottom-nav");
+    if (!nav) return;
+    const active = _bottomNavActive();
+    nav.querySelectorAll("button[data-tab]").forEach((btn) => {
+      btn.className = btn.dataset.tab === active ? "active" : "";
+    });
+  }
+
+  // Wire bottom-nav button onclick handlers once on creation.
+  (function _initBottomNav() {
+    const nav = $("#bottom-nav");
+    if (!nav) return;
+    nav.querySelectorAll("button[data-tab]").forEach((btn) => {
+      btn.onclick = () => {
+        state.tab = btn.dataset.tab;
+        persistTab(state.tab);
+        resetVerticalScroll();
+      };
+    });
+  })();
+
   function renderTabs() {
     const active = state.tab === "__time__" ? "world" : state.tab === "__players__" ? "players" : state.tab;
     const tabs = $("#tabs");
@@ -26,6 +55,7 @@ export function createNavigation({ state, $, t, uiIcon }) {
       };
       tabs.appendChild(clone);
     });
+    _syncBottomNav();
   }
 
   function openPlayers() {

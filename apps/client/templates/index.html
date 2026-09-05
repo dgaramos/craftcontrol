@@ -37,7 +37,7 @@
       </div>
     </header>
 
-    <nav id="tabs" aria-label="Configurações"></nav>
+    <nav id="tabs" aria-label="Configurações" hidden></nav>
 
     <main>
       <section id="hero" class="hero block-panel">
@@ -59,6 +59,27 @@
 
       <section id="content"></section>
     </main>
+
+    <nav id="bottom-nav" class="bottom-nav" role="tablist">
+      <button class="bottom-nav-tab" data-tab="home" role="tab" type="button">
+        <svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <use href="/static/craftcontrol-ui.svg#ui-home"></use>
+        </svg>
+        <span class="bottom-nav-label" data-i18n="navHome">Home</span>
+      </button>
+      <button class="bottom-nav-tab" data-tab="__players__" role="tab" type="button">
+        <svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <use href="/static/craftcontrol-ui.svg#ui-players"></use>
+        </svg>
+        <span class="bottom-nav-label" data-i18n="navPlayers">Jogadores</span>
+      </button>
+      <button class="bottom-nav-tab" data-tab="server" role="tab" type="button">
+        <svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <use href="/static/craftcontrol-ui.svg#ui-server"></use>
+        </svg>
+        <span class="bottom-nav-label" data-i18n="navServer">Servidor</span>
+      </button>
+    </nav>
 
     <div id="toast" role="status"></div>
     <footer>

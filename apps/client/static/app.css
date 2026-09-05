@@ -601,6 +601,26 @@ dialog.drawer { position: fixed; inset: auto 0 0; width: min(100%, 680px); max-h
   .players-card { min-width: 82px; }
 }
 
+@media (max-width: 360px) {
+  .hero { padding: 28px 10px 10px; }
+  .home-hero-row { gap: 7px; }
+  .server-overview { gap: 8px; padding: 8px; }
+  .shield { width: 38px; height: 38px; border-width: 3px; box-shadow: inset 2px 2px 0 #9ee26a, 3px 3px 0 #080a08; }
+  .shield .cc-icon { width: 24px; height: 24px; }
+  .server-overview h2 { font-size: 17px; white-space: nowrap; }
+  #hero-instance-name { max-width: 10ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .players-card { min-width: 74px; padding: 7px 5px; }
+  .players-card strong { font-size: 16px; }
+  .world-summary > div { padding: 7px 5px; }
+  .home-dashboard { gap: 6px; }
+  .home-time-action, .home-mode-card { padding: 8px; }
+  .home-mode-heading { gap: 4px; }
+  .home-mode-heading .cc-icon { width: 17px; height: 17px; }
+  .home-mode-heading strong { font-size: 11px; }
+  .home-mode-heading small { font-size: .4rem; }
+  .home-game-modes { gap: 3px; }
+}
+
 @media (min-width: 720px) {
   .topbar { padding-left: 30px; padding-right: 30px; }
   #tabs { top: 73px; width: min(760px, 100%); margin: 0 auto; }

@@ -341,6 +341,11 @@ main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; width: min(
 .time-launch > span .cc-icon { width: 34px; height: 34px; }
 .time-launch b { font-size: .86rem; }
 .time-launch small { color: #cabf9e; font-size: .67rem; font-weight: 700; }
+.world-summary { display: grid; grid-column: 1 / -1; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.world-summary > div { min-width: 0; padding: 8px 6px; text-align: center; border: 2px solid #080a08; border-top-color: #3b473f; background: #0e1410e8; box-shadow: inset 1px 1px 0 #303b33; }
+.world-summary small, .world-summary strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.world-summary small { color: var(--muted); font-size: .58rem; }
+.world-summary strong { margin-top: 3px; color: var(--grass-light); font-size: .84rem; }
 
 .quick-section { margin-top: 16px; }
 .quick-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
@@ -572,6 +577,7 @@ dialog.drawer { position: fixed; inset: auto 0 0; width: min(100%, 680px); max-h
   .toggle-control { min-width: 0; width: 100%; justify-content: space-between; }
   .overview-grid { grid-template-columns: 1fr; }
   .time-launch { grid-column: auto; }
+  .world-summary { grid-column: auto; }
 }
 
 @media (min-width: 720px) {

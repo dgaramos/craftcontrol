@@ -1,15 +1,5 @@
 export function createHomeFeature({ state, content, t, getSettingsFeature }) {
-  let _pollInterval = null;
-
-  function _stopPolling() {
-    if (_pollInterval !== null) {
-      clearInterval(_pollInterval);
-      _pollInterval = null;
-    }
-  }
-
   function render() {
-    _stopPolling();
     const modes = ["survival", "creative", "adventure"];
     const selected = state.changes.GAMEMODE || state.config.GAMEMODE || "survival";
     content.innerHTML = `

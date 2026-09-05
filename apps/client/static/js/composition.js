@@ -15,7 +15,7 @@ import { createServerFeature } from "./features/server/index.js?v=13";
 import { startAuthenticatedApplication } from "./features/auth/bootstrap.js?v=7";
 import { createSettingsFeature } from "./features/settings/index.js?v=7";
 import { createAuditFeature } from "./features/audit/index.js?v=1";
-import { createHomeFeature } from "./features/home/index.js?v=1";
+import { createHomeFeature } from "./features/home/index.js?v=2";
 import { createI18n } from "./i18n/index.js?v=8";
 import { createGameTerms } from "./i18n/game-terms.js?v=7";
 
@@ -201,6 +201,13 @@ export function startApplication() {
     $("#updated-at").textContent = state.updatedAt ? `${t("updated")} ${new Date(state.updatedAt * 1000).toLocaleTimeString(localeTag())}` : t("awaiting");
   }
 
+  function showWorld(snapshot) {
+    state.world = snapshot.world || {};
+    $("#world-day").textContent = state.world.day ?? "—";
+    $("#world-time").textContent = state.world.daytime ?? "—";
+    $("#world-weather").textContent = state.world.weather ? t(state.world.weather) : "—";
+  }
+
   function updateBrand() {
     const name = state.config.SERVER_NAME || "Minecraft Bedrock";
     $("#instance-name").textContent = name;
@@ -223,6 +230,7 @@ export function startApplication() {
     getSettingsFeature().updateSaveLabel();
     if (state.status) setStatus(state.status);
     showPlayers({ players: state.players, online: state.online, max_players: state.maxPlayers, updated_at: state.updatedAt });
+    showWorld({ world: state.world });
     updateBrand();
   }
 
@@ -231,6 +239,7 @@ export function startApplication() {
     state.batch(() => {
       state.config = snapshot.settings || {};
       state.gamerules = snapshot.gamerules || {};
+      showWorld(snapshot);
       state.domains = snapshot.domains || {};
       showPlayers(snapshot);
     });
@@ -242,6 +251,7 @@ export function startApplication() {
       state.schema = schema;
       state.config = snapshot.settings || {};
       state.gamerules = snapshot.gamerules || {};
+      showWorld(snapshot);
       state.domains = snapshot.domains || {};
       showPlayers(snapshot);
     });
@@ -268,10 +278,10 @@ export function startApplication() {
   state.subscribe("locale", applyLocale);
   state.subscribe("config", () => {
     updateBrand();
-    if (["world", "rules", "server", "__time__"].includes(state.tab)) refreshActivePanel();
+    if (["home", "world", "rules", "server", "__time__"].includes(state.tab)) refreshActivePanel();
   });
   state.subscribe("gamerules", () => {
-    if (["world", "rules", "server", "__time__"].includes(state.tab)) refreshActivePanel();
+    if (["home", "world", "rules", "server", "__time__"].includes(state.tab)) refreshActivePanel();
   });
   state.subscribe("schema", refreshActivePanel);
   state.subscribe("changes", () => getSettingsFeature().updateSaveLabel());

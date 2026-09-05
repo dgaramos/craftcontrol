@@ -8,7 +8,7 @@
     <title>CraftControl · Bedrock control center</title>
     <link rel="icon" href="/static/craftcontrol-mark.svg" type="image/svg+xml">
     <link rel="manifest" href="/static/site.webmanifest">
-    <link rel="stylesheet" href="/static/app.css?v=30">
+    <link rel="stylesheet" href="/static/app.css?v=31">
     <link rel="stylesheet" href="/static/players.css?v=25">
     <link rel="stylesheet" href="/static/analytics.css?v=12">
     <link rel="stylesheet" href="/static/auth.css?v=7">
@@ -53,6 +53,11 @@
             <span class="players-card-arrow" aria-hidden="true">›</span>
           </button>
           <button id="time-controls" class="overview-item time-launch" type="button"><span><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-sun"></use></svg></span><b data-i18n="timeControls">Tempo e clima</b><small data-i18n="timeControlsHint">Horário, ciclos e clima</small></button>
+          <div class="world-summary" aria-live="polite">
+            <div><small data-i18n="days">Dias jogados</small><strong id="world-day">—</strong></div>
+            <div><small data-i18n="daytime">Ticks do dia</small><strong id="world-time">—</strong></div>
+            <div><small data-i18n="weatherTitle">Clima</small><strong id="world-weather">—</strong></div>
+          </div>
         </div>
       </section>
 
@@ -198,6 +203,6 @@
     </div>
   </div>
 
-  <script type="module" src="/static/app.js?v=75"></script>
+  <script type="module" src="/static/app.js?v=76"></script>
   </body>
 </html>

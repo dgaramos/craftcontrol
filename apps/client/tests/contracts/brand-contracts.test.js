@@ -95,9 +95,9 @@ describe("brand contracts — mobile scroll behaviour", () => {
     expect(nav).toContain('window.scrollTo({ top: 0, left: 0, behavior: "auto" })');
   });
 
-  test("index.html references app.css?v=37", () => {
+  test("index.html references app.css?v=38", () => {
     const template = readFileSync(join(FRONTEND, "templates", "index.html"), "utf8");
-    expect(template).toContain("/static/app.css?v=37");
+    expect(template).toContain("/static/app.css?v=38");
   });
 
   test("index.html references app.js?v=82", () => {

@@ -308,8 +308,10 @@ main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; width: min(
 .home-hero-content { display: grid; gap: 11px; }
 .home-hero-row { display: flex; align-items: center; gap: 12px; }
 .overview-item { min-width: 0; padding: 10px; border: 2px solid #080a08; border-top-color: #3b473f; background: #0e1410e8; box-shadow: inset 1px 1px 0 #303b33; }
-.server-overview { display: flex; flex: 1 1 auto; align-items: center; gap: 12px; }
-.server-overview h2 { font-family: Oxanium, ui-monospace, monospace; font-size: 21px; font-weight: 800; line-height: 1; }
+.server-overview { display: flex; flex: 1 1 auto; align-items: center; gap: 12px; min-width: 0; }
+.server-overview > div:last-child { min-width: 0; overflow: hidden; }
+.server-overview h2 { font-family: Oxanium, ui-monospace, monospace; font-size: 21px; font-weight: 800; line-height: 1; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+#hero-instance-name { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .shield {
   width: 44px;
   height: 44px;
@@ -336,10 +338,13 @@ main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; width: min(
 .players-card strong, .players-card small { display: block; }
 .players-card strong { font-family: Oxanium, ui-monospace, monospace; font-size: 18px; line-height: 1; }
 .players-card small { margin: 0 0 2px; color: var(--copper-light); font-size: .58rem; text-transform: uppercase; }
+/* The player-management stylesheet gives this element a flex display. Keep
+   the overview-only details out of the compact Home card until shown. */
+#players-list[hidden], #updated-at[hidden] { display: none !important; }
 .world-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
 .world-summary > div { min-width: 0; padding: 8px 6px; text-align: left; border: 2px solid #080a08; border-top-color: #3b473f; background: #0e1410e8; box-shadow: inset 1px 1px 0 #303b33; }
 .world-summary small, .world-summary strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.world-summary small { color: var(--copper-light); font-size: .58rem; text-transform: uppercase; }
+.world-summary small { color: var(--copper-light); font-size: .58rem; text-transform: uppercase; font-weight: 700; letter-spacing: .08em; }
 .world-summary strong { margin-top: 3px; color: var(--text); font-family: Oxanium, ui-monospace, monospace; font-size: 13px; font-weight: 800; }
 .world-value { display: flex; align-items: center; gap: 4px; margin-top: 3px; }
 .world-value strong { margin-top: 0; }
@@ -365,11 +370,11 @@ main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; width: min(
 .home-mode-heading { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 6px; }
 .home-mode-heading > span { color: var(--water); }
 .home-mode-heading .cc-icon { width: 20px; height: 20px; }
-.home-mode-heading strong { font-family: Oxanium, ui-monospace, monospace; font-size: 13px; font-weight: 800; }
+.home-mode-heading strong { font-family: Oxanium, ui-monospace, monospace; font-size: 13px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .home-mode-heading small { color: #46534a; font-size: .5rem; text-transform: uppercase; }
 .home-game-modes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
 .home-game-modes button { min-height: 0; padding: 3px 2px; font-family: Oxanium, ui-monospace, monospace; font-size: 9px; font-weight: 800; box-shadow: 0 2px 0 #080a08; }
-.home-game-modes button.active { color: #071006; background: linear-gradient(#80cc52, #4d9d35); border-top-color: #b2f080; border-left-color: #8ed460; }
+.home-game-modes button.active { color: #1a0e00; background: linear-gradient(#ffd55b, #bd7b12); border-top-color: #fff0a0; border-left-color: #e8b840; }
 .home-game-modes button.unavailable { color: var(--muted); cursor: not-allowed; opacity: 1; }
 .home-mode-selected { color: #f4c95d; font-family: Oxanium, ui-monospace, monospace; font-size: 10px; font-weight: 700; }
 .home-shortcuts { display: grid; grid-column: 1 / -1; gap: 5px; }
@@ -377,7 +382,7 @@ main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; width: min(
 .home-shortcut > span:first-child { color: var(--grass-light); }
 .home-shortcut .cc-icon { width: 25px; height: 25px; }
 .home-shortcut small, .home-shortcut strong { display: block; }
-.home-shortcut small { color: var(--copper-light); font-size: .57rem; letter-spacing: .11em; }
+.home-shortcut small { color: var(--copper-light); font-size: .57rem; letter-spacing: .11em; text-transform: uppercase; }
 .home-shortcut small b { margin-left: 4px; padding: 1px 3px; color: #c8f08d; font-size: .5rem; border: 1px solid #47762d; }
 .home-shortcut strong { margin-top: 2px; font-size: .8rem; }
 .home-shortcut > b { color: var(--grass-light); font-size: 1.8rem; }
@@ -599,9 +604,12 @@ dialog.drawer { position: fixed; inset: auto 0 0; width: min(100%, 680px); max-h
   .toggle-control { min-width: 0; width: 100%; justify-content: space-between; }
   .home-hero-row { gap: 8px; }
   .players-card { min-width: 82px; }
+  .server-overview h2 { font-size: 18px; }
+  #hero-instance-name { max-width: 12ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #updated-at { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 }
 
-@media (max-width: 360px) {
+@media (max-width: 420px) {
   .hero { padding: 28px 10px 10px; }
   .home-hero-row { gap: 7px; }
   .server-overview { gap: 8px; padding: 8px; }

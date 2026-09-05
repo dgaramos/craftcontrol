@@ -129,4 +129,5 @@ export const en = {
     audit: "Audit", auditTitle: "Audit history", auditActor: "Actor", auditAction: "Action", auditTarget: "Target", auditResult: "Outcome", auditDate: "Date", auditFilterAll: "All", auditEmpty: "No audit records match the current filters.", auditPrev: "Previous", auditNext: "Next", auditApply: "Apply filters",
     diagUpdatedAt: "Updated at", diagDashboard: "Diagnostics", diagDashboardEyebrow: "HEALTH", diagDashboardHelp: "Live metrics from the telemetry pipeline and runtime.", diagKeyMetrics: "Key Metrics", diagRuntimeSection: "Runtime & Reconciliation",
     navHome: "Home", navPlayers: "Players", navServer: "Server",
+    profileLanguage: "Language", profileSessions: "Manage sessions", profileChangePassword: "Change password", profileSignOut: "Sign out",
   };

@@ -118,4 +118,5 @@ export const es = {
   audit: "Auditoría", auditTitle: "Historial de auditoría", auditActor: "Actor", auditAction: "Acción", auditTarget: "Objetivo", auditResult: "Resultado", auditDate: "Fecha", auditFilterAll: "Todos", auditEmpty: "No hay registros de auditoría que coincidan con los filtros.", auditPrev: "Anterior", auditNext: "Siguiente", auditApply: "Aplicar filtros",
   diagUpdatedAt: "Actualizado a las", diagDashboard: "Diagnósticos", diagDashboardEyebrow: "SALUD", diagDashboardHelp: "Métricas en tiempo real del pipeline de telemetría y runtime.", diagKeyMetrics: "Métricas clave", diagRuntimeSection: "Runtime y reconciliación",
   navHome: "Inicio", navPlayers: "Jugadores", navServer: "Servidor",
+  profileLanguage: "Idioma", profileSessions: "Gestionar sesiones", profileChangePassword: "Cambiar contraseña", profileSignOut: "Cerrar sesión",
 };

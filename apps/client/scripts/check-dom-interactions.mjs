@@ -15,7 +15,7 @@ global.window = {
   history: { replaceState: (_state, _title, hash) => { window.location.hash = hash; } },
 };
 
-const state = { tab: "home", tabs: ["home", "players", "analytics"] };
+const state = { tab: "home", tabs: ["home", "players", "analytics"], subscribe: () => {} };
 let buttons = [];
 const tabs = {
   replaceChildren() { buttons = []; },

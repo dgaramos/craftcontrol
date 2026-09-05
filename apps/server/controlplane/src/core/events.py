@@ -19,8 +19,9 @@ class Event:
 
 
 class EventBroker:
-    def __init__(self, repository: EventStore) -> None:
+    def __init__(self, repository: EventStore, heartbeat_seconds: float = 20) -> None:
         self.repository = repository
+        self._heartbeat_seconds = heartbeat_seconds
         self._subscribers: set[queue.Queue[Event]] = set()
         self._lock = threading.Lock()
         self._topic_counts: dict[str, int] = {}
@@ -66,7 +67,7 @@ class EventBroker:
                 self._subscribers.add(subscriber)
             while True:
                 try:
-                    yield subscriber.get(timeout=20)
+                    yield subscriber.get(timeout=self._heartbeat_seconds)
                 except queue.Empty:
                     yield None
         finally:

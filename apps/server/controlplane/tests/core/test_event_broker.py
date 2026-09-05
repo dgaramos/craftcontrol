@@ -151,6 +151,18 @@ def test_stream_registers_and_removes_subscriber(broker: EventBroker) -> None:
     assert len(broker._subscribers) == 0
 
 
+def test_repeatedly_closed_streams_do_not_accumulate_subscribers(broker: EventBroker) -> None:
+    broker = EventBroker(broker.repository, heartbeat_seconds=0)
+    for _ in range(32):
+        stream = broker.stream(after_id=0)
+        next(stream)
+        stream.close()
+
+    diagnostics = broker.diagnostics()
+    assert diagnostics["sse_connections"] == 0
+    assert len(broker._subscribers) == 0
+
+
 # ---------------------------------------------------------------------------
 # stream — reconnection counter
 # ---------------------------------------------------------------------------

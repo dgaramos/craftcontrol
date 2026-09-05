@@ -14,7 +14,7 @@ export function createNavigation({ state, $, t, uiIcon }) {
     return "home";
   }
 
-  function _syncBottomNav() {
+  function renderBottomNav() {
     const nav = $("#bottom-nav");
     if (!nav) return;
     const active = _bottomNavActive();
@@ -55,7 +55,7 @@ export function createNavigation({ state, $, t, uiIcon }) {
       };
       tabs.appendChild(clone);
     });
-    _syncBottomNav();
+    renderBottomNav();
   }
 
   function openPlayers() {
@@ -64,5 +64,7 @@ export function createNavigation({ state, $, t, uiIcon }) {
     resetVerticalScroll();
   }
 
-  return { openPlayers, renderTabs };
+  state.subscribe("tab", renderBottomNav);
+
+  return { openPlayers, renderTabs, renderBottomNav };
 }

@@ -129,4 +129,5 @@ export const pt = {
     audit: "Auditoria", auditTitle: "Histórico de auditoria", auditActor: "Ator", auditAction: "Ação", auditTarget: "Alvo", auditResult: "Resultado", auditDate: "Data", auditFilterAll: "Todos", auditEmpty: "Nenhum registro de auditoria corresponde aos filtros.", auditPrev: "Anterior", auditNext: "Próxima", auditApply: "Aplicar filtros",
     diagUpdatedAt: "Atualizado em", diagDashboard: "Diagnósticos", diagDashboardEyebrow: "SAÚDE", diagDashboardHelp: "Métricas em tempo real do pipeline de telemetria e runtime.", diagKeyMetrics: "Métricas principais", diagRuntimeSection: "Runtime e reconciliação",
     navHome: "Home", navPlayers: "Jogadores", navServer: "Servidor",
+    profileLanguage: "Idioma", profileSessions: "Gerenciar sessões", profileChangePassword: "Alterar senha", profileSignOut: "Sair",
   };

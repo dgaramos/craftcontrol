@@ -183,6 +183,33 @@
     </div>
   </template>
 
+  <div id="profile-sheet" class="bottom-sheet" hidden>
+    <div class="bottom-sheet-backdrop"></div>
+    <div class="bottom-sheet-panel">
+      <div class="bottom-sheet-handle"></div>
+      <div class="profile-sheet-user">
+        <div class="profile-sheet-avatar"><span id="profile-sheet-initial"></span></div>
+        <div>
+          <div class="profile-sheet-name" id="profile-sheet-name"></div>
+          <div class="profile-sheet-role" id="profile-sheet-role"></div>
+        </div>
+      </div>
+      <div class="profile-sheet-section">
+        <div class="profile-sheet-section-label" data-i18n="profileLanguage">Idioma</div>
+        <div class="profile-sheet-locale-row">
+          <button class="btn" data-locale="pt" type="button"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=2#ui-flag-br"></use></svg> PT</button>
+          <button class="btn" data-locale="en" type="button"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=2#ui-flag-us"></use></svg> EN</button>
+          <button class="btn" data-locale="es" type="button"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=2#ui-flag-es"></use></svg> ES</button>
+        </div>
+      </div>
+      <div class="profile-sheet-actions">
+        <button class="btn" id="manage-sessions-btn" type="button" data-i18n="profileSessions">Gerenciar sessões</button>
+        <button class="btn" id="change-password-btn" type="button" data-i18n="profileChangePassword">Alterar senha</button>
+        <button class="btn btn-danger" id="sign-out-btn" type="button" data-i18n="profileSignOut">Sair</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module" src="/static/app.js?v=71"></script>
   </body>
 </html>

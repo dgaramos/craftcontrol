@@ -51,6 +51,8 @@ export function createSettingsFeature({ state, content, t, api, $, escapeHtml, t
     $("#save").hidden = count === 0 || state.operationActive;
     $("#save-label").textContent = t("reviewCount", count);
     documentRef.querySelector("footer").classList.toggle("has-pending", count > 0);
+    const profileDot = documentRef.querySelector("#profile-dot");
+    if (profileDot) profileDot.hidden = count === 0;
     if ($("#changes-drawer").open) renderChangesDrawer();
   }
 

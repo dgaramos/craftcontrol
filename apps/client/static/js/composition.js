@@ -194,6 +194,7 @@ export function startApplication() {
   function applyLocale() {
     document.documentElement.lang = localeTag();
     document.querySelectorAll("[data-i18n]").forEach((element) => { element.textContent = t(element.dataset.i18n); });
+    document.querySelectorAll("[data-i18n-aria]").forEach((element) => { element.setAttribute("aria-label", t(element.dataset.i18nAria)); });
     const languageNames = { pt: "Português", en: "English", es: "Español" };
     const languageFlags = { pt: "br", en: "us", es: "es" };
     $("#language span").textContent = languageNames[state.locale];

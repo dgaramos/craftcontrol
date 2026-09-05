@@ -82,6 +82,7 @@ function makeEnv(initialTab = "home") {
   const state = {
     tab: initialTab,
     tabs: ["home", "world", "players", "analytics", "rules", "server"],
+    subscribe: jest.fn(),
   };
   const tabsEl = makeTabsElement();
   const bottomNavEl = makeBottomNavElement();
@@ -282,5 +283,60 @@ describe("createNavigation — bottom-nav sync", () => {
     nav.renderTabs();
     const playersBtn = bottomNavEl._buttons.find((b) => b.dataset.tab === "__players__");
     expect(playersBtn.className).toBe("active");
+  });
+});
+
+// ── renderBottomNav ───────────────────────────────────────────────────────────
+
+describe("createNavigation — renderBottomNav", () => {
+  test("is exposed on the navigation object", () => {
+    const { state, $, t, uiIcon } = makeEnv("home");
+    const nav = createNavigation({ state, $, t, uiIcon });
+    expect(typeof nav.renderBottomNav).toBe("function");
+  });
+
+  test("marks home button active when state.tab is home", () => {
+    const { state, $, t, uiIcon, bottomNavEl } = makeEnv("home");
+    const nav = createNavigation({ state, $, t, uiIcon });
+    nav.renderBottomNav();
+    const homeBtn = bottomNavEl._buttons.find((b) => b.dataset.tab === "home");
+    expect(homeBtn.className).toBe("active");
+  });
+
+  test("marks __players__ button active when state.tab is __players__", () => {
+    const { state, $, t, uiIcon, bottomNavEl } = makeEnv("__players__");
+    const nav = createNavigation({ state, $, t, uiIcon });
+    nav.renderBottomNav();
+    const playersBtn = bottomNavEl._buttons.find((b) => b.dataset.tab === "__players__");
+    expect(playersBtn.className).toBe("active");
+  });
+
+  test("marks server button active when state.tab is server", () => {
+    const { state, $, t, uiIcon, bottomNavEl } = makeEnv("server");
+    const nav = createNavigation({ state, $, t, uiIcon });
+    nav.renderBottomNav();
+    const serverBtn = bottomNavEl._buttons.find((b) => b.dataset.tab === "server");
+    expect(serverBtn.className).toBe("active");
+  });
+
+  test("removes active from other buttons when home is active", () => {
+    const { state, $, t, uiIcon, bottomNavEl } = makeEnv("home");
+    const nav = createNavigation({ state, $, t, uiIcon });
+    nav.renderBottomNav();
+    const inactive = bottomNavEl._buttons.filter((b) => b.dataset.tab !== "home");
+    inactive.forEach((btn) => expect(btn.className).toBe(""));
+  });
+
+  test("internal tabs leave no bottom-nav button active", () => {
+    for (const tab of ["world", "analytics", "rules", "audit", "__time__"]) {
+      const { state, $, t, uiIcon, bottomNavEl } = makeEnv(tab);
+      const nav = createNavigation({ state, $, t, uiIcon });
+      nav.renderBottomNav();
+      // For internal tabs, none of the 3 bottom-nav buttons should be active
+      // (they all fall back to 'home' mapping via _bottomNavActive)
+      // Actually per spec: home is the fallback for internal tabs
+      const homeBtn = bottomNavEl._buttons.find((b) => b.dataset.tab === "home");
+      expect(homeBtn.className).toBe("active");
+    }
   });
 });

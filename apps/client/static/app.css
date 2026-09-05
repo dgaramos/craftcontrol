@@ -362,15 +362,17 @@ main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; width: min(
 .home-mode-heading .cc-icon { width: 20px; height: 20px; }
 .home-mode-heading strong { font-size: .76rem; }
 .home-mode-heading small { grid-column: 2; color: var(--muted); font-size: .52rem; }
-.home-game-modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+.home-game-modes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
 .home-game-modes button { min-height: 27px; padding: 4px; font-size: .66rem; }
 .home-game-modes button.active { color: #071006; background: linear-gradient(#80cc52, #4d9d35); border-top-color: #b2f080; border-left-color: #8ed460; }
+.home-game-modes button.unavailable { color: #68726c; cursor: not-allowed; opacity: .72; }
 .home-shortcuts { display: grid; grid-column: 1 / -1; gap: 8px; }
 .home-shortcut { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; min-height: 58px; padding: 9px 12px; text-align: left; }
 .home-shortcut > span:first-child { color: var(--grass-light); }
 .home-shortcut .cc-icon { width: 25px; height: 25px; }
 .home-shortcut small, .home-shortcut strong { display: block; }
 .home-shortcut small { color: var(--copper-light); font-size: .57rem; letter-spacing: .11em; }
+.home-shortcut small b { margin-left: 4px; padding: 1px 3px; color: #c8f08d; font-size: .5rem; border: 1px solid #47762d; }
 .home-shortcut strong { margin-top: 2px; font-size: .8rem; }
 .home-shortcut > b { color: var(--grass-light); font-size: 1.8rem; }
 .home-shortcut.rules { border-left-color: var(--grass-light); background: linear-gradient(90deg, #163314, #101711); }

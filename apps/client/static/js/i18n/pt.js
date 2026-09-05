@@ -2,7 +2,7 @@ export const pt = {
     language: "Idioma",
     brandKicker: "CENTRAL BEDROCK",
     refresh: "Atualizar", refreshAriaLabel: "Atualizar estado", profileAriaLabel: "Perfil", worldState: "ESTADO DO MUNDO", quickActions: "Ações rápidas",
-    day: "Dia", night: "Noite", clearWeather: "Clima limpo", server: "Servidor",
+    day: "Dia", night: "Noite", clearWeather: "Clima limpo", server: "Servidor", homeDay: "Dia", homeTime: "Hora", homeWeather: "Clima", homeTimeAction: "Tempo & Hora", serverRules: "Regras do servidor", serverOperations: "Operações do servidor", recentActivity: "Atividade recente", instant: "Instantâneo", spectatorUnavailable: "Modo espectador ainda não é aceito pelo servidor",
     saveChanges: "Salvar alterações", control: "CONTROLE", serverOperation: "Operação do servidor",
     restartNotice: "Alterações persistentes entram em vigor ao aplicar e reiniciar.",
     start: "Iniciar", restart: "Reiniciar", stop: "Parar", close: "Fechar",

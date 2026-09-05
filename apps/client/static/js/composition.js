@@ -16,7 +16,7 @@ import { startAuthenticatedApplication } from "./features/auth/bootstrap.js?v=7"
 import { createSettingsFeature } from "./features/settings/index.js?v=7";
 import { createAuditFeature } from "./features/audit/index.js?v=1";
 import { createHomeFeature } from "./features/home/index.js?v=3";
-import { createI18n } from "./i18n/index.js?v=9";
+import { createI18n } from "./i18n/index.js?v=10";
 import { createGameTerms } from "./i18n/game-terms.js?v=7";
 
 export function startApplication() {

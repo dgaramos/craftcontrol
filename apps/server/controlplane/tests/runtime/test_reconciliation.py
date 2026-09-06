@@ -587,7 +587,9 @@ def test_refresh_without_world_service_still_succeeds(tmp_path: Path) -> None:
 
 
 def test_refresh_world_query_error_publishes_event_and_continues(tmp_path: Path) -> None:
-    """If query_world_state raises, refresh() publishes an event and does not re-raise."""
+    """If query_world_state raises (e.g. WorldQueryError), refresh() publishes an event and does not re-raise."""
+    from src.server.world import WorldQueryError
+
     bedrock = FakeBedrock()
     rec, repo = _make_reconciliation_with_world(tmp_path, bedrock)
 
@@ -601,7 +603,7 @@ def test_refresh_world_query_error_publishes_event_and_continues(tmp_path: Path)
     rec.broker.publish = capture  # type: ignore[method-assign]
 
     def boom():
-        raise RuntimeError("world query failed")
+        raise WorldQueryError([RuntimeError("daytime"), RuntimeError("day"), RuntimeError("weather")])
 
     rec.world_service.query_world_state = boom  # type: ignore[method-assign]
 

@@ -30,9 +30,9 @@ class ReconciliationService:
         broker: EventPublisher,
         player_service: PlayerService,
         telemetry_service: TelemetryService,
-        world_service: WorldService | None = None,
         telemetry_snapshot_fn: Callable[[str], None] | None = None,
         thread_factory: Callable[..., Any] | None = None,
+        world_service: WorldService | None = None,
     ) -> None:
         self.repository = repository
         self.files = files

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from src.server.world import WorldService
+from src.server.world import WorldQueryError, WorldService
 
 
 class _FakeBedrock:
@@ -94,7 +94,7 @@ def test_query_world_state_survives_bedrock_error_on_weather() -> None:
     assert "weather" not in result
 
 
-def test_query_world_state_returns_empty_when_all_queries_fail() -> None:
+def test_query_world_state_raises_when_all_queries_fail() -> None:
     bedrock = _FakeBedrock(
         raise_on={
             ("time", "query", "daytime"),
@@ -104,9 +104,10 @@ def test_query_world_state_returns_empty_when_all_queries_fail() -> None:
     )
     svc = _make_world(bedrock)
 
-    result = svc.query_world_state()
+    with pytest.raises(WorldQueryError) as exc_info:
+        svc.query_world_state()
 
-    assert result == {}
+    assert len(exc_info.value.causes) == 3
 
 
 def test_query_world_state_returns_empty_on_unrecognised_output() -> None:

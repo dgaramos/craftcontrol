@@ -8,6 +8,7 @@ from collections.abc import Callable
 from typing import Any
 
 from ..players import PlayerService
+from ..server.world import WorldService
 from ..telemetry.service import TelemetryService
 from ..ports import EventPublisher, ServerConfiguration, ServerConsole, StateStore
 from ..core.schema import GAMERULES, PROPERTY_NAMES, SETTINGS
@@ -29,6 +30,7 @@ class ReconciliationService:
         broker: EventPublisher,
         player_service: PlayerService,
         telemetry_service: TelemetryService,
+        world_service: WorldService | None = None,
         telemetry_snapshot_fn: Callable[[str], None] | None = None,
         thread_factory: Callable[..., Any] | None = None,
     ) -> None:
@@ -38,6 +40,7 @@ class ReconciliationService:
         self.broker = broker
         self.player_service = player_service
         self.telemetry_service = telemetry_service
+        self.world_service = world_service
         # Callback used when a refresh wants to trigger a telemetry snapshot.
         # Defaults to self.request_telemetry_snapshot_async so this class is
         # self-contained when used standalone.
@@ -107,6 +110,14 @@ class ReconciliationService:
             self.player_service.refresh_permissions(publish=False)
             self.player_service.bootstrap(players)
             self.broker.publish("state.changed", reason, {"domains": ["settings", "gamerules", "players", "server"]})
+            if self.world_service is not None:
+                try:
+                    world_state = self.world_service.query_world_state()
+                    if world_state:
+                        self.repository.store("world", world_state, "bedrock-console")
+                        self.broker.publish("state.changed", reason, {"domains": ["world"]})
+                except Exception as world_error:
+                    self.broker.publish("state.world.query.failed", reason, {"error": str(world_error)[:240]})
             trigger_telemetry = True
         except Exception as error:
             self.broker.publish("state.reconciliation.failed", reason, {"error": str(error)[:240]})

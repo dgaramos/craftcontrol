@@ -508,3 +508,103 @@ def test_existing_runtime_fields_intact(tmp_path: Path) -> None:
     diag = rec.diagnostics()
     for key in ("refreshing", "pending_gamerule_refreshes", "gamerule_worker_running", "snapshot_running"):
         assert key in diag
+
+
+# ---------------------------------------------------------------------------
+# world_service integration inside refresh()
+# ---------------------------------------------------------------------------
+
+from src.core.events import EventBroker
+from src.core.repository import StateRepository
+from src.server.files import ServerFiles
+from src.server.world import WorldService
+from src.players import PlayerService, SQLitePlayerRepository
+from src.telemetry.repository import SQLiteTelemetryRepository
+from src.telemetry.service import TelemetryService
+from src.runtime.reconciliation import ReconciliationService
+
+
+def _make_reconciliation_with_world(tmp_path, bedrock=None):
+    db_path = tmp_path / "state.db"
+    repo = StateRepository(db_path)
+    repo.initialize()
+    files = ServerFiles(tmp_path / ".env", tmp_path / "server.properties")
+    bedrock = bedrock or FakeBedrock()
+    brk = EventBroker(repo)
+    player_svc = PlayerService(SQLitePlayerRepository(db_path), files, bedrock, brk)
+    telemetry_svc = TelemetryService(SQLiteTelemetryRepository(db_path), brk)
+    world_svc = WorldService(bedrock, brk)
+    rec = ReconciliationService(
+        repository=repo,
+        files=files,
+        bedrock=bedrock,
+        broker=brk,
+        player_service=player_svc,
+        telemetry_service=telemetry_svc,
+        world_service=world_svc,
+        telemetry_snapshot_fn=lambda _reason: None,
+    )
+    return rec, repo
+
+
+def test_refresh_queries_world_state(tmp_path: Path) -> None:
+    """refresh() calls world_service.query_world_state() and persists results."""
+    bedrock = FakeBedrock()
+    # FakeBedrock.send_and_read returns "The time is 34" for any command
+    rec, repo = _make_reconciliation_with_world(tmp_path, bedrock)
+
+    rec.refresh("test")
+
+    world = repo.snapshot(False).get("world", {})
+    assert world.get("daytime") == "34"
+    assert world.get("day") == "34"
+
+
+def test_refresh_without_world_service_still_succeeds(tmp_path: Path) -> None:
+    """refresh() works when world_service is None (backwards-compatible)."""
+    db_path = tmp_path / "state.db"
+    repo = StateRepository(db_path)
+    repo.initialize()
+    files = ServerFiles(tmp_path / ".env", tmp_path / "server.properties")
+    bedrock = FakeBedrock()
+    brk = EventBroker(repo)
+    player_svc = PlayerService(SQLitePlayerRepository(db_path), files, bedrock, brk)
+    telemetry_svc = TelemetryService(SQLiteTelemetryRepository(db_path), brk)
+    rec = ReconciliationService(
+        repository=repo,
+        files=files,
+        bedrock=bedrock,
+        broker=brk,
+        player_service=player_svc,
+        telemetry_service=telemetry_svc,
+        world_service=None,
+        telemetry_snapshot_fn=lambda _reason: None,
+    )
+
+    rec.refresh("test")  # must not raise
+
+    assert repo.snapshot(False).get("world") is None
+
+
+def test_refresh_world_query_error_publishes_event_and_continues(tmp_path: Path) -> None:
+    """If query_world_state raises, refresh() publishes an event and does not re-raise."""
+    bedrock = FakeBedrock()
+    rec, repo = _make_reconciliation_with_world(tmp_path, bedrock)
+
+    events: list[str] = []
+    original_publish = rec.broker.publish
+
+    def capture(topic, *args, **kwargs):
+        events.append(topic)
+        original_publish(topic, *args, **kwargs)
+
+    rec.broker.publish = capture  # type: ignore[method-assign]
+
+    def boom():
+        raise RuntimeError("world query failed")
+
+    rec.world_service.query_world_state = boom  # type: ignore[method-assign]
+
+    rec.refresh("test")  # must not raise
+
+    assert "state.world.query.failed" in events

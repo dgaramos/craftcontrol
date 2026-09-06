@@ -86,6 +86,7 @@ def make_manager_service(
         broker=broker,
         player_service=player_service,
         telemetry_service=telemetry_service,
+        world_service=world_service,
     )
     return ManagerService(
         repo,
@@ -297,6 +298,7 @@ def reconciliation_service(tmp_path: Path, fake_bedrock: FakeBedrock) -> Reconci
     player_repo = SQLitePlayerRepository(db_path)
     player_svc = PlayerService(player_repo, files, fake_bedrock, brk)  # type: ignore[arg-type]
     telemetry_svc = TelemetryService(SQLiteTelemetryRepository(db_path), brk)
+    world_svc = WorldService(fake_bedrock, brk)  # type: ignore[arg-type]
     return ReconciliationService(
         repository=repo,
         files=files,
@@ -304,4 +306,5 @@ def reconciliation_service(tmp_path: Path, fake_bedrock: FakeBedrock) -> Reconci
         broker=brk,
         player_service=player_svc,
         telemetry_service=telemetry_svc,
+        world_service=world_svc,
     )

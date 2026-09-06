@@ -27,6 +27,27 @@ class WorldService:
         self.bedrock = bedrock
         self.broker = broker
 
+    def query_world_state(self) -> dict[str, str]:
+        """Query current time and weather from the Bedrock console and persist them."""
+        result: dict[str, str] = {}
+        for query in ("daytime", "day"):
+            try:
+                output = self.bedrock.send_and_read(["time", "query", query])
+                numbers = re.findall(r"-?\d+", output)
+                if numbers:
+                    result[query] = numbers[-1]
+            except Exception:
+                pass
+        try:
+            output = self.bedrock.send_and_read(["weather", "query"])
+            lowered = output.lower()
+            weather = next((w for w in self.WEATHER_QUERY_ORDER if w in lowered), None)
+            if weather:
+                result["weather"] = weather
+        except Exception:
+            pass
+        return result
+
     def run_world_action(self, action: str) -> None:
         if action not in self.WORLD_ACTIONS:
             raise KeyError(action)

@@ -57,8 +57,8 @@
           </div>
           <div class="world-summary" aria-live="polite">
             <div><small data-i18n="homeDay">Dia</small><strong id="world-day">—</strong></div>
-            <div><small data-i18n="homeTime">Hora</small><span class="world-value"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-sun"></use></svg><strong id="world-time">—</strong></span></div>
-            <div class="world-weather"><small data-i18n="homeWeather">Clima</small><span class="world-value"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-sun"></use></svg><strong id="world-weather">—</strong></span></div>
+            <div><span class="world-label-row"><small data-i18n="homeTime">Hora</small><small id="world-ticks" class="world-ticks"></small></span><span class="world-value"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use id="world-time-icon" href="/static/craftcontrol-ui.svg#ui-sun"></use></svg><strong id="world-time">—</strong></span></div>
+            <div class="world-weather"><small data-i18n="homeWeather">Clima</small><span class="world-value"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use id="world-weather-icon" href="/static/craftcontrol-ui.svg#ui-sun"></use></svg><strong id="world-weather">—</strong></span></div>
           </div>
         </div>
       </section>
@@ -198,13 +198,13 @@
         </div>
       </div>
       <div class="profile-sheet-actions">
-        <button class="btn" id="manage-sessions-btn" type="button" data-i18n="profileSessions">Gerenciar sessões</button>
-        <button class="btn" id="change-password-btn" type="button" data-i18n="profileChangePassword">Alterar senha</button>
-        <button class="btn btn-danger" id="sign-out-btn" type="button" data-i18n="profileSignOut">Sair</button>
+        <button class="btn" id="manage-sessions-btn" type="button"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=2#ui-sessions"></use></svg><span data-i18n="profileSessions">Gerenciar sessões</span></button>
+        <button class="btn" id="change-password-btn" type="button"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=2#ui-password"></use></svg><span data-i18n="profileChangePassword">Alterar senha</span></button>
+        <button class="btn btn-danger" id="sign-out-btn" type="button"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=2#ui-logout"></use></svg><span data-i18n="profileSignOut">Sair</span></button>
       </div>
     </div>
   </div>
 
-  <script type="module" src="/static/app.js?v=82"></script>
+  <script type="module" src="/static/app.js?v=83"></script>
   </body>
 </html>

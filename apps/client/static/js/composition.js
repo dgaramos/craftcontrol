@@ -15,7 +15,7 @@ import { createServerFeature } from "./features/server/index.js?v=13";
 import { startAuthenticatedApplication } from "./features/auth/bootstrap.js?v=7";
 import { createSettingsFeature } from "./features/settings/index.js?v=7";
 import { createAuditFeature } from "./features/audit/index.js?v=1";
-import { createHomeFeature } from "./features/home/index.js?v=5";
+import { createHomeFeature } from "./features/home/index.js?v=7";
 import { createI18n } from "./i18n/index.js?v=10";
 import { createGameTerms } from "./i18n/game-terms.js?v=7";
 
@@ -203,17 +203,43 @@ export function startApplication() {
     $("#updated-at").textContent = state.updatedAt ? `${t("updated")} ${new Date(state.updatedAt * 1000).toLocaleTimeString(localeTag())}` : t("awaiting");
   }
 
+  let _tickTimer = null;
+  let _localDaytime = NaN;
+
+  function _updateTickDisplay() {
+    _localDaytime = (_localDaytime + 2) % 24000;
+    const el = $("#world-ticks");
+    if (el) el.textContent = Math.round(_localDaytime).toLocaleString(localeTag());
+    const timeEl = $("#world-time");
+    if (timeEl) {
+      const minutes = Math.round(((_localDaytime + 6000) % 24000) / 1000 * 60);
+      const hour = Math.floor(minutes / 60) % 24;
+      const minute = minutes % 60;
+      timeEl.textContent = new Intl.DateTimeFormat(localeTag(), { hour: "numeric", minute: "2-digit" }).format(new Date(2000, 0, 1, hour, minute));
+    }
+    const isNight = _localDaytime >= 13000 && _localDaytime < 23000;
+    const iconEl = $("#world-time-icon");
+    if (iconEl) iconEl.setAttribute("href", `/static/craftcontrol-ui.svg#${isNight ? "ui-moon" : "ui-sun"}`);
+  }
+
   function showWorld(snapshot) {
     state.world = snapshot.world || {};
     $("#world-day").textContent = state.world.day ?? "—";
     const daytime = Number(state.world.daytime);
+    if (_tickTimer) { clearInterval(_tickTimer); _tickTimer = null; }
     if (Number.isFinite(daytime)) {
-      const minutes = Math.round((((daytime + 6000) % 24000) / 1000) * 60);
-      const hour = Math.floor(minutes / 60) % 24;
-      const minute = minutes % 60;
-      $("#world-time").textContent = new Intl.DateTimeFormat(localeTag(), { hour: "numeric", minute: "2-digit" }).format(new Date(2000, 0, 1, hour, minute));
-    } else $("#world-time").textContent = "—";
-    $("#world-weather").textContent = state.world.weather ? t(state.world.weather) : "—";
+      _localDaytime = daytime;
+      _updateTickDisplay();
+      _tickTimer = setInterval(_updateTickDisplay, 100);
+    } else {
+      _localDaytime = NaN;
+      $("#world-time").textContent = "—";
+      $("#world-ticks").textContent = "";
+    }
+    const weather = state.world.weather;
+    $("#world-weather").textContent = weather ? t(weather) : "—";
+    const weatherIcon = (weather === "rain" || weather === "thunder") ? "ui-rain" : "ui-sun";
+    $("#world-weather-icon").setAttribute("href", `/static/craftcontrol-ui.svg#${weatherIcon}`);
   }
 
   function updateBrand() {
@@ -318,14 +344,37 @@ export function startApplication() {
     const user = state.user;
     if (user) {
       const initial = (user.name || "").charAt(0).toUpperCase();
+      const gravatarUrl = user.id ? `https://www.gravatar.com/avatar/${user.id}?s=128&d=identicon&r=pg` : null;
       const profileInitial = $("#profile-initial");
-      if (profileInitial) profileInitial.textContent = initial;
+      if (profileInitial) {
+        if (gravatarUrl) {
+          profileInitial.textContent = "";
+          if (!profileInitial.querySelector("img")) {
+            const img = document.createElement("img");
+            img.src = gravatarUrl;
+            img.alt = initial;
+            img.onerror = () => { img.remove(); profileInitial.textContent = initial; };
+            profileInitial.appendChild(img);
+          }
+        } else { profileInitial.textContent = initial; }
+      }
+      const sheetAvatar = $("#profile-sheet-initial")?.parentElement;
+      if (sheetAvatar && gravatarUrl && !sheetAvatar.querySelector("img")) {
+        const img = document.createElement("img");
+        img.src = gravatarUrl;
+        img.alt = initial;
+        img.onerror = () => img.remove();
+        sheetAvatar.prepend(img);
+      }
       const sheetInitial = $("#profile-sheet-initial");
-      if (sheetInitial) sheetInitial.textContent = initial;
+      if (sheetInitial) sheetInitial.textContent = gravatarUrl ? "" : initial;
       const sheetName = $("#profile-sheet-name");
       if (sheetName) sheetName.textContent = user.name || "";
       const sheetRole = $("#profile-sheet-role");
-      if (sheetRole) sheetRole.textContent = user.role || "";
+      if (sheetRole) {
+        const role = user.role || "";
+        sheetRole.textContent = role ? role.charAt(0).toUpperCase() + role.slice(1) : "";
+      }
     }
     sheet.hidden = false;
   }

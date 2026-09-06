@@ -572,9 +572,10 @@ dialog.drawer { position: fixed; inset: auto 0 0; width: min(100%, 680px); max-h
 .remove-change .cc-icon { width: 27px; height: 27px; margin: 0; }
 .drawer-actions { position: sticky; bottom: -1px; display: grid; grid-template-columns: 1fr 1.5fr; gap: 7px; margin-top: 14px; padding-top: 10px; background: var(--stone); }
 .drawer-actions button:disabled { cursor: wait; filter: grayscale(1); opacity: .6; }
-.operation-indicator { position: fixed; z-index: 25; right: max(14px, env(safe-area-inset-right)); bottom: max(82px, calc(70px + env(safe-area-inset-bottom))); display: flex; align-items: center; gap: .5rem; max-width: min(300px, calc(100vw - 28px)); min-height: 44px; padding: .55rem .75rem; color: #d8f7ff; background: #102631; border: 2px solid #82c8ed; box-shadow: 4px 5px 0 #000; font-size: .74rem; font-weight: 900; }
-.operation-indicator .cc-icon { width: 1.1rem; height: 1.1rem; flex: 0 0 auto; }
-.operation-indicator.op-indicator-terminal { color: #f9dfa0; border-color: #f4c95d; }
+.indicator-bar { display: flex; align-items: center; gap: .5rem; width: 100%; padding: .45rem 1rem; font-size: .74rem; font-weight: 900; letter-spacing: .04em; cursor: pointer; border: none; flex-shrink: 0; }
+.indicator-bar .cc-icon { width: 1rem; height: 1rem; flex-shrink: 0; }
+.indicator-bar--changes { background: #2b1f00; color: #f4c95d; border-top: 2px solid #c99532; }
+.indicator-bar--operation { background: #0a1e2e; color: #82c8ed; border-top: 2px solid #2a6e9a; }
 .operation-drawer .operation-progress-card { margin-bottom: 0; }
 
 #toast { position: fixed; z-index: 30; left: 50%; bottom: 104px; width: max-content; max-width: calc(100vw - 26px); padding: 12px 16px; color: #10200e; font-weight: 900; background: #dff7d1; border: 3px solid #0a1008; border-radius: 0; box-shadow: 4px 5px 0 #000; opacity: 0; pointer-events: none; transform: translate(-50%, 16px); transition: .18s; }
@@ -722,7 +723,6 @@ dialog.drawer { position: fixed; inset: auto 0 0; width: min(100%, 680px); max-h
   .telemetry-pack-actions { display: grid; grid-template-columns: 1fr; }
   .telemetry-pack-actions button { width: 100%; }
   .op-stage { width: 100%; flex-basis: 100%; }
-  .operation-indicator { bottom: max(76px, calc(64px + env(safe-area-inset-bottom))); }
   dialog.operation-drawer { inset: auto max(0px, env(safe-area-inset-right)) max(0px, env(safe-area-inset-bottom)) max(0px, env(safe-area-inset-left)); width: auto; max-width: none; max-height: min(88dvh, 720px); padding: 10px 11px calc(12px + env(safe-area-inset-bottom)); box-sizing: border-box; }
   .operation-drawer .drawer-header { align-items: flex-start; }
   .operation-drawer .drawer-header > div { min-width: 0; }
@@ -859,3 +859,21 @@ dialog.drawer { position: fixed; inset: auto 0 0; width: min(100%, 680px); max-h
 .profile-sheet-actions .btn.secondary { background: linear-gradient(#343a35, #232824); color: var(--text); border: 2px solid var(--line); border-top-color: #454c46; border-left-color: #3b423c; border-radius: 4px; }
 .profile-sheet-actions .btn.danger { color: #fff; background: linear-gradient(#8b2b25, #5c1a17); border: 2px solid #3d0e0b; border-top-color: #d95a50; border-left-color: #b04040; border-radius: 4px; }
 .profile-sheet-actions .btn .cc-icon { width: 18px; height: 18px; flex-shrink: 0; }
+
+/* ── Server panel (T23) ──────────────────────────────────────────────── */
+.server-panel { display: flex; flex-direction: column; gap: 1rem; }
+.server-panel-header { }
+.server-panel-header .eyebrow { color: var(--copper-light); font-size: .58rem; }
+.server-panel-header h2 { font-size: 1.1rem; margin: 2px 0 0; }
+.server-status-row { display: flex; gap: .5rem; }
+.server-status-row button { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: .65rem .5rem; font-size: .85rem; font-weight: 700; border-radius: 4px; cursor: pointer; }
+.server-status-row button:disabled { opacity: .4; cursor: not-allowed; }
+.server-rules-card { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .75rem 1rem; background: #0e1f0f; border: 2px solid var(--grass); border-radius: 6px; cursor: pointer; }
+.server-rules-card-text { display: flex; flex-direction: column; gap: 2px; }
+.server-rules-card-text strong { font-size: .9rem; color: var(--grass-light); }
+.server-rules-card-text small { font-size: .72rem; color: var(--muted); }
+.server-rules-badge { font-size: .65rem; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; color: var(--grass-light); background: #1b3a1b; border: 1px solid var(--grass); padding: 2px 6px; border-radius: 3px; white-space: nowrap; }
+.server-nav-list { display: flex; flex-direction: column; gap: .35rem; }
+.server-nav-item { display: flex; align-items: center; gap: .75rem; padding: .7rem .85rem; background: var(--stone-light); border: 2px solid var(--line); border-top-color: #454c46; border-radius: 4px; cursor: pointer; font-weight: 700; font-size: .9rem; }
+.server-nav-item .cc-icon { width: 20px; height: 20px; color: var(--muted); flex-shrink: 0; }
+.server-nav-item-arrow { margin-left: auto; color: var(--muted); font-size: 1.1rem; }

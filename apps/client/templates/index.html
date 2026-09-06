@@ -8,7 +8,7 @@
     <title>CraftControl · Bedrock control center</title>
     <link rel="icon" href="/static/craftcontrol-mark.svg" type="image/svg+xml">
     <link rel="manifest" href="/static/site.webmanifest">
-    <link rel="stylesheet" href="/static/app.css?v=42">
+    <link rel="stylesheet" href="/static/app.css?v=43">
     <link rel="stylesheet" href="/static/players.css?v=25">
     <link rel="stylesheet" href="/static/analytics.css?v=12">
     <link rel="stylesheet" href="/static/auth.css?v=7">
@@ -66,6 +66,14 @@
       <section id="content"></section>
     </main>
 
+    <div id="changes-bar" class="indicator-bar indicator-bar--changes" hidden>
+      <svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-save"></use></svg>
+      <span id="changes-bar-label" data-i18n="pendingChanges">ALTERAÇÕES PENDENTES</span>
+    </div>
+    <div id="operation-bar" class="indicator-bar indicator-bar--operation" hidden>
+      <svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-server"></use></svg>
+      <span id="operation-bar-label"></span>
+    </div>
     <nav id="bottom-nav" class="bottom-nav" role="tablist">
       <button class="bottom-nav-tab" data-tab="home" role="tab" type="button">
         <svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -205,6 +213,6 @@
     </div>
   </div>
 
-  <script type="module" src="/static/app.js?v=84"></script>
+  <script type="module" src="/static/app.js?v=85"></script>
   </body>
 </html>

@@ -11,7 +11,7 @@ import { createAnalyticsFeature } from "./features/analytics/index.js?v=8";
 import { createPlayersFeature } from "./features/players/index.js?v=7";
 import { createWorldFeature } from "./features/world/index.js?v=7";
 import { createRulesFeature } from "./features/rules/index.js?v=7";
-import { createServerFeature } from "./features/server/index.js?v=13";
+import { createServerFeature } from "./features/server/index.js?v=14";
 import { startAuthenticatedApplication } from "./features/auth/bootstrap.js?v=7";
 import { createSettingsFeature } from "./features/settings/index.js?v=7";
 import { createAuditFeature } from "./features/audit/index.js?v=1";
@@ -309,6 +309,7 @@ export function startApplication() {
     getSettingsFeature().updateSaveLabel();
     if (state.operationActive) $("#changes-drawer").close();
     if (["world", "rules", "server", "__players__"].includes(state.tab)) refreshActivePanel();
+    refreshIndicatorBars();
   });
   state.subscribe("locale", applyLocale);
   state.subscribe("config", () => {
@@ -319,7 +320,15 @@ export function startApplication() {
     if (["home", "world", "rules", "server", "__time__"].includes(state.tab)) refreshActivePanel();
   });
   state.subscribe("schema", refreshActivePanel);
-  state.subscribe("changes", () => getSettingsFeature().updateSaveLabel());
+  function refreshIndicatorBars() {
+    const hasChanges = Object.keys(state.changes).length > 0;
+    const opActive = !!state.operationActive;
+    const changesBar = $("#changes-bar");
+    const opBar = $("#operation-bar");
+    if (changesBar) changesBar.hidden = !hasChanges || opActive;
+    if (opBar) opBar.hidden = !opActive;
+  }
+  state.subscribe("changes", () => { getSettingsFeature().updateSaveLabel(); refreshIndicatorBars(); });
 
   const languageBtn = $("#language");
   if (languageBtn) {
@@ -395,6 +404,11 @@ export function startApplication() {
 
   $("#close-changes").onclick = () => $("#changes-drawer").close();
   $("#operation-indicator").onclick = () => getServerFeature().openOperationDrawer();
+  $("#changes-bar")?.addEventListener("click", () => {
+    getSettingsFeature().renderChangesDrawer();
+    $("#changes-drawer").showModal();
+  });
+  $("#operation-bar")?.addEventListener("click", () => getServerFeature().openOperationDrawer());
   $("#close-operation-drawer").onclick = () => $("#operation-drawer").close();
   $("#discard-all").onclick = () => {
     state.changes = {};

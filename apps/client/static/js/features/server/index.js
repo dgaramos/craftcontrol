@@ -338,6 +338,8 @@ function refreshOperationPanel() {
     indicator.classList?.toggle("op-indicator-terminal", !!op && !["pending", "running"].includes(op.state));
   }
   if (indicatorLabel) indicatorLabel.textContent = op ? (t(`opState_${op.state}`) || op.state) : "";
+  const opBarLabel = $("#operation-bar-label");
+  if (opBarLabel) opBarLabel.textContent = op ? (t(`opState_${op.state}`) || op.state) : "";
   if (!container) return;
   const frag = op ? operationFeature.renderOperation(op) : null;
   container.replaceChildren(...(frag ? [frag] : []));
@@ -364,9 +366,54 @@ async function initializeOperationProgress() {
   if (state.operationActive) openOperationDrawer();
 }
 
-  const renderServer = () => {
-    getSettingsFeature().renderSettingsGroups(["Packs", "Rede", "Avançado"], telemetryPackMarkup());
-    loadTelemetryPack();
-  };
+  function renderServerPanel() {
+    const serverName = state.config?.SERVER_NAME || "Minecraft Bedrock";
+    const disabled = state.operationActive ? " disabled" : "";
+    const isOwner = state.user?.role === "owner";
+    content.innerHTML = `
+      <section class="server-panel block-panel">
+        <div class="server-panel-header">
+          <span class="eyebrow" data-i18n="control">CONTROLE</span>
+          <h2>${serverName}</h2>
+        </div>
+        <div class="server-status-row">
+          <button class="primary" id="sp-restart" type="button"${disabled}>
+            ${uiIcon("restart")} <span data-i18n="restart">Reiniciar</span>
+          </button>
+          <button class="danger" id="sp-stop" type="button"${disabled}>
+            ${uiIcon("close")} <span data-i18n="stop">Parar</span>
+          </button>
+        </div>
+        <button class="server-rules-card" id="sp-rules" type="button">
+          <div class="server-rules-card-text">
+            <strong data-i18n="serverRules">Regras do servidor</strong>
+            <small data-i18n="restartNotice">Alterações entram em vigor sem reiniciar.</small>
+          </div>
+          <span class="server-rules-badge" data-i18n="instant">Instantâneo</span>
+        </button>
+        <nav class="server-nav-list">
+          <button class="server-nav-item" type="button" data-sp-tab="world">${uiIcon("world")}<span data-i18n="world">Mundo</span><span class="server-nav-item-arrow">›</span></button>
+          <button class="server-nav-item" type="button" data-sp-tab="server">${uiIcon("server")}<span data-i18n="settings">Servidor</span><span class="server-nav-item-arrow">›</span></button>
+          <button class="server-nav-item" type="button" data-sp-tab="analytics">${uiIcon("analytics")}<span data-i18n="analytics">Dados</span><span class="server-nav-item-arrow">›</span></button>
+          ${isOwner ? `<button class="server-nav-item" type="button" data-sp-tab="audit">${uiIcon("activity")}<span data-i18n="recentActivity">Atividade recente</span><span class="server-nav-item-arrow">›</span></button>` : ""}
+        </nav>
+      </section>`;
+    content.querySelector("#sp-restart")?.addEventListener("click", async () => {
+      if (!confirm(t("confirmAction", t("restart")))) return;
+      try { await api("/api/server/restart", { method: "POST" }); }
+      catch (error) { toast(error.message, true); }
+    });
+    content.querySelector("#sp-stop")?.addEventListener("click", async () => {
+      if (!confirm(t("confirmAction", t("stop")))) return;
+      try { await api("/api/server/stop", { method: "POST" }); }
+      catch (error) { toast(error.message, true); }
+    });
+    content.querySelector("#sp-rules")?.addEventListener("click", () => { state.tab = "rules"; });
+    content.querySelectorAll("[data-sp-tab]").forEach((btn) => {
+      btn.addEventListener("click", () => { state.tab = btn.dataset.spTab; });
+    });
+  }
+
+  const renderServer = renderServerPanel;
   return { renderServer, renderReleaseTags, loadFrontendVersion, initializeOperationProgress, loadDiagnostics, openOperationDrawer, refreshOperationPanel };
 }

@@ -77,6 +77,7 @@ def compose_manager(
         broker=broker,
         player_service=players,
         telemetry_service=telemetry,
+        world_service=world,
     )
     audit_repo = SQLiteAuditRepository(settings.database)
     audit = AuditService(audit_repo)

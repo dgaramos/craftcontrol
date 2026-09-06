@@ -9,6 +9,14 @@ from typing import Any
 from ..ports import EventPublisher, ServerConsole
 
 
+class WorldQueryError(Exception):
+    """Raised when every Bedrock query in query_world_state fails."""
+
+    def __init__(self, causes: list[Exception]) -> None:
+        super().__init__(f"all world queries failed ({len(causes)} error(s))")
+        self.causes = causes
+
+
 class WorldService:
     """Handles time, weather, and world preset actions via the Bedrock console."""
 
@@ -26,6 +34,35 @@ class WorldService:
     def __init__(self, bedrock: ServerConsole, broker: EventPublisher) -> None:
         self.bedrock = bedrock
         self.broker = broker
+
+    def query_world_state(self) -> dict[str, str]:
+        """Query current time and weather from the Bedrock console.
+
+        Partial failures (individual queries) are tolerated — the successfully
+        retrieved values are still returned. If every query fails, a
+        ``WorldQueryError`` is raised so the caller can record the failure.
+        """
+        result: dict[str, str] = {}
+        errors: list[Exception] = []
+        for query in ("daytime", "day"):
+            try:
+                output = self.bedrock.send_and_read(["time", "query", query])
+                numbers = re.findall(r"-?\d+", output)
+                if numbers:
+                    result[query] = numbers[-1]
+            except Exception as exc:
+                errors.append(exc)
+        try:
+            output = self.bedrock.send_and_read(["weather", "query"])
+            lowered = output.lower()
+            weather = next((w for w in self.WEATHER_QUERY_ORDER if w in lowered), None)
+            if weather:
+                result["weather"] = weather
+        except Exception as exc:
+            errors.append(exc)
+        if errors and not result:
+            raise WorldQueryError(errors) from errors[0]
+        return result
 
     def run_world_action(self, action: str) -> None:
         if action not in self.WORLD_ACTIONS:

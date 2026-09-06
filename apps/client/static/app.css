@@ -853,9 +853,10 @@ dialog.drawer { position: fixed; inset: auto 0 0; width: min(100%, 680px); max-h
 .profile-sheet-section { display: flex; flex-direction: column; gap: .5rem; }
 .profile-sheet-section-label { font-size: .75rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
 .profile-sheet-locale-row { display: flex; gap: .5rem; }
-.profile-sheet-locale-row .btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: .5rem; background: var(--stone-light); border: 2px solid transparent; border-radius: 6px; font-size: .85rem; font-weight: 600; cursor: pointer; color: var(--text); transition: border-color .15s, background .15s; }
-.profile-sheet-locale-row .btn[aria-selected="true"] { border-color: var(--grass); background: #1b291f; color: var(--grass-light); }
+.profile-sheet-locale-row .btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 5px; padding: .45rem .5rem; background: var(--stone-light); border: 2px solid var(--line); border-radius: 4px; font-size: .82rem; font-weight: 700; cursor: pointer; color: var(--muted); transition: none; }
+.profile-sheet-locale-row .btn[aria-selected="true"] { border-color: var(--color-active-nav); color: var(--color-active-nav); background: #2a220a; }
 .profile-sheet-actions { display: flex; flex-direction: column; gap: .5rem; }
-.profile-sheet-actions .btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: .65rem 1rem; background: var(--stone-light); border: none; border-radius: 6px; font-size: .9rem; font-weight: 600; color: var(--text); cursor: pointer; }
-.profile-sheet-actions .btn-danger { background: #4a1414; color: #e57373; }
+.profile-sheet-actions .btn { display: flex; align-items: center; gap: 10px; width: 100%; padding: .6rem .85rem; font-size: .88rem; font-weight: 700; cursor: pointer; }
+.profile-sheet-actions .btn.secondary { background: linear-gradient(#343a35, #232824); color: var(--text); border: 2px solid var(--line); border-top-color: #454c46; border-left-color: #3b423c; border-radius: 4px; }
+.profile-sheet-actions .btn.danger { color: #fff; background: linear-gradient(#8b2b25, #5c1a17); border: 2px solid #3d0e0b; border-top-color: #d95a50; border-left-color: #b04040; border-radius: 4px; }
 .profile-sheet-actions .btn .cc-icon { width: 18px; height: 18px; flex-shrink: 0; }

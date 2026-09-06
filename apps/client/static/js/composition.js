@@ -373,7 +373,9 @@ export function startApplication() {
       const sheetRole = $("#profile-sheet-role");
       if (sheetRole) {
         const role = user.role || "";
-        sheetRole.textContent = role ? role.charAt(0).toUpperCase() + role.slice(1) : "";
+        const roleCap = role ? role.charAt(0).toUpperCase() + role.slice(1) : "";
+        const serverName = state.config?.SERVER_NAME;
+        sheetRole.textContent = serverName ? `${roleCap} · ${serverName}` : roleCap;
       }
     }
     sheet.hidden = false;

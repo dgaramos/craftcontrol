@@ -344,30 +344,10 @@ export function startApplication() {
     const user = state.user;
     if (user) {
       const initial = (user.name || "").charAt(0).toUpperCase();
-      const gravatarUrl = user.id ? `https://www.gravatar.com/avatar/${user.id}?s=128&d=identicon&r=pg` : null;
       const profileInitial = $("#profile-initial");
-      if (profileInitial) {
-        if (gravatarUrl) {
-          profileInitial.textContent = "";
-          if (!profileInitial.querySelector("img")) {
-            const img = document.createElement("img");
-            img.src = gravatarUrl;
-            img.alt = initial;
-            img.onerror = () => { img.remove(); profileInitial.textContent = initial; };
-            profileInitial.appendChild(img);
-          }
-        } else { profileInitial.textContent = initial; }
-      }
-      const sheetAvatar = $("#profile-sheet-initial")?.parentElement;
-      if (sheetAvatar && gravatarUrl && !sheetAvatar.querySelector("img")) {
-        const img = document.createElement("img");
-        img.src = gravatarUrl;
-        img.alt = initial;
-        img.onerror = () => img.remove();
-        sheetAvatar.prepend(img);
-      }
+      if (profileInitial) profileInitial.textContent = initial;
       const sheetInitial = $("#profile-sheet-initial");
-      if (sheetInitial) sheetInitial.textContent = gravatarUrl ? "" : initial;
+      if (sheetInitial) sheetInitial.textContent = initial;
       const sheetName = $("#profile-sheet-name");
       if (sheetName) sheetName.textContent = user.name || "";
       const sheetRole = $("#profile-sheet-role");

@@ -253,7 +253,9 @@ CSRF validation, and the SSE proxy boundary.
 
 ### The backend becomes unhealthy after browser reconnects
 
-Inspect the backend health and its bounded SSE counters before restarting it:
+Inspect the backend health and its bounded SSE counters before restarting it.
+Replace `8082` below with the configured `MANAGER_PORT` when it differs from
+the default:
 
 ```bash
 curl --max-time 3 http://127.0.0.1:8082/api/health

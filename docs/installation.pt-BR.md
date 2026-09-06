@@ -124,7 +124,9 @@ Confirme que o backend está saudável. O navegador deve usar a origem pública 
 
 ### O backend fica unhealthy após reconexões do navegador
 
-Antes de reiniciar, verifique a saúde do backend e os contadores SSE limitados:
+Antes de reiniciar, verifique a saúde do backend e os contadores SSE limitados.
+Substitua `8082` pela `MANAGER_PORT` configurada quando ela for diferente do
+valor padrão:
 
 ```bash
 curl --max-time 3 http://127.0.0.1:8082/api/health

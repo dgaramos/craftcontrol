@@ -24,6 +24,30 @@ class Event:
     payload: dict[str, Any]
 
 
+class _StreamSubscription(Iterator[Event | None]):
+    """Release a broker stream reservation even when iteration never starts."""
+
+    def __init__(self, broker: "EventBroker", after_id: int) -> None:
+        self._broker = broker
+        self._iterator = broker._stream(after_id)
+        self._closed = False
+
+    def __next__(self) -> Event | None:
+        try:
+            return next(self._iterator)
+        except StopIteration:
+            self.close()
+            raise
+
+    def close(self) -> None:
+        """Close the underlying generator and release this stream's slot once."""
+        if self._closed:
+            return
+        self._closed = True
+        self._iterator.close()
+        self._broker._release_stream()
+
+
 class EventBroker:
     """Persist and fan out operational events to bounded SSE subscribers."""
 
@@ -74,7 +98,12 @@ class EventBroker:
             self._stream_connections += 1
             if after_id > 0:
                 self._stream_reconnections += 1
-        return self._stream(after_id)
+        return _StreamSubscription(self, after_id)
+
+    def _release_stream(self) -> None:
+        """Release exactly one previously reserved SSE connection slot."""
+        with self._lock:
+            self._active_stream_connections -= 1
 
     def _stream(self, after_id: int) -> Iterator[Event | None]:
         """Yield replay and live events, releasing the reserved slot on close."""
@@ -91,6 +120,5 @@ class EventBroker:
                     yield None
         finally:
             with self._lock:
-                self._active_stream_connections -= 1
                 if "subscriber" in locals():
                     self._subscribers.discard(subscriber)

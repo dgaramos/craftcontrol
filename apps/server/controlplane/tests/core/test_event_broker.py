@@ -168,9 +168,11 @@ def test_stream_capacity_reserves_connections_for_non_stream_requests(broker: Ev
     first = broker.stream()
     with pytest.raises(StreamCapacityError):
         broker.stream()
-    assert next(first) is None
     first.close()
-    broker.stream().close()
+    assert broker.diagnostics()["sse_connections"] == 0
+    second = broker.stream()
+    second.close()
+    assert broker.diagnostics()["sse_connections"] == 0
 
 
 # ---------------------------------------------------------------------------

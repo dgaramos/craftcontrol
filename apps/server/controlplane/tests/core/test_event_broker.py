@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from src.core.events import Event, EventBroker
+from src.core.events import Event, EventBroker, StreamCapacityError
 from factories import event
 
 
@@ -149,6 +149,30 @@ def test_stream_registers_and_removes_subscriber(broker: EventBroker) -> None:
     t.join(timeout=3)
     assert count == 1
     assert len(broker._subscribers) == 0
+
+
+def test_repeatedly_closed_streams_do_not_accumulate_subscribers(broker: EventBroker) -> None:
+    broker = EventBroker(broker.repository, heartbeat_seconds=0)
+    for _ in range(32):
+        stream = broker.stream(after_id=0)
+        next(stream)
+        stream.close()
+
+    diagnostics = broker.diagnostics()
+    assert diagnostics["sse_connections"] == 0
+    assert len(broker._subscribers) == 0
+
+
+def test_stream_capacity_reserves_connections_for_non_stream_requests(broker: EventBroker) -> None:
+    broker = EventBroker(broker.repository, heartbeat_seconds=0, max_stream_connections=1)
+    first = broker.stream()
+    with pytest.raises(StreamCapacityError):
+        broker.stream()
+    first.close()
+    assert broker.diagnostics()["sse_connections"] == 0
+    second = broker.stream()
+    second.close()
+    assert broker.diagnostics()["sse_connections"] == 0
 
 
 # ---------------------------------------------------------------------------

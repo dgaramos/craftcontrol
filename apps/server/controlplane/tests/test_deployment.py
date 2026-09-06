@@ -197,6 +197,15 @@ def test_backend_healthcheck_bounds_its_http_request_before_docker_timeout() -> 
     assert "wget -T 2 -q -O /dev/null http://127.0.0.1:8082/api/health" in dockerfile
 
 
+def test_backend_uses_one_cooperative_worker_for_sse_connections() -> None:
+    dockerfile = (ROOT / "apps" / "server" / "controlplane" / "Dockerfile").read_text()
+    requirements = (ROOT / "apps" / "server" / "controlplane" / "requirements.txt").read_text()
+    assert '"--worker-class=gevent"' in dockerfile
+    assert '"--worker-connections=256"' in dockerfile
+    assert '"--workers=1"' in dockerfile
+    assert any(line.strip() == "gevent==24.11.1" for line in requirements.splitlines())
+
+
 def test_split_backend_reaches_host_agent_and_mounts_docker_socket() -> None:
     """Split-mode backend must configure the host agent AND mount the Docker socket.
 

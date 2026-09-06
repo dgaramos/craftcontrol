@@ -23,4 +23,4 @@ EXPOSE 8082
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
   CMD wget -T 2 -q -O /dev/null http://127.0.0.1:8082/api/health || exit 1
 
-CMD ["gunicorn", "--bind=0.0.0.0:8082", "--workers=1", "--threads=16", "--timeout=0", "--access-logfile=-", "wsgi:app"]
+CMD ["gunicorn", "--bind=0.0.0.0:8082", "--worker-class=gevent", "--worker-connections=256", "--workers=1", "--timeout=0", "--access-logfile=-", "wsgi:app"]

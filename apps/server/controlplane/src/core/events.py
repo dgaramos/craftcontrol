@@ -8,6 +8,12 @@ from typing import Any, Iterator
 
 from ..ports import EventStore
 
+MAX_SSE_CONNECTIONS = 240
+
+
+class StreamCapacityError(RuntimeError):
+    """Raised before a stream can consume capacity reserved for HTTP requests."""
+
 
 @dataclass(frozen=True)
 class Event:
@@ -18,9 +24,38 @@ class Event:
     payload: dict[str, Any]
 
 
+class _StreamSubscription(Iterator[Event | None]):
+    """Release a broker stream reservation even when iteration never starts."""
+
+    def __init__(self, broker: "EventBroker", after_id: int) -> None:
+        self._broker = broker
+        self._iterator = broker._stream(after_id)
+        self._closed = False
+
+    def __next__(self) -> Event | None:
+        try:
+            return next(self._iterator)
+        except StopIteration:
+            self.close()
+            raise
+
+    def close(self) -> None:
+        """Close the underlying generator and release this stream's slot once."""
+        if self._closed:
+            return
+        self._closed = True
+        self._iterator.close()
+        self._broker._release_stream()
+
+
 class EventBroker:
-    def __init__(self, repository: EventStore) -> None:
+    """Persist and fan out operational events to bounded SSE subscribers."""
+
+    def __init__(self, repository: EventStore, heartbeat_seconds: float = 20, max_stream_connections: int = MAX_SSE_CONNECTIONS) -> None:
+        """Create a broker with a bounded stream pool and idle heartbeat."""
         self.repository = repository
+        self._heartbeat_seconds = heartbeat_seconds
+        self._max_stream_connections = max_stream_connections
         self._subscribers: set[queue.Queue[Event]] = set()
         self._lock = threading.Lock()
         self._topic_counts: dict[str, int] = {}
@@ -29,6 +64,7 @@ class EventBroker:
         self._stream_reconnections: int = 0
 
     def publish(self, topic: str, source: str, payload: dict[str, Any] | None = None) -> Event:
+        """Persist an event and offer it to every currently live subscriber."""
         payload = payload or {}
         timestamp = time.time()
         event_id = self.repository.record_event(topic, source, payload)
@@ -44,6 +80,7 @@ class EventBroker:
         return event
 
     def diagnostics(self) -> dict[str, Any]:
+        """Return process-local counters without exposing subscriber payloads."""
         with self._lock:
             return {
                 "events_by_topic": dict(sorted(self._topic_counts.items())),
@@ -53,11 +90,23 @@ class EventBroker:
             }
 
     def stream(self, after_id: int = 0) -> Iterator[Event | None]:
+        """Reserve one SSE slot and return its replaying event iterator."""
         with self._lock:
+            if self._active_stream_connections >= self._max_stream_connections:
+                raise StreamCapacityError("SSE connection capacity reached")
             self._active_stream_connections += 1
             self._stream_connections += 1
             if after_id > 0:
                 self._stream_reconnections += 1
+        return _StreamSubscription(self, after_id)
+
+    def _release_stream(self) -> None:
+        """Release exactly one previously reserved SSE connection slot."""
+        with self._lock:
+            self._active_stream_connections -= 1
+
+    def _stream(self, after_id: int) -> Iterator[Event | None]:
+        """Yield replay and live events, releasing the reserved slot on close."""
         try:
             for saved in self.repository.events_after(after_id):
                 yield Event(saved["id"], saved["topic"], saved["timestamp"], saved["source"], saved["payload"])
@@ -66,11 +115,10 @@ class EventBroker:
                 self._subscribers.add(subscriber)
             while True:
                 try:
-                    yield subscriber.get(timeout=20)
+                    yield subscriber.get(timeout=self._heartbeat_seconds)
                 except queue.Empty:
                     yield None
         finally:
             with self._lock:
-                self._active_stream_connections -= 1
                 if "subscriber" in locals():
                     self._subscribers.discard(subscriber)

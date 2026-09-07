@@ -38,6 +38,27 @@ def test_backend_deploy_backup_runs_inside_container_not_on_host() -> None:
     )
 
 
+def test_backend_deploy_validates_the_shared_internal_tls_before_mutating() -> None:
+    script = (ROOT / "bin" / "deploy-craftcontrol-backend").read_text()
+    # The frontend verifies the backend certificate with the CA from the shared
+    # volume. When that volume is recreated the running frontend keeps an empty
+    # mount and every proxied request answers 502. The pairing must be checked
+    # in the preflight, before the backend container is replaced.
+    assert "validate_internal_tls" in script
+    preflight = script.index("backend deploy preflight: ok")
+    assert script.index("validate_internal_tls()") < preflight
+    assert script.index("\nvalidate_internal_tls\n") < preflight
+
+
+def test_backend_deploy_reports_a_broken_proxy_instead_of_a_bare_curl_error() -> None:
+    script = (ROOT / "bin" / "deploy-craftcontrol-backend").read_text()
+    # A 502 from the proxied health check used to surface as "curl: (22)" with
+    # no indication of the cause.
+    health_check = [l for l in script.splitlines() if "$frontend_port/api/health" in l]
+    assert health_check, "the deploy must check /api/health through the frontend"
+    assert "could not proxy to the backend" in script
+
+
 def test_split_runtime_gate_exercises_cli_inside_container() -> None:
     canary = (ROOT / "bin" / "check-split-runtime").read_text()
     assert "craftcontrol backup list" in canary

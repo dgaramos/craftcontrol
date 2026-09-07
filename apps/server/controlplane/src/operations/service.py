@@ -639,9 +639,6 @@ class ServerOperationService:
         method runs synchronously during ``__init__`` — before any thread is
         created — so no lock is required.
         """
-        # reconcile=False: __init__ runs before the container is known to be
-        # up, and observing it would make boot depend on Docker being ready.
-        # Startup keeps the behaviour it has always had.
         self._reclaim_stalled(
             ORPHAN_STALENESS_SECONDS,
             "abandoned: process restarted",
@@ -663,12 +660,10 @@ class ServerOperationService:
             f"abandoned: no progress for {ABANDONED_STALENESS_SECONDS}s",
             context="while running",
             lock=True,
-            reconcile=True,
         )
 
     def _reclaim_stalled(
-        self, threshold_seconds: int, reason: str, *, context: str, lock: bool,
-        reconcile: bool = False,
+        self, threshold_seconds: int, reason: str, *, context: str, lock: bool
     ) -> None:
         """Mark the active operation as failed once it has been silent too long.
 
@@ -726,16 +721,12 @@ class ServerOperationService:
             # stage so that fail_stage has a valid stage record to update.
             active_stage = active.active_stage
             stage = active_stage.stage if active_stage else OperationStage.REVIEW
-            if reconcile:
-                # Same terminal flow as a lifecycle failure: anything past
-                # REVIEW may have already reached disk or the container, so the
-                # observation that classifies it as applied or divergent must be
-                # attached before the terminal result is exposed.
-                self._fail(active, stage, reason)
-            else:
-                active.fail_stage(stage, reason)
-                self._repo.save(active)
-                self._publish(active)
+            # Same terminal flow as a lifecycle failure: anything past REVIEW
+            # may have already reached disk or the container, so the observation
+            # that classifies it as applied or divergent must be attached, and
+            # the audit trail must record it, before the terminal result is
+            # exposed. Reconciliation is read-only and never raises.
+            self._fail(active, stage, reason)
         finally:
             if lock:
                 self._lock.release()

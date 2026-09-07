@@ -936,6 +936,58 @@ class TestServerOperationService:
         assert audit.write.call_args.kwargs["action"] == "operation.failed"
         assert audit.write.call_args.kwargs["result"] == "divergent"
 
+    def test_startup_orphan_past_review_also_gets_the_terminal_flow(self, tmp_path: Path):
+        """Startup reclaim uses the same terminal flow as every other failure.
+
+        Reconciliation is read-only and swallows its own errors, so running it
+        during __init__ cannot make boot depend on Docker being reachable.
+        """
+        db = make_operation_db(tmp_path)
+        repo = SQLiteOperationRepository(db)
+        orphan = ServerOperation.create("test-server", {"MAX_PLAYERS": "20"})
+        orphan.start()
+        orphan.begin_stage(OperationStage.RESTART)
+        orphan.updated_at -= 60
+        repo.save(orphan)
+
+        audit = MagicMock()
+        make_service_with_repo(repo, audit_service=audit)
+
+        reconciled = repo.get(orphan.operation_id)
+        assert reconciled is not None
+        assert reconciled.state == OperationState.DIVERGENT
+        assert reconciled.observation, "expected the reconciliation observation"
+        audit.write.assert_called_once()
+
+    def test_startup_orphan_survives_an_unreachable_container(self, tmp_path: Path):
+        """Boot must not fail because Docker is not up yet."""
+        db = make_operation_db(tmp_path)
+        repo = SQLiteOperationRepository(db)
+        orphan = ServerOperation.create("test-server", {"MAX_PLAYERS": "20"})
+        orphan.start()
+        orphan.begin_stage(OperationStage.RESTART)
+        orphan.updated_at -= 60
+        repo.save(orphan)
+
+        docker = MagicMock()
+        docker.status.side_effect = RuntimeError("docker socket unavailable")
+        configuration = MagicMock()
+        configuration.read_properties.return_value = {"max-players": "1"}
+        ServerOperationService(
+            operation_repository=repo,
+            docker=docker,
+            broker=MagicMock(),
+            configuration=configuration,
+            thread_factory=threading.Thread,
+            server_id="test-server",
+            health_timeout=1,
+        )
+
+        reconciled = repo.get(orphan.operation_id)
+        assert reconciled is not None
+        assert reconciled.state == OperationState.FAILED
+        assert reconciled.observation["container_state"] == "error"
+
     def test_reconcile_startup_orphan_with_active_stage(self, tmp_path: Path):
         """Orphan with an active (RUNNING) stage uses that stage for fail_stage."""
         db = make_operation_db(tmp_path)

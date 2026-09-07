@@ -91,6 +91,10 @@ class ServerOperationService:
         self._audit_service = audit_service
         # Protects the check-then-create sequence on this process.
         self._lock = threading.Lock()
+        # Operation ids with a worker thread running in THIS process. _lock is
+        # released before the worker starts and _run never takes it, so the
+        # lock says nothing about whether a worker is alive; only this does.
+        self._live_workers: set[str] = set()
         self._reconcile_startup_orphans()
 
     # ------------------------------------------------------------------
@@ -298,6 +302,7 @@ class ServerOperationService:
     # ------------------------------------------------------------------
 
     def _run(self, operation: ServerOperation, apply_fn: Any) -> None:
+        self._live_workers.add(operation.operation_id)
         try:
             operation.start()
             self._repo.save(operation)
@@ -436,6 +441,8 @@ class ServerOperationService:
                 operation.fail_stage(stage, f"internal error: {exc}")
                 self._repo.save(operation)
                 self._publish(operation)
+        finally:
+            self._live_workers.discard(operation.operation_id)
 
     # ------------------------------------------------------------------
     # Stage helpers
@@ -632,6 +639,9 @@ class ServerOperationService:
         method runs synchronously during ``__init__`` — before any thread is
         created — so no lock is required.
         """
+        # reconcile=False: __init__ runs before the container is known to be
+        # up, and observing it would make boot depend on Docker being ready.
+        # Startup keeps the behaviour it has always had.
         self._reclaim_stalled(
             ORPHAN_STALENESS_SECONDS,
             "abandoned: process restarted",
@@ -653,17 +663,21 @@ class ServerOperationService:
             f"abandoned: no progress for {ABANDONED_STALENESS_SECONDS}s",
             context="while running",
             lock=True,
+            reconcile=True,
         )
 
     def _reclaim_stalled(
-        self, threshold_seconds: int, reason: str, *, context: str, lock: bool
+        self, threshold_seconds: int, reason: str, *, context: str, lock: bool,
+        reconcile: bool = False,
     ) -> None:
         """Mark the active operation as failed once it has been silent too long.
 
-        ``lock`` is taken non-blockingly: when another thread already holds it
-        the operation is being created or mutated right now, so it is by
-        definition not stalled and this pass is skipped.  Never blocking also
-        keeps the read paths free of any deadlock against ``_create_or_reject``.
+        ``lock`` serialises this against ``_create_or_reject`` so the
+        check-then-write cannot interleave with a concurrent creation.  It is
+        taken non-blockingly, which also keeps the read paths free of any
+        deadlock against that method.  The lock is NOT evidence that no worker
+        is running — it is released before the worker starts and ``_run`` never
+        acquires it — so liveness is checked separately below.
         """
         if lock and not self._lock.acquire(blocking=False):
             return
@@ -676,10 +690,20 @@ class ServerOperationService:
                 return
             if active is None:
                 return
-            # A recently-touched operation is still alive — either a worker in
-            # this process, or (during a graceful reload such as Gunicorn
-            # SIGWINCH) one in an overlapping process. Either way it must not be
-            # clobbered. CraftControl targets a single-worker homelab
+            # A worker in this process is still executing it. Silence is not
+            # proof of death: the world backup runs without a heartbeat, and a
+            # hung docker call can block far longer than any threshold. Failing
+            # the record here would let a second operation start while the first
+            # one is still free to apply changes and restart the container.
+            if active.operation_id in self._live_workers:
+                LOGGER.info(
+                    "server_operation skipping orphan reclaim: operation_id=%s has a live worker",
+                    active.operation_id,
+                )
+                return
+            # A recently-touched operation is still alive — for instance a
+            # worker in an overlapping process during a graceful reload
+            # (Gunicorn SIGWINCH). CraftControl targets a single-worker homelab
             # deployment, so that window is ordinarily zero.
             age = datetime.now(timezone.utc).timestamp() - active.updated_at
             if age < threshold_seconds:
@@ -702,9 +726,16 @@ class ServerOperationService:
             # stage so that fail_stage has a valid stage record to update.
             active_stage = active.active_stage
             stage = active_stage.stage if active_stage else OperationStage.REVIEW
-            active.fail_stage(stage, reason)
-            self._repo.save(active)
-            self._publish(active)
+            if reconcile:
+                # Same terminal flow as a lifecycle failure: anything past
+                # REVIEW may have already reached disk or the container, so the
+                # observation that classifies it as applied or divergent must be
+                # attached before the terminal result is exposed.
+                self._fail(active, stage, reason)
+            else:
+                active.fail_stage(stage, reason)
+                self._repo.save(active)
+                self._publish(active)
         finally:
             if lock:
                 self._lock.release()

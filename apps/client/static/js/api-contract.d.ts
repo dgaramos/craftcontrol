@@ -3,6 +3,9 @@
 export const contractVersion: "1.2.0";
 
 export type Error = { error: string; capability?: string; };
+export type ExportManifest = { export_schema_version: number; resource: string; format: "json" | "csv"; filters: JsonMap; generated_at: number; row_count: number; timezone: string; row_limit: number; truncated: boolean; };
+export type ExportRefusal = { error: string; limit: "record" | "byte"; measured: number; allowed: number; hint?: string; };
+export type PlayerExport = { manifest: ExportManifest; records: Array<JsonMap>; };
 export type User = { id: string; name: string; role: "viewer" | "operator" | "owner"; capabilities: Array<string>; };
 export type Session = { user: User; csrf_token?: string; };
 export type LoginRequest = { player: string; password: string; };

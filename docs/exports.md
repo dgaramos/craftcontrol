@@ -37,6 +37,15 @@ API already defines (`PlayerSummary`, `PlayerSession`, `ActivityEvent`). Filters
 are an optional player, an optional period in days, and for `activity` the same
 `kind` and `source` allowlists the activity endpoint accepts.
 
+Three consequences of a stable column set are worth stating, because an
+implementation would otherwise decide them one endpoint at a time. `profiles`
+carries the summary fields, not the optional telemetry aggregate map: its keys
+vary per player, so including it would make the columns depend on the rows.
+`sessions` requires a player filter, because sessions are readable per profile
+and every session of every player is exactly the unbounded request the ceilings
+exist to refuse. And a period filter is rejected, not ignored, by a resource
+that has no period.
+
 **Analytics resources** — `rankings`, `periods`, `blocks`, `combat`,
 `exploration`. They export the bounded aggregates behind the analytics
 endpoints. Filters are the category or metric selection each endpoint already
@@ -71,7 +80,10 @@ loadable by a spreadsheet: `X-CraftControl-Export-Manifest` holds the same objec
 as compact JSON. A CSV body is a header row followed by data rows, RFC 4180
 quoting, UTF-8 without a byte-order mark, and LF line endings. Nested values are
 flattened with dotted column names (`player.id`, `player.name`); a null is an
-empty field, never the string `null`. Column order is the declared order of the
+empty field, never the string `null`; a boolean is `true` or `false`. A
+free-form detail map is the exception to flattening: its keys vary per event
+topic, so it travels as one column holding compact JSON, and the JSON export
+carries the identical value so both formats stay comparable. Column order is the declared order of the
 resource's fields and is stable across releases within an
 `export_schema_version`.
 

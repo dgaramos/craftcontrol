@@ -23,10 +23,30 @@ from src.operations.lifecycle import (
 )
 from src.operations.repository import SQLiteOperationRepository
 from src.operations.service import (
+    ABANDONED_STALENESS_SECONDS,
     ConflictingOperationError,
     ServerOperationService,
 )
 from conftest import make_operation_db, make_operation_service, wait_for_terminal
+
+
+def make_service_with_repo(repo: SQLiteOperationRepository) -> ServerOperationService:
+    """A service sharing the test's repository, with startup reclaim already done."""
+    docker = MagicMock()
+    docker.status.return_value = {"state": "running", "online": True}
+    docker.execute.return_value = None
+    configuration = MagicMock()
+    configuration.read_properties.return_value = {"max-players": "1"}
+    return ServerOperationService(
+        operation_repository=repo,
+        docker=docker,
+        broker=MagicMock(),
+        configuration=configuration,
+        thread_factory=threading.Thread,
+        server_id="test-server",
+        health_timeout=1,
+    )
+
 
 
 # ---------------------------------------------------------------------------
@@ -752,6 +772,86 @@ class TestServerOperationService:
         assert reconciled is not None
         assert reconciled.state == OperationState.FAILED
         assert "abandoned" in (reconciled.terminal_error or "")
+
+    def test_reclaims_operation_abandoned_while_the_process_stays_up(self, tmp_path: Path):
+        """A worker can die without the process restarting.
+
+        Startup reconciliation would never see it, so the record would stay
+        active forever: every later operation is rejected as conflicting and the
+        client stays locked out of restart and stop.
+        """
+        db = make_operation_db(tmp_path)
+        repo = SQLiteOperationRepository(db)
+        service = make_service_with_repo(repo)
+
+        stalled = ServerOperation.create("test-server", {"X": "1"})
+        stalled.start()
+        stalled.begin_stage(OperationStage.RESTART)
+        stalled.updated_at -= ABANDONED_STALENESS_SECONDS + 60
+        repo.save(stalled)
+
+        assert service.get_active() is None
+        reclaimed = repo.get(stalled.operation_id)
+        assert reclaimed is not None
+        assert reclaimed.state == OperationState.FAILED
+        assert "abandoned" in (reclaimed.terminal_error or "")
+
+    def test_a_heartbeating_operation_is_never_reclaimed(self, tmp_path: Path):
+        """The backup stage can legitimately run for minutes without an update."""
+        db = make_operation_db(tmp_path)
+        repo = SQLiteOperationRepository(db)
+        service = make_service_with_repo(repo)
+
+        live = ServerOperation.create("test-server", {"X": "1"})
+        live.start()
+        live.begin_stage(OperationStage.RESTART)
+        live.updated_at -= ABANDONED_STALENESS_SECONDS - 120
+        repo.save(live)
+
+        active = service.get_active()
+        assert active is not None
+        assert active.operation_id == live.operation_id
+        assert active.state == OperationState.RUNNING
+
+    def test_reclaim_unblocks_creating_a_new_operation(self, tmp_path: Path):
+        """The point of the reclaim: the server becomes operable again."""
+        db = make_operation_db(tmp_path)
+        repo = SQLiteOperationRepository(db)
+        service = make_service_with_repo(repo)
+
+        stalled = ServerOperation.create("test-server", {"X": "1"})
+        stalled.start()
+        stalled.updated_at -= ABANDONED_STALENESS_SECONDS + 60
+        repo.save(stalled)
+
+        # Reading is what triggers recovery; afterwards a new operation is
+        # accepted instead of raising ConflictingOperationError.
+        service.get_latest()
+        fresh = service.apply_restart_required({}, lambda: None)
+        wait_for_terminal(service, fresh.operation_id)
+        assert fresh.operation_id != stalled.operation_id
+
+    def test_reclaim_skips_while_another_thread_holds_the_lock(self, tmp_path: Path):
+        """A held lock means an operation is being created or mutated right now.
+
+        That is by definition not stalled, and blocking on the read path could
+        deadlock against _create_or_reject.
+        """
+        db = make_operation_db(tmp_path)
+        repo = SQLiteOperationRepository(db)
+        service = make_service_with_repo(repo)
+
+        stalled = ServerOperation.create("test-server", {"X": "1"})
+        stalled.start()
+        stalled.updated_at -= ABANDONED_STALENESS_SECONDS + 60
+        repo.save(stalled)
+
+        with service._lock:
+            assert service.get_active() is not None
+
+        untouched = repo.get(stalled.operation_id)
+        assert untouched is not None
+        assert untouched.state == OperationState.RUNNING
 
     def test_reconcile_startup_orphan_with_active_stage(self, tmp_path: Path):
         """Orphan with an active (RUNNING) stage uses that stage for fail_stage."""

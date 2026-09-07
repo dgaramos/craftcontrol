@@ -32,8 +32,8 @@ def test_backend_deploy_backup_runs_inside_container_not_on_host() -> None:
     # Backup must run via compose exec so it uses the running container's own
     # craftcontrol binary. Calling the host-side binary fails when module paths differ.
     assert "compose exec -T craftcontrol-backend craftcontrol backup create" in script
-    lines_with_backup = [l for l in script.splitlines() if "craftcontrol backup create" in l]
-    assert all("exec" in l for l in lines_with_backup), (
+    lines_with_backup = [line for line in script.splitlines() if "craftcontrol backup create" in line]
+    assert all("exec" in line for line in lines_with_backup), (
         "craftcontrol backup create must only appear inside a 'compose exec' call"
     )
 
@@ -54,9 +54,9 @@ def test_backend_deploy_reports_a_broken_proxy_instead_of_a_bare_curl_error() ->
     script = (ROOT / "bin" / "deploy-craftcontrol-backend").read_text()
     # A 502 from the proxied health check used to surface as "curl: (22)" with
     # no indication of the cause.
-    health_check = [l for l in script.splitlines() if "$frontend_port/api/health" in l]
+    health_check = [line for line in script.splitlines() if "$frontend_port/api/health" in line]
     assert health_check, "the deploy must check /api/health through the frontend"
-    assert "could not proxy to the backend" in script
+    assert "did not answer /api/health" in script
 
 
 def test_split_runtime_gate_exercises_cli_inside_container() -> None:

@@ -80,14 +80,30 @@ describe("brand contracts — mobile scroll behaviour", () => {
     expect(css).toContain("overscroll-behavior-y: none");
   });
 
-  test("app.css sets min-height: 100dvh", () => {
+  /* iPadOS parks the page past the end of the content when the document is
+     scrollable at all, which drags the whole shell — and the bottom nav with
+     it — out of place. The shell owns the viewport instead. */
+  test("the document itself never scrolls", () => {
     const css = readFileSync(join(STATIC, "app.css"), "utf8");
-    expect(css).toContain("min-height: 100dvh");
+    const body = css.match(/\nbody \{[^}]*\}/)[0];
+    expect(body).toContain("height: 100%");
+    expect(body).toContain("overflow: hidden");
+    expect(body).not.toContain("min-height: 100vh");
   });
 
-  test("app.css sets overflow-x: clip", () => {
+  test("the shell is pinned to the viewport, not sized by a viewport unit", () => {
     const css = readFileSync(join(STATIC, "app.css"), "utf8");
-    expect(css).toContain("overflow-x: clip");
+    const shell = css.match(/\.shell \{[^}]*\}/)[0];
+    expect(shell).toContain("position: fixed");
+    expect(shell).toContain("inset: 0");
+    expect(shell).not.toContain("100dvh");
+  });
+
+  test("the scroll container contains its overscroll", () => {
+    const css = readFileSync(join(STATIC, "app.css"), "utf8");
+    const main = css.match(/\nmain \{[^}]*\}/)[0];
+    expect(main).toContain("overflow-y: auto");
+    expect(main).toContain("overscroll-behavior-y: contain");
   });
 
   /* <main> is the scroll container in the mobile shell, so window.scrollTo is a
@@ -100,9 +116,9 @@ describe("brand contracts — mobile scroll behaviour", () => {
     expect(dom).toContain("export function resetPanelScroll");
   });
 
-  test("index.html references app.css?v=50", () => {
+  test("index.html references app.css?v=51", () => {
     const template = readFileSync(join(FRONTEND, "templates", "index.html"), "utf8");
-    expect(template).toContain("/static/app.css?v=50");
+    expect(template).toContain("/static/app.css?v=51");
   });
 
   test("index.html references app.js?v=97", () => {

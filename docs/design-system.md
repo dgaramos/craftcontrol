@@ -16,8 +16,8 @@ Use the `--surface-inset`, `--surface-border-top`, and `--surface-border-left`
 tokens for inset fields and card edges. Keep groups 12px apart, with approximately
 13px of card padding. Selection is gold, the colour the Players filter and the
 analytics pickers already used; green remains the live/healthy signal and the
-colour of saving, and red remains the destructive/error signal. Form controls have at least 44px
-of touch height. Forms stack on phones and place controls beside descriptions
+colour of saving, and red remains the destructive/error signal. Inputs and selects have at least 44px of touch
+height; choice chips are 36px by their own definition. Forms stack on phones and place controls beside descriptions
 when space permits; audit records expose their column labels in stacked mobile
 rows. Data navigation uses four columns on phones and eight on wide screens.
 
@@ -31,8 +31,10 @@ horizontally scrolling row of options are not part of this language.
 Choices that carry an icon — the data view switch, the ranking categories, the
 block modes, the ore grid, the time presets and the weather options — are the
 second variant, taller because the icon leads. They are deliberately not folded
-into the text chips, and unifying their active colour is still open: the ore
-grid is the last blue selection in the panel.
+into the text chips, and they do not yet share a rule among themselves: the data
+view switch is sand, the ranking categories gold, the block modes green and the
+ore grid blue. Unifying them is open work, not a settled convention — a screen
+adding an icon choice today should copy the closest existing one and say so.
 
 An inner screen is built from the shared anatomy, not from new components. The
 heading block is `.inner-heading`: an eyebrow, a 20px title, and an optional
@@ -44,9 +46,8 @@ notice; a screen that needs one does not invent a banner.
 
 Every inner screen — including Time & weather — opens with the same heading
 block, and every inset field surface uses `--surface-inset` rather than a local
-hex value. Selection is sand on both segmented controls and the data view
-switch. Headings, eyebrows, and helper copy are localized through `i18n`; no
-screen may hard-code a language string.
+hex value. Headings, eyebrows, and helper copy are localized through `i18n`; no screen may
+hard-code a language string.
 
 ## Icon families
 

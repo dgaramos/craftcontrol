@@ -16,10 +16,12 @@ roadmap/
 coverage.xml
 
 # Frontend
-apps/frontend/node_modules/
-apps/frontend/coverage/
+# Anywhere: apps/client, packs/*, and any workspace added later. The previous
+# rule was pinned to apps/frontend/, which stopped matching when that directory
+# was renamed to apps/client — and 5757 files were committed before anyone
+# noticed. package-lock.json is the source of truth; `npm ci` recreates these.
+node_modules/
 test-results/
-apps/frontend/junit.xml
 .coverage *
 apps/client/coverage/
 apps/client/junit.xml

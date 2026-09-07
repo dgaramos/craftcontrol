@@ -469,9 +469,6 @@ main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-
 }
 .field input:focus, .field select:focus { outline: 2px solid var(--grass-light); }
 
-.segmented { display: flex; justify-content: flex-end; gap: 4px; min-width: min(44vw, 360px); }
-.segment { min-height: 42px; padding: 7px 10px; color: var(--muted); font-size: .72rem; flex: 1 1 auto; }
-.segment.active { color: #071006; background: linear-gradient(#80cc52, #4d9d35); border-top-color: #b2f080; border-left-color: #8ed460; text-shadow: 1px 1px 0 #b7e99a; }
 .toggle-control { display: flex; align-items: center; justify-content: flex-end; gap: 10px; min-width: 170px; }
 .toggle-value { color: var(--emerald); font-size: .74rem; font-weight: 900; text-transform: uppercase; }
 .toggle-value.unknown { color: #ffd36d; }
@@ -488,9 +485,29 @@ main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-
 /* Choice chips — the panel's selection control, first drawn for the Players
    status filter and shared from there. Small, dense, gold when chosen; a
    viewport-wide split button belongs to no screen here. */
-.choice-group, .player-filters { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 5px; }
-.choice-group button, .player-filters button { min-width: 0; min-height: 36px; padding: 3px 4px; color: var(--muted); font-family: var(--font-display); font-size: 10px; font-weight: 800; letter-spacing: .5px; box-shadow: 0 3px 0 #080a08; }
-.choice-group button.active, .player-filters button.active { color: #1a1000; background: linear-gradient(#f0c040, #b88018); border-top-color: #ffe080; border-left-color: #d4a030; text-shadow: 1px 1px 0 #f0e090; }
+/* One definition, every screen: Players' status filter, a setting's enum, the
+   analytics metric pickers and the export panel. Wrapping beats a hidden
+   horizontal scroll, and one active colour beats five per-screen ones. */
+.choice-group, .player-filters, .segmented,
+.ranking-metric-picker, .combat-metric-picker, .exploration-metric-picker,
+.period-metric-picker, .period-switch {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 5px;
+}
+.choice-group > button, .player-filters > button, .segmented > .segment,
+.ranking-metric-picker > button, .combat-metric-picker > button,
+.exploration-metric-picker > button, .period-metric-picker > button,
+.period-switch > button {
+  min-width: 0; min-height: 36px; padding: 3px 4px; color: var(--muted);
+  font-family: var(--font-display); font-size: 10px; font-weight: 800; letter-spacing: .5px;
+  overflow-wrap: anywhere; box-shadow: 0 3px 0 #080a08;
+}
+.choice-group > button.active, .player-filters > button.active, .segmented > .segment.active,
+.ranking-metric-picker > button.active, .combat-metric-picker > button.active,
+.exploration-metric-picker > button.active, .period-metric-picker > button.active,
+.period-switch > button.active {
+  color: #1a1000; background: linear-gradient(#f0c040, #b88018); background-image: linear-gradient(#f0c040, #b88018);
+  border-top-color: #ffe080; border-left-color: #d4a030; text-shadow: 1px 1px 0 #f0e090;
+}
 
 .section-heading { margin: 14px 2px 12px; }
 .section-heading h2 { color: var(--text); font-size: 1.35rem; }
@@ -1009,9 +1026,6 @@ dialog.drawer::backdrop { background: rgba(0, 0, 0, .7); }
   border: 2px solid #080a08; border-bottom-color: #414842; border-right-color: #414842;
   border-radius: 0; font-family: var(--font-body); font-size: 13px; font-weight: 500;
 }
-.settings-screen .segmented { flex-wrap: wrap; justify-content: flex-start; min-width: 0; width: 100%; gap: 5px; }
-.settings-screen .segment { flex: 1 1 60px; min-width: 0; min-height: 44px; padding: 7px 6px; border-width: 2px; border-radius: 0; font-family: var(--font-display); font-size: 11px; font-weight: 700; box-shadow: 0 2px 0 #080a08; }
-.settings-screen .segment.active { color: var(--sand); background: linear-gradient(#302817, #1a211d); border-top-color: var(--sand); border-left-color: #7a6130; text-shadow: none; }
 .settings-screen .toggle-control { flex-direction: column; justify-content: space-between; min-width: 0; width: auto; gap: 0; }
 .settings-screen .toggle-value { font-family: var(--font-display); font-size: 11px; font-weight: 700; }
 .settings-screen .field:has(.toggle-control) { grid-template-columns: minmax(0, 1fr) auto; }

@@ -28,17 +28,21 @@ and the analytics metric pickers are the same rule under different class names,
 kept only so existing markup keeps working. A viewport-wide split button and a
 horizontally scrolling row of options are not part of this language.
 
-Choices that carry an icon — the data view switch, the ranking categories, the
-block modes, the ore grid, the time presets and the weather options — are the
-second variant, taller because the icon leads. Gold marks the selection in both
-variants, but it is drawn differently: a text chip fills with gold, while an
-icon chip keeps the dark surface and takes a gold edge and label. The sprites
-are multi-colour pixel art with no `currentColor`, so filling their ground would
-leave the artwork fighting the colour behind it.
+Controls that carry an icon are the second variant of that layout, taller
+because the icon leads: the data view switch, the ranking categories, the block
+modes, the ore grid, the time presets and the weather options.
 
-The time presets and the weather options look like a choice but are not one:
-pressing them sets the time or the weather rather than selecting a view that
-stays selected, so they carry no selected state.
+Only some of them are selections. The view switch, the categories, the block
+modes and the ore grid choose something that stays chosen, and they mark it in
+gold like the text chips — drawn differently, though: a text chip fills with
+gold, while an icon chip keeps the dark surface and takes a gold edge and label.
+The sprites are multi-colour pixel art with no `currentColor`, so filling their
+ground would leave the artwork fighting the colour behind it.
+
+The time presets and the weather options borrow the same layout but are actions:
+pressing one sets the time or the weather and nothing stays selected afterwards.
+They have no selected state, and giving them one would claim a mode the server
+does not keep.
 
 An inner screen is built from the shared anatomy, not from new components. The
 heading block is `.inner-heading`: an eyebrow, a 20px title, and an optional

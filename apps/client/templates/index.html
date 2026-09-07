@@ -9,7 +9,7 @@
     <link rel="icon" href="/static/craftcontrol-mark.svg" type="image/svg+xml">
     <link rel="manifest" href="/static/site.webmanifest">
     <link rel="stylesheet" href="/static/fonts.css?v=1">
-    <link rel="stylesheet" href="/static/app.css?v=47">
+    <link rel="stylesheet" href="/static/app.css?v=48">
     <link rel="stylesheet" href="/static/players.css?v=27">
     <link rel="stylesheet" href="/static/analytics.css?v=12">
     <link rel="stylesheet" href="/static/auth.css?v=7">
@@ -57,9 +57,9 @@
           </button>
           </div>
           <div class="world-summary" aria-live="polite">
-            <div><small data-i18n="homeDay">Dia</small><strong id="world-day">—</strong></div>
-            <div><span class="world-label-row"><small data-i18n="homeTime">Hora</small><small id="world-ticks" class="world-ticks"></small></span><span class="world-value"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use id="world-time-icon" href="/static/craftcontrol-ui.svg#ui-sun"></use></svg><strong id="world-time">—</strong></span></div>
-            <div class="world-weather"><small data-i18n="homeWeather">Clima</small><span class="world-value"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use id="world-weather-icon" href="/static/craftcontrol-ui.svg#ui-sun"></use></svg><strong id="world-weather">—</strong></span></div>
+            <div><small data-i18n="homeDay">Dia</small><strong id="world-day" data-world="day">—</strong></div>
+            <div><span class="world-label-row"><small data-i18n="homeTime">Hora</small><small id="world-ticks" class="world-ticks" data-world="ticks"></small></span><span class="world-value"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use id="world-time-icon" data-world-icon="time" href="/static/craftcontrol-ui.svg#ui-sun"></use></svg><strong id="world-time" data-world="time">—</strong></span></div>
+            <div class="world-weather" data-world-cell="weather"><small data-i18n="homeWeather">Clima</small><span class="world-value"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use id="world-weather-icon" data-world-icon="weather" href="/static/craftcontrol-ui.svg#ui-sun"></use></svg><strong id="world-weather" data-world="weather">—</strong></span></div>
           </div>
         </div>
       </section>
@@ -229,6 +229,6 @@
     </div>
   </div>
 
-  <script type="module" src="/static/app.js?v=91"></script>
+  <script type="module" src="/static/app.js?v=93"></script>
   </body>
 </html>

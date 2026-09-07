@@ -397,38 +397,38 @@ async function initializeOperationProgress() {
     content.innerHTML = `
       <section class="server-panel block-panel">
         <div class="server-panel-header">
-          <span class="eyebrow" data-i18n="administration">ADMINISTRAÇÃO</span>
-          <h2 data-i18n="server">Servidor</h2>
+          <span class="eyebrow">${t("administration")}</span>
+          <h2>${t("server")}</h2>
         </div>
         <section class="server-status-card ${online ? "" : "offline"}" aria-label="${stateTitle}">
           <div class="server-status-summary">
             <span class="server-status-shield">${uiIcon("shield")}</span>
-            <span><small data-i18n="worldState">ESTADO</small><strong>${stateLabel} · ${escapeHtml(serverName)}</strong></span>
+            <span><small>${t("serverStateLabel")}</small><strong>${stateLabel} · ${escapeHtml(serverName)}</strong></span>
           </div>
           <div class="server-status-row">
             <button class="secondary" id="sp-restart" type="button"${disabled}>
-              ${uiIcon("restart")} <span data-i18n="restart">Reiniciar</span>
+              ${uiIcon("restart")} <span>${t("restart")}</span>
             </button>
             <button class="danger" id="sp-stop" type="button"${disabled}>
-              ${uiIcon("close")} <span data-i18n="stop">Parar</span>
+              ${uiIcon("close")} <span>${t("stop")}</span>
             </button>
           </div>
         </section>
         <button class="server-rules-card" id="sp-rules" type="button">
           <span class="server-rules-icon">${uiIcon("rules")}</span>
           <div class="server-rules-card-text">
-            <span><b data-i18n="instant">Instantâneo</b><small data-i18n="noRestart">sem restart</small></span>
-            <strong data-i18n="rules">Regras</strong>
-            <small data-i18n="rulesLiveHelp">Regras aplicadas ao vivo no servidor.</small>
+            <span><b>${t("instant")}</b><small>${t("noRestart")}</small></span>
+            <strong>${t("rules")}</strong>
+            <small>${t("rulesLiveHelp")}</small>
           </div>
           <span class="server-nav-item-arrow" aria-hidden="true">›</span>
         </button>
-        <p class="server-restart-label"><span aria-hidden="true">↻</span><span data-i18n="restartRequired">Requer restart</span></p>
+        <p class="server-restart-label"><span aria-hidden="true">↻</span><span>${t("restartRequiredShort")}</span></p>
         <nav class="server-nav-list">
-          <button class="server-nav-item" type="button" data-sp-tab="world">${uiIcon("world")}<span><small data-i18n="configuration">CONFIGURAÇÃO</small><strong data-i18n="world">Mundo</strong></span><span class="server-nav-item-arrow">›</span></button>
-          <button class="server-nav-item" type="button" data-sp-tab="__server_settings__">${uiIcon("server")}<span><small data-i18n="infrastructure">INFRAESTRUTURA</small><strong data-i18n="settings">Servidor</strong></span><span class="server-nav-item-arrow">›</span></button>
-          <button class="server-nav-item" type="button" data-sp-tab="analytics">${uiIcon("analytics")}<span><small data-i18n="analytics">ANALYTICS</small><strong data-i18n="analytics">Dados</strong></span><span class="server-nav-item-arrow">›</span></button>
-          ${isOwner ? `<button class="server-nav-item" type="button" data-sp-tab="audit">${uiIcon("activity")}<span><small data-i18n="historyLabel">HISTÓRICO</small><strong data-i18n="audit">Auditoria</strong></span><span class="server-nav-item-arrow">›</span></button>` : ""}
+          <button class="server-nav-item" type="button" data-sp-tab="world">${uiIcon("world")}<span><small>${t("configuration")}</small><strong>${t("world")}</strong></span><span class="server-nav-item-arrow">›</span></button>
+          <button class="server-nav-item" type="button" data-sp-tab="__server_settings__">${uiIcon("server")}<span><small>${t("infrastructure")}</small><strong>${t("settings")}</strong></span><span class="server-nav-item-arrow">›</span></button>
+          <button class="server-nav-item" type="button" data-sp-tab="analytics">${uiIcon("data")}<span><small>${t("analyticsKicker")}</small><strong>${t("analytics")}</strong></span><span class="server-nav-item-arrow">›</span></button>
+          ${isOwner ? `<button class="server-nav-item" type="button" data-sp-tab="audit">${uiIcon("activity")}<span><small>${t("historyLabel")}</small><strong>${t("audit")}</strong></span><span class="server-nav-item-arrow">›</span></button>` : ""}
         </nav>
       </section>`;
     content.querySelector("#sp-restart")?.addEventListener("click", async () => {

@@ -157,6 +157,32 @@ describe("feature contracts — pending changes and operation indicators", () =>
     expect(css).toMatch(/^\[hidden\]\s*\{[^}]*display:\s*none\s*!important/m);
   });
 
+  /* applyLocale translates [data-i18n] and only then re-renders the active
+     panel, so any panel that ships the attribute with a literal string keeps
+     that literal in every locale. Feature markup must resolve through t(). */
+  test("feature markup never relies on data-i18n for its strings", () => {
+    const offenders = everyModule()
+      .filter(([file]) => file.includes("/features/"))
+      .filter(([, source]) => source.includes("data-i18n"))
+      .map(([file]) => file);
+    expect(offenders).toEqual([]);
+  });
+
+  /* uiIcon() only validates the shape of the name, so a symbol that does not
+     exist in the sprite renders an empty <use> and the icon silently vanishes.
+     This has bitten twice: ui-pending in the stage checklist and ui-analytics
+     in the server hub. Check every reference against the sprite. */
+  test("every icon reference resolves to a symbol in the sprite", () => {
+    const sprite = readFileSync(join(STATIC, "craftcontrol-ui.svg"), "utf8");
+    const available = new Set([...sprite.matchAll(/id="ui-([a-z0-9-]+)"/g)].map((m) => m[1]));
+    const referenced = new Set();
+    for (const [, source] of everyModule()) {
+      for (const m of source.matchAll(/uiIcon\("([a-z0-9-]+)"/g)) referenced.add(m[1]);
+    }
+    const missing = [...referenced].filter((name) => !available.has(name));
+    expect(missing).toEqual([]);
+  });
+
   /* The world clock ticks 10x a second. Rewriting the href of a <use> that
      points at an external sprite re-resolves the reference and makes the icon
      flicker, so the write must be conditional. */

@@ -3,7 +3,7 @@ export const en = {
     brandKicker: "BEDROCK CONTROL CENTER",
     refresh: "Refresh", refreshAriaLabel: "Refresh", profileAriaLabel: "Profile", worldState: "WORLD STATE", quickActions: "Quick actions",
     day: "Day", night: "Night", clearWeather: "Clear weather", server: "Server", homeDay: "Day", homeTime: "Time", homeWeather: "Weather", homeTimeAction: "Time & Hour", serverRules: "Server rules", serverOperations: "Server operations", recentActivity: "Recent activity", historyLabel: "History", instant: "Instant", restartShort: "Restart", spectatorUnavailable: "Spectator mode is not supported by this server yet",
-    saveChanges: "Save changes", control: "CONTROL", administration: "ADMINISTRATION", configuration: "CONFIGURATION", infrastructure: "INFRASTRUCTURE", noRestart: "no restart", rulesLiveHelp: "Rules applied live on the server.", serverOperation: "Server operation",
+    saveChanges: "Save changes", control: "CONTROL", administration: "ADMINISTRATION", serverStateLabel: "State", restartRequiredShort: "Requires restart", analyticsKicker: "Analytics", configuration: "CONFIGURATION", infrastructure: "INFRASTRUCTURE", noRestart: "no restart", rulesLiveHelp: "Rules applied live on the server.", serverOperation: "Server operation",
     restartNotice: "Persistent changes take effect after applying and restarting.",
     start: "Start", restart: "Restart", stop: "Stop", close: "Close",
     checking: "Checking…", online: "Online", stopped: "Stopped", serverOnline: "Server online",

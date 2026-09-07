@@ -2,6 +2,7 @@ import { api } from "./api.js?v=7";
 import { connectEventStream } from "./events.js";
 import { requireSession, showSessions, showPasswordChange } from "./auth.js?v=8";
 import { state } from "./core/state.js?v=7";
+import { createNavTrail } from "./core/route.js?v=8";
 import { $, escapeHtml } from "./core/dom.js?v=7";
 import { connectInvalidation } from "./core/invalidation.js?v=7";
 import { createNavigation } from "./core/navigation.js?v=8";
@@ -9,15 +10,15 @@ import { toast } from "./components/feedback.js?v=7";
 import { formatDate as formatLocalizedDate, formatDuration, sessionMoment as localizedSessionMoment, timelineTimestamp as localizedTimelineTimestamp } from "./components/time.js?v=9";
 import { createAnalyticsFeature } from "./features/analytics/index.js?v=8";
 import { createPlayersFeature } from "./features/players/index.js?v=8";
-import { createWorldFeature } from "./features/world/index.js?v=9";
+import { createWorldFeature } from "./features/world/index.js?v=10";
 import { createRulesFeature } from "./features/rules/index.js?v=7";
-import { createServerFeature } from "./features/server/index.js?v=17";
+import { createServerFeature } from "./features/server/index.js?v=18";
 import { UNRESPONSIVE_AFTER_MS } from "./features/server/operation.js?v=15";
 import { startAuthenticatedApplication } from "./features/auth/bootstrap.js?v=7";
 import { createSettingsFeature } from "./features/settings/index.js?v=8";
 import { createAuditFeature } from "./features/audit/index.js?v=1";
 import { createHomeFeature } from "./features/home/index.js?v=7";
-import { createI18n } from "./i18n/index.js?v=11";
+import { createI18n } from "./i18n/index.js?v=12";
 import { createGameTerms } from "./i18n/game-terms.js?v=7";
 
 export function startApplication() {
@@ -41,6 +42,42 @@ export function startApplication() {
 
   function playerSettingsMarkup(...args) { return getSettingsFeature().playerSettingsMarkup(...args); }
 
+  /* Inner screens are reachable from more than one place — Rules from Home and
+     from the Server hub, Time from Home and from World — so a hard-coded
+     destination sends you somewhere you were not. Keep the trail instead.
+     Landing on a root tab clears it: the bottom nav is a fresh start. */
+  const ROOT_TABS = new Set(["home", "__players__", "server"]);
+  const BACK_LABELS = { home: "navHome", __players__: "navPlayers", server: "navServer", world: "world", rules: "rules", analytics: "analytics", audit: "audit", __server_settings__: "settings", __time__: "timeControls" };
+  let _navTrail = [];
+  let _goingBack = false;
+
+  state.subscribe("tab", (value, previous) => {
+    if (_goingBack) { _goingBack = false; return; }
+    if (ROOT_TABS.has(value)) { _navTrail = []; return; }
+    if (previous && previous !== value) _navTrail.push(previous);
+  });
+
+  function goBack() {
+    const target = _navTrail.pop() || "home";
+    _goingBack = true;
+    state.tab = target;
+  }
+
+  function addBackButton() {
+    if (typeof document === "undefined" || !content) return;
+    const target = _navTrail[_navTrail.length - 1] || "home";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "panel-back btn";
+    button.dataset.panelBack = "";
+    button.innerHTML = uiIcon("chevron");
+    const label = document.createElement("span");
+    label.textContent = t(BACK_LABELS[target] || "navHome");
+    button.appendChild(label);
+    button.onclick = goBack;
+    content.prepend(button);
+  }
+
   function refreshActivePanel() {
     $("#hero").hidden = state.tab !== "home";
     // Home remains useful while the backend is reconnecting: its time shortcut,
@@ -50,13 +87,13 @@ export function startApplication() {
       content.innerHTML = `<section class="panel-pending block-panel" role="status">${t("querying")}</section>`;
       return;
     }
-    if (state.tab === "__time__") return getWorldFeature().renderTimePanel();
-    if (state.tab === "__server_settings__") return getServerFeature().renderServerSettings();
+    if (state.tab === "__time__") { getWorldFeature().renderTimePanel(); return addBackButton(); }
+    if (state.tab === "__server_settings__") { getServerFeature().renderServerSettings(); return addBackButton(); }
     if (state.tab === "__players__") return renderPlayersPanel();
-    if (state.tab === "analytics") return renderAnalyticsPanel();
-    if (state.tab === "audit") return getAuditFeature().renderAuditPanel();
-    if (state.tab === "world") getWorldFeature().renderWorld();
-    else if (state.tab === "rules") getRulesFeature().renderRules();
+    if (state.tab === "analytics") { renderAnalyticsPanel(); return addBackButton(); }
+    if (state.tab === "audit") { getAuditFeature().renderAuditPanel(); return addBackButton(); }
+    if (state.tab === "world") { getWorldFeature().renderWorld(); addBackButton(); }
+    else if (state.tab === "rules") { getRulesFeature().renderRules(); addBackButton(); }
     else if (state.tab === "server") { getServerFeature().renderServer(); getServerFeature().loadDiagnostics(); }
   }
 
@@ -72,7 +109,7 @@ export function startApplication() {
   }
 
   function getWorldFeature() {
-    if (!worldFeature) worldFeature = createWorldFeature({ state, content, t, api, $, uiIcon, toast, getSettingsFeature, getNavigation });
+    if (!worldFeature) worldFeature = createWorldFeature({ state, content, t, api, $, uiIcon, toast, getSettingsFeature, getNavigation, refreshWorldCells });
     return worldFeature;
   }
 
@@ -213,19 +250,27 @@ export function startApplication() {
   let _tickTimer = null;
   let _localDaytime = NaN;
 
+  function setWorldCells(field, text) {
+    if (typeof document === "undefined") return;
+    document.querySelectorAll(`[data-world="${field}"]`).forEach((node) => { node.textContent = text; });
+  }
+
+  function setWorldIcons(field, symbol) {
+    if (typeof document === "undefined") return;
+    document.querySelectorAll(`[data-world-icon="${field}"]`).forEach((node) => setIcon(node, symbol));
+  }
+
   function _updateTickDisplay() {
     _localDaytime = (_localDaytime + 2) % 24000;
-    const el = $("#world-ticks");
-    if (el) el.textContent = Math.round(_localDaytime).toLocaleString(localeTag());
-    const timeEl = $("#world-time");
-    if (timeEl) {
+    setWorldCells("ticks", Math.round(_localDaytime).toLocaleString(localeTag()));
+    {
       const minutes = Math.round(((_localDaytime + 6000) % 24000) / 1000 * 60);
       const hour = Math.floor(minutes / 60) % 24;
       const minute = minutes % 60;
-      timeEl.textContent = new Intl.DateTimeFormat(localeTag(), { hour: "numeric", minute: "2-digit" }).format(new Date(2000, 0, 1, hour, minute));
+      setWorldCells("time", new Intl.DateTimeFormat(localeTag(), { hour: "numeric", minute: "2-digit" }).format(new Date(2000, 0, 1, hour, minute)));
     }
     const isNight = _localDaytime >= 13000 && _localDaytime < 23000;
-    setIcon($("#world-time-icon"), isNight ? "ui-moon" : "ui-sun");
+    setWorldIcons("time", isNight ? "ui-moon" : "ui-sun");
     _applyWeatherAccent();
   }
 
@@ -236,19 +281,39 @@ export function startApplication() {
   }
 
   function _applyWeatherAccent() {
-    const cell = document.querySelector(".world-weather");
-    if (!cell) return;
+    const cells = document.querySelectorAll('[data-world-cell="weather"]');
+    if (!cells.length) return;
     const weather = state.world?.weather;
     const isNight = _localDaytime >= 13000 && _localDaytime < 23000;
     const next = weather === "rain" ? "rain"
       : weather === "thunder" ? "thunder"
         : isNight ? "clear-night" : "clear";
-    if (cell.dataset.weather !== next) cell.dataset.weather = next;
+    cells.forEach((cell) => { if (cell.dataset.weather !== next) cell.dataset.weather = next; });
+  }
+
+  /* Re-applies the current world values to every marked cell. A screen that
+     renders its own copy calls this once after mounting; the live clock keeps
+     it updated from then on. */
+  function refreshWorldCells() {
+    setWorldCells("day", state.world?.day ?? "—");
+    const weather = state.world?.weather;
+    setWorldCells("weather", weather ? t(weather) : "—");
+    if (Number.isFinite(_localDaytime)) {
+      _updateTickDisplay();
+    } else {
+      setWorldCells("time", "—");
+      setWorldCells("ticks", "");
+    }
+    const isNight = _localDaytime >= 13000 && _localDaytime < 23000;
+    setWorldIcons("weather", weather === "thunder" ? "ui-thunder"
+      : weather === "rain" ? "ui-rain"
+        : isNight ? "ui-moon" : "ui-sun");
+    _applyWeatherAccent();
   }
 
   function showWorld(snapshot) {
     state.world = snapshot.world || {};
-    $("#world-day").textContent = state.world.day ?? "—";
+    setWorldCells("day", state.world.day ?? "—");
     const daytime = Number(state.world.daytime);
     if (_tickTimer) { clearInterval(_tickTimer); _tickTimer = null; }
     if (Number.isFinite(daytime)) {
@@ -257,13 +322,13 @@ export function startApplication() {
       _tickTimer = setInterval(_updateTickDisplay, 100);
     } else {
       _localDaytime = NaN;
-      $("#world-time").textContent = "—";
-      $("#world-ticks").textContent = "";
+      setWorldCells("time", "—");
+      setWorldCells("ticks", "");
     }
     const weather = state.world.weather;
-    $("#world-weather").textContent = weather ? t(weather) : "—";
+    setWorldCells("weather", weather ? t(weather) : "—");
     const isNight = _localDaytime >= 13000 && _localDaytime < 23000;
-    setIcon($("#world-weather-icon"), weather === "thunder" ? "ui-thunder"
+    setWorldIcons("weather", weather === "thunder" ? "ui-thunder"
       : weather === "rain" ? "ui-rain"
         : isNight ? "ui-moon" : "ui-sun");
     _applyWeatherAccent();

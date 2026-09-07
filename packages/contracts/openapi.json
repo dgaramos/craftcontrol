@@ -2106,6 +2106,42 @@
           }
         }
       },
+      "PlayerActivityExportRecord": {
+        "type": "object",
+        "description": "One exported event. `details` is compact JSON so the CSV column set cannot vary per topic.",
+        "required": [
+          "id",
+          "timestamp",
+          "topic",
+          "source",
+          "player",
+          "details"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "timestamp": {
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "topic": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "player": {
+            "$ref": "#/components/schemas/PlayerExportReference"
+          },
+          "details": {
+            "type": "string"
+          }
+        }
+      },
       "PlayerExport": {
         "type": "object",
         "required": [
@@ -2119,8 +2155,128 @@
           "records": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/JsonMap"
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/PlayerProfileExportRecord"
+                },
+                {
+                  "$ref": "#/components/schemas/PlayerSessionExportRecord"
+                },
+                {
+                  "$ref": "#/components/schemas/PlayerActivityExportRecord"
+                }
+              ]
             }
+          }
+        }
+      },
+      "PlayerExportReference": {
+        "type": "object",
+        "description": "Public player reference: opaque ID and current Gamertag, nothing else.",
+        "required": [
+          "id",
+          "name"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "PlayerProfileExportRecord": {
+        "type": "object",
+        "description": "One exported profile. Closed on purpose: a XUID or telemetry envelope cannot appear.",
+        "required": [
+          "id",
+          "name",
+          "online",
+          "sessions_count",
+          "total_play_seconds",
+          "deaths_count",
+          "permission",
+          "operator"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "online": {
+            "type": "boolean"
+          },
+          "sessions_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "total_play_seconds": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "deaths_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "permission": {
+            "type": "string"
+          },
+          "operator": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PlayerSessionExportRecord": {
+        "type": "object",
+        "required": [
+          "player",
+          "id",
+          "connected_at",
+          "duration_seconds",
+          "inferred",
+          "active"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "player": {
+            "$ref": "#/components/schemas/PlayerExportReference"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "connected_at": {
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "disconnected_at": {
+            "type": [
+              "number",
+              "string",
+              "null"
+            ]
+          },
+          "duration_seconds": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "close_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "inferred": {
+            "type": "boolean"
+          },
+          "active": {
+            "type": "boolean"
           }
         }
       },

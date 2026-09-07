@@ -60,13 +60,32 @@ def _refuse(target: str, status: int, metadata: dict[str, Any], **body: Any):
 
 @exports_api.get("/api/exports/players/<resource>")
 def export_players(resource: str):
-    """Export one player resource as JSON or CSV, bounded and audited."""
-    user = getattr(g, "user", None)
-    if user is None:
-        return jsonify(error="authentication required"), 401
+    """Export one player resource as JSON or CSV, bounded and audited.
 
+    Every attempt writes exactly one audit record, including an unexpected
+    failure: the contract promises a trace of who tried, and a handler that only
+    caught the errors it predicted would silently lose the rest.
+    """
+    try:
+        return _export_players(resource)
+    except Exception:
+        _audit(
+            f"players.{resource}:{request.args.get('format', 'json')}",
+            "failed",
+            {"reason": "unexpected failure"},
+        )
+        raise
+
+
+def _export_players(resource: str):
     export_format = request.args.get("format", "json")
     target = f"players.{resource}:{export_format}"
+
+    # An unauthenticated request never reaches this route: the auth boundary
+    # refuses it first, and it has no actor to record. Auditing it there would
+    # let unauthenticated traffic write to the audit log; failed authentication
+    # is already recorded in `auth_attempts`.
+    user = g.user
 
     try:
         auth_service().require_capability(user, EXPORT_CAPABILITY)
@@ -162,6 +181,9 @@ def _download(body: str, manifest: Manifest, export_format: str) -> Response:
     extension = "csv" if export_format == "csv" else "json"
     mimetype = "text/csv" if export_format == "csv" else "application/json"
     response = Response(body, mimetype=mimetype)
+    # docker-compose also publishes the backend port directly, so the export
+    # cannot rely on the proxy to keep an authenticated payload out of caches.
+    response.headers["Cache-Control"] = "no-store"
     response.headers["Content-Disposition"] = (
         f'attachment; filename="{file_name(manifest.resource, extension, manifest.generated_at)}"'
     )

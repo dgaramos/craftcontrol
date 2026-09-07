@@ -24,9 +24,14 @@ class _FakePlayers:
         self._events = events or []
         self._profile = profile
         self.activity_calls: list[tuple] = []
+        self.listed = False
 
     def list_profiles(self) -> list[dict]:
+        self.listed = True
         return list(self._profiles)
+
+    def profile_count(self) -> int:
+        return len(self._profiles)
 
     def profile(self, identity: str) -> dict | None:
         return self._profile
@@ -141,7 +146,7 @@ def test_activity_export_drops_private_player_fields_and_serializes_details() ->
     assert records[0]["player"] == {"id": "pub-Steve", "name": "Steve"}
     assert "xuid" not in json.dumps(records)
     # Detail keys vary per topic; one JSON column keeps the CSV shape stable.
-    assert records[0]["details"] == '{"cause": "fall"}'
+    assert records[0]["details"] == '{"cause":"fall"}'
 
 
 def test_activity_export_reports_the_effective_filters() -> None:
@@ -174,12 +179,14 @@ def test_oversized_player_filter_is_rejected() -> None:
 
 # -- ceiling ----------------------------------------------------------------
 
-def test_record_ceiling_refuses_profiles_before_shaping_them() -> None:
-    service = PlayerExportService(_FakePlayers(profiles=[_profile(str(i)) for i in range(5)]),
-                                  row_limit=4)
+def test_record_ceiling_refuses_profiles_before_building_them() -> None:
+    """Counting is cheap; building profiles parses every telemetry blob."""
+    players = _FakePlayers(profiles=[_profile(str(i)) for i in range(5)])
+    service = PlayerExportService(players, row_limit=4)
     with pytest.raises(ExportTooLarge) as error:
         service.records("profiles")
     assert error.value.limit == "record"
+    assert players.listed is False
 
 
 def test_record_ceiling_refuses_activity_from_the_first_page_total() -> None:

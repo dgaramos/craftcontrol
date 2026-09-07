@@ -81,6 +81,11 @@ class PlayerExportService:
     def _profiles(self, player: str, days: int) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         if days:
             raise ValueError("profiles export does not support a period filter")
+        if not player:
+            # Unfiltered, the export is the whole table. Count first: building
+            # the profiles parses every telemetry blob, which is exactly the
+            # cost a refusal should not pay.
+            enforce_row_limit(self._players.profile_count(), self._row_limit)
         rows = [
             self._public_profile(profile)
             for profile in self._players.list_profiles()
@@ -164,5 +169,5 @@ class PlayerExportService:
             "topic": event.get("topic"),
             "source": event.get("source"),
             "player": {"id": player.get("id"), "name": player.get("name")},
-            "details": json.dumps(event.get("details") or {}, ensure_ascii=False, sort_keys=True),
+            "details": json.dumps(event.get("details") or {}, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
         }

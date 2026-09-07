@@ -16,7 +16,13 @@ Exports require the `data.export` capability. `ROLE_CAPABILITIES` grants `*` to
 new capability makes exports owner-only without a second rule. Requests without
 it answer `403` through the existing error envelope.
 
-The refusal is audited, and that requires care: the shared `require` decorator
+Every authenticated attempt is audited — success, denial, invalid filter,
+refusal, or unexpected failure — and exactly once. An unauthenticated request is
+not an export attempt: the auth boundary refuses it before any route, it has no
+actor to record, and auditing it there would let unauthenticated traffic write
+to the audit log. Failed authentication is already recorded separately.
+
+Auditing the denial requires care: the shared `require` decorator
 answers `403` before the handler runs and never reaches the audit boundary, so
 an export route that relies on it alone leaves no trace of who tried. Export
 routes therefore perform the capability check at their own boundary, record the

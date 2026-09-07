@@ -135,10 +135,25 @@ def serialize_csv(
     return _measured(buffer.getvalue(), allowed)
 
 
+# A spreadsheet executes a cell that opens with one of these, so a Gamertag such
+# as "=cmd|..." would run on open. Only text is neutralized: numbers stay numbers,
+# so a negative duration keeps its sign and its type.
+FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
+
+
 def _cell(value: Any) -> str:
     """Render one CSV cell; a null is empty, never the string ``null``."""
     if value is None:
         return ""
     if isinstance(value, bool):
         return "true" if value else "false"
+    if isinstance(value, str):
+        return neutralize_formula(value)
     return str(value)
+
+
+def neutralize_formula(value: str) -> str:
+    """Prefix a formula-looking value so a spreadsheet reads it as text."""
+    if value.startswith(FORMULA_PREFIXES):
+        return f"'{value}"
+    return value

@@ -44,6 +44,9 @@ class _FakePlayerService:
     def list_profiles(self):
         return list(self._profiles)
 
+    def profile_count(self):
+        return len(self._profiles)
+
     def profile(self, identity):
         return self._profiles[0] if self._profiles else None
 
@@ -234,3 +237,62 @@ def test_refusal_returns_no_payload_at_all(monkeypatch) -> None:
     response = app.test_client().get("/api/exports/players/profiles")
     assert response.status_code == 422
     assert "records" not in response.get_json()
+
+
+# -- review findings ---------------------------------------------------------
+
+@pytest.mark.parametrize("prefix", ["=", "+", "-", "@"])
+def test_csv_neutralizes_formula_prefixes_in_player_supplied_text(prefix) -> None:
+    """A Gamertag is player input; a spreadsheet must read it as text."""
+    players = _FakePlayerService(profiles=[_profile(f"{prefix}cmd|calc")])
+    app = _app(FakeAuditPort(), players=players)
+    response = app.test_client().get("/api/exports/players/profiles?format=csv")
+    row = response.get_data(as_text=True).splitlines()[1]
+    assert f",'{prefix}cmd|calc," in row or row.endswith(f"'{prefix}cmd|calc")
+    assert f",{prefix}cmd|calc," not in row
+
+
+def test_numbers_keep_their_sign_and_are_not_neutralized() -> None:
+    """Only text is neutralized, so a negative number stays a number."""
+    profile = _profile()
+    profile["total_play_seconds"] = -5
+    app = _app(FakeAuditPort(), players=_FakePlayerService(profiles=[profile]))
+    response = app.test_client().get("/api/exports/players/profiles?format=csv")
+    assert ",-5," in response.get_data(as_text=True).splitlines()[1]
+
+
+def test_unauthenticated_request_never_reaches_the_export_audit() -> None:
+    """The auth boundary refuses first, and there is no actor to record.
+
+    Auditing it here would let unauthenticated traffic write to the audit log;
+    failed authentication is recorded by the auth layer instead.
+    """
+    port = FakeAuditPort()
+    app = _app(port)
+    app.extensions["auth_service"].authenticate.return_value = None
+    response = app.test_client().get("/api/exports/players/profiles")
+    assert response.status_code == 401
+    assert port.records == []
+
+
+def test_unexpected_failure_is_audited_once_and_not_swallowed(monkeypatch) -> None:
+    port = FakeAuditPort()
+    app = _app(port)
+
+    def explode(*args, **kwargs):
+        raise RuntimeError("repository unavailable")
+
+    monkeypatch.setattr(_FakePlayerService, "list_profiles", explode)
+    response = app.test_client().get("/api/exports/players/profiles")
+    assert response.status_code == 500
+    assert len(port.records) == 1
+    assert port.records[0]["result"] == "failed"
+    assert port.records[0]["metadata"]["reason"] == "unexpected failure"
+
+
+def test_download_is_never_cached() -> None:
+    """The backend port is published directly, so it cannot rely on the proxy."""
+    app = _app(FakeAuditPort())
+    for query in ("", "?format=csv"):
+        response = app.test_client().get(f"/api/exports/players/profiles{query}")
+        assert response.headers["Cache-Control"] == "no-store"

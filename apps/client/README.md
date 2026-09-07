@@ -13,7 +13,8 @@ No build step. No framework. No bundler. ES modules loaded directly by the brows
 ```text
 apps/client/
 ├── Dockerfile            # Nginx image — serves static assets, proxies /api/*
-├── nginx.conf            # Nginx configuration (SSE unbuffered, gzip, cache headers)
+├── deploy/
+│   └── nginx.conf        # Nginx configuration (SSE unbuffered, cache headers)
 ├── static/
 │   ├── app.js            # Entry point — bootstraps routing and state
 │   ├── composition.js    # Manual dependency wiring (no service locator)
@@ -107,10 +108,19 @@ separate check scripts. Requirements: Node.js 18+.
 
 ## Nginx
 
-`nginx.conf` configures:
+`deploy/nginx.conf` configures:
 
 - Static asset serving with cache headers.
-- `/api/*` proxy to the CraftControl Server (default: `http://server:5000`).
+- `/api/*` proxy to the CraftControl Server over TLS
+  (`https://craftcontrol-backend:8082`), verified against the internal CA the
+  backend writes to the shared `craftcontrol-internal-tls` volume on first
+  start. The session cookie rides every one of these calls, so the hop is not
+  cleartext on the Compose network. No key material is committed or baked into
+  an image.
+- `no-store` on the `/api/` prefix, so authenticated JSON is never reused across
+  a logout and a different login in the same browser. The exact-match
+  `location = /api/events` does not inherit that block: the stream keeps the
+  backend's own `no-cache` alongside `proxy_cache off`.
 - SSE (`/api/events`) with `proxy_buffering off` and extended timeouts.
 - gzip compression for text assets.
 
@@ -125,7 +135,7 @@ Compose network.
 If extracted:
 
 1. Copy `apps/client/` as the project root.
-2. Update `nginx.conf` to point `/api/*` at the CraftControl Server's address.
+2. Update `deploy/nginx.conf` to point `/api/*` at the CraftControl Server's address.
 3. `api-contract.d.ts` is generated from `packages/contracts/openapi.json` in the
    monorepo — keep it in sync when the API surface changes.
 4. No dependency on `apps/server/` exists in any client source file.

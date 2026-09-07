@@ -1,7 +1,7 @@
 import { createPlayerAccess } from "./access.js?v=7";
 import { createPlayerHistory } from "./history.js?v=7";
-import { createPlayerProfile } from "./profile.js?v=7";
-import { createPlayerTelemetry } from "./telemetry.js?v=7";
+import { createPlayerProfile } from "./profile.js?v=8";
+import { createPlayerTelemetry } from "./telemetry.js?v=8";
 import { createPlayersWorkspace } from "./workspace.js?v=7";
 
 export function createPlayersFeature(deps) {

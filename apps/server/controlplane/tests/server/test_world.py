@@ -1,4 +1,4 @@
-"""Tests for WorldService.query_world_state."""
+"""Tests for WorldService — query_world_state and time_action persistence."""
 from __future__ import annotations
 
 import pytest
@@ -24,14 +24,29 @@ class _FakeBedrock:
 
 
 class _FakeBroker:
-    def publish(self, *args, **kwargs) -> None:
-        pass
+    def __init__(self) -> None:
+        self.events: list[tuple[str, str, dict]] = []
+
+    def publish(self, topic: str, source: str, payload: dict | None = None) -> None:
+        self.events.append((topic, source, payload or {}))
 
 
-def _make_world(bedrock=None):
+class _RecordingStore:
+    def __init__(self) -> None:
+        self.writes: list[tuple[str, dict[str, str], str]] = []
+
+    def store(self, kind: str, values: dict[str, str], source: str) -> None:
+        self.writes.append((kind, values, source))
+
+
+def _make_world(bedrock=None, store=None):
     bedrock = bedrock or _FakeBedrock()
-    return WorldService(bedrock, _FakeBroker())  # type: ignore[arg-type]
+    return WorldService(bedrock, _FakeBroker(), store)  # type: ignore[arg-type]
 
+
+# ---------------------------------------------------------------------------
+# query_world_state
+# ---------------------------------------------------------------------------
 
 def test_query_world_state_returns_daytime_day_and_weather() -> None:
     bedrock = _FakeBedrock(responses={
@@ -135,3 +150,31 @@ def test_query_world_state_picks_last_number_from_output() -> None:
 
     assert result["daytime"] == "24000"
     assert result["day"] == "7"
+
+
+# ---------------------------------------------------------------------------
+# time_action persistence via _observe_world
+# ---------------------------------------------------------------------------
+
+def test_time_query_persists_confirmed_value_and_publishes_world_change() -> None:
+    store = _RecordingStore()
+    bedrock = _FakeBedrock(responses={("time", "query", "daytime"): "The time is 6000"})
+    svc = _make_world(bedrock, store)
+
+    result = svc.time_action("query", {"value": "daytime"})
+
+    assert result == {"action": "query", "query": "daytime", "value": 6000}
+    assert store.writes == [("world", {"daytime": "6000"}, "manager")]
+    assert svc.broker.events == [("state.changed", "manager", {"domains": ["world"], "action": "query"})]  # type: ignore[attr-defined]
+
+
+def test_weather_query_persists_only_recognized_weather() -> None:
+    store = _RecordingStore()
+    bedrock = _FakeBedrock(responses={("weather", "query"): "It is currently raining"})
+    svc = _make_world(bedrock, store)
+
+    result = svc.time_action("weather-query", {})
+
+    assert result["value"] == "rain"
+    assert store.writes == [("world", {"weather": "rain"}, "manager")]
+    assert svc.broker.events[-1][2]["domains"] == ["world"]  # type: ignore[attr-defined]

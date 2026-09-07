@@ -69,7 +69,7 @@ def compose_manager(
         SQLitePlayerRepository(settings.database), files, bedrock, broker, settings.bootstrap_operator
     )
     telemetry = TelemetryService(SQLiteTelemetryRepository(settings.database), broker)
-    world = WorldService(bedrock, broker)
+    world = WorldService(bedrock, broker, repository)
     reconciliation = ReconciliationService(
         repository=repository,
         files=files,

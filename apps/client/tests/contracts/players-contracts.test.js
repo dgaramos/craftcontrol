@@ -109,27 +109,29 @@ describe("player profile consolidates authoritative individual analytics", () =>
 // ── 3. test_player_feature_separates_workspace_profile_access_history_and_telemetry ──
 
 describe("player feature separates workspace, profile, access, history and telemetry", () => {
+  // Each submodule pins its own cache-busting version; the contract is that
+  // every one is imported with a version, not that they share a number.
   const modules = {
-    workspace: "createPlayersWorkspace",
-    profile: "createPlayerProfile",
-    access: "createPlayerAccess",
-    history: "createPlayerHistory",
-    telemetry: "createPlayerTelemetry",
+    workspace: ["createPlayersWorkspace", 7],
+    profile: ["createPlayerProfile", 8],
+    access: ["createPlayerAccess", 7],
+    history: ["createPlayerHistory", 7],
+    telemetry: ["createPlayerTelemetry", 8],
   };
 
-  for (const [name, factory] of Object.entries(modules)) {
+  for (const [name, [factory, version]] of Object.entries(modules)) {
     test(`${name}.js exports ${factory}`, () => {
       const source = readFileSync(join(PLAYERS, `${name}.js`), "utf8");
       expect(source).toContain(`export function ${factory}`);
     });
 
-    test(`index.js imports from ./${name}.js?v=7`, () => {
-      expect(indexJs).toContain(`from "./${name}.js?v=7"`);
+    test(`index.js imports from ./${name}.js?v=${version}`, () => {
+      expect(indexJs).toContain(`from "./${name}.js?v=${version}"`);
     });
   }
 
-  test('composition.js imports from "./features/players/index.js?v=7"', () => {
-    expect(composition).toContain('from "./features/players/index.js?v=7"');
+  test('composition.js imports from "./features/players/index.js?v=8"', () => {
+    expect(composition).toContain('from "./features/players/index.js?v=8"');
   });
 
   test("composition.js does not inline renderPlayerCards", () => {

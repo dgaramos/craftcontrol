@@ -267,11 +267,47 @@ def test_frontend_proxy_preserves_same_origin_and_sse_streaming() -> None:
     assert "location /api/" in nginx
     assert "location = /api/events" in nginx
     assert "resolver 127.0.0.11" in nginx
-    assert "set $craftcontrol_backend http://craftcontrol-backend:8082" in nginx
     assert "proxy_pass $craftcontrol_backend$request_uri" in nginx
     assert "proxy_set_header Host $http_host" in nginx
     assert "proxy_buffering off" in nginx
     assert "proxy_read_timeout 1h" in nginx
+    # index.html carries every asset version, so it must never be served from
+    # cache without revalidating, or a deploy reaches nobody.
+    assert 'add_header Cache-Control "no-cache"' in nginx
+    # Authenticated API responses must never be reusable across sessions.
+    assert 'add_header Cache-Control "no-store" always' in nginx
+    assert "proxy_hide_header Cache-Control" in nginx
+    # The session cookie rides every proxied call, so the internal hop is TLS
+    # with a verified certificate rather than cleartext on the Compose network.
+    assert "set $craftcontrol_backend https://craftcontrol-backend:8082" in nginx
+    assert "proxy_ssl_verify on" in nginx
+    assert "proxy_ssl_trusted_certificate /tls/ca.crt" in nginx
+    assert "proxy_ssl_name craftcontrol-backend" in nginx
+    assert "http://craftcontrol-backend" not in nginx
+
+
+def test_internal_tls_material_is_generated_at_runtime_and_never_committed():
+    """Keys must exist only in the mounted volume, never in the image or repo."""
+    entrypoint = (ROOT / "apps" / "server" / "controlplane" / "docker-entrypoint.sh").read_text()
+    assert "openssl req -x509" in entrypoint
+    assert "--certfile=" in entrypoint and "--keyfile=" in entrypoint
+    # Mounting the directory is what enables TLS, so a monolith or local run
+    # still starts over plain HTTP without any certificates.
+    assert 'if [ -d "$TLS_DIR" ]' in entrypoint
+
+    dockerfile = (ROOT / "apps" / "server" / "controlplane" / "Dockerfile").read_text()
+    assert "openssl" in dockerfile
+    assert "ENTRYPOINT" in dockerfile
+
+    compose = (ROOT / "docker-compose.split.yml").read_text()
+    assert "craftcontrol-internal-tls:/tls" in compose
+    # The proxy needs the CA, never the private keys.
+    assert "craftcontrol-internal-tls:/tls:ro" in compose
+
+    tracked = subprocess.run(
+        ["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True
+    ).stdout.splitlines()
+    assert not [path for path in tracked if path.endswith((".key", ".pem", ".crt"))]
 
 
 def test_backend_image_does_not_bundle_frontend_application() -> None:

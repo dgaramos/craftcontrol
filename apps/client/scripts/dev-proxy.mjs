@@ -64,7 +64,16 @@ function proxy(req, res) {
   };
   const proto = backendUrl.protocol === "https:" ? https : http;
   const upstream = proto.request(options, (upRes) => {
-    res.writeHead(upRes.statusCode, upRes.headers);
+    const headers = { ...upRes.headers };
+    // Strip the Secure flag from Set-Cookie when serving over plain HTTP so
+    // that iOS Safari (which rejects Secure cookies on non-HTTPS origins)
+    // stores the session cookie during local dev.
+    if (headers["set-cookie"]) {
+      headers["set-cookie"] = headers["set-cookie"].map((c) =>
+        c.replace(/;\s*Secure/gi, "")
+      );
+    }
+    res.writeHead(upRes.statusCode, headers);
     upRes.pipe(res);
   });
   upstream.on("error", (err) => {

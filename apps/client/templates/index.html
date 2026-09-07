@@ -8,71 +8,134 @@
     <title>CraftControl · Bedrock control center</title>
     <link rel="icon" href="/static/craftcontrol-mark.svg" type="image/svg+xml">
     <link rel="manifest" href="/static/site.webmanifest">
-    <link rel="stylesheet" href="/static/app.css?v=28">
-    <link rel="stylesheet" href="/static/players.css?v=25">
+    <link rel="stylesheet" href="/static/fonts.css?v=1">
+    <link rel="stylesheet" href="/static/app.css?v=48">
+    <link rel="stylesheet" href="/static/players.css?v=27">
     <link rel="stylesheet" href="/static/analytics.css?v=12">
     <link rel="stylesheet" href="/static/auth.css?v=7">
   </head>
   <body>
     <div id="auth-overlay" hidden></div>
-    <header class="topbar">
-      <div class="brand">
-        <div class="block-logo"><img src="/static/craftcontrol-mark.svg" alt=""></div>
-        <div class="brand-copy"><span class="eyebrow" data-i18n="brandKicker">CENTRAL BEDROCK</span><h1>Craft<span>Control</span></h1><div class="instance-line"><span id="instance-name">Minecraft Bedrock</span><span aria-hidden="true">•</span><span id="status" class="status">Verificando…</span></div><div id="release-tags" class="release-tags" aria-label="Versões"></div></div>
+    <div class="shell">
+    <header id="topbar" class="topbar">
+      <div class="topbar-brand">
+        <img src="/static/craftcontrol-mark.svg" width="24" height="24" class="topbar-mark" alt="" aria-hidden="true">
+        <div class="topbar-brand-text">
+          <span class="topbar-eyebrow" data-i18n="brandKicker">CENTRAL BEDROCK</span>
+          <span class="topbar-name">CraftControl</span>
+          <span id="instance-name" hidden></span>
+          <div id="release-tags" class="release-tags" aria-label="Versões" hidden></div>
+        </div>
       </div>
-      <div class="top-actions">
-        <div id="identity" hidden></div>
-        <div id="language-picker" class="language-picker"><button id="language" type="button" aria-haspopup="listbox" aria-expanded="false"><svg class="language-flag" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=2#ui-flag-br"></use></svg><span>Português</span><b aria-hidden="true">▾</b></button><div id="language-menu" role="listbox" hidden><button type="button" role="option" data-locale="pt"><svg class="language-flag" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=2#ui-flag-br"></use></svg>Português</button><button type="button" role="option" data-locale="en"><svg class="language-flag" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=2#ui-flag-us"></use></svg>English</button><button type="button" role="option" data-locale="es"><svg class="language-flag" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=2#ui-flag-es"></use></svg>Español</button></div></div>
-        <button id="refresh" class="icon-button" title="Atualizar estado"><b><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-refresh"></use></svg></b><span data-i18n="refresh">Atualizar</span></button>
+      <div id="status-pill" class="status-pill" aria-live="polite">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span id="status" class="status-label" data-i18n="online">Online</span>
+      </div>
+      <div class="topbar-actions">
+        <button id="refresh" class="topbar-btn" type="button" aria-label="Atualizar estado" data-i18n-aria="refreshAriaLabel"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-refresh"></use></svg></button>
+        <button id="profile-btn" class="topbar-btn topbar-profile" type="button" aria-label="Perfil" data-i18n-aria="profileAriaLabel"><span id="profile-initial" aria-hidden="true"></span><span id="profile-dot" class="topbar-notif-dot" hidden aria-hidden="true"></span></button>
       </div>
     </header>
 
-    <nav id="tabs" aria-label="Configurações"></nav>
+    <nav id="tabs" aria-label="Configurações" hidden></nav>
 
     <main>
       <section id="hero" class="hero block-panel">
         <div class="grass-edge" aria-hidden="true"></div>
-        <div class="overview-grid">
+        <div class="home-hero-content">
+          <div class="home-hero-row">
           <div class="overview-item server-overview">
             <div class="shield"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-shield"></use></svg></div>
-            <div><span class="eyebrow" data-i18n="worldState">ESTADO DO MUNDO</span><h2 id="server-state-title">Consultando servidor</h2></div>
+            <div><span id="hero-instance-name" class="eyebrow" data-i18n="worldState">ESTADO DO MUNDO</span><h2 id="server-state-title">Consultando servidor</h2></div>
           </div>
           <button id="open-players" class="overview-item players-card" type="button" aria-label="Abrir jogadores e históricos">
-            <div class="player-count"><span class="pixel-icon"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-players"></use></svg></span><strong id="players-summary">0 jogadores online</strong></div>
-            <div id="players-list">Ninguém conectado</div>
-            <small id="updated-at">Aguardando atualização</small>
+            <small data-i18n="players">Jogadores</small>
+            <div class="player-count"><strong id="players-summary">0 / 0</strong></div>
+            <div id="players-list" hidden>Ninguém conectado</div>
+            <small id="updated-at" hidden>Aguardando atualização</small>
             <span class="players-card-arrow" aria-hidden="true">›</span>
           </button>
-          <button id="time-controls" class="overview-item time-launch" type="button"><span><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-sun"></use></svg></span><b data-i18n="timeControls">Tempo e clima</b><small data-i18n="timeControlsHint">Horário, ciclos e clima</small></button>
+          </div>
+          <div class="world-summary" aria-live="polite">
+            <div><small data-i18n="homeDay">Dia</small><strong id="world-day" data-world="day">—</strong></div>
+            <div><span class="world-label-row"><small data-i18n="homeTime">Hora</small><small id="world-ticks" class="world-ticks" data-world="ticks"></small></span><span class="world-value"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use id="world-time-icon" data-world-icon="time" href="/static/craftcontrol-ui.svg#ui-sun"></use></svg><strong id="world-time" data-world="time">—</strong></span></div>
+            <div class="world-weather" data-world-cell="weather"><small data-i18n="homeWeather">Clima</small><span class="world-value"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use id="world-weather-icon" data-world-icon="weather" href="/static/craftcontrol-ui.svg#ui-sun"></use></svg><strong id="world-weather" data-world="weather">—</strong></span></div>
+          </div>
         </div>
       </section>
 
+      <button id="panel-back" class="panel-back btn" type="button" hidden><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-chevron"></use></svg><span id="panel-back-label"></span></button>
       <section id="content"></section>
     </main>
 
+    <div id="changes-bar" class="indicator-bar indicator-bar--changes" hidden>
+      <svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-warning"></use></svg>
+      <span class="indicator-bar-copy">
+        <strong id="changes-bar-label" data-i18n="pendingChanges">ALTERAÇÕES PENDENTES</strong>
+        <small id="changes-bar-hint" data-i18n="indicatorChangesHint">Requer restart do servidor para aplicar</small>
+      </span>
+      <span class="indicator-bar-cta" data-i18n="indicatorReview">REVISAR ›</span>
+    </div>
+    <div id="operation-bar" class="indicator-bar indicator-bar--operation" hidden>
+      <svg id="operation-bar-icon" class="cc-icon indicator-bar-live" viewBox="0 0 24 24" aria-hidden="true"><use id="operation-bar-icon-use" href="/static/craftcontrol-ui.svg#ui-live"></use></svg>
+      <span class="indicator-bar-copy">
+        <strong id="operation-bar-title">Operação em andamento</strong>
+        <small id="operation-bar-label"></small>
+      </span>
+      <span class="indicator-bar-cta" data-i18n="indicatorView">VER ›</span>
+    </div>
+    <nav id="bottom-nav" class="bottom-nav" role="tablist">
+      <button class="bottom-nav-tab" data-tab="home" role="tab" type="button">
+        <svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <use href="/static/craftcontrol-ui.svg#ui-home"></use>
+        </svg>
+        <span class="bottom-nav-label" data-i18n="navHome">Home</span>
+      </button>
+      <button class="bottom-nav-tab" data-tab="__players__" role="tab" type="button">
+        <svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <use href="/static/craftcontrol-ui.svg#ui-players"></use>
+        </svg>
+        <span class="bottom-nav-label" data-i18n="navPlayers">Jogadores</span>
+      </button>
+      <button class="bottom-nav-tab" data-tab="server" role="tab" type="button">
+        <svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <use href="/static/craftcontrol-ui.svg#ui-server"></use>
+        </svg>
+        <span class="bottom-nav-label" data-i18n="navServer">Servidor</span>
+      </button>
+    </nav>
+    </div><!-- /.shell -->
+
     <div id="toast" role="status"></div>
-    <footer>
+    <footer hidden>
       <button id="server-menu" class="secondary"><span><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-server"></use></svg></span><b data-i18n="server">Servidor</b></button>
       <button id="save" class="primary" hidden><span><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-save"></use></svg></span><b id="save-label">Revisar alterações</b></button>
     </footer>
 
-    <dialog id="changes-drawer" class="drawer">
+    <dialog id="changes-drawer" class="drawer drawer--changes">
       <div class="drawer-handle" aria-hidden="true"></div>
-      <div class="drawer-header"><div><span class="eyebrow" data-i18n="pendingChanges">ALTERAÇÕES PENDENTES</span><h2 data-i18n="reviewChanges">Revisar alterações</h2></div><button id="close-changes" class="drawer-close" type="button" aria-label="Fechar"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-close"></use></svg></button></div>
-      <p data-i18n="pendingHelp">Estas configurações serão salvas e o servidor será reiniciado somente quando você aplicar.</p>
+      <div class="drawer-header">
+        <svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-warning"></use></svg>
+        <div><h2 data-i18n="reviewChanges">Alterações pendentes</h2><p data-i18n="pendingHelp">Aplicar irá reiniciar o servidor. Jogadores serão desconectados.</p></div>
+        <button id="close-changes" class="drawer-close" type="button" aria-label="Fechar"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-close"></use></svg></button>
+      </div>
       <div id="changes-list" class="changes-list"></div>
-      <div class="drawer-actions"><button id="discard-all" class="secondary" data-i18n="discardAll">Descartar todas</button><button id="apply-changes" class="primary" data-i18n="applyChanges">Aplicar alterações</button></div>
+      <div class="drawer-actions"><button id="discard-all" class="danger" data-i18n="discardAll">Descartar tudo</button><button id="apply-changes" class="apply-restart" data-i18n="applyChanges">Aplicar e reiniciar</button></div>
     </dialog>
 
     <button id="operation-indicator" class="operation-indicator" type="button" hidden aria-controls="operation-drawer">
       <svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-server"></use></svg>
       <span id="operation-indicator-label"></span>
     </button>
-    <dialog id="operation-drawer" class="drawer operation-drawer" aria-labelledby="operation-drawer-title">
+    <dialog id="operation-drawer" class="drawer drawer--operation operation-drawer" aria-labelledby="operation-drawer-title">
       <div class="drawer-handle" aria-hidden="true"></div>
-      <div class="drawer-header"><div><span class="eyebrow" data-i18n="serverOperation">OPERAÇÃO DO SERVIDOR</span><h2 id="operation-drawer-title" data-i18n="serverOperation">Operação do servidor</h2></div><button id="close-operation-drawer" class="drawer-close" type="button" aria-label="Fechar"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-close"></use></svg></button></div>
-      <p data-i18n="operationDrawerHelp">A operação continua em segundo plano enquanto você navega.</p>
+      <div class="drawer-header">
+        <svg id="operation-drawer-icon" class="cc-icon indicator-bar-live" viewBox="0 0 24 24" aria-hidden="true"><use id="operation-drawer-icon-use" href="/static/craftcontrol-ui.svg#ui-live"></use></svg>
+        <div><h2 id="operation-drawer-title" data-i18n="serverOperation">Operação do servidor</h2><p data-i18n="operationDrawerHelp">Aguarde a conclusão antes de fazer alterações.</p></div>
+        <button id="close-operation-drawer" class="drawer-close" type="button" aria-label="Fechar"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-close"></use></svg></button>
+      </div>
       <div id="operation-progress-container"></div>
+      <div class="drawer-actions"><button id="dismiss-operation" class="secondary" data-i18n="operationKeepRunning">Fechar (a operação continua em segundo plano)</button></div>
     </dialog>
 
     <dialog id="server-dialog">
@@ -83,18 +146,6 @@
     </dialog>
     <dialog id="account-dialog"></dialog>
   <!-- ── Native templates ──────────────────────────────────────────────────── -->
-
-  <!-- tpl-identity: topbar user chip (name, role, logout button) -->
-  <template id="tpl-identity">
-    <span></span>
-    <small></small>
-    <button id="logout" type="button">
-      <svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=8#ui-logout"></use></svg>
-      <span></span>
-    </button>
-    <button id="change-password" type="button"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=8#ui-password"></use></svg><span></span></button>
-    <button id="manage-sessions" type="button"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=8#ui-sessions"></use></svg><span></span></button>
-  </template>
 
   <!-- tpl-nav-tab: one navigation tab button -->
   <template id="tpl-nav-tab">
@@ -152,6 +203,33 @@
     </div>
   </template>
 
-  <script type="module" src="/static/app.js?v=71"></script>
+  <div id="profile-sheet" class="bottom-sheet" hidden>
+    <div class="bottom-sheet-backdrop"></div>
+    <div class="bottom-sheet-panel">
+      <div class="bottom-sheet-handle"></div>
+      <div class="profile-sheet-user">
+        <div class="profile-sheet-avatar"><span id="profile-sheet-initial"></span></div>
+        <div>
+          <div class="profile-sheet-name" id="profile-sheet-name"></div>
+          <div class="profile-sheet-role" id="profile-sheet-role"></div>
+        </div>
+      </div>
+      <div class="profile-sheet-section">
+        <div class="profile-sheet-section-label" data-i18n="profileLanguage">Idioma</div>
+        <div class="profile-sheet-locale-row">
+          <button class="btn" data-locale="pt" type="button"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=2#ui-flag-br"></use></svg> PT</button>
+          <button class="btn" data-locale="en" type="button"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=2#ui-flag-us"></use></svg> EN</button>
+          <button class="btn" data-locale="es" type="button"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=2#ui-flag-es"></use></svg> ES</button>
+        </div>
+      </div>
+      <div class="profile-sheet-actions">
+        <button class="btn secondary" id="manage-sessions-btn" type="button"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=2#ui-sessions"></use></svg><span data-i18n="profileSessions">Gerenciar sessões</span></button>
+        <button class="btn secondary" id="change-password-btn" type="button"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=2#ui-password"></use></svg><span data-i18n="profileChangePassword">Alterar senha</span></button>
+        <button class="btn danger" id="sign-out-btn" type="button"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=2#ui-logout"></use></svg><span data-i18n="profileSignOut">Sair</span></button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/static/app.js?v=95"></script>
   </body>
 </html>

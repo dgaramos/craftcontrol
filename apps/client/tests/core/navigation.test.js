@@ -56,21 +56,56 @@ function makeTabsElement() {
   };
 }
 
+function makeBottomNavButton(tab) {
+  const btn = {
+    dataset: { tab },
+    className: "",
+    onclick: null,
+    click() { if (this.onclick) this.onclick(); },
+  };
+  btn.classList = {
+    toggle(cls, force) {
+      const classes = btn.className.split(" ").filter(Boolean).filter((c) => c !== cls);
+      const add = force !== undefined ? force : !btn.className.split(" ").includes(cls);
+      if (add) classes.push(cls);
+      btn.className = classes.join(" ");
+    },
+    contains(cls) { return btn.className.split(" ").includes(cls); },
+  };
+  return btn;
+}
+
+function makeBottomNavElement() {
+  const homeBtn = makeBottomNavButton("home");
+  const playersBtn = makeBottomNavButton("__players__");
+  const serverBtn = makeBottomNavButton("server");
+  const buttons = [homeBtn, playersBtn, serverBtn];
+  return {
+    _buttons: buttons,
+    querySelectorAll(sel) {
+      return sel === "button[data-tab]" ? buttons : [];
+    },
+  };
+}
+
 function makeEnv(initialTab = "home") {
   const state = {
     tab: initialTab,
     tabs: ["home", "world", "players", "analytics", "rules", "server"],
+    subscribe: jest.fn(),
   };
   const tabsEl = makeTabsElement();
+  const bottomNavEl = makeBottomNavElement();
   const tplNavTab = makeFakeNavTabTemplate();
   const $ = (sel) => {
     if (sel === "#tabs") return tabsEl;
     if (sel === "#tpl-nav-tab") return tplNavTab;
+    if (sel === "#bottom-nav") return bottomNavEl;
     return null;
   };
   const t = (key) => key;
   const uiIcon = (name) => name;
-  return { state, $, t, uiIcon, tabsEl };
+  return { state, $, t, uiIcon, tabsEl, bottomNavEl };
 }
 
 // ── renderTabs ────────────────────────────────────────────────────────────────
@@ -190,5 +225,126 @@ describe("createNavigation — openPlayers", () => {
     nav.renderTabs();
     nav.openPlayers();
     expect(state.tab).toBe("__players__");
+  });
+});
+
+// ── bottom-nav sync ───────────────────────────────────────────────────────────
+
+describe("createNavigation — bottom-nav sync", () => {
+  test("bottom-nav home button sets state.tab to 'home'", () => {
+    const { state, $, t, uiIcon, bottomNavEl } = makeEnv("__players__");
+    createNavigation({ state, $, t, uiIcon });
+    const homeBtn = bottomNavEl._buttons.find((b) => b.dataset.tab === "home");
+    homeBtn.click();
+    expect(state.tab).toBe("home");
+  });
+
+  test("bottom-nav players button sets state.tab to '__players__'", () => {
+    const { state, $, t, uiIcon, bottomNavEl } = makeEnv("home");
+    createNavigation({ state, $, t, uiIcon });
+    const playersBtn = bottomNavEl._buttons.find((b) => b.dataset.tab === "__players__");
+    playersBtn.click();
+    expect(state.tab).toBe("__players__");
+  });
+
+  test("bottom-nav server button sets state.tab to 'server'", () => {
+    const { state, $, t, uiIcon, bottomNavEl } = makeEnv("home");
+    createNavigation({ state, $, t, uiIcon });
+    const serverBtn = bottomNavEl._buttons.find((b) => b.dataset.tab === "server");
+    serverBtn.click();
+    expect(state.tab).toBe("server");
+  });
+
+  test("renderTabs marks home bottom-nav button active when tab is home", () => {
+    const { state, $, t, uiIcon, bottomNavEl } = makeEnv("home");
+    const nav = createNavigation({ state, $, t, uiIcon });
+    nav.renderTabs();
+    const homeBtn = bottomNavEl._buttons.find((b) => b.dataset.tab === "home");
+    expect(homeBtn.className).toBe("active");
+  });
+
+  test("renderTabs marks players bottom-nav button active when tab is __players__", () => {
+    const { state, $, t, uiIcon, bottomNavEl } = makeEnv("__players__");
+    const nav = createNavigation({ state, $, t, uiIcon });
+    nav.renderTabs();
+    const playersBtn = bottomNavEl._buttons.find((b) => b.dataset.tab === "__players__");
+    expect(playersBtn.className).toBe("active");
+  });
+
+  test("renderTabs marks server bottom-nav button active when tab is server", () => {
+    const { state, $, t, uiIcon, bottomNavEl } = makeEnv("server");
+    const nav = createNavigation({ state, $, t, uiIcon });
+    nav.renderTabs();
+    const serverBtn = bottomNavEl._buttons.find((b) => b.dataset.tab === "server");
+    expect(serverBtn.className).toBe("active");
+  });
+
+  test("renderTabs removes active from inactive bottom-nav buttons", () => {
+    const { state, $, t, uiIcon, bottomNavEl } = makeEnv("home");
+    const nav = createNavigation({ state, $, t, uiIcon });
+    nav.renderTabs();
+    const inactive = bottomNavEl._buttons.filter((b) => b.dataset.tab !== "home");
+    inactive.forEach((btn) => expect(btn.className).toBe(""));
+  });
+
+  test("__players__ state marks players bottom-nav button active", () => {
+    const { state, $, t, uiIcon, bottomNavEl } = makeEnv("__players__");
+    const nav = createNavigation({ state, $, t, uiIcon });
+    nav.renderTabs();
+    const playersBtn = bottomNavEl._buttons.find((b) => b.dataset.tab === "__players__");
+    expect(playersBtn.className).toBe("active");
+  });
+});
+
+// ── renderBottomNav ───────────────────────────────────────────────────────────
+
+describe("createNavigation — renderBottomNav", () => {
+  test("is exposed on the navigation object", () => {
+    const { state, $, t, uiIcon } = makeEnv("home");
+    const nav = createNavigation({ state, $, t, uiIcon });
+    expect(typeof nav.renderBottomNav).toBe("function");
+  });
+
+  test("marks home button active when state.tab is home", () => {
+    const { state, $, t, uiIcon, bottomNavEl } = makeEnv("home");
+    const nav = createNavigation({ state, $, t, uiIcon });
+    nav.renderBottomNav();
+    const homeBtn = bottomNavEl._buttons.find((b) => b.dataset.tab === "home");
+    expect(homeBtn.className).toBe("active");
+  });
+
+  test("marks __players__ button active when state.tab is __players__", () => {
+    const { state, $, t, uiIcon, bottomNavEl } = makeEnv("__players__");
+    const nav = createNavigation({ state, $, t, uiIcon });
+    nav.renderBottomNav();
+    const playersBtn = bottomNavEl._buttons.find((b) => b.dataset.tab === "__players__");
+    expect(playersBtn.className).toBe("active");
+  });
+
+  test("marks server button active when state.tab is server", () => {
+    const { state, $, t, uiIcon, bottomNavEl } = makeEnv("server");
+    const nav = createNavigation({ state, $, t, uiIcon });
+    nav.renderBottomNav();
+    const serverBtn = bottomNavEl._buttons.find((b) => b.dataset.tab === "server");
+    expect(serverBtn.className).toBe("active");
+  });
+
+  test("removes active from other buttons when home is active", () => {
+    const { state, $, t, uiIcon, bottomNavEl } = makeEnv("home");
+    const nav = createNavigation({ state, $, t, uiIcon });
+    nav.renderBottomNav();
+    const inactive = bottomNavEl._buttons.filter((b) => b.dataset.tab !== "home");
+    inactive.forEach((btn) => expect(btn.className).toBe(""));
+  });
+
+  test("internal tabs leave no bottom-nav button active", () => {
+    for (const tab of ["world", "analytics", "rules", "audit", "__time__"]) {
+      const { state, $, t, uiIcon, bottomNavEl } = makeEnv(tab);
+      const nav = createNavigation({ state, $, t, uiIcon });
+      nav.renderBottomNav();
+      // Internal tabs are reached via the top horizontal nav; the bottom-nav
+      // must not highlight any of the 3 visible buttons (home/players/server).
+      bottomNavEl._buttons.forEach((btn) => expect(btn.className).toBe(""));
+    }
   });
 });

@@ -22,6 +22,7 @@ return async function renderPlayerDetail(player, account, back = renderPlayersPa
       `<div class="player-detail-screen">`,
       `<button id="back-to-players" class="secondary player-back" type="button"></button>`,
       `<div class="player-detail-hero block-panel">`,
+      `<div class="grass-edge" aria-hidden="true"></div>`,
       `<div class="player-detail-identity">`,
       `<div class="player-avatar large" aria-hidden="true" id="detail-avatar"></div>`,
       `<div class="player-detail-identity-copy">`,

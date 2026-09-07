@@ -10,7 +10,7 @@
  */
 
 import { jest } from "@jest/globals";
-import { createOperationFeature } from "../../../static/js/features/server/operation.js";
+import { createOperationFeature, confirmedExpiresAt, isExpiredOperation, isUnresponsiveOperation, unresponsiveAt, nextOperationTransition, UNRESPONSIVE_AFTER_MS } from "../../../static/js/features/server/operation.js";
 import { makeStorage } from "../../helpers.js";
 import { makeOperation } from "../../factories.js";
 
@@ -586,5 +586,100 @@ describe("createOperationFeature — divergent stage rendering", () => {
     // evidence key "observed" must appear as a dt
     const dts = Array.from(el.querySelectorAll(".op-active-stage dt")).map((dt) => dt.textContent);
     expect(dts).toContain("observed");
+  });
+});
+
+describe("confirmed operations expire after their retention window", () => {
+  const HOUR = 60 * 60 * 1000;
+  const finishedAt = "2026-09-06T12:00:00Z";
+  const finishedMs = Date.parse(finishedAt);
+
+  test("a confirmed operation expires once the window closes", () => {
+    const op = makeOperation({ state: "confirmed", completed_at: finishedAt });
+    expect(isExpiredOperation(op, finishedMs + HOUR - 1000)).toBe(false);
+    expect(isExpiredOperation(op, finishedMs + HOUR)).toBe(true);
+  });
+
+  test("failed and divergent operations never expire — they still need a decision", () => {
+    const long = finishedMs + 100 * HOUR;
+    expect(isExpiredOperation(makeOperation({ state: "failed", completed_at: finishedAt }), long)).toBe(false);
+    expect(isExpiredOperation(makeOperation({ state: "divergent", completed_at: finishedAt }), long)).toBe(false);
+    expect(isExpiredOperation(makeOperation({ state: "running" }), long)).toBe(false);
+    expect(isExpiredOperation(null, long)).toBe(false);
+  });
+
+  test("a confirmed operation without a usable timestamp is kept", () => {
+    const op = makeOperation({ state: "confirmed", completed_at: null, updated_at: null });
+    expect(isExpiredOperation(op, Date.now())).toBe(false);
+    expect(confirmedExpiresAt(op)).toBeNull();
+  });
+
+  test("getOperation hides an expired operation and forgets its stored id", async () => {
+    const storage = makeStorage();
+    storage.setItem("craftcontrol-operation-id", "op-1");
+    const stale = makeOperation({ state: "confirmed", completed_at: new Date(Date.now() - 2 * HOUR).toISOString() });
+    const feature = createOperationFeature(makeDeps({
+      storage,
+      api: jest.fn().mockResolvedValue({ operation: stale }),
+    }));
+    await feature.initialize();
+
+    expect(feature.getOperation()).toBeNull();
+    expect(storage.getItem("craftcontrol-operation-id")).toBeNull();
+  });
+
+  test("getOperation keeps a recently confirmed operation", async () => {
+    const fresh = makeOperation({ state: "confirmed", completed_at: new Date(Date.now() - 60 * 1000).toISOString() });
+    const feature = createOperationFeature(makeDeps({ api: jest.fn().mockResolvedValue({ operation: fresh }) }));
+    await feature.initialize();
+
+    expect(feature.getOperation()).toEqual(fresh);
+  });
+});
+
+describe("a live operation that stops reporting is unresponsive, not in progress", () => {
+  const MINUTE = 60 * 1000;
+  const touchedAt = "2026-09-06T12:00:00Z";
+  const touchedMs = Date.parse(touchedAt);
+
+  test("running stays live while the backend keeps heartbeating updated_at", () => {
+    const op = makeOperation({ state: "running", updated_at: touchedAt });
+    // The backend writes a health observation every 5s and budgets 300s for the
+    // health wait, so minutes of silence must never be called dead.
+    expect(isUnresponsiveOperation(op, touchedMs + 5 * MINUTE)).toBe(false);
+    expect(isUnresponsiveOperation(op, touchedMs + 14 * MINUTE)).toBe(false);
+  });
+
+  test("running becomes unresponsive once the window closes", () => {
+    const op = makeOperation({ state: "running", updated_at: touchedAt });
+    expect(isUnresponsiveOperation(op, touchedMs + UNRESPONSIVE_AFTER_MS)).toBe(true);
+    expect(unresponsiveAt(op)).toBe(touchedMs + UNRESPONSIVE_AFTER_MS);
+  });
+
+  test("pending is covered too — it never reached a stage", () => {
+    const op = makeOperation({ state: "pending", updated_at: touchedAt });
+    expect(isUnresponsiveOperation(op, touchedMs + UNRESPONSIVE_AFTER_MS)).toBe(true);
+  });
+
+  test("terminal states are never unresponsive", () => {
+    const far = touchedMs + 100 * 60 * MINUTE;
+    for (const opState of ["confirmed", "failed", "divergent"]) {
+      expect(isUnresponsiveOperation(makeOperation({ state: opState, updated_at: touchedAt }), far)).toBe(false);
+    }
+    expect(isUnresponsiveOperation(null, far)).toBe(false);
+    expect(unresponsiveAt(null)).toBeNull();
+  });
+
+  test("an operation without a usable timestamp is never called unresponsive", () => {
+    const op = makeOperation({ state: "running", updated_at: null, created_at: null });
+    expect(isUnresponsiveOperation(op, Date.now())).toBe(false);
+  });
+
+  test("nextOperationTransition reports whichever change applies", () => {
+    const running = makeOperation({ state: "running", updated_at: touchedAt });
+    expect(nextOperationTransition(running)).toBe(touchedMs + UNRESPONSIVE_AFTER_MS);
+    const confirmed = makeOperation({ state: "confirmed", completed_at: touchedAt });
+    expect(nextOperationTransition(confirmed)).toBe(confirmedExpiresAt(confirmed));
+    expect(nextOperationTransition(makeOperation({ state: "failed", completed_at: touchedAt }))).toBeNull();
   });
 });

@@ -69,6 +69,12 @@ describe("brand contracts — CSRF and API versioning", () => {
 });
 
 describe("brand contracts — mobile scroll behaviour", () => {
+  test("scopes legacy sticky navigation styles to #tabs", () => {
+    const css = readFileSync(join(STATIC, "app.css"), "utf8");
+    expect(css).toContain("#tabs {\n  display: grid;");
+    expect(css).not.toMatch(/(?:^|\n)nav\s*\{/);
+  });
+
   test("app.css sets overscroll-behavior-y: none", () => {
     const css = readFileSync(join(STATIC, "app.css"), "utf8");
     expect(css).toContain("overscroll-behavior-y: none");
@@ -84,19 +90,42 @@ describe("brand contracts — mobile scroll behaviour", () => {
     expect(css).toContain("overflow-x: clip");
   });
 
-  test("navigation.js scrolls to top on tab change", () => {
+  /* <main> is the scroll container in the mobile shell, so window.scrollTo is a
+     no-op: a screen opened after scrolling would appear already scrolled down. */
+  test("tab changes reset the scroll container, not the window", () => {
     const nav = readFileSync(join(JS, "core", "navigation.js"), "utf8");
-    expect(nav).toContain('window.scrollTo({ top: 0, left: 0, behavior: "auto" })');
+    expect(nav).toContain("resetPanelScroll");
+    expect(nav).not.toContain("window.scrollTo");
+    const dom = readFileSync(join(JS, "core", "dom.js"), "utf8");
+    expect(dom).toContain("export function resetPanelScroll");
   });
 
-  test("index.html references app.css?v=28", () => {
+  test("index.html references app.css?v=48", () => {
     const template = readFileSync(join(FRONTEND, "templates", "index.html"), "utf8");
-    expect(template).toContain("/static/app.css?v=28");
+    expect(template).toContain("/static/app.css?v=48");
   });
 
-  test("index.html references app.js?v=71", () => {
+  test("index.html references app.js?v=95", () => {
     const template = readFileSync(join(FRONTEND, "templates", "index.html"), "utf8");
-    expect(template).toContain("/static/app.js?v=71");
+    expect(template).toContain("/static/app.js?v=95");
+  });
+
+  test("index.html links the self-hosted display and body fonts", () => {
+    const template = readFileSync(join(FRONTEND, "templates", "index.html"), "utf8");
+    expect(template).toContain("/static/fonts.css");
+  });
+
+  test("fonts.css self-hosts Oxanium and Geist without an external origin", () => {
+    const fonts = readFileSync(join(FRONTEND, "static", "fonts.css"), "utf8");
+    expect(fonts).toContain("font-family: 'Oxanium'");
+    expect(fonts).toContain("font-family: 'Geist'");
+    expect(fonts).not.toContain("https://");
+  });
+
+  test("app.css resolves the display and body font tokens", () => {
+    const css = readFileSync(join(FRONTEND, "static", "app.css"), "utf8");
+    expect(css).toContain("--font-display: Oxanium");
+    expect(css).toContain("--font-body: Geist");
   });
 });
 

@@ -14,6 +14,52 @@
 const STAGE_ORDER = ["review", "backup_verify", "prepare", "restart", "health_wait", "verify", "confirm"];
 const STORAGE_KEY = "craftcontrol-operation-id";
 
+/* A confirmed operation stays on screen for an hour after it finishes; past
+   that it is history, not status, and the panel goes empty. Failed and
+   divergent operations never expire — they still need an operator decision. */
+export const CONFIRMED_RETENTION_MS = 60 * 60 * 1000;
+
+export function confirmedExpiresAt(op) {
+  if (!op || op.state !== "confirmed") return null;
+  const finished = Date.parse(op.completed_at || op.updated_at || "");
+  if (!Number.isFinite(finished)) return null;
+  return finished + CONFIRMED_RETENTION_MS;
+}
+
+export function isExpiredOperation(op, now = Date.now()) {
+  const expiresAt = confirmedExpiresAt(op);
+  return expiresAt !== null && now >= expiresAt;
+}
+
+/* A live operation heartbeats `updated_at` constantly: the backend persists a
+   health observation every HEALTH_POLL_INTERVAL_SECONDS (5s) precisely to keep
+   it within ORPHAN_STALENESS_SECONDS (30s), and every stage transition writes
+   it too. Its longest budgeted stages are a 300s health wait and a 180s
+   restart. Silence far past those means the worker died before reaching a
+   terminal state — and the backend only reclaims such orphans when its process
+   restarts, so nothing else will clear it. The window is deliberately far
+   above any legitimate stage (a large world backup is the one step without a
+   heartbeat) to avoid ever calling a working operation dead. */
+export const UNRESPONSIVE_AFTER_MS = 15 * 60 * 1000;
+
+export function unresponsiveAt(op) {
+  if (!op || !["pending", "running"].includes(op.state)) return null;
+  const touched = Date.parse(op.updated_at || op.created_at || "");
+  if (!Number.isFinite(touched)) return null;
+  return touched + UNRESPONSIVE_AFTER_MS;
+}
+
+export function isUnresponsiveOperation(op, now = Date.now()) {
+  const at = unresponsiveAt(op);
+  return at !== null && now >= at;
+}
+
+/* The next instant at which this operation's presentation changes on its own,
+   so an open panel can re-evaluate without polling. */
+export function nextOperationTransition(op) {
+  return confirmedExpiresAt(op) ?? unresponsiveAt(op);
+}
+
 function operationDate(value, formatDate) {
   return value ? formatDate(value) : "";
 }
@@ -122,8 +168,21 @@ export function createOperationFeature({ api, t, formatDate, uiIcon, toast, stor
     return "pending";
   }
 
+  /* Icon per stage state. "pending" has no sprite in craftcontrol-ui.svg — it
+     is drawn as an empty marker, matching the handoff checklist and avoiding a
+     <use> that resolves to nothing. */
+  const STAGE_ICON = {
+    completed: "check",
+    skipped: "check",
+    running: "live",
+    failed: "close",
+    divergent: "warning",
+  };
+
   /**
    * Appends one .op-stage child per record into the given container element.
+   * Rendered as a vertical checklist: each stage is waiting, done, or failed —
+   * never a fake continuous progress bar.
    */
   function renderStageBar(stages, container) {
     stages.forEach((record) => {
@@ -134,21 +193,28 @@ export function createOperationFeature({ api, t, formatDate, uiIcon, toast, stor
 
       const div = document.createElement("div");
       div.className = `op-stage op-stage-${cls}`;
+      div.setAttribute("role", "listitem");
       div.title = title;
       div.setAttribute("aria-label", title);
 
-      const iconName =
-        cls === "completed" || cls === "skipped" ? "check"
-          : cls === "failed" || cls === "divergent" ? "close"
-            : "pending";
-      // icon slot: trusted static SVG markup from uiIcon()
       const iconSlot = document.createElement("span");
-      iconSlot.innerHTML = uiIcon(iconName);
+      iconSlot.className = "op-stage-icon";
+      const iconName = STAGE_ICON[cls];
+      // icon slot: trusted static SVG markup from uiIcon()
+      if (iconName) iconSlot.innerHTML = uiIcon(iconName);
       div.appendChild(iconSlot);
 
       const span = document.createElement("span");
+      span.className = "op-stage-label";
       span.textContent = label;
       div.appendChild(span);
+
+      if (timestamp) {
+        const time = document.createElement("small");
+        time.className = "op-stage-time";
+        time.textContent = timestamp;
+        div.appendChild(time);
+      }
 
       container.appendChild(div);
     });
@@ -551,6 +617,11 @@ export function createOperationFeature({ api, t, formatDate, uiIcon, toast, stor
   }
 
   function getOperation() {
+    if (isExpiredOperation(currentOperation)) {
+      // Drop the pointer too, so a reload does not resurrect stale history.
+      try { _storage.removeItem(STORAGE_KEY); } catch (_) { /* storage unavailable */ }
+      return null;
+    }
     return currentOperation;
   }
 

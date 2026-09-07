@@ -1,19 +1,68 @@
-import { persistTab } from "../../core/route.js?v=7";
+import { persistTab } from "../../core/route.js?v=8";
+import { resetPanelScroll } from "../../core/dom.js?v=8";
 
-export function createWorldFeature({ state, content, t, api, $, uiIcon, toast, getSettingsFeature, getNavigation }) {
+export function createWorldFeature({ state, content, t, api, $, uiIcon, toast, getSettingsFeature, getNavigation, refreshWorldCells = () => {} }) {
 function renderTimePanel() {
   const presets = ["sunrise", "day", "noon", "sunset", "night", "midnight"];
   const presetIcons = { sunrise: "sun", day: "sun", noon: "sun", sunset: "sun", night: "moon", midnight: "moon" };
+  const settings = getSettingsFeature();
   content.innerHTML = `
     <div class="time-screen">
-      <section class="time-card block-panel"><h3>${t("timeOfDay")}</h3><p>${state.locale === "pt" ? "Escolha um momento predefinido do ciclo completo." : "Choose a preset from the complete daylight cycle."}</p><div class="time-presets">${presets.map((preset) => `<button type="button" data-time-preset="${preset}"><span>${uiIcon(presetIcons[preset])}</span>${t(preset)}</button>`).join("")}</div></section>
-      <section class="time-card block-panel"><h3>${t("exactTime")}</h3><p>${t("exactTimeHelp")}</p><div class="command-row"><input id="exact-time" type="number" min="0" max="24000" value="0"><button type="button" id="set-exact-time">${t("setTime")}</button></div><h3 class="subheading">${t("advanceTime")}</h3><p>${t("advanceTimeHelp")}</p><div class="command-row"><input id="add-time" type="number" min="1" max="240000" value="1000"><button type="button" id="add-time-button">${t("addTime")}</button></div></section>
-      <section class="time-card block-panel"><h3>${t("cycles")}</h3><div class="cycle-row"><div><strong>${t("daylightCycle")}</strong><small>${state.locale === "pt" ? "Desative para congelar o horário atual." : "Disable to freeze the current time."}</small></div>${getSettingsFeature().booleanControl("time-daylight-cycle", state.gamerules.dodaylightcycle)}</div><div class="cycle-row"><div><strong>${t("weatherCycle")}</strong><small>${state.locale === "pt" ? "Desative para manter o clima escolhido." : "Disable to keep the selected weather."}</small></div>${getSettingsFeature().booleanControl("time-weather-cycle", state.gamerules.doweathercycle)}</div></section>
-      <section class="time-card block-panel"><h3>${t("weatherTitle")}</h3><p>${state.locale === "pt" ? "Escolha o clima e, se quiser, uma duração em ticks." : "Choose the weather and optionally set a duration in ticks."}</p><div class="weather-options"><button data-weather="clear">${uiIcon("sun")} ${t("clear")}</button><button data-weather="rain">${uiIcon("rain")} ${t("rain")}</button><button data-weather="thunder">${uiIcon("thunder")} ${t("thunder")}</button></div><input id="weather-duration" type="number" min="1" max="1000000" placeholder="${t("duration")}"><button id="weather-query" class="secondary wide">${t("queryWeather")}</button></section>
-      <section class="time-card block-panel"><h3>${t("timeQueries")}</h3><div class="query-buttons"><button data-time-query="daytime">${t("daytime")}</button><button data-time-query="gametime">${t("gametime")}</button><button data-time-query="day">${t("days")}</button></div><output id="time-query-result">${t("queryResult")}: —</output></section>
-      <section class="time-card danger-zone block-panel"><h3>${t("resetDays")}</h3><p>${t("resetDaysHelp")}</p><button id="reset-days" class="danger wide">${t("resetDays")}</button></section>
+      <section class="time-world block-panel">
+        <div class="grass-edge" aria-hidden="true"></div>
+        <div class="world-summary">
+          <div><small>${t("homeDay")}</small><strong data-world="day">—</strong></div>
+          <div><span class="world-label-row"><small>${t("homeTime")}</small><small class="world-ticks" data-world="ticks"></small></span><span class="world-value"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use data-world-icon="time" href="/static/craftcontrol-ui.svg#ui-sun"></use></svg><strong data-world="time">—</strong></span></div>
+          <div class="world-weather" data-world-cell="weather"><small>${t("homeWeather")}</small><span class="world-value"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use data-world-icon="weather" href="/static/craftcontrol-ui.svg#ui-sun"></use></svg><strong data-world="weather">—</strong></span></div>
+        </div>
+      </section>
+      <section class="time-group">
+        <span class="eyebrow">${t("timeOfDay")}</span>
+        <div class="time-presets">${presets.map((preset) => `<button type="button" data-time-preset="${preset}"><span>${uiIcon(presetIcons[preset])}</span>${t(preset)}</button>`).join("")}</div>
+      </section>
+      <section class="time-group">
+        <span class="eyebrow">${t("weatherTitle")}</span>
+        <div class="weather-options">
+          <button data-weather="clear" class="weather-clear">${uiIcon("sun")} ${t("clear")}</button>
+          <button data-weather="rain" class="weather-rain">${uiIcon("rain")} ${t("rain")}</button>
+          <button data-weather="thunder" class="weather-thunder">${uiIcon("thunder")} ${t("thunder")}</button>
+        </div>
+        <div class="weather-duration-row">
+          <span>${t("duration")}</span>
+          <input id="weather-duration" type="number" min="1" max="1000000" placeholder="${t("duration")}">
+        </div>
+      </section>
+      <section class="time-group">
+        <span class="eyebrow time-group-label">${t("cycles")}<b>${t("instant")}</b></span>
+        <div class="block-panel time-cycles">
+          <div class="cycle-row"><div><strong>${t("daylightCycle")}</strong><small>${state.locale === "pt" ? "Desative para congelar o horário atual." : "Disable to freeze the current time."}</small></div>${settings.booleanControl("time-daylight-cycle", state.gamerules.dodaylightcycle)}</div>
+          <div class="cycle-row"><div><strong>${t("weatherCycle")}</strong><small>${state.locale === "pt" ? "Desative para manter o clima escolhido." : "Disable to keep the selected weather."}</small></div>${settings.booleanControl("time-weather-cycle", state.gamerules.doweathercycle)}</div>
+        </div>
+      </section>
+      <details class="time-advanced">
+        <summary><span>${t("advancedControls")}</span>${uiIcon("chevron")}</summary>
+        <div class="time-advanced-body">
+          <div><span class="eyebrow">${t("exactTime")}</span><div class="command-row"><input id="exact-time" type="number" min="0" max="24000" value="0"><button type="button" id="set-exact-time" class="primary">${t("setTime")}</button></div></div>
+          <div><span class="eyebrow">${t("advanceTime")}</span><div class="command-row"><input id="add-time" type="number" min="1" max="240000" value="1000"><button type="button" id="add-time-button">${t("addTime")}</button></div></div>
+          <div>
+            <span class="eyebrow">${t("timeQueries")}</span>
+            <div class="query-buttons">
+              <button data-time-query="daytime">${t("daytime")}</button>
+              <button data-time-query="gametime">${t("gametime")}</button>
+              <button data-time-query="day">${t("days")}</button>
+              <button id="weather-query">${t("queryWeather")}</button>
+            </div>
+            <output id="time-query-result">${t("queryResult")}: —</output>
+          </div>
+        </div>
+      </details>
+      <section class="time-danger">
+        <div><strong>${t("resetDays")}</strong><small>${t("resetDaysHelp")}</small></div>
+        <button id="reset-days" class="danger">${t("resetDays")}</button>
+      </section>
     </div>`;
   bindTimePanel();
+  refreshWorldCells();
 }
 
 const READ_ONLY_TIME_ACTIONS = new Set(["weather-query", "query"]);
@@ -72,7 +121,7 @@ function bindTimePanel() {
     persistTab(state.tab);
     getNavigation().renderTabs();
     renderTimePanel();
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    resetPanelScroll("smooth");
   };
   const renderWorld = () => {
     const prefix = `<button class="section-feature" id="open-time"><span>${uiIcon("sun")}</span><div><strong>${t("timeControls")}</strong><small>${t("timeControlsHint")}</small></div><b>›</b></button>`;

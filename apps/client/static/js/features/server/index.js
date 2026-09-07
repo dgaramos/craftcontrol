@@ -1,4 +1,4 @@
-import { createOperationFeature } from "./operation.js?v=13";
+import { createOperationFeature, isUnresponsiveOperation, nextOperationTransition } from "./operation.js?v=15";
 
 export function createServerFeature({ state, content, t, api, $, escapeHtml, uiIcon, formatDate, toast, getSettingsFeature }) {
 function telemetryPackMarkup() {
@@ -328,25 +328,50 @@ async function loadFrontendVersion() {
 
 const operationFeature = createOperationFeature({ api, t, formatDate, uiIcon, toast });
 
+let _operationTransitionTimer = null;
+
 function refreshOperationPanel() {
   const container = $("#operation-progress-container");
   const indicator = $("#operation-indicator");
   const indicatorLabel = $("#operation-indicator-label");
   const op = operationFeature.getOperation();
-  if (indicator) {
-    indicator.hidden = !op;
-    indicator.classList?.toggle("op-indicator-terminal", !!op && !["pending", "running"].includes(op.state));
-  }
-  if (indicatorLabel) indicatorLabel.textContent = op ? (t(`opState_${op.state}`) || op.state) : "";
+  if (indicator) indicator.hidden = true;
+  if (indicatorLabel) indicatorLabel.textContent = "";
+  publishOperationState(op);
+  scheduleOperationTransition(op);
   if (!container) return;
   const frag = op ? operationFeature.renderOperation(op) : null;
   container.replaceChildren(...(frag ? [frag] : []));
   operationFeature.bindRecoveryActions(container);
 }
 
-operationFeature.setUpdateCallback((op) => {
+/* The indicator bars read only from state; composition owns how they look.
+   An unresponsive operation is deliberately NOT "active": it must stop
+   blocking restart, stop, time controls and the save affordance. */
+function publishOperationState(op) {
+  const live = !!(op && ["pending", "running"].includes(op.state));
+  const stalled = live && isUnresponsiveOperation(op);
+  state.batch(() => {
+    state.operationState = live ? op.state : null;
+    state.operationStalled = stalled;
+    state.operationActive = live && !stalled;
+  });
+}
+
+/* Re-evaluate exactly when the operation's presentation changes on its own —
+   a confirmed one ageing out, or a live one falling silent — so an open panel
+   updates without polling. */
+function scheduleOperationTransition(op) {
+  if (_operationTransitionTimer) { clearTimeout(_operationTransitionTimer); _operationTransitionTimer = null; }
+  const at = nextOperationTransition(op);
+  if (at === null) return;
+  const delay = at - Date.now();
+  if (delay <= 0) return;
+  _operationTransitionTimer = setTimeout(() => { _operationTransitionTimer = null; refreshOperationPanel(); }, delay);
+}
+
+operationFeature.setUpdateCallback(() => {
   const wasActive = state.operationActive;
-  state.operationActive = !!(op && (op.state === "pending" || op.state === "running"));
   refreshOperationPanel();
   if (state.operationActive && !wasActive) openOperationDrawer();
 });
@@ -358,15 +383,75 @@ function openOperationDrawer() {
 
 async function initializeOperationProgress() {
   await operationFeature.initialize();
-  const op = operationFeature.getOperation();
-  state.operationActive = !!(op && (op.state === "pending" || op.state === "running"));
   refreshOperationPanel();
   if (state.operationActive) openOperationDrawer();
 }
 
-  const renderServer = () => {
+  function renderServerPanel() {
+    const serverName = state.config?.SERVER_NAME || "Minecraft Bedrock";
+    const disabled = state.operationActive ? " disabled" : "";
+    const isOwner = state.user?.role === "owner";
+    const online = !!state.status?.online;
+    const stateLabel = online ? t("online") : t("stopped");
+    const stateTitle = online ? t("serverOnline") : t("serverStopped");
+    content.innerHTML = `
+      <section class="server-panel block-panel">
+        <div class="server-panel-header">
+          <span class="eyebrow">${t("administration")}</span>
+          <h2>${t("server")}</h2>
+        </div>
+        <section class="server-status-card ${online ? "" : "offline"}" aria-label="${stateTitle}">
+          <div class="server-status-summary">
+            <span class="server-status-shield">${uiIcon("shield")}</span>
+            <span><small>${t("serverStateLabel")}</small><strong>${stateLabel} · ${escapeHtml(serverName)}</strong></span>
+          </div>
+          <div class="server-status-row">
+            <button class="secondary" id="sp-restart" type="button"${disabled}>
+              ${uiIcon("restart")} <span>${t("restart")}</span>
+            </button>
+            <button class="danger" id="sp-stop" type="button"${disabled}>
+              ${uiIcon("close")} <span>${t("stop")}</span>
+            </button>
+          </div>
+        </section>
+        <button class="server-rules-card" id="sp-rules" type="button">
+          <span class="server-rules-icon">${uiIcon("rules")}</span>
+          <div class="server-rules-card-text">
+            <span><b>${t("instant")}</b><small>${t("noRestart")}</small></span>
+            <strong>${t("rules")}</strong>
+            <small>${t("rulesLiveHelp")}</small>
+          </div>
+          <span class="server-nav-item-arrow" aria-hidden="true">›</span>
+        </button>
+        <p class="server-restart-label"><span aria-hidden="true">↻</span><span>${t("restartRequiredShort")}</span></p>
+        <nav class="server-nav-list">
+          <button class="server-nav-item" type="button" data-sp-tab="world">${uiIcon("world")}<span><small>${t("configuration")}</small><strong>${t("world")}</strong></span><span class="server-nav-item-arrow">›</span></button>
+          <button class="server-nav-item" type="button" data-sp-tab="__server_settings__">${uiIcon("server")}<span><small>${t("infrastructure")}</small><strong>${t("settings")}</strong></span><span class="server-nav-item-arrow">›</span></button>
+          <button class="server-nav-item" type="button" data-sp-tab="analytics">${uiIcon("data")}<span><small>${t("analyticsKicker")}</small><strong>${t("analytics")}</strong></span><span class="server-nav-item-arrow">›</span></button>
+          ${isOwner ? `<button class="server-nav-item" type="button" data-sp-tab="audit">${uiIcon("activity")}<span><small>${t("historyLabel")}</small><strong>${t("audit")}</strong></span><span class="server-nav-item-arrow">›</span></button>` : ""}
+        </nav>
+      </section>`;
+    content.querySelector("#sp-restart")?.addEventListener("click", async () => {
+      if (!confirm(t("confirmAction", t("restart")))) return;
+      try { await api("/api/server/restart", { method: "POST" }); }
+      catch (error) { toast(error.message, true); }
+    });
+    content.querySelector("#sp-stop")?.addEventListener("click", async () => {
+      if (!confirm(t("confirmAction", t("stop")))) return;
+      try { await api("/api/server/stop", { method: "POST" }); }
+      catch (error) { toast(error.message, true); }
+    });
+    content.querySelector("#sp-rules")?.addEventListener("click", () => { state.tab = "rules"; });
+    content.querySelectorAll("[data-sp-tab]").forEach((btn) => {
+      btn.addEventListener("click", () => { state.tab = btn.dataset.spTab; });
+    });
+    loadTelemetryPack();
+  }
+
+  const renderServer = renderServerPanel;
+  const renderServerSettings = () => {
     getSettingsFeature().renderSettingsGroups(["Packs", "Rede", "Avançado"], telemetryPackMarkup());
     loadTelemetryPack();
   };
-  return { renderServer, renderReleaseTags, loadFrontendVersion, initializeOperationProgress, loadDiagnostics, openOperationDrawer, refreshOperationPanel };
+  return { renderServer, renderServerSettings, renderReleaseTags, loadFrontendVersion, initializeOperationProgress, loadDiagnostics, openOperationDrawer, refreshOperationPanel };
 }

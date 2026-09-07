@@ -2,6 +2,8 @@
 // Do not edit by hand; run: python packages/contracts/generate_types.py --write
 export const contractVersion: "1.2.0";
 
+export type AnalyticsExport = { manifest: ExportManifest; records: Array<AnalyticsExportRecord>; };
+export type AnalyticsExportRecord = { section: string; metric: string; key: string; rank: number | null; player: PlayerExportReference | null; value: number | string | null; source: string; };
 export type Error = { error: string; capability?: string; };
 export type ExportManifest = { export_schema_version: number; resource: string; format: "json" | "csv"; filters: JsonMap; generated_at: number; row_count: number; timezone: string; row_limit: number; truncated: boolean; };
 export type ExportRefusal = { error: string; limit: "record" | "byte"; measured: number; allowed: number; hint?: string; };

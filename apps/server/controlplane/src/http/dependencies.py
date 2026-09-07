@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from flask import current_app
 
+from ..players.analytics_exports import AnalyticsExportService
 from ..players.exports import PlayerExportService
 from ..runtime import ManagerService
 from ..telemetry.installer import TelemetryPackInstaller
@@ -20,3 +21,7 @@ def telemetry_installer() -> TelemetryPackInstaller:
 
 def player_exports() -> PlayerExportService:
     return PlayerExportService(manager().player_service)
+
+
+def analytics_exports() -> AnalyticsExportService:
+    return AnalyticsExportService(manager().player_service)

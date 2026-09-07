@@ -747,6 +747,136 @@
         }
       }
     },
+    "/api/exports/analytics/{resource}": {
+      "get": {
+        "operationId": "exportAnalyticsResource",
+        "summary": "Export an analytics resource as JSON or CSV",
+        "description": "Owner-only bounded export of one analytics aggregate, flattened into measure rows with a stable column set. Refused with 422 beyond the ceilings in docs/exports.md; never truncated. Every authenticated attempt is audited.",
+        "parameters": [
+          {
+            "name": "resource",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "rankings",
+                "periods",
+                "blocks",
+                "combat",
+                "exploration"
+              ]
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "json",
+                "csv"
+              ],
+              "default": "json"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "description": "Period for the periods resource; unsupported by the others.",
+            "schema": {
+              "type": "integer",
+              "enum": [
+                7,
+                30
+              ],
+              "default": 30
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Entries per ranking, matching the analytics endpoints' own bound.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 25,
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Export payload with its manifest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyticsExport"
+                }
+              },
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed or unsupported filter",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing the data.export capability",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown export resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Export exceeds a documented ceiling and is refused whole",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportRefusal"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/exports/players/{resource}": {
       "get": {
         "operationId": "exportPlayerResource",
@@ -2010,6 +2140,76 @@
       }
     },
     "schemas": {
+      "AnalyticsExport": {
+        "type": "object",
+        "required": [
+          "manifest",
+          "records"
+        ],
+        "properties": {
+          "manifest": {
+            "$ref": "#/components/schemas/ExportManifest"
+          },
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AnalyticsExportRecord"
+            }
+          }
+        }
+      },
+      "AnalyticsExportRecord": {
+        "type": "object",
+        "description": "One measure and the coordinates identifying it: the slice it came from, what it measures, the non-player dimension, the rank and the player when there is one.",
+        "required": [
+          "section",
+          "metric",
+          "key",
+          "rank",
+          "player",
+          "value",
+          "source"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "section": {
+            "type": "string"
+          },
+          "metric": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "rank": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "player": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PlayerExportReference"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "value": {
+            "type": [
+              "number",
+              "string",
+              "null"
+            ]
+          },
+          "source": {
+            "type": "string"
+          }
+        }
+      },
       "Error": {
         "type": "object",
         "required": [

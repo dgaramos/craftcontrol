@@ -22,12 +22,12 @@ export function createActivityView({ state, t, optionLabel, uiIcon, gameTermMark
     if (details.killer) items.push([t("killedBy"), details.killer, "entity"]);
     if (details.projectile) items.push([t("projectile"), details.projectile, "entity"]);
     if (details.permission) items.push([t("permission"), optionLabel(details.permission)]);
-    if (details.dimension) items.push([state.locale === "pt" ? "Dimensão" : state.locale === "es" ? "Dimensión" : "Dimension", String(details.dimension).replace(/^minecraft:/, "")]);
+    if (details.dimension) items.push([t("dimensionLabel"), String(details.dimension).replace(/^minecraft:/, "")]);
     if (details.from_dimension) items.push([t("fromDimension"), String(details.from_dimension).replace(/^minecraft:/, "")]);
     if (details.to_dimension) items.push([t("toDimension"), String(details.to_dimension).replace(/^minecraft:/, "")]);
     const coordinates = details.coordinates || {};
-    if (Object.keys(coordinates).length) items.push([state.locale === "pt" ? "Coordenadas" : state.locale === "es" ? "Coordenadas" : "Coordinates", [coordinates.x, coordinates.y, coordinates.z].filter((value) => value !== undefined).join(", ")]);
-    if (details.inferred) items.push([state.locale === "pt" ? "Observação" : state.locale === "es" ? "Nota" : "Note", t("inferredExit")]);
+    if (Object.keys(coordinates).length) items.push([t("coordinatesLabel"), [coordinates.x, coordinates.y, coordinates.z].filter((value) => value !== undefined).join(", ")]);
+    if (details.inferred) items.push([t("noteLabel"), t("inferredExit")]);
     return items.length ? `<dl class="analytics-event-details">${items.map(([label, value, kind]) => `<div><dt>${escapeHtml(label)}</dt><dd>${kind ? gameTermMarkup(value, kind) : escapeHtml(value)}</dd></div>`).join("")}</dl>` : "";
   };
 

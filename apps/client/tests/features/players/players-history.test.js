@@ -1,8 +1,9 @@
 import { createPlayerHistory } from "../../../static/js/features/players/history.js";
+import { createI18n } from "../../../static/js/i18n/index.js";
 
 function makeDeps(locale = "en") {
   const state = { locale };
-  const t = (key) => key;
+  const t = createI18n(() => locale).t;
   const escapeHtml = (s) => String(s).replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const gameLabel = (value, kind) => String(value);
   const gameIcon = () => `<svg/>`;
@@ -18,7 +19,7 @@ function makeDeps(locale = "en") {
 describe("createPlayerHistory — historyMarkup", () => {
   test("returns empty message for no events", () => {
     const { historyMarkup } = createPlayerHistory(makeDeps());
-    expect(historyMarkup([])).toContain("noHistory");
+    expect(historyMarkup([])).toContain("No events recorded.");
   });
 
   test("renders timeline list for events", () => {
@@ -42,6 +43,20 @@ describe("createPlayerHistory — historyMarkup", () => {
     const html = historyMarkup(events);
     expect(html).toContain("Died");
     expect(html).toContain("fall");
+  });
+
+  test.each([
+    ["player.respawned", "en", "Respawned"],
+    ["player.respawned", "pt", "Renasceu"],
+    ["player.respawned", "es", "Reapareció"],
+    ["player.dimension.changed", "en", "Changed dimension"],
+    ["player.dimension.changed", "pt", "Mudou de dimensão"],
+    ["player.dimension.changed", "es", "Cambió de dimensión"],
+  ])("labels %s in %s instead of the raw topic", (topic, locale, label) => {
+    const { historyMarkup } = createPlayerHistory(makeDeps(locale));
+    const html = historyMarkup([{ topic, timestamp: 1700000000, payload: {} }]);
+    expect(html).toContain(label);
+    expect(html).not.toContain(topic);
   });
 
   test("unknown topic falls back to topic string", () => {
@@ -70,7 +85,7 @@ describe("createPlayerHistory — historyMarkup", () => {
 describe("createPlayerHistory — sessionsMarkup", () => {
   test("returns empty message for no sessions", () => {
     const { sessionsMarkup } = createPlayerHistory(makeDeps());
-    expect(sessionsMarkup([])).toContain("noHistory");
+    expect(sessionsMarkup([])).toContain("No events recorded.");
   });
 
   test("renders active session", () => {
@@ -86,7 +101,7 @@ describe("createPlayerHistory — sessionsMarkup", () => {
     const sessions = [{ active: false, inferred: false, duration_seconds: 60, connected_at: 1700000000, disconnected_at: 1700000060 }];
     const html = sessionsMarkup(sessions);
     expect(html).toContain("Session ended");
-    expect(html).toContain("normalExit");
+    expect(html).toContain("Normal exit");
   });
 
   test("renders inferred session", () => {
@@ -94,7 +109,7 @@ describe("createPlayerHistory — sessionsMarkup", () => {
     const sessions = [{ active: false, inferred: true, duration_seconds: 60, connected_at: 1700000000 }];
     const html = sessionsMarkup(sessions);
     expect(html).toContain("is-inferred");
-    expect(html).toContain("inferredExit");
+    expect(html).toContain("Inferred closure");
   });
 
   test("close_reason appears when not disconnect", () => {
@@ -116,7 +131,7 @@ describe("createPlayerHistory — sessionsMarkup", () => {
 describe("createPlayerHistory — deathHistoryMarkup", () => {
   test("returns no deaths message for empty events", () => {
     const { deathHistoryMarkup } = createPlayerHistory(makeDeps());
-    expect(deathHistoryMarkup([])).toContain("noDeaths");
+    expect(deathHistoryMarkup([])).toContain("No detailed deaths recorded.");
   });
 
   test("renders death events", () => {
@@ -130,14 +145,14 @@ describe("createPlayerHistory — deathHistoryMarkup", () => {
   test("ignores non-death events", () => {
     const { deathHistoryMarkup } = createPlayerHistory(makeDeps());
     const events = [{ topic: "player.connected", timestamp: 1700000000, payload: {} }];
-    expect(deathHistoryMarkup(events)).toContain("noDeaths");
+    expect(deathHistoryMarkup(events)).toContain("No detailed deaths recorded.");
   });
 
   test("behavior pack source shows telemetrySource", () => {
     const { deathHistoryMarkup } = createPlayerHistory(makeDeps());
     const events = [{ topic: "player.death", timestamp: 1700000000, payload: { cause: "fall" }, source: "behavior-pack" }];
     const html = deathHistoryMarkup(events);
-    expect(html).toContain("telemetrySource");
+    expect(html).toContain("Behavior pack");
   });
 
   test("renders killer variants, projectile evidence, and fallback values", () => {
@@ -199,6 +214,17 @@ describe("createPlayerHistory — profileMarkup", () => {
     };
     const html = profileMarkup(profile);
     expect(html).toContain("<b>1</b>");
+  });
+
+  test.each([
+    ["en", "permanent aggregates", "Player history"],
+    ["pt", "agregados permanentes", "Histórico do jogador"],
+    ["es", "agregados permanentes", "Historial del jugador"],
+  ])("explains the non-authoritative history in %s", (locale, help, title) => {
+    const { profileMarkup } = createPlayerHistory(makeDeps(locale));
+    const html = profileMarkup({ name: "Player", permission: "member", aliases: [], history: [], sessions: [], last_death_at: null });
+    expect(html).toContain(help);
+    expect(html).toContain(title);
   });
 
   test("uses collection fallbacks for incomplete profiles", () => {

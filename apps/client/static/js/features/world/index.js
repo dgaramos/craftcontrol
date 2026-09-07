@@ -8,6 +8,10 @@ function renderTimePanel() {
   const settings = getSettingsFeature();
   content.innerHTML = `
     <div class="time-screen">
+      <header class="inner-heading">
+        <span class="eyebrow">${t("configuration")}</span>
+        <h2>${t("timeControls")}</h2>
+      </header>
       <section class="time-world block-panel">
         <div class="grass-edge" aria-hidden="true"></div>
         <div class="world-summary">
@@ -35,8 +39,8 @@ function renderTimePanel() {
       <section class="time-group">
         <span class="eyebrow time-group-label">${t("cycles")}<b>${t("instant")}</b></span>
         <div class="block-panel time-cycles">
-          <div class="cycle-row"><div><strong>${t("daylightCycle")}</strong><small>${state.locale === "pt" ? "Desative para congelar o horário atual." : "Disable to freeze the current time."}</small></div>${settings.booleanControl("time-daylight-cycle", state.gamerules.dodaylightcycle)}</div>
-          <div class="cycle-row"><div><strong>${t("weatherCycle")}</strong><small>${state.locale === "pt" ? "Desative para manter o clima escolhido." : "Disable to keep the selected weather."}</small></div>${settings.booleanControl("time-weather-cycle", state.gamerules.doweathercycle)}</div>
+          <div class="cycle-row"><div><strong>${t("daylightCycle")}</strong><small>${t("daylightCycleHelp")}</small></div>${settings.booleanControl("time-daylight-cycle", state.gamerules.dodaylightcycle)}</div>
+          <div class="cycle-row"><div><strong>${t("weatherCycle")}</strong><small>${t("weatherCycleHelp")}</small></div>${settings.booleanControl("time-weather-cycle", state.gamerules.doweathercycle)}</div>
         </div>
       </section>
       <details class="time-advanced">

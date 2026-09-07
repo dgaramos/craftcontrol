@@ -32,11 +32,11 @@ export function createAuditFeature({ state, content, t, api, $, escapeHtml, toas
     const result = escapeHtml(rec.result);
     return `
       <tr>
-        <td>${actor}</td>
-        <td><span class="audit-action-code">${action}</span></td>
-        <td><span class="audit-target" title="${target}">${target}</span></td>
-        <td><span class="audit-outcome ${outcomeClass(rec.result)}">${result}</span></td>
-        <td class="audit-date">${date}</td>
+        <td data-label="${escapeHtml(t("auditActor"))}">${actor}</td>
+        <td data-label="${escapeHtml(t("auditAction"))}"><span class="audit-action-code">${action}</span></td>
+        <td data-label="${escapeHtml(t("auditTarget"))}"><span class="audit-target" title="${target}">${target}</span></td>
+        <td data-label="${escapeHtml(t("auditResult"))}"><span class="audit-outcome ${outcomeClass(rec.result)}">${result}</span></td>
+        <td data-label="${escapeHtml(t("auditDate"))}" class="audit-date">${date}</td>
       </tr>`;
   }
 
@@ -137,16 +137,11 @@ export function createAuditFeature({ state, content, t, api, $, escapeHtml, toas
 
     content.innerHTML = `
       <section class="audit-panel">
-        <div class="block-panel hero">
-          <div class="grass-edge"></div>
-          <div class="audit-hero">
-            <div>
-              <span class="eyebrow">CRAFTCONTROL</span>
-              <h2>${escapeHtml(t("auditTitle"))}</h2>
-            </div>
-          </div>
-        </div>
-        <div class="block-panel" style="padding:0;overflow:hidden;">
+        <header class="inner-heading">
+          <span class="eyebrow">${escapeHtml(t("historyLabel"))}</span>
+          <h2>${escapeHtml(t("auditTitle"))}</h2>
+        </header>
+        <div class="audit-table-card block-panel">
           ${renderFilters()}
           ${renderTable(data)}
         </div>

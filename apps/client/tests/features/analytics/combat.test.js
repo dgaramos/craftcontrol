@@ -23,6 +23,7 @@ describe("createCombatPanel", () => {
     const render = createCombatPanel(deps);
     await render();
     expect(deps.content.innerHTML).toContain("combat-screen");
+    expect(deps.content.innerHTML).toContain('<span class="eyebrow">combatLogKicker</span>');
   });
 
   test("combat target innerHTML is set after api resolves", async () => {

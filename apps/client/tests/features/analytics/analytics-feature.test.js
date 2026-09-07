@@ -20,6 +20,7 @@ describe("createAnalyticsFeature — factory setup", () => {
     const { render } = createAnalyticsFeature(deps);
     await render();
     expect(deps.content.innerHTML).toContain("analytics-screen");
+    expect(deps.content.innerHTML).toContain('<span class="eyebrow">analyticsKicker</span>');
   });
 
   test("render delegates to renderRankingsPanel for rankings kind", async () => {

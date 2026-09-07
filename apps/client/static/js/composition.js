@@ -9,17 +9,17 @@ import { connectInvalidation } from "./core/invalidation.js?v=7";
 import { createNavigation } from "./core/navigation.js?v=9";
 import { toast } from "./components/feedback.js?v=7";
 import { formatDate as formatLocalizedDate, formatDuration, sessionMoment as localizedSessionMoment, timelineTimestamp as localizedTimelineTimestamp } from "./components/time.js?v=9";
-import { createAnalyticsFeature } from "./features/analytics/index.js?v=8";
-import { createPlayersFeature } from "./features/players/index.js?v=8";
-import { createWorldFeature } from "./features/world/index.js?v=11";
+import { createAnalyticsFeature } from "./features/analytics/index.js?v=9";
+import { createPlayersFeature } from "./features/players/index.js?v=9";
+import { createWorldFeature } from "./features/world/index.js?v=12";
 import { createRulesFeature } from "./features/rules/index.js?v=7";
-import { createServerFeature } from "./features/server/index.js?v=18";
+import { createServerFeature } from "./features/server/index.js?v=19";
 import { UNRESPONSIVE_AFTER_MS } from "./features/server/operation.js?v=15";
 import { startAuthenticatedApplication } from "./features/auth/bootstrap.js?v=7";
-import { createSettingsFeature } from "./features/settings/index.js?v=8";
-import { createAuditFeature } from "./features/audit/index.js?v=1";
+import { createSettingsFeature } from "./features/settings/index.js?v=9";
+import { createAuditFeature } from "./features/audit/index.js?v=2";
 import { createHomeFeature } from "./features/home/index.js?v=7";
-import { createI18n } from "./i18n/index.js?v=12";
+import { createI18n } from "./i18n/index.js?v=14";
 import { createGameTerms } from "./i18n/game-terms.js?v=7";
 
 export function startApplication() {
@@ -86,7 +86,7 @@ export function startApplication() {
     if (state.tab === "audit") return getAuditFeature().renderAuditPanel();
     if (state.tab === "world") getWorldFeature().renderWorld();
     else if (state.tab === "rules") getRulesFeature().renderRules();
-    else if (state.tab === "server") { getServerFeature().renderServer(); getServerFeature().loadDiagnostics(); }
+    else if (state.tab === "server") getServerFeature().renderServer();
   }
 
   let worldFeature = null;

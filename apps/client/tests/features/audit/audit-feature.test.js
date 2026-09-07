@@ -67,6 +67,9 @@ describe("createAuditFeature — happy path", () => {
     expect(deps.content.innerHTML).toContain("alice");
     expect(deps.content.innerHTML).toContain("auth.login");
     expect(deps.content.innerHTML).toContain("bob");
+    for (const label of ["auditActor", "auditAction", "auditTarget", "auditResult", "auditDate"]) {
+      expect(deps.content.innerHTML).toContain(`data-label="${label}"`);
+    }
   });
 
   test("renderAuditPanel renders the panel heading", async () => {
@@ -177,7 +180,7 @@ describe("createAuditFeature — empty state", () => {
     const { renderAuditPanel } = createAuditFeature(deps);
     await renderAuditPanel();
     expect(deps.content.innerHTML).toContain("auditEmpty");
-    expect(deps.content.innerHTML).not.toContain("audit-table");
+    expect(deps.content.innerHTML).not.toContain('<table class="audit-table">');
   });
 
   test("empty state still renders filter row", async () => {
@@ -447,7 +450,7 @@ describe("createAuditFeature — renderTable null records", () => {
     const { renderAuditPanel } = createAuditFeature(deps);
     await renderAuditPanel();
     expect(deps.content.innerHTML).toContain("auditEmpty");
-    expect(deps.content.innerHTML).not.toContain("audit-table");
+    expect(deps.content.innerHTML).not.toContain('<table class="audit-table">');
   });
 
   test("undefined records field renders empty state", async () => {

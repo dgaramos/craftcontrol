@@ -27,7 +27,7 @@
 .player-overview span { min-width: 0; padding: 9px 4px; color: var(--copper-light); font-family: var(--font-display); font-size: 9px; font-weight: 800; letter-spacing: .16em; text-align: center; text-transform: uppercase; background: #0e1410e8; border: 2px solid #080a08; border-top-color: #3b473f; box-shadow: inset 1px 1px 0 #303b33; }
 .player-overview b { display: block; overflow: hidden; margin-bottom: 4px; color: var(--text); font-family: var(--font-display); font-size: 16px; font-weight: 800; letter-spacing: 0; text-overflow: ellipsis; text-transform: none; }
 .player-toolbar { margin-bottom: 11px; }
-.player-toolbar input { width: 100%; min-height: 44px; padding: 9px 12px; color: var(--text); font-size: 13px; background: #0c100d; border: 3px solid #080a08; border-bottom-color: #414842; border-right-color: #414842; border-radius: 0; }
+.player-toolbar input { width: 100%; min-height: 44px; padding: 9px 12px; color: var(--text); font-size: 13px; background: var(--surface-inset); border: 3px solid #080a08; border-bottom-color: #414842; border-right-color: #414842; border-radius: 0; }
 .player-toolbar input:focus { outline: 2px solid var(--grass-light); }
 .player-filters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 6px; }
 .player-filters button { min-width: 0; min-height: 36px; padding: 3px 4px; color: var(--muted); font-family: var(--font-display); font-size: 10px; font-weight: 800; letter-spacing: .5px; box-shadow: 0 3px 0 #080a08; }
@@ -194,7 +194,7 @@
   min-height: 34px; padding: 0 8px;
   width: auto; font-size: .72rem;
 }
-.gamemode-select { min-height: 34px; padding: 0 6px; color: var(--grass-light); background: #0c100d; border: 2px solid #080a08; border-bottom-color: #414842; border-right-color: #414842; border-radius: 0; width: 100%; font-family: var(--font-display); font-size: 11px; font-weight: 700; cursor: pointer; }
+.gamemode-select { min-height: 34px; padding: 0 6px; color: var(--grass-light); background: var(--surface-inset); border: 2px solid #080a08; border-bottom-color: #414842; border-right-color: #414842; border-radius: 0; width: 100%; font-family: var(--font-display); font-size: 11px; font-weight: 700; cursor: pointer; }
 .gamemode-select:focus { outline: 2px solid var(--grass-light); }
 .player-access-compact { padding: 18px; }
 .player-access-compact .panel-access-actions { margin-top: 12px; }
@@ -255,7 +255,7 @@
 .player-data-ranking .block-term { overflow: hidden; text-transform: none; }
 .player-data-ranking .block-term .block-icon { width: 18px; height: 18px; }
 .player-data-ranking li > strong { flex-shrink: 0; color: var(--text); font-family: var(--font-display); font-weight: 800; font-size: 12px; }
-.player-data-empty { margin: 0; padding: 12px; color: var(--muted); font-size: 11px; text-align: center; background: #0c100d; }
+.player-data-empty { margin: 0; padding: 12px; color: var(--muted); font-size: 11px; text-align: center; background: var(--surface-inset); }
 .player-records-heading { padding: 12px 13px 8px; }
 .player-records-heading h3 { margin: 2px 0 0; color: var(--text); font-family: var(--font-display); font-size: 14px; font-weight: 700; }
 .player-records-heading p { margin: 3px 0 0; color: #708060; font-size: 11px; line-height: 1.4; }
@@ -297,10 +297,9 @@
 .timeline-timestamp { display: grid; min-width: 108px; gap: 3px; padding-left: 12px; text-align: right; border-left: 1px solid #344038; }
 .timeline-timestamp span { color: var(--muted); font-size: .62rem; text-transform: capitalize; }
 .timeline-timestamp b { color: var(--sand); font-size: .76rem; }
-.player-server-settings { padding: 18px; }
-.player-server-settings .section-heading { margin-bottom: 12px; }
-.player-server-settings .section-heading h3 { margin: 5px 0; }
-.player-server-settings .section-heading p { margin: 0; color: var(--muted); }
+.player-server-settings { padding: 0; }
+.player-server-settings .inner-heading h3 { margin: 4px 0 6px; color: var(--text); font-family: var(--font-display); font-size: 16px; font-weight: 800; line-height: 1.3; }
+.player-server-settings .inner-heading p { max-width: 62ch; margin: 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
 
 @media (max-width: 760px) {
   .player-roster-open { grid-template-columns: auto minmax(0, 1fr) auto; column-gap: 10px; row-gap: 5px; align-items: center; }

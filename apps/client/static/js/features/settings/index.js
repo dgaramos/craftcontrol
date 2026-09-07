@@ -18,8 +18,7 @@ export function createSettingsFeature({ state, content, t, api, $, escapeHtml, t
     const checked = normalized === "true";
     const text = known ? (checked ? t("enabled") : t("disabled")) : t("unknown");
     if (id === "detail-operator" && !can("players.manage_permissions")) {
-      const readOnlyLabel = state.locale === "pt" ? "Somente leitura" : state.locale === "es" ? "Solo lectura" : "Read only";
-      return `<span class="read-only-badge">${readOnlyLabel}</span>`;
+      return `<span class="read-only-badge">${t("readOnlyLabel")}</span>`;
     }
     return `<div class="toggle-control"><span class="toggle-value ${known ? "" : "unknown"}">${text}</span><label class="switch"><input id="${id}" type="checkbox" ${checked ? "checked" : ""}><span></span></label></div>`;
   }
@@ -124,15 +123,16 @@ export function createSettingsFeature({ state, content, t, api, $, escapeHtml, t
   function playerSettingsMarkup() {
     const persistent = Object.entries(state.schema.settings).filter(([, definition]) => definition.group === "Jogadores");
     const live = Object.entries(state.schema.gamerules).filter(([, definition]) => definition.group === "Jogadores");
-    return `<section class="player-server-settings block-panel"><div class="section-heading"><div><span class="eyebrow">${state.locale === "pt" ? "REGRAS GERAIS" : "GENERAL RULES"}</span><h3>${state.locale === "pt" ? "Configurações para todos os jogadores" : "Settings for every player"}</h3><p>${state.locale === "pt" ? "Limites e regras do servidor. Alterações instantâneas são identificadas pelo raio." : "Server-wide limits and rules. Instant changes are marked with a lightning bolt."}</p></div></div><div class="card">${persistent.map(([key, definition]) => inputFor(key, definition, Object.hasOwn(state.changes, key) ? state.changes[key] : state.config[key])).join("")}${live.map(([key, definition]) => inputFor(key, definition, state.gamerules[key], true)).join("")}</div></section>`;
+    return `<section class="player-server-settings settings-screen"><header class="inner-heading"><span class="eyebrow">${t("generalPlayerRules")}</span><h3>${t("playerSettingsTitle")}</h3><p>${t("playerSettingsHelp")}</p></header><div class="card">${persistent.map(([key, definition]) => inputFor(key, definition, Object.hasOwn(state.changes, key) ? state.changes[key] : state.config[key])).join("")}${live.map(([key, definition]) => inputFor(key, definition, state.gamerules[key], true)).join("")}</div></section>`;
   }
 
   function renderSettingsGroups(groupNames, prefix = "") {
-    const titleKey = state.tab === "world" ? "worldIntro" : state.tab === "rules" ? "rulesIntro" : state.tab === "server" ? "serverIntro" : "onlinePlayers";
+    const titleKey = state.tab === "world" ? "worldIntro" : state.tab === "rules" ? "rulesIntro" : "serverIntro";
+    const kickerKey = state.tab === "world" ? "configuration" : state.tab === "rules" ? "instant" : "infrastructure";
     const lockBanner = state.operationActive
       ? `<div class="mutation-lock-notice" role="alert">${t("operationLocked")}</div>`
       : "";
-    content.innerHTML = `<div class="section-heading"><h2>${t(titleKey)}</h2></div>${prefix}${lockBanner}<div class="accordion-list">${settingsMarkup(groupNames)}</div>`;
+    content.innerHTML = `<section class="settings-screen"><header class="inner-heading"><span class="eyebrow">${t(kickerKey)}</span><h2>${t(titleKey)}</h2></header>${prefix}${lockBanner}<div class="accordion-list">${settingsMarkup(groupNames)}</div></section>`;
     bindSegmentedControls();
     bindSettingFields(groupNames);
   }

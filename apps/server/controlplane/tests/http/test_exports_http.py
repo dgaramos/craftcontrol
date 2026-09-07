@@ -54,6 +54,24 @@ class _FakePlayerService:
         return {"events": list(self._events), "total": len(self._events),
                 "page": page, "page_size": page_size, "pages": 1}
 
+    def rankings(self, limit):
+        return {"metrics": {"play_time": [
+            {"player": {"id": "pub-Steve", "name": "Steve"}, "value": 30, "source": "manager"}
+        ]}}
+
+    def periods(self, days, limit):
+        return {"totals": {"sessions": 2}, "rankings": {}, "timezone": "America/Sao_Paulo",
+                "calendar": [{"day": "2026-09-07", "play_seconds": 90.0}], "heatmap": []}
+
+    def blocks(self, limit):
+        return {"totals": {"broken": 1}, "rankings": {}}
+
+    def combat(self, limit):
+        return {"totals": {"deaths": 1}, "rankings": {}}
+
+    def exploration(self, limit):
+        return {"totals": {"distance": 1.0}, "rankings": {}}
+
 
 def _app(port: FakeAuditPort, *, capabilities=("*",), players=None) -> Flask:
     from src.http.exports import exports_api
@@ -296,3 +314,119 @@ def test_download_is_never_cached() -> None:
     for query in ("", "?format=csv"):
         response = app.test_client().get(f"/api/exports/players/profiles{query}")
         assert response.headers["Cache-Control"] == "no-store"
+
+
+# -- analytics resources (issue #271) ----------------------------------------
+
+def test_analytics_export_carries_measure_rows_and_its_manifest() -> None:
+    app = _app(FakeAuditPort())
+    response = app.test_client().get("/api/exports/analytics/rankings")
+    payload = response.get_json()
+    assert payload["manifest"]["resource"] == "analytics.rankings"
+    assert payload["records"][0] == {
+        "section": "rankings", "metric": "play_time", "key": "", "rank": 1,
+        "player": {"id": "pub-Steve", "name": "Steve"}, "value": 30, "source": "manager",
+    }
+
+
+def test_analytics_csv_uses_the_same_columns_for_every_resource() -> None:
+    """One column set means a spreadsheet template survives the resource switch."""
+    app = _app(FakeAuditPort())
+    header = "section,metric,key,rank,player.id,player.name,value,source"
+    for resource in ("rankings", "periods", "blocks", "combat", "exploration"):
+        response = app.test_client().get(f"/api/exports/analytics/{resource}?format=csv")
+        assert response.status_code == 200
+        assert response.get_data(as_text=True).splitlines()[0] == header
+
+
+def test_analytics_export_is_audited_with_its_effective_filters() -> None:
+    port = FakeAuditPort()
+    app = _app(port)
+    app.test_client().get("/api/exports/analytics/periods?days=7&limit=5")
+    assert port.records[0]["result"] == "ok"
+    assert port.records[0]["target"] == "analytics.periods:json"
+    assert port.records[0]["metadata"]["filters"]["days"] == 7
+    assert port.records[0]["metadata"]["filters"]["timezone"] == "America/Sao_Paulo"
+
+
+def test_analytics_export_requires_the_capability() -> None:
+    port = FakeAuditPort()
+    app = _app(port, capabilities=("server.read",))
+    response = app.test_client().get("/api/exports/analytics/rankings")
+    assert response.status_code == 403
+    assert port.records[0]["result"] == "failed"
+
+
+def test_analytics_unknown_resource_answers_404() -> None:
+    app = _app(FakeAuditPort())
+    assert app.test_client().get("/api/exports/analytics/salaries").status_code == 404
+
+
+def test_analytics_rejects_an_out_of_range_limit() -> None:
+    app = _app(FakeAuditPort())
+    response = app.test_client().get("/api/exports/analytics/rankings?limit=99")
+    assert response.status_code == 400
+    assert "limit" in response.get_json()["error"]
+
+
+def test_analytics_rejects_a_non_numeric_filter() -> None:
+    app = _app(FakeAuditPort())
+    assert app.test_client().get(
+        "/api/exports/analytics/periods?days=soon"
+    ).status_code == 400
+
+
+def test_analytics_download_is_never_cached() -> None:
+    app = _app(FakeAuditPort())
+    response = app.test_client().get("/api/exports/analytics/rankings")
+    assert response.headers["Cache-Control"] == "no-store"
+
+
+def test_analytics_unexpected_failure_is_audited_once(monkeypatch) -> None:
+    port = FakeAuditPort()
+    app = _app(port)
+
+    def explode(*args, **kwargs):
+        raise RuntimeError("repository unavailable")
+
+    monkeypatch.setattr(_FakePlayerService, "rankings", explode)
+    response = app.test_client().get("/api/exports/analytics/rankings")
+    assert response.status_code == 500
+    assert len(port.records) == 1
+    assert port.records[0]["metadata"]["reason"] == "unexpected failure"
+
+
+def test_analytics_ceiling_refusal_answers_422(monkeypatch) -> None:
+    port = FakeAuditPort()
+    app = _app(port)
+
+    def refuse(*args, **kwargs):
+        raise ExportTooLarge("record", 20_000, 10_000)
+
+    monkeypatch.setattr("src.players.analytics_exports.enforce_row_limit", refuse)
+    response = app.test_client().get("/api/exports/analytics/rankings")
+    assert response.status_code == 422
+    assert response.get_json()["limit"] == "record"
+    assert port.records[0]["result"] == "failed"
+
+
+def test_analytics_rejects_an_unsupported_format() -> None:
+    app = _app(FakeAuditPort())
+    response = app.test_client().get("/api/exports/analytics/rankings?format=xlsx")
+    assert response.status_code == 400
+    assert response.get_json()["error"] == "invalid export format"
+
+
+def test_analytics_byte_ceiling_refuses_during_serialization(monkeypatch) -> None:
+    """The byte ceiling is measured on the payload, after the rows are known."""
+    port = FakeAuditPort()
+    app = _app(port)
+
+    def refuse(*args, **kwargs):
+        raise ExportTooLarge("byte", 6_000_000, 5_242_880)
+
+    monkeypatch.setattr("src.http.exports.serialize_json", refuse)
+    response = app.test_client().get("/api/exports/analytics/rankings")
+    assert response.status_code == 422
+    assert response.get_json()["limit"] == "byte"
+    assert port.records[0]["metadata"]["limit"] == "byte"

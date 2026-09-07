@@ -54,8 +54,22 @@ that has no period.
 
 **Analytics resources** — `rankings`, `periods`, `blocks`, `combat`,
 `exploration`. They export the bounded aggregates behind the analytics
-endpoints. Filters are the category or metric selection each endpoint already
-allowlists, plus the period where the endpoint supports one.
+endpoints. Filters are `limit`, the same 1–25 bound those endpoints apply to
+their rankings, plus `days` for `periods`, which supports 7 or 30 like the
+endpoint it reads.
+
+These payloads are nested and shaped per screen, so each is flattened into one
+long measure table shared by all five resources: `section`, `metric`, `key`,
+`rank`, `player`, `value`, `source`. A value carries the coordinates that
+identify it — which slice it came from, what it measures, the non-player
+dimension such as a block or a day, the rank, and the player when there is one.
+One column set means a spreadsheet built for one resource still opens the next.
+
+Event-shaped lists are deliberately absent. Dimension transitions are
+`player.dimension.changed` events and duels come from deaths; both are already
+exportable through the player `activity` and `deaths` resources, and carrying
+them again as measures would mean inventing a second shape for the same
+records.
 
 A resource that the API does not serve today is not exportable. Adding one means
 adding the endpoint first, so the export never becomes a second, wider read path

@@ -117,8 +117,10 @@ separate check scripts. Requirements: Node.js 18+.
   start. The session cookie rides every one of these calls, so the hop is not
   cleartext on the Compose network. No key material is committed or baked into
   an image.
-- `no-store` on `/api/`, so authenticated responses are never reused across a
-  logout and a different login in the same browser.
+- `no-store` on the `/api/` prefix, so authenticated JSON is never reused across
+  a logout and a different login in the same browser. The exact-match
+  `location = /api/events` does not inherit that block: the stream keeps the
+  backend's own `no-cache` alongside `proxy_cache off`.
 - SSE (`/api/events`) with `proxy_buffering off` and extended timeouts.
 - gzip compression for text assets.
 

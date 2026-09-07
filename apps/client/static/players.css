@@ -29,9 +29,7 @@
 .player-toolbar { margin-bottom: 11px; }
 .player-toolbar input { width: 100%; min-height: 44px; padding: 9px 12px; color: var(--text); font-size: 13px; background: var(--surface-inset); border: 3px solid #080a08; border-bottom-color: #414842; border-right-color: #414842; border-radius: 0; }
 .player-toolbar input:focus { outline: 2px solid var(--grass-light); }
-.player-filters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 6px; }
-.player-filters button { min-width: 0; min-height: 36px; padding: 3px 4px; color: var(--muted); font-family: var(--font-display); font-size: 10px; font-weight: 800; letter-spacing: .5px; box-shadow: 0 3px 0 #080a08; }
-.player-filters button.active { color: #1a1000; background: linear-gradient(#f0c040, #b88018); border-top-color: #ffe080; border-left-color: #d4a030; text-shadow: 1px 1px 0 #f0e090; }
+.player-filters { grid-template-columns: repeat(4, 1fr); margin-top: 6px; }
 .no-player-results { margin: 0; padding: 18px; color: var(--muted); text-align: center; background: #0b0e0c; }
 .player-management-list { display: grid; gap: 6px; }
 .player-management-card { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 11px; padding: 11px; background: #0b0e0c; border: 3px solid #080a08; box-shadow: inset 2px 2px 0 #343a35; }

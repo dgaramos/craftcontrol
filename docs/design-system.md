@@ -20,6 +20,11 @@ of touch height. Forms stack on phones and place controls beside descriptions
 when space permits; audit records expose their column labels in stacked mobile
 rows. Data navigation uses four columns on phones and eight on wide screens.
 
+Selection between a few options uses the choice chips first drawn for the
+Players status filter: a dense row of 36px buttons in 10px display type, gold
+when chosen. Any screen offering a small closed choice uses `.choice-group`;
+a viewport-wide split button is not part of this language.
+
 An inner screen is built from the shared anatomy, not from new components. The
 heading block is `.inner-heading`: an eyebrow, a 20px title, and an optional
 11px muted paragraph. A form is one card of `.field` rows, each carrying a

@@ -57,9 +57,9 @@ export function createExportsFeature({ state, content, t, $, escapeHtml, toast, 
         <div class="card">
           <div class="field">
             <div class="field-copy"><label for="export-family">${t("exportFamily")}</label></div>
-            <div class="segmented" id="export-family-control">
-              <button type="button" class="segment ${family === "players" ? "active" : ""}" data-export-family="players">${t("navPlayers")}</button>
-              <button type="button" class="segment ${family === "analytics" ? "active" : ""}" data-export-family="analytics">${t("analytics")}</button>
+            <div class="choice-group" id="export-family-control">
+              <button type="button" class="${family === "players" ? "active" : ""}" data-export-family="players">${t("navPlayers")}</button>
+              <button type="button" class="${family === "analytics" ? "active" : ""}" data-export-family="analytics">${t("analytics")}</button>
             </div>
           </div>
           <div class="field">
@@ -71,9 +71,9 @@ export function createExportsFeature({ state, content, t, $, escapeHtml, toast, 
           </div>
           <div class="field">
             <div class="field-copy"><label for="export-format">${t("exportFormat")}</label></div>
-            <div class="segmented" id="export-format-control">
-              <button type="button" class="segment ${format === "json" ? "active" : ""}" data-export-format="json">JSON</button>
-              <button type="button" class="segment ${format === "csv" ? "active" : ""}" data-export-format="csv">CSV</button>
+            <div class="choice-group" id="export-format-control">
+              <button type="button" class="${format === "json" ? "active" : ""}" data-export-format="json">JSON</button>
+              <button type="button" class="${format === "csv" ? "active" : ""}" data-export-format="csv">CSV</button>
             </div>
           </div>
           ${supportsPlayer() ? `

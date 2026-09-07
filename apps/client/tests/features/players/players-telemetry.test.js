@@ -68,10 +68,14 @@ describe("playerBreakdownMarkup", () => {
     expect(html).toContain("overworld");
   });
 
-  test("shows rank numbers", () => {
+  test("lists the term and its count, without a ranking position", () => {
+    // The handoff reads as icon + name on the left and the count on the right.
+    // A rank number would compete with the count for the same attention.
     const html = playerBreakdownMarkup([["a", 10], ["b", 5]], "entity", "empty");
-    expect(html).toContain("<b>1</b>");
-    expect(html).toContain("<b>2</b>");
+    expect(html).toContain("<strong>10</strong>");
+    expect(html).toContain("<strong>5</strong>");
+    expect(html).not.toContain("<b>1</b>");
+    expect(html).not.toContain("<b>2</b>");
   });
 });
 

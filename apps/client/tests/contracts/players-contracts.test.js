@@ -116,7 +116,7 @@ describe("player feature separates workspace, profile, access, history and telem
     profile: ["createPlayerProfile", 8],
     access: ["createPlayerAccess", 7],
     history: ["createPlayerHistory", 7],
-    telemetry: ["createPlayerTelemetry", 7],
+    telemetry: ["createPlayerTelemetry", 8],
   };
 
   for (const [name, [factory, version]] of Object.entries(modules)) {

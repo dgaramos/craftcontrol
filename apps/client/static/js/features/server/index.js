@@ -429,6 +429,7 @@ async function initializeOperationProgress() {
           <button class="server-nav-item" type="button" data-sp-tab="__server_settings__">${uiIcon("server")}<span><small>${t("infrastructure")}</small><strong>${t("settings")}</strong></span><span class="server-nav-item-arrow">›</span></button>
           <button class="server-nav-item" type="button" data-sp-tab="analytics">${uiIcon("data")}<span><small>${t("analyticsKicker")}</small><strong>${t("analytics")}</strong></span><span class="server-nav-item-arrow">›</span></button>
           ${isOwner ? `<button class="server-nav-item" type="button" data-sp-tab="audit">${uiIcon("activity")}<span><small>${t("historyLabel")}</small><strong>${t("audit")}</strong></span><span class="server-nav-item-arrow">›</span></button>` : ""}
+          ${isOwner ? `<button class="server-nav-item" type="button" data-sp-tab="exports">${uiIcon("data")}<span><small>${t("administration")}</small><strong>${t("exportTitle")}</strong></span><span class="server-nav-item-arrow">›</span></button>` : ""}
         </nav>
       </section>`;
     content.querySelector("#sp-restart")?.addEventListener("click", async () => {

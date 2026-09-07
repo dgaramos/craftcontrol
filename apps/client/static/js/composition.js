@@ -13,13 +13,15 @@ import { createAnalyticsFeature } from "./features/analytics/index.js?v=9";
 import { createPlayersFeature } from "./features/players/index.js?v=9";
 import { createWorldFeature } from "./features/world/index.js?v=12";
 import { createRulesFeature } from "./features/rules/index.js?v=7";
-import { createServerFeature } from "./features/server/index.js?v=19";
+import { createServerFeature } from "./features/server/index.js?v=20";
 import { UNRESPONSIVE_AFTER_MS } from "./features/server/operation.js?v=15";
 import { startAuthenticatedApplication } from "./features/auth/bootstrap.js?v=7";
 import { createSettingsFeature } from "./features/settings/index.js?v=9";
 import { createAuditFeature } from "./features/audit/index.js?v=2";
+import { createExportsFeature } from "./features/exports/index.js?v=1";
+import { downloadFile } from "./core/download.js?v=1";
 import { createHomeFeature } from "./features/home/index.js?v=7";
-import { createI18n } from "./i18n/index.js?v=14";
+import { createI18n } from "./i18n/index.js?v=15";
 import { createGameTerms } from "./i18n/game-terms.js?v=7";
 
 export function startApplication() {
@@ -47,7 +49,7 @@ export function startApplication() {
      from the Server hub, Time from Home and from World — so a hard-coded
      destination sends you somewhere you were not. Keep the trail instead.
      Landing on a root tab clears it: the bottom nav is a fresh start. */
-  const BACK_LABELS = { home: "navHome", __players__: "navPlayers", server: "navServer", world: "world", rules: "rules", analytics: "analytics", audit: "audit", __server_settings__: "settings", __time__: "timeControls" };
+  const BACK_LABELS = { home: "navHome", __players__: "navPlayers", server: "navServer", world: "world", rules: "rules", analytics: "analytics", audit: "audit", exports: "exportTitle", __server_settings__: "settings", __time__: "timeControls" };
   const navTrail = createNavTrail();
 
   state.subscribe("tab", (value, previous) => navTrail.record(value, previous));
@@ -84,6 +86,7 @@ export function startApplication() {
     if (state.tab === "__players__") return renderPlayersPanel();
     if (state.tab === "analytics") return renderAnalyticsPanel();
     if (state.tab === "audit") return getAuditFeature().renderAuditPanel();
+    if (state.tab === "exports") return getExportsFeature().renderExportsPanel();
     if (state.tab === "world") getWorldFeature().renderWorld();
     else if (state.tab === "rules") getRulesFeature().renderRules();
     else if (state.tab === "server") getServerFeature().renderServer();
@@ -93,6 +96,7 @@ export function startApplication() {
   let rulesFeature = null;
   let serverFeature = null;
   let auditFeature = null;
+  let exportsFeature = null;
   let homeFeature = null;
 
   function getHomeFeature() {
@@ -118,6 +122,13 @@ export function startApplication() {
   function getAuditFeature() {
     if (!auditFeature) auditFeature = createAuditFeature({ state, content, t, api, $, escapeHtml, toast, formatDate, uiIcon });
     return auditFeature;
+  }
+
+  function getExportsFeature() {
+    if (!exportsFeature) exportsFeature = createExportsFeature({
+      state, content, t, $, escapeHtml, toast, download: (url) => downloadFile(url),
+    });
+    return exportsFeature;
   }
 
   function formatDate(timestamp) {
@@ -579,7 +590,7 @@ export function startApplication() {
   // Inject the audit tab for owners only, once user identity is known.
   state.subscribe("user", (user) => {
     if (user?.role === "owner" && !state.tabs.includes("audit")) {
-      state.tabs = [...state.tabs, "audit"];
+      state.tabs = [...state.tabs, "audit", "exports"];
     }
   });
 

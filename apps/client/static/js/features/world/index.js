@@ -7,6 +7,17 @@ function renderTimePanel() {
   const settings = getSettingsFeature();
   content.innerHTML = `
     <div class="time-screen">
+      <button type="button" class="time-back btn" data-time-back>
+        ${uiIcon("chevron")}<span>${t("navHome")}</span>
+      </button>
+      <section class="time-world block-panel">
+        <div class="grass-edge" aria-hidden="true"></div>
+        <div class="world-summary">
+          <div><small>${t("homeDay")}</small><strong id="time-world-day">—</strong></div>
+          <div><span class="world-label-row"><small>${t("homeTime")}</small><small id="time-world-ticks" class="world-ticks"></small></span><span class="world-value">${uiIcon("sun", "", "js-time-world-icon")}<strong id="time-world-time">—</strong></span></div>
+          <div class="world-weather" id="time-world-weather-cell"><small>${t("homeWeather")}</small><span class="world-value">${uiIcon("sun", "", "js-time-weather-icon")}<strong id="time-world-weather">—</strong></span></div>
+        </div>
+      </section>
       <section class="time-group">
         <span class="eyebrow">${t("timeOfDay")}</span>
         <div class="time-presets">${presets.map((preset) => `<button type="button" data-time-preset="${preset}"><span>${uiIcon(presetIcons[preset])}</span>${t(preset)}</button>`).join("")}</div>
@@ -53,6 +64,28 @@ function renderTimePanel() {
       </section>
     </div>`;
   bindTimePanel();
+  mirrorWorldSummary();
+}
+
+/* The Home hero owns the live clock; this screen mirrors its current values so
+   the reading and the controls sit together. */
+function mirrorWorldSummary() {
+  const pairs = [["#world-day", "#time-world-day"], ["#world-ticks", "#time-world-ticks"], ["#world-time", "#time-world-time"], ["#world-weather", "#time-world-weather"]];
+  pairs.forEach(([from, to]) => {
+    const source = $(from);
+    const target = $(to);
+    if (source && target) target.textContent = source.textContent;
+  });
+  if (typeof document === "undefined") return;
+  const weatherCell = document.querySelector(".world-weather[data-weather]");
+  const mirrorCell = $("#time-world-weather-cell");
+  if (weatherCell && mirrorCell) mirrorCell.dataset.weather = weatherCell.dataset.weather;
+  [["#world-time-icon", ".js-time-world-icon use"], ["#world-weather-icon", ".js-time-weather-icon use"]].forEach(([from, to]) => {
+    const source = $(from);
+    const target = document.querySelector(to);
+    const href = source?.getAttribute("href");
+    if (target && href && target.getAttribute("href") !== href) target.setAttribute("href", href);
+  });
 }
 
 const READ_ONLY_TIME_ACTIONS = new Set(["weather-query", "query"]);
@@ -68,6 +101,7 @@ function bindTimePanel() {
     if (state.operationActive) { toast(t("operationLocked"), true); return; }
     return fn(...args);
   };
+  content.querySelectorAll("[data-time-back]").forEach((button) => button.onclick = () => { state.tab = "home"; });
   content.querySelectorAll("[data-time-preset]").forEach((button) => button.onclick = guardMutation(async () => {
     try { await runTimeAction("preset", { value: button.dataset.timePreset }); } catch (error) { toast(error.message, true); }
   }));

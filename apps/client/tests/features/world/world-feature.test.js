@@ -223,3 +223,30 @@ describe("openTimeControls", () => {
     expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: "smooth" });
   });
 });
+
+describe("time screen carries its own context", () => {
+  // The Home hero is hidden outside the Home tab, so without this panel the
+  // screen would offer time controls with no reading of the current time.
+  test("renders the back affordance and the day/time/weather panel", () => {
+    const deps = makeDeps({ state: { locale: "pt", gamerules: {} } });
+    deps.content.querySelectorAll = jest.fn(() => []);
+    deps.$ = jest.fn(() => makeEl());
+    const { renderTimePanel } = createWorldFeature(deps);
+    renderTimePanel();
+    expect(deps.content.innerHTML).toContain("data-time-back");
+    expect(deps.content.innerHTML).toContain("time-world");
+    expect(deps.content.innerHTML).toContain("world-summary");
+    expect(deps.content.innerHTML).toContain("grass-edge");
+  });
+
+  test("the back affordance returns to Home", () => {
+    const deps = makeDeps({ state: { locale: "en", gamerules: {}, tab: "__time__" } });
+    const back = makeEl();
+    deps.content.querySelectorAll = jest.fn((sel) => (sel === "[data-time-back]" ? [back] : []));
+    deps.$ = jest.fn(() => makeEl());
+    const { renderTimePanel } = createWorldFeature(deps);
+    renderTimePanel();
+    back.onclick();
+    expect(deps.state.tab).toBe("home");
+  });
+});

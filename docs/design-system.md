@@ -14,16 +14,24 @@ the page background rather than inside an additional hero card.
 Inner cards use flat stone surfaces, square corners, and raised top/left edges.
 Use the `--surface-inset`, `--surface-border-top`, and `--surface-border-left`
 tokens for inset fields and card edges. Keep groups 12px apart, with approximately
-13px of card padding. Selection uses sand; green remains the live/healthy signal,
-and red remains the destructive/error signal. Form controls have at least 44px
+13px of card padding. Selection is gold, the colour the Players filter and the
+analytics pickers already used; green remains the live/healthy signal and the
+colour of saving, and red remains the destructive/error signal. Form controls have at least 44px
 of touch height. Forms stack on phones and place controls beside descriptions
 when space permits; audit records expose their column labels in stacked mobile
 rows. Data navigation uses four columns on phones and eight on wide screens.
 
-Selection between a few options uses the choice chips first drawn for the
-Players status filter: a dense row of 36px buttons in 10px display type, gold
-when chosen. Any screen offering a small closed choice uses `.choice-group`;
-a viewport-wide split button is not part of this language.
+Selection between a few options uses one control everywhere: a row of 36px
+buttons in 10px display type, gold when chosen, wrapping when the options do not
+fit. `.choice-group` is its name; the Players status filter, a setting's enum
+and the analytics metric pickers are the same rule under different class names,
+kept only so existing markup keeps working. A viewport-wide split button and a
+horizontally scrolling row of options are not part of this language.
+
+Choices that carry an icon — the data view switch, the ranking categories, the
+block modes, the time presets and the weather options — are the second variant,
+taller because the icon leads. They are deliberately not folded into the text
+chips.
 
 An inner screen is built from the shared anatomy, not from new components. The
 heading block is `.inner-heading`: an eyebrow, a 20px title, and an optional

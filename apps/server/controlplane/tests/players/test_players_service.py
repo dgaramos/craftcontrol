@@ -159,6 +159,15 @@ def test_rankings_limit_too_high_raises(service: PlayerService) -> None:
         service.rankings(26)
 
 
+def test_profile_count_delegates_to_the_repository(
+    service: PlayerService, repo: MagicMock
+) -> None:
+    """The export ceiling is checked against this count before profiles are built."""
+    repo.player_profile_count.return_value = 3
+    assert service.profile_count() == 3
+    repo.player_profile_count.assert_called_once_with()
+
+
 def test_rankings_delegates_valid_limit(service: PlayerService, repo: MagicMock) -> None:
     repo.player_rankings.return_value = {"top": ["VonCrush"]}
     result = service.rankings(5)

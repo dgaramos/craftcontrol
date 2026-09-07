@@ -28,7 +28,7 @@ from ..core.exports import (
     serialize_csv,
     serialize_json,
 )
-from ..players.exports import RESOURCES, UnknownExportResource
+from ..players.exports import RESOURCES
 
 EXPORT_CAPABILITY = "data.export"
 EXPORT_ACTION = "data.export"
@@ -103,6 +103,8 @@ def _export_players(resource: str):
             target, 400, {"reason": "invalid format"}, error="invalid export format"
         )
     if resource not in RESOURCES:
+        # The only reachable check: the service raises for an unknown resource
+        # too, but it can never be reached through this route.
         return _refuse(
             target, 404, {"reason": "unknown resource"}, error="unknown export resource"
         )
@@ -119,10 +121,6 @@ def _export_players(resource: str):
             player=request.args.get("player", ""),
             days=days,
             source=request.args.get("source", "all"),
-        )
-    except UnknownExportResource:
-        return _refuse(
-            target, 404, {"reason": "unknown resource"}, error="unknown export resource"
         )
     except ValueError as error:
         return _refuse(target, 400, {"reason": str(error)}, error=str(error))

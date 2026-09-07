@@ -8,8 +8,9 @@
     <title>CraftControl · Bedrock control center</title>
     <link rel="icon" href="/static/craftcontrol-mark.svg" type="image/svg+xml">
     <link rel="manifest" href="/static/site.webmanifest">
-    <link rel="stylesheet" href="/static/app.css?v=44">
-    <link rel="stylesheet" href="/static/players.css?v=25">
+    <link rel="stylesheet" href="/static/fonts.css?v=1">
+    <link rel="stylesheet" href="/static/app.css?v=46">
+    <link rel="stylesheet" href="/static/players.css?v=26">
     <link rel="stylesheet" href="/static/analytics.css?v=12">
     <link rel="stylesheet" href="/static/auth.css?v=7">
   </head>
@@ -67,12 +68,20 @@
     </main>
 
     <div id="changes-bar" class="indicator-bar indicator-bar--changes" hidden>
-      <svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-save"></use></svg>
-      <span id="changes-bar-label" data-i18n="pendingChanges">ALTERAÇÕES PENDENTES</span>
+      <svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-warning"></use></svg>
+      <span class="indicator-bar-copy">
+        <strong id="changes-bar-label" data-i18n="pendingChanges">ALTERAÇÕES PENDENTES</strong>
+        <small id="changes-bar-hint" data-i18n="indicatorChangesHint">Requer restart do servidor para aplicar</small>
+      </span>
+      <span class="indicator-bar-cta" data-i18n="indicatorReview">REVISAR ›</span>
     </div>
     <div id="operation-bar" class="indicator-bar indicator-bar--operation" hidden>
-      <svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-server"></use></svg>
-      <span id="operation-bar-label"></span>
+      <svg id="operation-bar-icon" class="cc-icon indicator-bar-live" viewBox="0 0 24 24" aria-hidden="true"><use id="operation-bar-icon-use" href="/static/craftcontrol-ui.svg#ui-live"></use></svg>
+      <span class="indicator-bar-copy">
+        <strong id="operation-bar-title">Operação em andamento</strong>
+        <small id="operation-bar-label"></small>
+      </span>
+      <span class="indicator-bar-cta" data-i18n="indicatorView">VER ›</span>
     </div>
     <nav id="bottom-nav" class="bottom-nav" role="tablist">
       <button class="bottom-nav-tab" data-tab="home" role="tab" type="button">
@@ -102,23 +111,30 @@
       <button id="save" class="primary" hidden><span><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-save"></use></svg></span><b id="save-label">Revisar alterações</b></button>
     </footer>
 
-    <dialog id="changes-drawer" class="drawer">
+    <dialog id="changes-drawer" class="drawer drawer--changes">
       <div class="drawer-handle" aria-hidden="true"></div>
-      <div class="drawer-header"><div><span class="eyebrow" data-i18n="pendingChanges">ALTERAÇÕES PENDENTES</span><h2 data-i18n="reviewChanges">Revisar alterações</h2></div><button id="close-changes" class="drawer-close" type="button" aria-label="Fechar"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-close"></use></svg></button></div>
-      <p data-i18n="pendingHelp">Estas configurações serão salvas e o servidor será reiniciado somente quando você aplicar.</p>
+      <div class="drawer-header">
+        <svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-warning"></use></svg>
+        <div><h2 data-i18n="reviewChanges">Alterações pendentes</h2><p data-i18n="pendingHelp">Aplicar irá reiniciar o servidor. Jogadores serão desconectados.</p></div>
+        <button id="close-changes" class="drawer-close" type="button" aria-label="Fechar"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-close"></use></svg></button>
+      </div>
       <div id="changes-list" class="changes-list"></div>
-      <div class="drawer-actions"><button id="discard-all" class="secondary" data-i18n="discardAll">Descartar todas</button><button id="apply-changes" class="primary" data-i18n="applyChanges">Aplicar alterações</button></div>
+      <div class="drawer-actions"><button id="discard-all" class="danger" data-i18n="discardAll">Descartar tudo</button><button id="apply-changes" class="apply-restart" data-i18n="applyChanges">Aplicar e reiniciar</button></div>
     </dialog>
 
     <button id="operation-indicator" class="operation-indicator" type="button" hidden aria-controls="operation-drawer">
       <svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-server"></use></svg>
       <span id="operation-indicator-label"></span>
     </button>
-    <dialog id="operation-drawer" class="drawer operation-drawer" aria-labelledby="operation-drawer-title">
+    <dialog id="operation-drawer" class="drawer drawer--operation operation-drawer" aria-labelledby="operation-drawer-title">
       <div class="drawer-handle" aria-hidden="true"></div>
-      <div class="drawer-header"><div><span class="eyebrow" data-i18n="serverOperation">OPERAÇÃO DO SERVIDOR</span><h2 id="operation-drawer-title" data-i18n="serverOperation">Operação do servidor</h2></div><button id="close-operation-drawer" class="drawer-close" type="button" aria-label="Fechar"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-close"></use></svg></button></div>
-      <p data-i18n="operationDrawerHelp">A operação continua em segundo plano enquanto você navega.</p>
+      <div class="drawer-header">
+        <svg id="operation-drawer-icon" class="cc-icon indicator-bar-live" viewBox="0 0 24 24" aria-hidden="true"><use id="operation-drawer-icon-use" href="/static/craftcontrol-ui.svg#ui-live"></use></svg>
+        <div><h2 id="operation-drawer-title" data-i18n="serverOperation">Operação do servidor</h2><p data-i18n="operationDrawerHelp">Aguarde a conclusão antes de fazer alterações.</p></div>
+        <button id="close-operation-drawer" class="drawer-close" type="button" aria-label="Fechar"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg#ui-close"></use></svg></button>
+      </div>
       <div id="operation-progress-container"></div>
+      <div class="drawer-actions"><button id="dismiss-operation" class="secondary" data-i18n="operationKeepRunning">Fechar (a operação continua em segundo plano)</button></div>
     </dialog>
 
     <dialog id="server-dialog">
@@ -213,6 +229,6 @@
     </div>
   </div>
 
-  <script type="module" src="/static/app.js?v=86"></script>
+  <script type="module" src="/static/app.js?v=90"></script>
   </body>
 </html>

@@ -1,4 +1,4 @@
-import { createOperationFeature } from "./operation.js?v=13";
+import { createOperationFeature, isUnresponsiveOperation, nextOperationTransition } from "./operation.js?v=15";
 
 export function createServerFeature({ state, content, t, api, $, escapeHtml, uiIcon, formatDate, toast, getSettingsFeature }) {
 function telemetryPackMarkup() {
@@ -328,25 +328,50 @@ async function loadFrontendVersion() {
 
 const operationFeature = createOperationFeature({ api, t, formatDate, uiIcon, toast });
 
+let _operationTransitionTimer = null;
+
 function refreshOperationPanel() {
   const container = $("#operation-progress-container");
   const indicator = $("#operation-indicator");
   const indicatorLabel = $("#operation-indicator-label");
   const op = operationFeature.getOperation();
-  const opRunning = !!(op && ["pending", "running"].includes(op.state));
   if (indicator) indicator.hidden = true;
   if (indicatorLabel) indicatorLabel.textContent = "";
-  const opBarLabel = $("#operation-bar-label");
-  if (opBarLabel) opBarLabel.textContent = opRunning ? (t(`opState_${op.state}`) || op.state) : "";
+  publishOperationState(op);
+  scheduleOperationTransition(op);
   if (!container) return;
   const frag = op ? operationFeature.renderOperation(op) : null;
   container.replaceChildren(...(frag ? [frag] : []));
   operationFeature.bindRecoveryActions(container);
 }
 
-operationFeature.setUpdateCallback((op) => {
+/* The indicator bars read only from state; composition owns how they look.
+   An unresponsive operation is deliberately NOT "active": it must stop
+   blocking restart, stop, time controls and the save affordance. */
+function publishOperationState(op) {
+  const live = !!(op && ["pending", "running"].includes(op.state));
+  const stalled = live && isUnresponsiveOperation(op);
+  state.batch(() => {
+    state.operationState = live ? op.state : null;
+    state.operationStalled = stalled;
+    state.operationActive = live && !stalled;
+  });
+}
+
+/* Re-evaluate exactly when the operation's presentation changes on its own —
+   a confirmed one ageing out, or a live one falling silent — so an open panel
+   updates without polling. */
+function scheduleOperationTransition(op) {
+  if (_operationTransitionTimer) { clearTimeout(_operationTransitionTimer); _operationTransitionTimer = null; }
+  const at = nextOperationTransition(op);
+  if (at === null) return;
+  const delay = at - Date.now();
+  if (delay <= 0) return;
+  _operationTransitionTimer = setTimeout(() => { _operationTransitionTimer = null; refreshOperationPanel(); }, delay);
+}
+
+operationFeature.setUpdateCallback(() => {
   const wasActive = state.operationActive;
-  state.operationActive = !!(op && (op.state === "pending" || op.state === "running"));
   refreshOperationPanel();
   if (state.operationActive && !wasActive) openOperationDrawer();
 });
@@ -358,8 +383,6 @@ function openOperationDrawer() {
 
 async function initializeOperationProgress() {
   await operationFeature.initialize();
-  const op = operationFeature.getOperation();
-  state.operationActive = !!(op && (op.state === "pending" || op.state === "running"));
   refreshOperationPanel();
   if (state.operationActive) openOperationDrawer();
 }
@@ -368,32 +391,44 @@ async function initializeOperationProgress() {
     const serverName = state.config?.SERVER_NAME || "Minecraft Bedrock";
     const disabled = state.operationActive ? " disabled" : "";
     const isOwner = state.user?.role === "owner";
+    const online = !!state.status?.online;
+    const stateLabel = online ? t("online") : t("stopped");
+    const stateTitle = online ? t("serverOnline") : t("serverStopped");
     content.innerHTML = `
       <section class="server-panel block-panel">
         <div class="server-panel-header">
-          <span class="eyebrow" data-i18n="control">CONTROLE</span>
-          <h2>${serverName}</h2>
+          <span class="eyebrow" data-i18n="administration">ADMINISTRAÇÃO</span>
+          <h2 data-i18n="server">Servidor</h2>
         </div>
-        <div class="server-status-row">
-          <button class="primary" id="sp-restart" type="button"${disabled}>
-            ${uiIcon("restart")} <span data-i18n="restart">Reiniciar</span>
-          </button>
-          <button class="danger" id="sp-stop" type="button"${disabled}>
-            ${uiIcon("close")} <span data-i18n="stop">Parar</span>
-          </button>
-        </div>
-        <button class="server-rules-card" id="sp-rules" type="button">
-          <div class="server-rules-card-text">
-            <strong data-i18n="serverRules">Regras do servidor</strong>
-            <small data-i18n="restartNotice">Alterações entram em vigor sem reiniciar.</small>
+        <section class="server-status-card ${online ? "" : "offline"}" aria-label="${stateTitle}">
+          <div class="server-status-summary">
+            <span class="server-status-shield">${uiIcon("shield")}</span>
+            <span><small data-i18n="worldState">ESTADO</small><strong>${stateLabel} · ${escapeHtml(serverName)}</strong></span>
           </div>
-          <span class="server-rules-badge" data-i18n="instant">Instantâneo</span>
+          <div class="server-status-row">
+            <button class="secondary" id="sp-restart" type="button"${disabled}>
+              ${uiIcon("restart")} <span data-i18n="restart">Reiniciar</span>
+            </button>
+            <button class="danger" id="sp-stop" type="button"${disabled}>
+              ${uiIcon("close")} <span data-i18n="stop">Parar</span>
+            </button>
+          </div>
+        </section>
+        <button class="server-rules-card" id="sp-rules" type="button">
+          <span class="server-rules-icon">${uiIcon("rules")}</span>
+          <div class="server-rules-card-text">
+            <span><b data-i18n="instant">Instantâneo</b><small data-i18n="noRestart">sem restart</small></span>
+            <strong data-i18n="rules">Regras</strong>
+            <small data-i18n="rulesLiveHelp">Regras aplicadas ao vivo no servidor.</small>
+          </div>
+          <span class="server-nav-item-arrow" aria-hidden="true">›</span>
         </button>
+        <p class="server-restart-label"><span aria-hidden="true">↻</span><span data-i18n="restartRequired">Requer restart</span></p>
         <nav class="server-nav-list">
-          <button class="server-nav-item" type="button" data-sp-tab="world">${uiIcon("world")}<span data-i18n="world">Mundo</span><span class="server-nav-item-arrow">›</span></button>
-          <button class="server-nav-item" type="button" data-sp-tab="server">${uiIcon("server")}<span data-i18n="settings">Servidor</span><span class="server-nav-item-arrow">›</span></button>
-          <button class="server-nav-item" type="button" data-sp-tab="analytics">${uiIcon("analytics")}<span data-i18n="analytics">Dados</span><span class="server-nav-item-arrow">›</span></button>
-          ${isOwner ? `<button class="server-nav-item" type="button" data-sp-tab="audit">${uiIcon("activity")}<span data-i18n="recentActivity">Atividade recente</span><span class="server-nav-item-arrow">›</span></button>` : ""}
+          <button class="server-nav-item" type="button" data-sp-tab="world">${uiIcon("world")}<span><small data-i18n="configuration">CONFIGURAÇÃO</small><strong data-i18n="world">Mundo</strong></span><span class="server-nav-item-arrow">›</span></button>
+          <button class="server-nav-item" type="button" data-sp-tab="__server_settings__">${uiIcon("server")}<span><small data-i18n="infrastructure">INFRAESTRUTURA</small><strong data-i18n="settings">Servidor</strong></span><span class="server-nav-item-arrow">›</span></button>
+          <button class="server-nav-item" type="button" data-sp-tab="analytics">${uiIcon("analytics")}<span><small data-i18n="analytics">ANALYTICS</small><strong data-i18n="analytics">Dados</strong></span><span class="server-nav-item-arrow">›</span></button>
+          ${isOwner ? `<button class="server-nav-item" type="button" data-sp-tab="audit">${uiIcon("activity")}<span><small data-i18n="historyLabel">HISTÓRICO</small><strong data-i18n="audit">Auditoria</strong></span><span class="server-nav-item-arrow">›</span></button>` : ""}
         </nav>
       </section>`;
     content.querySelector("#sp-restart")?.addEventListener("click", async () => {
@@ -410,8 +445,13 @@ async function initializeOperationProgress() {
     content.querySelectorAll("[data-sp-tab]").forEach((btn) => {
       btn.addEventListener("click", () => { state.tab = btn.dataset.spTab; });
     });
+    loadTelemetryPack();
   }
 
   const renderServer = renderServerPanel;
-  return { renderServer, renderReleaseTags, loadFrontendVersion, initializeOperationProgress, loadDiagnostics, openOperationDrawer, refreshOperationPanel };
+  const renderServerSettings = () => {
+    getSettingsFeature().renderSettingsGroups(["Packs", "Rede", "Avançado"], telemetryPackMarkup());
+    loadTelemetryPack();
+  };
+  return { renderServer, renderServerSettings, renderReleaseTags, loadFrontendVersion, initializeOperationProgress, loadDiagnostics, openOperationDrawer, refreshOperationPanel };
 }

@@ -8,15 +8,16 @@ import { createNavigation } from "./core/navigation.js?v=8";
 import { toast } from "./components/feedback.js?v=7";
 import { formatDate as formatLocalizedDate, formatDuration, sessionMoment as localizedSessionMoment, timelineTimestamp as localizedTimelineTimestamp } from "./components/time.js?v=9";
 import { createAnalyticsFeature } from "./features/analytics/index.js?v=8";
-import { createPlayersFeature } from "./features/players/index.js?v=7";
-import { createWorldFeature } from "./features/world/index.js?v=7";
+import { createPlayersFeature } from "./features/players/index.js?v=8";
+import { createWorldFeature } from "./features/world/index.js?v=8";
 import { createRulesFeature } from "./features/rules/index.js?v=7";
-import { createServerFeature } from "./features/server/index.js?v=14";
+import { createServerFeature } from "./features/server/index.js?v=17";
+import { UNRESPONSIVE_AFTER_MS } from "./features/server/operation.js?v=15";
 import { startAuthenticatedApplication } from "./features/auth/bootstrap.js?v=7";
-import { createSettingsFeature } from "./features/settings/index.js?v=7";
+import { createSettingsFeature } from "./features/settings/index.js?v=8";
 import { createAuditFeature } from "./features/audit/index.js?v=1";
 import { createHomeFeature } from "./features/home/index.js?v=7";
-import { createI18n } from "./i18n/index.js?v=10";
+import { createI18n } from "./i18n/index.js?v=11";
 import { createGameTerms } from "./i18n/game-terms.js?v=7";
 
 export function startApplication() {
@@ -50,6 +51,7 @@ export function startApplication() {
       return;
     }
     if (state.tab === "__time__") return getWorldFeature().renderTimePanel();
+    if (state.tab === "__server_settings__") return getServerFeature().renderServerSettings();
     if (state.tab === "__players__") return renderPlayersPanel();
     if (state.tab === "analytics") return renderAnalyticsPanel();
     if (state.tab === "audit") return getAuditFeature().renderAuditPanel();
@@ -198,7 +200,12 @@ export function startApplication() {
     state.online = snapshot.online || 0;
     state.maxPlayers = snapshot.max_players || 0;
     if (snapshot.updated_at !== undefined) state.updatedAt = snapshot.updated_at || 0;
-    $("#players-summary").textContent = `${state.online} / ${state.maxPlayers || "?"}`;
+    const summary = $("#players-summary");
+    summary.textContent = `${state.online} `;
+    const max = document.createElement("span");
+    max.className = "players-max";
+    max.textContent = `/ ${state.maxPlayers || "?"}`;
+    summary.append(max);
     $("#players-list").textContent = state.players.length ? state.players.join(" · ") : t("nobody");
     $("#updated-at").textContent = state.updatedAt ? `${t("updated")} ${new Date(state.updatedAt * 1000).toLocaleTimeString(localeTag())}` : t("awaiting");
   }
@@ -218,8 +225,25 @@ export function startApplication() {
       timeEl.textContent = new Intl.DateTimeFormat(localeTag(), { hour: "numeric", minute: "2-digit" }).format(new Date(2000, 0, 1, hour, minute));
     }
     const isNight = _localDaytime >= 13000 && _localDaytime < 23000;
-    const iconEl = $("#world-time-icon");
-    if (iconEl) iconEl.setAttribute("href", `/static/craftcontrol-ui.svg#${isNight ? "ui-moon" : "ui-sun"}`);
+    setIcon($("#world-time-icon"), isNight ? "ui-moon" : "ui-sun");
+    _applyWeatherAccent();
+  }
+
+  function setIcon(useEl, symbol) {
+    if (!useEl) return;
+    const href = `/static/craftcontrol-ui.svg#${symbol}`;
+    if (useEl.getAttribute("href") !== href) useEl.setAttribute("href", href);
+  }
+
+  function _applyWeatherAccent() {
+    const cell = document.querySelector(".world-weather");
+    if (!cell) return;
+    const weather = state.world?.weather;
+    const isNight = _localDaytime >= 13000 && _localDaytime < 23000;
+    const next = weather === "rain" ? "rain"
+      : weather === "thunder" ? "thunder"
+        : isNight ? "clear-night" : "clear";
+    if (cell.dataset.weather !== next) cell.dataset.weather = next;
   }
 
   function showWorld(snapshot) {
@@ -238,8 +262,11 @@ export function startApplication() {
     }
     const weather = state.world.weather;
     $("#world-weather").textContent = weather ? t(weather) : "—";
-    const weatherIcon = (weather === "rain" || weather === "thunder") ? "ui-rain" : "ui-sun";
-    $("#world-weather-icon").setAttribute("href", `/static/craftcontrol-ui.svg#${weatherIcon}`);
+    const isNight = _localDaytime >= 13000 && _localDaytime < 23000;
+    setIcon($("#world-weather-icon"), weather === "thunder" ? "ui-thunder"
+      : weather === "rain" ? "ui-rain"
+        : isNight ? "ui-moon" : "ui-sun");
+    _applyWeatherAccent();
   }
 
   function updateBrand() {
@@ -267,6 +294,7 @@ export function startApplication() {
     showPlayers({ players: state.players, online: state.online, max_players: state.maxPlayers, updated_at: state.updatedAt });
     showWorld({ world: state.world });
     updateBrand();
+    refreshIndicatorBars();
   }
 
   async function loadState() {
@@ -304,6 +332,8 @@ export function startApplication() {
     getNavigation().renderBottomNav();
     refreshActivePanel();
   });
+  state.subscribe("operationStalled", refreshIndicatorBars);
+  state.subscribe("operationState", refreshIndicatorBars);
   state.subscribe("operationActive", () => {
     if (state.status) setStatus(state.status);
     getSettingsFeature().updateSaveLabel();
@@ -320,13 +350,37 @@ export function startApplication() {
     if (["home", "world", "rules", "server", "__time__"].includes(state.tab)) refreshActivePanel();
   });
   state.subscribe("schema", refreshActivePanel);
+  /* Exactly one bar is ever shown. An operation — running, or gone silent and
+     needing a decision — outranks pending changes, because it is the thing
+     standing between the operator and applying them. */
   function refreshIndicatorBars() {
-    const hasChanges = Object.keys(state.changes).length > 0;
+    const changesCount = Object.keys(state.changes).length;
     const opActive = !!state.operationActive;
-    const changesBar = $("#changes-bar");
+    const opStalled = !!state.operationStalled;
+    const showOperation = opActive || opStalled;
+
     const opBar = $("#operation-bar");
-    if (changesBar) changesBar.hidden = !hasChanges || opActive;
-    if (opBar) opBar.hidden = !opActive;
+    if (opBar) {
+      opBar.hidden = !showOperation;
+      opBar.classList.toggle("indicator-bar--stalled", opStalled);
+    }
+    const opIcon = $("#operation-bar-icon");
+    if (opIcon) opIcon.classList.toggle("indicator-bar-live", !opStalled);
+    const opIconUse = $("#operation-bar-icon-use");
+    if (opIconUse) opIconUse.setAttribute("href", `/static/craftcontrol-ui.svg#${opStalled ? "ui-warning" : "ui-live"}`);
+    const opTitle = $("#operation-bar-title");
+    if (opTitle && showOperation) opTitle.textContent = opStalled ? t("indicatorOperationStalled") : t("indicatorOperationTitle");
+    const opLabel = $("#operation-bar-label");
+    if (opLabel && showOperation) {
+      opLabel.textContent = opStalled
+        ? t("indicatorOperationStalledHint", UNRESPONSIVE_AFTER_MS / 60000)
+        : (t(`opState_${state.operationState}`) || state.operationState || "");
+    }
+
+    const changesBar = $("#changes-bar");
+    if (changesBar) changesBar.hidden = changesCount === 0 || showOperation;
+    const changesLabel = $("#changes-bar-label");
+    if (changesLabel && changesCount > 0) changesLabel.textContent = t("indicatorChangesTitle", changesCount);
   }
   state.subscribe("changes", () => { getSettingsFeature().updateSaveLabel(); refreshIndicatorBars(); });
 
@@ -410,6 +464,8 @@ export function startApplication() {
   });
   $("#operation-bar")?.addEventListener("click", () => getServerFeature().openOperationDrawer());
   $("#close-operation-drawer").onclick = () => $("#operation-drawer").close();
+  const dismissOperation = $("#dismiss-operation");
+  if (dismissOperation) dismissOperation.onclick = () => $("#operation-drawer").close();
   $("#discard-all").onclick = () => {
     state.changes = {};
     $("#changes-drawer").close();

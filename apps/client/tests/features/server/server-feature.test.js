@@ -8,7 +8,12 @@ import { makeEl } from "../../helpers.js";
 
 function makeDeps(overrides = {}) {
   const elements = {};
-  const state = { frontendVersion: "1.0.0", operationActive: false, ...overrides.state };
+  // Mirrors the real reactive state, which exposes a synchronous batch().
+  const state = {
+    frontendVersion: "1.0.0", operationActive: false, operationStalled: false, operationState: null,
+    batch: (run) => run(),
+    ...overrides.state,
+  };
   const $ = jest.fn((selector) => elements[selector] ||= makeEl());
   const content = makeEl();
   const api = jest.fn().mockResolvedValue({ installed: false, enabled: false, health: "waiting", capabilities: {} });
@@ -139,6 +144,52 @@ describe("createServerFeature", () => {
     expect(deps.state.operationActive).toBe(true);
   });
 
+  test("an operation that stopped reporting stops blocking the app", async () => {
+    // The backend only reclaims abandoned operations when its process restarts,
+    // so a worker that dies mid-flight would otherwise leave the client locked
+    // out of restart, stop, time controls and applying changes forever.
+    const deps = makeDeps();
+    deps.elements["#operation-progress-container"] = makeEl();
+    const silentSince = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+    deps.api = jest.fn().mockResolvedValue({
+      operation: { operation_id: "op-1", state: "running", stages: [], updated_at: silentSince },
+    });
+    const feature = createServerFeature(deps);
+    await feature.initializeOperationProgress();
+
+    expect(deps.state.operationActive).toBe(false);
+    expect(deps.state.operationStalled).toBe(true);
+    expect(deps.state.operationState).toBe("running");
+  });
+
+  test("a recently heartbeating operation still blocks the app", async () => {
+    const deps = makeDeps();
+    deps.elements["#operation-progress-container"] = makeEl();
+    const justNow = new Date(Date.now() - 30 * 1000).toISOString();
+    deps.api = jest.fn().mockResolvedValue({
+      operation: { operation_id: "op-1", state: "running", stages: [], updated_at: justNow },
+    });
+    const feature = createServerFeature(deps);
+    await feature.initializeOperationProgress();
+
+    expect(deps.state.operationActive).toBe(true);
+    expect(deps.state.operationStalled).toBe(false);
+  });
+
+  test("a terminal operation leaves no operation state behind", async () => {
+    const deps = makeDeps();
+    deps.elements["#operation-progress-container"] = makeEl();
+    deps.api = jest.fn().mockResolvedValue({
+      operation: { operation_id: "op-1", state: "confirmed", stages: [], completed_at: new Date().toISOString() },
+    });
+    const feature = createServerFeature(deps);
+    await feature.initializeOperationProgress();
+
+    expect(deps.state.operationActive).toBe(false);
+    expect(deps.state.operationStalled).toBe(false);
+    expect(deps.state.operationState).toBeNull();
+  });
+
   test("does not reopen a dismissed drawer when the Server area renders", async () => {
     const deps = makeDeps();
     deps.elements["#telemetry-pack-state"] = makeEl();
@@ -159,8 +210,8 @@ describe("createServerFeature", () => {
     await feature.initializeOperationProgress();
     expect(deps.state.operationActive).toBe(true);
     expect(deps.elements["#operation-drawer"].showModal).toHaveBeenCalledTimes(1);
-    expect(deps.elements["#operation-indicator"].hidden).toBe(false);
-    expect(deps.elements["#operation-indicator-label"].textContent).toBe("opState_pending");
+    expect(deps.elements["#operation-indicator"].hidden).toBe(true);
+    expect(deps.elements["#operation-indicator-label"].textContent).toBe("");
   });
 
   test("opens the drawer for a new active SSE operation after it was dismissed", async () => {
@@ -183,14 +234,14 @@ describe("createServerFeature", () => {
 
       expect(deps.state.operationActive).toBe(true);
       expect(deps.elements["#operation-drawer"].showModal).toHaveBeenCalledTimes(1);
-      expect(deps.elements["#operation-indicator"].hidden).toBe(false);
+      expect(deps.elements["#operation-indicator"].hidden).toBe(true);
     } finally {
       global.EventSource = savedEventSource;
       localStorage.clear();
     }
   });
 
-  test("keeps terminal operation details available from the persistent indicator", async () => {
+  test("does not show the legacy indicator for terminal operation details", async () => {
     const deps = makeDeps();
     deps.elements["#operation-progress-container"] = makeEl();
     deps.elements["#operation-indicator"] = makeEl();
@@ -202,8 +253,8 @@ describe("createServerFeature", () => {
     await feature.initializeOperationProgress();
 
     expect(deps.state.operationActive).toBe(false);
-    expect(deps.elements["#operation-indicator"].hidden).toBe(false);
-    expect(deps.elements["#operation-indicator-label"].textContent).toBe("opState_failed");
+    expect(deps.elements["#operation-indicator"].hidden).toBe(true);
+    expect(deps.elements["#operation-indicator-label"].textContent).toBe("");
     feature.openOperationDrawer();
     expect(deps.elements["#operation-drawer"].showModal).toHaveBeenCalledTimes(1);
   });

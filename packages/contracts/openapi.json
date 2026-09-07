@@ -2467,6 +2467,9 @@
           "gamerules": {
             "$ref": "#/components/schemas/JsonMap"
           },
+          "world": {
+            "$ref": "#/components/schemas/JsonMap"
+          },
           "players": {
             "$ref": "#/components/schemas/JsonMap"
           },

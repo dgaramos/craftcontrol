@@ -1,4 +1,4 @@
-import { readFileSync } from "fs";
+import { readFileSync, readdirSync } from "fs";
 import { join, resolve } from "path";
 import { fileURLToPath } from "url";
 
@@ -120,5 +120,74 @@ describe("feature contracts — deaths localisation and layout", () => {
   test("index.html has release-tags element", () => {
     const template = readFileSync(join(FRONTEND, "templates", "index.html"), "utf8");
     expect(template).toContain('id="release-tags"');
+  });
+});
+
+describe("feature contracts — pending changes and operation indicators", () => {
+  /* The reactive state proxy only traps top-level assignment. Mutating
+     state.changes in place silently skips every "changes" subscriber, which
+     leaves the pending-changes bar on screen with an empty drawer behind it. */
+  function everyModule() {
+    const files = [];
+    const walk = (dir) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = join(dir, entry.name);
+        if (entry.isDirectory()) walk(full);
+        else if (entry.name.endsWith(".js")) files.push([full, readFileSync(full, "utf8")]);
+      }
+    };
+    walk(JS);
+    files.push([join(STATIC, "app.js"), readFileSync(join(STATIC, "app.js"), "utf8")]);
+    return files;
+  }
+
+  test("no module mutates state.changes in place", () => {
+    const offenders = everyModule()
+      .filter(([, source]) => /delete\s+state\.changes\[/.test(source) || /state\.changes\[[^\]]+\]\s*=[^=]/.test(source))
+      .map(([file]) => file);
+    expect(offenders).toEqual([]);
+  });
+
+  /* The UA rule for [hidden] is display:none, but ANY author `display` rule
+     beats it. This project hit that four separate times (footer, players list,
+     bottom sheet, and both indicator bars, which stayed permanently visible
+     because .indicator-bar sets display:flex). One global rule settles it. */
+  test("the hidden attribute wins over component display rules", () => {
+    const css = readFileSync(join(STATIC, "app.css"), "utf8");
+    expect(css).toMatch(/^\[hidden\]\s*\{[^}]*display:\s*none\s*!important/m);
+  });
+
+  /* The world clock ticks 10x a second. Rewriting the href of a <use> that
+     points at an external sprite re-resolves the reference and makes the icon
+     flicker, so the write must be conditional. */
+  test("the world icons are only rewritten when the symbol changes", () => {
+    const composition = readFileSync(join(JS, "composition.js"), "utf8");
+    expect(composition).toContain('if (useEl.getAttribute("href") !== href) useEl.setAttribute("href", href)');
+    expect(composition).not.toMatch(/\$\("#world-(time|weather)-icon"\)\.setAttribute/);
+  });
+
+  test("exactly one indicator bar shows, with the operation outranking changes", () => {
+    const composition = readFileSync(join(JS, "composition.js"), "utf8");
+    expect(composition).toContain("const showOperation = opActive || opStalled");
+    expect(composition).toContain("opBar.hidden = !showOperation");
+    expect(composition).toContain("changesBar.hidden = changesCount === 0 || showOperation");
+  });
+
+  test("operations carry both a retention window and an unresponsive window", () => {
+    const operation = readFileSync(join(JS, "features", "server", "operation.js"), "utf8");
+    expect(operation).toContain("CONFIRMED_RETENTION_MS");
+    expect(operation).toContain("isExpiredOperation");
+    expect(operation).toContain("UNRESPONSIVE_AFTER_MS");
+    expect(operation).toContain("isUnresponsiveOperation");
+  });
+
+  /* An unresponsive operation must never count as active, or the app stays
+     locked out of restart, stop, time controls and applying changes. */
+  test("only a live, responding operation sets state.operationActive", () => {
+    const server = readFileSync(join(JS, "features", "server", "index.js"), "utf8");
+    expect(server).toContain("state.operationActive = live && !stalled");
+    const offenders = [readFileSync(join(JS, "composition.js"), "utf8"), server]
+      .filter((source) => /state\.operationActive\s*=\s*!!\(op/.test(source));
+    expect(offenders).toEqual([]);
   });
 });

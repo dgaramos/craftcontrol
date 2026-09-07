@@ -77,14 +77,17 @@ export function createSettingsFeature({ state, content, t, api, $, escapeHtml, t
       $("#changes-drawer").close();
       return;
     }
+    // Handoff layout: the before → after pair reads first, with the technical
+    // key as a quiet caption underneath.
     $("#changes-list").innerHTML = entries.map(([key, value]) => {
       const definition = definitionFor(key);
-      return `<article class="change-item"><div class="change-copy"><strong>${escapeHtml(fieldLabel(definition))}</strong><div class="change-values"><span><small>${t("currentValue")}</small>${escapeHtml(displayValue(state.config[key], definition))}</span><b>→</b><span><small>${t("newValue")}</small>${escapeHtml(displayValue(value, definition))}</span></div></div><button type="button" class="remove-change" data-remove-change="${escapeHtml(key)}" aria-label="${t("removeChange")}">${uiIcon("close")}</button></article>`;
+      return `<article class="change-item"><div class="change-values"><span><small>${t("currentValue")}</small><b class="change-before">${escapeHtml(displayValue(state.config[key], definition))}</b></span><i aria-hidden="true">→</i><span><small>${t("newValue")}</small><b class="change-after">${escapeHtml(displayValue(value, definition))}</b></span></div><button type="button" class="remove-change" data-remove-change="${escapeHtml(key)}" aria-label="${t("removeChange")}">${uiIcon("close")}</button><p class="change-key">${escapeHtml(key)} · ${escapeHtml(fieldLabel(definition))}</p></article>`;
     }).join("");
     $("#changes-list").querySelectorAll("[data-remove-change]").forEach((button) => button.onclick = () => {
-      delete state.changes[button.dataset.removeChange];
+      const remaining = { ...state.changes };
+      delete remaining[button.dataset.removeChange];
+      state.changes = remaining;
       refreshActivePanel();
-      updateSaveLabel();
     });
   }
 
@@ -151,9 +154,10 @@ export function createSettingsFeature({ state, content, t, api, $, escapeHtml, t
       element.addEventListener("change", () => {
         if (definition.type === "boolean") updateToggleLabel(element);
         const value = definition.type === "boolean" ? element.checked : element.value;
-        if (comparableValue(value) === comparableValue(state.config[key])) delete state.changes[key];
-        else state.changes[key] = value;
-        updateSaveLabel();
+        const next = { ...state.changes };
+        if (comparableValue(value) === comparableValue(state.config[key])) delete next[key];
+        else next[key] = value;
+        state.changes = next;
       });
     });
     live.forEach(([key, definition]) => {

@@ -278,3 +278,69 @@ describe("createSettingsFeature — renderSettingsGroups", () => {
     expect(deps.content.innerHTML).toContain('value="42"');
   });
 });
+
+describe("pending changes stay reactive", () => {
+  // state.changes is only observable when reassigned: the reactive state proxy
+  // traps top-level sets, so in-place mutation would leave the indicator bar
+  // and the save affordance showing a list that is already empty.
+  function makeReactiveDeps(initialChanges) {
+    const deps = makeDeps({ changes: initialChanges });
+    const assignments = [];
+    let changes = initialChanges;
+    Object.defineProperty(deps.state, "changes", {
+      configurable: true,
+      get: () => changes,
+      set: (value) => { changes = value; assignments.push(value); },
+    });
+    return { deps, assignments, current: () => changes };
+  }
+
+  test("removing the last pending change reassigns state.changes", () => {
+    const { deps, assignments, current } = makeReactiveDeps({ MAX_PLAYERS: "20" });
+    const removeButton = { dataset: { removeChange: "MAX_PLAYERS" }, onclick: null };
+    deps.elements["#changes-list"] = {
+      innerHTML: "",
+      querySelectorAll: jest.fn(() => [removeButton]),
+    };
+    deps.elements["#changes-drawer"] = { open: false, close: jest.fn() };
+    deps.state.schema.settings.MAX_PLAYERS = { type: "number", label: "Max players", label_en: "Max players" };
+
+    const feature = createSettingsFeature(deps);
+    feature.renderChangesDrawer();
+    removeButton.onclick();
+
+    expect(assignments).toHaveLength(1);
+    expect(current()).toEqual({});
+    expect(deps.refreshActivePanel).toHaveBeenCalled();
+  });
+
+  test("editing a field reassigns state.changes instead of mutating it", () => {
+    const { deps, assignments, current } = makeReactiveDeps({});
+    deps.state.config.MAX_PLAYERS = "10";
+    deps.state.schema.settings.MAX_PLAYERS = { type: "number", group: "Rede", label: "Max players", label_en: "Max players" };
+    const field = { value: "20", addEventListener: jest.fn((_, handler) => { field._change = handler; }) };
+    deps.elements["#field-MAX_PLAYERS"] = field;
+
+    const feature = createSettingsFeature(deps);
+    feature.bindSettingFields(["Rede"]);
+    field._change();
+
+    expect(assignments).toHaveLength(1);
+    expect(current()).toEqual({ MAX_PLAYERS: "20" });
+  });
+
+  test("reverting a field to the configured value drops the key by reassignment", () => {
+    const { deps, assignments, current } = makeReactiveDeps({ MAX_PLAYERS: "20" });
+    deps.state.config.MAX_PLAYERS = "10";
+    deps.state.schema.settings.MAX_PLAYERS = { type: "number", group: "Rede", label: "Max players", label_en: "Max players" };
+    const field = { value: "10", addEventListener: jest.fn((_, handler) => { field._change = handler; }) };
+    deps.elements["#field-MAX_PLAYERS"] = field;
+
+    const feature = createSettingsFeature(deps);
+    feature.bindSettingFields(["Rede"]);
+    field._change();
+
+    expect(assignments).toHaveLength(1);
+    expect(current()).toEqual({});
+  });
+});

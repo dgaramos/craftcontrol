@@ -108,7 +108,7 @@ describe("renderTimePanel", () => {
     deps.$ = jest.fn(() => makeEl());
     const { renderTimePanel } = createWorldFeature(deps);
     renderTimePanel();
-    expect(deps.content.innerHTML).toContain("Escolha um momento predefinido");
+    expect(deps.content.innerHTML).toContain("Desative para congelar o horário atual.");
   });
 });
 

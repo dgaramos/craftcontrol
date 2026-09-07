@@ -95,14 +95,32 @@ describe("brand contracts — mobile scroll behaviour", () => {
     expect(nav).toContain('window.scrollTo({ top: 0, left: 0, behavior: "auto" })');
   });
 
-  test("index.html references app.css?v=38", () => {
+  test("index.html references app.css?v=46", () => {
     const template = readFileSync(join(FRONTEND, "templates", "index.html"), "utf8");
-    expect(template).toContain("/static/app.css?v=38");
+    expect(template).toContain("/static/app.css?v=46");
   });
 
-  test("index.html references app.js?v=82", () => {
+  test("index.html references app.js?v=90", () => {
     const template = readFileSync(join(FRONTEND, "templates", "index.html"), "utf8");
-    expect(template).toContain("/static/app.js?v=82");
+    expect(template).toContain("/static/app.js?v=90");
+  });
+
+  test("index.html links the self-hosted display and body fonts", () => {
+    const template = readFileSync(join(FRONTEND, "templates", "index.html"), "utf8");
+    expect(template).toContain("/static/fonts.css");
+  });
+
+  test("fonts.css self-hosts Oxanium and Geist without an external origin", () => {
+    const fonts = readFileSync(join(FRONTEND, "static", "fonts.css"), "utf8");
+    expect(fonts).toContain("font-family: 'Oxanium'");
+    expect(fonts).toContain("font-family: 'Geist'");
+    expect(fonts).not.toContain("https://");
+  });
+
+  test("app.css resolves the display and body font tokens", () => {
+    const css = readFileSync(join(FRONTEND, "static", "app.css"), "utf8");
+    expect(css).toContain("--font-display: Oxanium");
+    expect(css).toContain("--font-body: Geist");
   });
 });
 

@@ -42,11 +42,18 @@ describe("panelAccessHeroRow — non-owner viewer", () => {
     expect(html).toContain("operator");
   });
 
-  test("shows session count in hero row", () => {
-    const deps = makeDeps("en", "viewer");
+  test.each([
+    ["en", 3, "3 active sessions"],
+    ["en", 1, "1 active session"],
+    ["pt", 3, "3 sessões ativas"],
+    ["pt", 1, "1 sessão ativa"],
+    ["es", 3, "3 sesiones activas"],
+    ["es", 1, "1 sesión activa"],
+  ])("shows the %s session count for %i sessions in the hero row", (locale, sessions, label) => {
+    const deps = makeDeps(locale, "viewer");
     const { panelAccessHeroRow } = createPlayerAccess(deps);
-    const html = panelAccessHeroRow({ name: "P" }, { status: "active", role: "viewer", active_sessions: 3 });
-    expect(html).toContain("3 active sessions");
+    const html = panelAccessHeroRow({ name: "P" }, { status: "active", role: "viewer", active_sessions: sessions });
+    expect(html).toContain(label);
   });
 });
 
@@ -188,6 +195,26 @@ describe("createPlayerAccess — bindPlayerAccess", () => {
       expect(deps.toast).toHaveBeenCalledWith("Could not copy code", true);
     } finally {
       global.navigator = savedNavigator;
+    }
+  });
+
+  test.each([
+    ["en", "Suspend Ana's access?"],
+    ["pt", "Suspender o acesso de Ana?"],
+    ["es", "¿Suspender el acceso de Ana?"],
+  ])("asks for suspension confirmation in %s", async (locale, question) => {
+    const savedConfirm = global.confirm;
+    const deps = makeDeps(locale);
+    const suspend = { onclick: null };
+    deps.$ = jest.fn((selector) => ({ "#detail-access-invite": { onclick: null }, "#detail-access-suspend": suspend })[selector] || null);
+    global.confirm = jest.fn().mockReturnValue(false);
+    try {
+      createPlayerAccess(deps).bindPlayerAccess({ name: "Ana" }, { status: "active" });
+      await suspend.onclick();
+      expect(global.confirm).toHaveBeenCalledWith(question);
+      expect(deps.api).not.toHaveBeenCalled();
+    } finally {
+      global.confirm = savedConfirm;
     }
   });
 

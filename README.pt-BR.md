@@ -210,6 +210,8 @@ A área Jogadores consolida totais e detalhamentos de toda a vida antes das evid
 
 Ícones de criaturas, blocos, projéteis, navegação, ações, estados e métricas usam pixel art SVG original incluída. Identificadores do jogo são localizados em português, inglês e espanhol, com fallback neutro localizado para identificadores desconhecidos. Veja [Regras do sistema visual](docs/design-system.md).
 
+O dono pode exportar o que o painel mostra em JSON ou CSV: perfis, sessões, atividade e mortes dos jogadores, além dos agregados de rankings, períodos, blocos, combate e exploração. A exportação nunca contém XUIDs, tokens, endereços ou evidência bruta do servidor, respeita tetos documentados e é recusada em vez de truncada, e toda tentativa é auditada. Veja [Exportação de dados](docs/exports.md).
+
 ## Backups e recuperação
 
 O CraftControl não é dono do mundo Minecraft. O mundo permanece no projeto Bedrock; o estado do gerenciador vive em `manager.db`. Migrações SQLite são transacionais e criam um backup imutável do banco antes da primeira migração pendente.

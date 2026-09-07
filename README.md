@@ -227,6 +227,8 @@ The Players area consolidates one player’s lifetime totals and breakdowns befo
 
 Creature, block, projectile, navigation, action, state, and metric icons use original bundled SVG pixel art. Game identifiers are localized in Portuguese, English, and Spanish, with a localized neutral fallback for unknown identifiers. See [Visual system rules](docs/design-system.md).
 
+An owner can export what the panel shows as JSON or CSV: player profiles, sessions, activity and deaths, plus the analytics rankings, periods, blocks, combat and exploration aggregates. Exports never contain XUIDs, tokens, addresses or raw server evidence, are bounded by documented ceilings and refused rather than truncated, and every attempt is audited. See [Data exports](docs/exports.md).
+
 ## Backups and recovery
 
 CraftControl does not own the Minecraft world. The world remains in the Bedrock project; manager state lives in `manager.db`. SQLite migrations are transactional and create an immutable database backup before the first pending migration.

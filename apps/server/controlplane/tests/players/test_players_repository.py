@@ -71,6 +71,31 @@ def test_player_profiles_returns_list(player_repo: SQLitePlayerRepository) -> No
     assert len(player_repo.player_profiles()) == 1
 
 
+def test_player_profile_count_matches_the_profiles_without_building_them(
+    player_repo: SQLitePlayerRepository,
+) -> None:
+    """Exports refuse an oversized request on this count, so it must be exact.
+
+    ``player_profiles`` materializes every profile and parses every telemetry
+    blob; the count exists to make that refusal cheap.
+    """
+    assert player_repo.player_profile_count() == 0
+    player_repo.observe_player("VonCrush", True)
+    player_repo.observe_player("Nicole", False)
+    assert player_repo.player_profile_count() == 2
+    assert player_repo.player_profile_count() == len(player_repo.player_profiles())
+
+
+def test_player_profile_count_counts_a_profile_once_across_sessions(
+    player_repo: SQLitePlayerRepository,
+) -> None:
+    """Reconnecting must not inflate the count the ceiling is checked against."""
+    player_repo.observe_player("VonCrush", True, "999", occurred_at=100.0)
+    player_repo.observe_player("VonCrush", False, "999", occurred_at=160.0)
+    player_repo.observe_player("VonCrush", True, "999", occurred_at=200.0)
+    assert player_repo.player_profile_count() == 1
+
+
 def test_player_profile_returns_detail(player_repo: SQLitePlayerRepository) -> None:
     player_repo.observe_player("VonCrush", True, "999", occurred_at=100.0)
     player_repo.observe_player("VonCrush", False, "999", occurred_at=160.0)

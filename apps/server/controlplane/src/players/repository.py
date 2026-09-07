@@ -300,6 +300,16 @@ class SQLitePlayerRepository:
             ).fetchone()
             return row[0] if row else None
 
+    def player_profile_count(self) -> int:
+        """Count profiles without building any of them.
+
+        ``player_profiles`` materializes every profile and parses every
+        telemetry blob, so an export needs a cheap count to refuse an oversized
+        request before paying that cost.
+        """
+        with self._connect() as connection:
+            return int(connection.execute("SELECT COUNT(*) FROM player_profiles").fetchone()[0])
+
     def player_profiles(self) -> list[dict[str, Any]]:
         with self._connect() as connection:
             rows = connection.execute(

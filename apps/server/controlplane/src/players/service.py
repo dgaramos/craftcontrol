@@ -109,6 +109,9 @@ class PlayerService:
     def list_profiles(self) -> list[dict[str, Any]]:
         return self.repository.player_profiles()
 
+    def profile_count(self) -> int:
+        return self.repository.player_profile_count()
+
     def profile(self, identity: str) -> dict[str, Any] | None:
         return self.repository.player_profile(identity)
 

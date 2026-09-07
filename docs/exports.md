@@ -16,7 +16,13 @@ Exports require the `data.export` capability. `ROLE_CAPABILITIES` grants `*` to
 new capability makes exports owner-only without a second rule. Requests without
 it answer `403` through the existing error envelope.
 
-The refusal is audited, and that requires care: the shared `require` decorator
+Every authenticated attempt is audited — success, denial, invalid filter,
+refusal, or unexpected failure — and exactly once. An unauthenticated request is
+not an export attempt: the auth boundary refuses it before any route, it has no
+actor to record, and auditing it there would let unauthenticated traffic write
+to the audit log. Failed authentication is already recorded separately.
+
+Auditing the denial requires care: the shared `require` decorator
 answers `403` before the handler runs and never reaches the audit boundary, so
 an export route that relies on it alone leaves no trace of who tried. Export
 routes therefore perform the capability check at their own boundary, record the
@@ -36,6 +42,15 @@ the durable records behind the Players and Data workspaces, using the shapes the
 API already defines (`PlayerSummary`, `PlayerSession`, `ActivityEvent`). Filters
 are an optional player, an optional period in days, and for `activity` the same
 `kind` and `source` allowlists the activity endpoint accepts.
+
+Three consequences of a stable column set are worth stating, because an
+implementation would otherwise decide them one endpoint at a time. `profiles`
+carries the summary fields, not the optional telemetry aggregate map: its keys
+vary per player, so including it would make the columns depend on the rows.
+`sessions` requires a player filter, because sessions are readable per profile
+and every session of every player is exactly the unbounded request the ceilings
+exist to refuse. And a period filter is rejected, not ignored, by a resource
+that has no period.
 
 **Analytics resources** — `rankings`, `periods`, `blocks`, `combat`,
 `exploration`. They export the bounded aggregates behind the analytics
@@ -71,7 +86,10 @@ loadable by a spreadsheet: `X-CraftControl-Export-Manifest` holds the same objec
 as compact JSON. A CSV body is a header row followed by data rows, RFC 4180
 quoting, UTF-8 without a byte-order mark, and LF line endings. Nested values are
 flattened with dotted column names (`player.id`, `player.name`); a null is an
-empty field, never the string `null`. Column order is the declared order of the
+empty field, never the string `null`; a boolean is `true` or `false`. A
+free-form detail map is the exception to flattening: its keys vary per event
+topic, so it travels as one column holding compact JSON, and the JSON export
+carries the identical value so both formats stay comparable. Column order is the declared order of the
 resource's fields and is stable across releases within an
 `export_schema_version`.
 

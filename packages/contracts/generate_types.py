@@ -20,6 +20,9 @@ def type_expression(schema: dict[str, Any]) -> str:
         return " | ".join(json.dumps(value) for value in schema["enum"])
     if "allOf" in schema:
         return " & ".join(type_expression(item) for item in schema["allOf"])
+    for keyword in ("oneOf", "anyOf"):
+        if keyword in schema:
+            return " | ".join(type_expression(item) for item in schema[keyword])
     nullable = schema.get("nullable", False)
     schema_type = schema.get("type")
     if nullable and schema_type not in (None, "null"):

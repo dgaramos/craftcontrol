@@ -60,6 +60,12 @@
       ]
     },
     {
+      "path": "/api/exports/players/<resource>",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
       "path": "/api/auth/access",
       "methods": [
         "GET"
@@ -334,8 +340,12 @@
       "csrf_exempt": true,
       "response_content_type": "text/plain; version=0.0.4",
       "responses": {
-        "200": {"description": "Prometheus text exposition (no PII, no XUIDs)"},
-        "401": {"description": "Bearer token required but missing or invalid"}
+        "200": {
+          "description": "Prometheus text exposition (no PII, no XUIDs)"
+        },
+        "401": {
+          "description": "Bearer token required but missing or invalid"
+        }
       },
       "pagination": false
     },

@@ -747,6 +747,148 @@
         }
       }
     },
+    "/api/exports/players/{resource}": {
+      "get": {
+        "operationId": "exportPlayerResource",
+        "summary": "Export a player resource as JSON or CSV",
+        "description": "Owner-only bounded export of one player resource. Refused with 422 when it would exceed the record or byte ceiling documented in docs/exports.md; never truncated. Every attempt is audited, including a refusal.",
+        "parameters": [
+          {
+            "name": "resource",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "profiles",
+                "sessions",
+                "activity",
+                "deaths"
+              ]
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "json",
+                "csv"
+              ],
+              "default": "json"
+            }
+          },
+          {
+            "name": "player",
+            "in": "query",
+            "required": false,
+            "description": "Public player ID or Gamertag. Required for the sessions resource.",
+            "schema": {
+              "type": "string",
+              "maxLength": 64
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "description": "Period for activity and deaths; unsupported by profiles and sessions.",
+            "schema": {
+              "type": "integer",
+              "enum": [
+                0,
+                7,
+                30
+              ],
+              "default": 0
+            }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "all",
+                "structured",
+                "server"
+              ],
+              "default": "all"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Export payload with its manifest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerExport"
+                }
+              },
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed or unsupported filter",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing the data.export capability",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown export resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Export exceeds a documented ceiling and is refused whole",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportRefusal"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/gamerules/{rule}": {
       "put": {
         "tags": [
@@ -1879,6 +2021,262 @@
           },
           "capability": {
             "type": "string"
+          }
+        }
+      },
+      "ExportManifest": {
+        "type": "object",
+        "description": "States what an export payload contains so a stored file stays interpretable.",
+        "required": [
+          "export_schema_version",
+          "resource",
+          "format",
+          "filters",
+          "generated_at",
+          "row_count",
+          "timezone",
+          "row_limit",
+          "truncated"
+        ],
+        "properties": {
+          "export_schema_version": {
+            "type": "integer"
+          },
+          "resource": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "json",
+              "csv"
+            ]
+          },
+          "filters": {
+            "$ref": "#/components/schemas/JsonMap"
+          },
+          "generated_at": {
+            "type": "number"
+          },
+          "row_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "timezone": {
+            "type": "string",
+            "description": "IANA identifier that produced any day key."
+          },
+          "row_limit": {
+            "type": "integer"
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "Always false; an oversized export is refused, never cut."
+          }
+        }
+      },
+      "ExportRefusal": {
+        "type": "object",
+        "description": "A refusal naming the ceiling that stopped the export.",
+        "required": [
+          "error",
+          "limit",
+          "measured",
+          "allowed"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string",
+            "enum": [
+              "record",
+              "byte"
+            ]
+          },
+          "measured": {
+            "type": "integer"
+          },
+          "allowed": {
+            "type": "integer"
+          },
+          "hint": {
+            "type": "string"
+          }
+        }
+      },
+      "PlayerActivityExportRecord": {
+        "type": "object",
+        "description": "One exported event. `details` is compact JSON so the CSV column set cannot vary per topic.",
+        "required": [
+          "id",
+          "timestamp",
+          "topic",
+          "source",
+          "player",
+          "details"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "timestamp": {
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "topic": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "player": {
+            "$ref": "#/components/schemas/PlayerExportReference"
+          },
+          "details": {
+            "type": "string"
+          }
+        }
+      },
+      "PlayerExport": {
+        "type": "object",
+        "required": [
+          "manifest",
+          "records"
+        ],
+        "properties": {
+          "manifest": {
+            "$ref": "#/components/schemas/ExportManifest"
+          },
+          "records": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/PlayerProfileExportRecord"
+                },
+                {
+                  "$ref": "#/components/schemas/PlayerSessionExportRecord"
+                },
+                {
+                  "$ref": "#/components/schemas/PlayerActivityExportRecord"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "PlayerExportReference": {
+        "type": "object",
+        "description": "Public player reference: opaque ID and current Gamertag, nothing else.",
+        "required": [
+          "id",
+          "name"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "PlayerProfileExportRecord": {
+        "type": "object",
+        "description": "One exported profile. Closed on purpose: a XUID or telemetry envelope cannot appear.",
+        "required": [
+          "id",
+          "name",
+          "online",
+          "sessions_count",
+          "total_play_seconds",
+          "deaths_count",
+          "permission",
+          "operator"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "online": {
+            "type": "boolean"
+          },
+          "sessions_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "total_play_seconds": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "deaths_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "permission": {
+            "type": "string"
+          },
+          "operator": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PlayerSessionExportRecord": {
+        "type": "object",
+        "required": [
+          "player",
+          "id",
+          "connected_at",
+          "duration_seconds",
+          "inferred",
+          "active"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "player": {
+            "$ref": "#/components/schemas/PlayerExportReference"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "connected_at": {
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "disconnected_at": {
+            "type": [
+              "number",
+              "string",
+              "null"
+            ]
+          },
+          "duration_seconds": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "close_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "inferred": {
+            "type": "boolean"
+          },
+          "active": {
+            "type": "boolean"
           }
         }
       },

@@ -6,7 +6,7 @@ import pytest
 from flask import Flask, jsonify
 
 from src.auth.http import auth_api, install_auth, require
-from src.auth.service import AuthService
+from src.auth.service import ROLE_CAPABILITIES, AuthService
 from src.players.repository import SQLitePlayerRepository
 from conftest import make_operation_db
 
@@ -212,6 +212,23 @@ def test_role_capabilities_are_enforced(auth_db) -> None:
     auth.require_capability(viewer, "server.read")
     with pytest.raises(PermissionError):
         auth.require_capability(viewer, "world.manage")
+
+
+def test_data_export_capability_is_reachable_only_through_the_owner_wildcard(auth_db) -> None:
+    """docs/exports.md makes exports owner-only by naming a new capability.
+
+    `viewer` and `operator` enumerate their capabilities, so the guarantee holds
+    only while neither role lists this one and the owner wildcard still answers
+    for it. Granting it to another role would silently widen who can export
+    player history.
+    """
+    _, auth = auth_db
+    assert "data.export" not in ROLE_CAPABILITIES["viewer"]
+    assert "data.export" not in ROLE_CAPABILITIES["operator"]
+    auth.require_capability({"capabilities": sorted(ROLE_CAPABILITIES["owner"])}, "data.export")
+    for role in ("viewer", "operator"):
+        with pytest.raises(PermissionError):
+            auth.require_capability({"capabilities": sorted(ROLE_CAPABILITIES[role])}, "data.export")
 
 
 def test_owner_can_list_access_and_last_owner_cannot_be_suspended(auth_db) -> None:

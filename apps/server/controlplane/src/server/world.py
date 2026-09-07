@@ -30,6 +30,51 @@ class WorldService:
     TIME_QUERIES: frozenset[str] = frozenset({"daytime", "gametime", "day"})
     # Deterministic priority order for weather-query: most severe first.
     WEATHER_QUERY_ORDER: tuple[str, ...] = ("thunder", "rain", "clear")
+    # `send_and_read` returns every line the server logged in the last second,
+    # not just the answer to the command. The telemetry pack writes JSON lines
+    # milliseconds after a response, so a value must be read from the line that
+    # answers the query — never from the surrounding log.
+    SCRIPT_LOG_MARKERS: tuple[str, ...] = ("[Scripting]", "BEDROCK_TELEMETRY")
+    TIME_RESPONSES: MappingProxyType[str, re.Pattern[str]] = MappingProxyType({
+        "day": re.compile(r"\bDay is (-?\d+)", re.IGNORECASE),
+        "daytime": re.compile(r"\bDaytime is (-?\d+)", re.IGNORECASE),
+        "gametime": re.compile(r"\bGame ?time is (-?\d+)", re.IGNORECASE),
+    })
+    WEATHER_RESPONSE: re.Pattern[str] = re.compile(
+        r"\bWeather state is:\s*(\w+)", re.IGNORECASE
+    )
+
+    @classmethod
+    def _console_lines(cls, output: str) -> list[str]:
+        """Return the server's own lines, dropping behavior-pack log output."""
+        return [
+            line for line in output.splitlines()
+            if not any(marker in line for marker in cls.SCRIPT_LOG_MARKERS)
+        ]
+
+    @classmethod
+    def _read_time_response(cls, output: str, query: str) -> str | None:
+        """Return the number the server answered for ``query``, or None.
+
+        Reporting nothing is preferable to reporting a number taken from an
+        unrelated line: the panel already renders an unavailable state.
+        """
+        pattern = cls.TIME_RESPONSES.get(query)
+        if pattern is None:
+            return None
+        matches = [match.group(1) for line in cls._console_lines(output)
+                   if (match := pattern.search(line))]
+        return matches[-1] if matches else None
+
+    @classmethod
+    def _read_weather_response(cls, output: str) -> str | None:
+        """Return the weather the server answered, or None."""
+        states = [match.group(1).lower() for line in cls._console_lines(output)
+                  if (match := cls.WEATHER_RESPONSE.search(line))]
+        for state in reversed(states):
+            if state in cls.WEATHER_QUERY_ORDER:
+                return state
+        return None
 
     def __init__(self, bedrock: ServerConsole, broker: EventPublisher, state_store: StateStore | None = None) -> None:
         self.bedrock = bedrock
@@ -54,15 +99,14 @@ class WorldService:
         for query in ("daytime", "day"):
             try:
                 output = self.bedrock.send_and_read(["time", "query", query])
-                numbers = re.findall(r"-?\d+", output)
-                if numbers:
-                    result[query] = numbers[-1]
+                value = self._read_time_response(output, query)
+                if value is not None:
+                    result[query] = value
             except Exception as exc:
                 errors.append(exc)
         try:
             output = self.bedrock.send_and_read(["weather", "query"])
-            lowered = output.lower()
-            weather = next((w for w in self.WEATHER_QUERY_ORDER if w in lowered), None)
+            weather = self._read_weather_response(output)
             if weather:
                 result["weather"] = weather
         except Exception as exc:
@@ -98,8 +142,8 @@ class WorldService:
         if action == "query" and payload.get("value") in self.TIME_QUERIES:
             query = payload["value"]
             output = self.bedrock.send_and_read(["time", "query", query])
-            numbers = re.findall(r"-?\d+", output)
-            value = int(numbers[-1]) if numbers else None
+            answer = self._read_time_response(output, query)
+            value = int(answer) if answer is not None else None
             if value is not None:
                 self._observe_world({query: str(value)}, action)
             return {"action": action, "query": query, "value": value}
@@ -117,8 +161,7 @@ class WorldService:
             return {"action": action, "value": weather, "duration": duration}
         if action == "weather-query":
             output = self.bedrock.send_and_read(["weather", "query"])
-            lowered = output.lower()
-            weather = next((w for w in self.WEATHER_QUERY_ORDER if w in lowered), "unknown")
+            weather = self._read_weather_response(output) or "unknown"
             if weather != "unknown":
                 self._observe_world({"weather": weather}, action)
             return {"action": action, "value": weather}

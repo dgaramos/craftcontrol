@@ -430,7 +430,7 @@ def test_weather_duration_out_of_range_raises(manager_service: ManagerService) -
 
 
 def test_weather_query_returns_weather_type(manager_service: ManagerService, fake_bedrock: FakeBedrock) -> None:
-    fake_bedrock.send_and_read = lambda parts: "It is currently clear"  # type: ignore[method-assign]
+    fake_bedrock.send_and_read = lambda parts: "[INFO] Weather state is: clear"  # type: ignore[method-assign]
     result = manager_service.time_action("weather-query", {})
     assert result["value"] == "clear"
 

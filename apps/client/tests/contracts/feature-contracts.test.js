@@ -212,11 +212,21 @@ describe("feature contracts — pending changes and operation indicators", () =>
     expect(composition).not.toMatch(/\$\("#world-(time|weather)-icon"\)\.setAttribute/);
   });
 
-  test("exactly one indicator bar shows, with the operation outranking changes", () => {
+  /* The rule itself is unit-tested in core/panel-state; this only pins that the
+     composition root defers to it instead of re-deciding inline. */
+  test("indicator visibility is decided by the tested rule, not inline", () => {
     const composition = readFileSync(join(JS, "composition.js"), "utf8");
-    expect(composition).toContain("const showOperation = opActive || opStalled");
+    expect(composition).toContain("indicatorState({");
     expect(composition).toContain("opBar.hidden = !showOperation");
-    expect(composition).toContain("changesBar.hidden = changesCount === 0 || showOperation");
+    expect(composition).toContain("changesBar.hidden = !showChanges");
+    expect(composition).not.toMatch(/showOperation\s*=\s*opActive/);
+  });
+
+  test("world icon choice is decided by the tested rule, not inline", () => {
+    const composition = readFileSync(join(JS, "composition.js"), "utf8");
+    expect(composition).toContain("worldPresentation({");
+    // The night window must not be re-derived by hand anywhere.
+    expect(composition).not.toContain("_localDaytime >= 13000");
   });
 
   test("operations carry both a retention window and an unresponsive window", () => {

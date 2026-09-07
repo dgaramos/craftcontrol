@@ -3,6 +3,7 @@ import { connectEventStream } from "./events.js";
 import { requireSession, showSessions, showPasswordChange } from "./auth.js?v=8";
 import { state } from "./core/state.js?v=7";
 import { createNavTrail } from "./core/route.js?v=8";
+import { indicatorState, worldPresentation } from "./core/panel-state.js?v=1";
 import { $, escapeHtml } from "./core/dom.js?v=7";
 import { connectInvalidation } from "./core/invalidation.js?v=7";
 import { createNavigation } from "./core/navigation.js?v=9";
@@ -10,7 +11,7 @@ import { toast } from "./components/feedback.js?v=7";
 import { formatDate as formatLocalizedDate, formatDuration, sessionMoment as localizedSessionMoment, timelineTimestamp as localizedTimelineTimestamp } from "./components/time.js?v=9";
 import { createAnalyticsFeature } from "./features/analytics/index.js?v=8";
 import { createPlayersFeature } from "./features/players/index.js?v=8";
-import { createWorldFeature } from "./features/world/index.js?v=10";
+import { createWorldFeature } from "./features/world/index.js?v=11";
 import { createRulesFeature } from "./features/rules/index.js?v=7";
 import { createServerFeature } from "./features/server/index.js?v=18";
 import { UNRESPONSIVE_AFTER_MS } from "./features/server/operation.js?v=15";
@@ -260,8 +261,7 @@ export function startApplication() {
       const minute = minutes % 60;
       setWorldCells("time", new Intl.DateTimeFormat(localeTag(), { hour: "numeric", minute: "2-digit" }).format(new Date(2000, 0, 1, hour, minute)));
     }
-    const isNight = _localDaytime >= 13000 && _localDaytime < 23000;
-    setWorldIcons("time", isNight ? "ui-moon" : "ui-sun");
+    setWorldIcons("time", worldPresentation({ daytime: _localDaytime }).timeIcon);
     _applyWeatherAccent();
   }
 
@@ -274,12 +274,8 @@ export function startApplication() {
   function _applyWeatherAccent() {
     const cells = document.querySelectorAll('[data-world-cell="weather"]');
     if (!cells.length) return;
-    const weather = state.world?.weather;
-    const isNight = _localDaytime >= 13000 && _localDaytime < 23000;
-    const next = weather === "rain" ? "rain"
-      : weather === "thunder" ? "thunder"
-        : isNight ? "clear-night" : "clear";
-    cells.forEach((cell) => { if (cell.dataset.weather !== next) cell.dataset.weather = next; });
+    const { weatherKey } = worldPresentation({ weather: state.world?.weather, daytime: _localDaytime });
+    cells.forEach((cell) => { if (cell.dataset.weather !== weatherKey) cell.dataset.weather = weatherKey; });
   }
 
   /* Re-applies the current world values to every marked cell. A screen that
@@ -295,10 +291,7 @@ export function startApplication() {
       setWorldCells("time", "—");
       setWorldCells("ticks", "");
     }
-    const isNight = _localDaytime >= 13000 && _localDaytime < 23000;
-    setWorldIcons("weather", weather === "thunder" ? "ui-thunder"
-      : weather === "rain" ? "ui-rain"
-        : isNight ? "ui-moon" : "ui-sun");
+    setWorldIcons("weather", worldPresentation({ weather, daytime: _localDaytime }).weatherIcon);
     _applyWeatherAccent();
   }
 
@@ -318,10 +311,7 @@ export function startApplication() {
     }
     const weather = state.world.weather;
     setWorldCells("weather", weather ? t(weather) : "—");
-    const isNight = _localDaytime >= 13000 && _localDaytime < 23000;
-    setWorldIcons("weather", weather === "thunder" ? "ui-thunder"
-      : weather === "rain" ? "ui-rain"
-        : isNight ? "ui-moon" : "ui-sun");
+    setWorldIcons("weather", worldPresentation({ weather, daytime: _localDaytime }).weatherIcon);
     _applyWeatherAccent();
   }
 
@@ -431,9 +421,11 @@ export function startApplication() {
      standing between the operator and applying them. */
   function refreshIndicatorBars() {
     const changesCount = Object.keys(state.changes).length;
-    const opActive = !!state.operationActive;
-    const opStalled = !!state.operationStalled;
-    const showOperation = opActive || opStalled;
+    const { showOperation, showChanges, stalled: opStalled } = indicatorState({
+      changesCount,
+      operationActive: state.operationActive,
+      operationStalled: state.operationStalled,
+    });
 
     const opBar = $("#operation-bar");
     if (opBar) {
@@ -454,7 +446,7 @@ export function startApplication() {
     }
 
     const changesBar = $("#changes-bar");
-    if (changesBar) changesBar.hidden = changesCount === 0 || showOperation;
+    if (changesBar) changesBar.hidden = !showChanges;
     const changesLabel = $("#changes-bar-label");
     if (changesLabel && changesCount > 0) changesLabel.textContent = t("indicatorChangesTitle", changesCount);
   }

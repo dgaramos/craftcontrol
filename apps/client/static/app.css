@@ -490,19 +490,21 @@ main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-
    horizontal scroll, and one active colour beats five per-screen ones. */
 .choice-group, .player-filters, .segmented,
 .ranking-metric-picker, .combat-metric-picker, .exploration-metric-picker,
-.period-metric-picker {
+.period-metric-picker, .period-switch {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 5px;
 }
 .choice-group > button, .player-filters > button, .segmented > .segment,
 .ranking-metric-picker > button, .combat-metric-picker > button,
-.exploration-metric-picker > button, .period-metric-picker > button {
+.exploration-metric-picker > button, .period-metric-picker > button,
+.period-switch > button {
   min-width: 0; min-height: 36px; padding: 3px 4px; color: var(--muted);
   font-family: var(--font-display); font-size: 10px; font-weight: 800; letter-spacing: .5px;
   overflow-wrap: anywhere; box-shadow: 0 3px 0 #080a08;
 }
 .choice-group > button.active, .player-filters > button.active, .segmented > .segment.active,
 .ranking-metric-picker > button.active, .combat-metric-picker > button.active,
-.exploration-metric-picker > button.active, .period-metric-picker > button.active {
+.exploration-metric-picker > button.active, .period-metric-picker > button.active,
+.period-switch > button.active {
   color: #1a1000; background: linear-gradient(#f0c040, #b88018); background-image: linear-gradient(#f0c040, #b88018);
   border-top-color: #ffe080; border-left-color: #d4a030; text-shadow: 1px 1px 0 #f0e090;
 }

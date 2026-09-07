@@ -29,9 +29,10 @@ kept only so existing markup keeps working. A viewport-wide split button and a
 horizontally scrolling row of options are not part of this language.
 
 Choices that carry an icon — the data view switch, the ranking categories, the
-block modes, the time presets and the weather options — are the second variant,
-taller because the icon leads. They are deliberately not folded into the text
-chips.
+block modes, the ore grid, the time presets and the weather options — are the
+second variant, taller because the icon leads. They are deliberately not folded
+into the text chips, and unifying their active colour is still open: the ore
+grid is the last blue selection in the panel.
 
 An inner screen is built from the shared anatomy, not from new components. The
 heading block is `.inner-heading`: an eyebrow, a 20px title, and an optional

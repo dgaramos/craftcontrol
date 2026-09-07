@@ -268,9 +268,6 @@
 .trends-hero { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 20px; background: linear-gradient(135deg, #302617, #171815); }
 .trends-hero h2 { margin: 5px 0 7px; color: #e4bd7c; }
 .trends-hero p { max-width: 62ch; margin: 0; color: var(--muted); }
-.period-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
-.period-switch button { color: var(--muted); }
-.period-switch button.active { color: #171006; background: linear-gradient(#d2a869, #8c6536); border-top-color: #f4d59c; text-shadow: 1px 1px 0 #efd3a0; }
 .trends-note { display: flex; justify-content: space-between; gap: 12px; margin: 0; padding: 11px 13px; color: #b9aa92; font-size: .64rem; background: #17140f; border-left: 3px solid #b78a4b; }
 .trends-note small { flex: 0 0 auto; color: #887a65; }
 .trends-summary { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 7px; }

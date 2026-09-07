@@ -22,6 +22,17 @@ from typing import Any
 # or the next startup cycle will catch it once it truly stalls.
 ORPHAN_STALENESS_SECONDS = 30
 
+# Minimum silence before an operation is reclaimed while this process is live.
+# A working operation touches `updated_at` on every stage transition and, during
+# the health wait, on every poll (HEALTH_POLL_INTERVAL_SECONDS) — the heartbeat
+# that keeps it inside ORPHAN_STALENESS_SECONDS.  A worker thread can still die
+# without reaching a terminal state (an unhandled error, a killed thread), and
+# startup reconciliation alone would leave that record blocking every future
+# operation until the backend is restarted.  The threshold is set far above the
+# longest legitimate stage — the world backup is the one step that can run for
+# minutes without a heartbeat — so a working operation is never reclaimed.
+ABANDONED_STALENESS_SECONDS = 900
+
 from .lifecycle import (
     OperationStage,
     OperationState,
@@ -117,9 +128,11 @@ class ServerOperationService:
         return self._repo.get(operation_id)
 
     def get_latest(self) -> ServerOperation | None:
+        self._reclaim_abandoned()
         return self._repo.get_latest(self._server_id)
 
     def get_active(self) -> ServerOperation | None:
+        self._reclaim_abandoned()
         return self._repo.get_active(self._server_id)
 
     def list_recent(self, limit: int = 10, page: int = 1) -> dict[str, Any]:
@@ -619,44 +632,82 @@ class ServerOperationService:
         method runs synchronously during ``__init__`` — before any thread is
         created — so no lock is required.
         """
-        try:
-            active = self._repo.get_active(self._server_id)
-        except sqlite3.OperationalError:
-            # Schema not yet migrated (e.g. first boot or test DB without migrations).
-            # No orphans can exist in an empty schema.
-            return
-        if active is None:
-            return
-        # Guard against racing with a still-running worker during a graceful
-        # reload (e.g. Gunicorn SIGWINCH).  The previous worker updates
-        # `updated_at` on every stage transition, so a recently-touched
-        # operation is still alive in another process and must not be clobbered.
-        # CraftControl targets a single-worker homelab deployment, so this
-        # window is ordinarily zero; the guard is a safety net for any
-        # deployment that introduces overlapping workers.
-        age = datetime.now(timezone.utc).timestamp() - active.updated_at
-        if age < ORPHAN_STALENESS_SECONDS:
-            LOGGER.info(
-                "server_operation skipping orphan reclaim: operation_id=%s updated %.1fs ago"
-                " (threshold %ds) — may still be running in another worker",
-                active.operation_id,
-                age,
-                ORPHAN_STALENESS_SECONDS,
-            )
-            return
-        LOGGER.warning(
-            "server_operation orphan detected on startup operation_id=%s state=%s age=%.1fs — marking as failed",
-            active.operation_id,
-            active.state.value,
-            age,
+        self._reclaim_stalled(
+            ORPHAN_STALENESS_SECONDS,
+            "abandoned: process restarted",
+            context="on startup",
+            lock=False,
         )
-        # Use the currently running stage if one exists, otherwise the first
-        # stage so that fail_stage has a valid stage record to update.
-        active_stage = active.active_stage
-        stage = active_stage.stage if active_stage else OperationStage.REVIEW
-        active.fail_stage(stage, "abandoned: process restarted")
-        self._repo.save(active)
-        self._publish(active)
+
+    def _reclaim_abandoned(self) -> None:
+        """Fail an operation whose worker died without reaching a terminal state.
+
+        Startup reconciliation only runs when the process restarts, so a worker
+        thread that dies while the process stays up would otherwise leave the
+        record active forever: every later operation is rejected as conflicting
+        and the client stays locked out of restart and stop.  Called from the
+        read paths so recovery happens without a background scheduler.
+        """
+        self._reclaim_stalled(
+            ABANDONED_STALENESS_SECONDS,
+            f"abandoned: no progress for {ABANDONED_STALENESS_SECONDS}s",
+            context="while running",
+            lock=True,
+        )
+
+    def _reclaim_stalled(
+        self, threshold_seconds: int, reason: str, *, context: str, lock: bool
+    ) -> None:
+        """Mark the active operation as failed once it has been silent too long.
+
+        ``lock`` is taken non-blockingly: when another thread already holds it
+        the operation is being created or mutated right now, so it is by
+        definition not stalled and this pass is skipped.  Never blocking also
+        keeps the read paths free of any deadlock against ``_create_or_reject``.
+        """
+        if lock and not self._lock.acquire(blocking=False):
+            return
+        try:
+            try:
+                active = self._repo.get_active(self._server_id)
+            except sqlite3.OperationalError:
+                # Schema not yet migrated (e.g. first boot or test DB without
+                # migrations). No orphans can exist in an empty schema.
+                return
+            if active is None:
+                return
+            # A recently-touched operation is still alive — either a worker in
+            # this process, or (during a graceful reload such as Gunicorn
+            # SIGWINCH) one in an overlapping process. Either way it must not be
+            # clobbered. CraftControl targets a single-worker homelab
+            # deployment, so that window is ordinarily zero.
+            age = datetime.now(timezone.utc).timestamp() - active.updated_at
+            if age < threshold_seconds:
+                LOGGER.info(
+                    "server_operation skipping orphan reclaim: operation_id=%s updated %.1fs ago"
+                    " (threshold %ds) — may still be running",
+                    active.operation_id,
+                    age,
+                    threshold_seconds,
+                )
+                return
+            LOGGER.warning(
+                "server_operation orphan detected %s operation_id=%s state=%s age=%.1fs — marking as failed",
+                context,
+                active.operation_id,
+                active.state.value,
+                age,
+            )
+            # Use the currently running stage if one exists, otherwise the first
+            # stage so that fail_stage has a valid stage record to update.
+            active_stage = active.active_stage
+            stage = active_stage.stage if active_stage else OperationStage.REVIEW
+            active.fail_stage(stage, reason)
+            self._repo.save(active)
+            self._publish(active)
+        finally:
+            if lock:
+                self._lock.release()
 
     # ------------------------------------------------------------------
     # Lock and creation

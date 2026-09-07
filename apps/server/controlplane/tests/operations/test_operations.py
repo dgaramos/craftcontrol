@@ -30,7 +30,9 @@ from src.operations.service import (
 from conftest import make_operation_db, make_operation_service, wait_for_terminal
 
 
-def make_service_with_repo(repo: SQLiteOperationRepository) -> ServerOperationService:
+def make_service_with_repo(
+    repo: SQLiteOperationRepository, audit_service: MagicMock | None = None
+) -> ServerOperationService:
     """A service sharing the test's repository, with startup reclaim already done."""
     docker = MagicMock()
     docker.status.return_value = {"state": "running", "online": True}
@@ -45,6 +47,7 @@ def make_service_with_repo(repo: SQLiteOperationRepository) -> ServerOperationSe
         thread_factory=threading.Thread,
         server_id="test-server",
         health_timeout=1,
+        audit_service=audit_service,
     )
 
 
@@ -852,6 +855,86 @@ class TestServerOperationService:
         untouched = repo.get(stalled.operation_id)
         assert untouched is not None
         assert untouched.state == OperationState.RUNNING
+
+    def test_a_live_but_blocked_worker_is_never_reclaimed(self, tmp_path: Path):
+        """Silence is not proof of death.
+
+        _lock is released before the worker starts and _run never acquires it,
+        so it cannot stand in for liveness. A worker blocked in a long backup or
+        a hung docker call goes quiet without dying; failing its record would
+        let a second operation start while the first is still free to apply
+        changes and restart the container.
+        """
+        release = threading.Event()
+        entered = threading.Event()
+
+        def blocking_apply():
+            entered.set()
+            release.wait(timeout=10)
+
+        service = make_operation_service(tmp_path, health_timeout=1)
+        op = service.apply_restart_required({}, blocking_apply)
+        assert entered.wait(timeout=5)
+
+        # Backdate well past the threshold while the worker is still running.
+        record = service.get_operation(op.operation_id)
+        assert record is not None
+        record.updated_at -= ABANDONED_STALENESS_SECONDS + 600
+        service._repo.save(record)
+
+        try:
+            still_running = service.get_active()
+            assert still_running is not None
+            assert still_running.operation_id == op.operation_id
+            assert not still_running.state.is_terminal
+        finally:
+            release.set()
+
+        wait_for_terminal(service, op.operation_id)
+        finished = service.get_operation(op.operation_id)
+        assert finished is not None
+        assert finished.state.is_terminal
+
+    def test_a_worker_that_died_leaves_no_liveness_registration(self, tmp_path: Path):
+        """The registration is cleared in a finally, including on a crash."""
+        def exploding_apply():
+            raise RuntimeError("worker died")
+
+        service = make_operation_service(tmp_path, health_timeout=1)
+        op = service.apply_restart_required({}, exploding_apply)
+        wait_for_terminal(service, op.operation_id)
+        assert op.operation_id not in service._live_workers
+
+    def test_reclaim_past_review_attaches_the_terminal_observation(self, tmp_path: Path):
+        """A reclaimed operation goes through the same terminal flow as _fail.
+
+        Anything past REVIEW may already have reached disk or the container, so
+        the observation that classifies it as applied or divergent must be
+        attached rather than leaving a bare FAILED record.
+        """
+        db = make_operation_db(tmp_path)
+        repo = SQLiteOperationRepository(db)
+        audit = MagicMock()
+        service = make_service_with_repo(repo, audit_service=audit)
+
+        stalled = ServerOperation.create("test-server", {"MAX_PLAYERS": "20"})
+        stalled.start()
+        stalled.begin_stage(OperationStage.RESTART)
+        stalled.updated_at -= ABANDONED_STALENESS_SECONDS + 60
+        repo.save(stalled)
+
+        assert service.get_active() is None
+
+        reclaimed = repo.get(stalled.operation_id)
+        assert reclaimed is not None
+        # The observation is what makes the difference: the requested value never
+        # reached Bedrock, so reconciliation classifies this as DIVERGENT. A bare
+        # fail_stage would have left an uninformative FAILED record instead.
+        assert reclaimed.state == OperationState.DIVERGENT
+        assert reclaimed.observation, "expected the reconciliation observation"
+        audit.write.assert_called_once()
+        assert audit.write.call_args.kwargs["action"] == "operation.failed"
+        assert audit.write.call_args.kwargs["result"] == "divergent"
 
     def test_reconcile_startup_orphan_with_active_stage(self, tmp_path: Path):
         """Orphan with an active (RUNNING) stage uses that stage for fail_stage."""

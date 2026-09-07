@@ -275,6 +275,9 @@ def test_frontend_proxy_preserves_same_origin_and_sse_streaming() -> None:
     # index.html carries every asset version, so it must never be served from
     # cache without revalidating, or a deploy reaches nobody.
     assert 'add_header Cache-Control "no-cache"' in nginx
+    # Authenticated API responses must never be reusable across sessions.
+    assert 'add_header Cache-Control "no-store" always' in nginx
+    assert "proxy_hide_header Cache-Control" in nginx
 
 
 def test_backend_image_does_not_bundle_frontend_application() -> None:

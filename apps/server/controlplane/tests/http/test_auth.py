@@ -223,10 +223,14 @@ def test_data_export_capability_is_reachable_only_through_the_owner_wildcard(aut
     player history.
     """
     _, auth = auth_db
-    assert "data.export" not in ROLE_CAPABILITIES["viewer"]
-    assert "data.export" not in ROLE_CAPABILITIES["operator"]
+    # The owner must answer for the capability *through the wildcard*. Listing it
+    # explicitly would satisfy require_capability while quietly abandoning the
+    # rule the contract relies on, so assert both halves.
+    assert "*" in ROLE_CAPABILITIES["owner"]
+    assert "data.export" not in ROLE_CAPABILITIES["owner"]
     auth.require_capability({"capabilities": sorted(ROLE_CAPABILITIES["owner"])}, "data.export")
     for role in ("viewer", "operator"):
+        assert "data.export" not in ROLE_CAPABILITIES[role]
         with pytest.raises(PermissionError):
             auth.require_capability({"capabilities": sorted(ROLE_CAPABILITIES[role])}, "data.export")
 

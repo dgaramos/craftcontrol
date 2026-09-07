@@ -14,8 +14,15 @@ export.
 Exports require the `data.export` capability. `ROLE_CAPABILITIES` grants `*` to
 `owner` and lists `viewer` and `operator` capabilities explicitly, so naming a
 new capability makes exports owner-only without a second rule. Requests without
-it answer `403` through the existing error envelope, and every attempt is
-audited whether it succeeds or fails.
+it answer `403` through the existing error envelope.
+
+The refusal is audited, and that requires care: the shared `require` decorator
+answers `403` before the handler runs and never reaches the audit boundary, so
+an export route that relies on it alone leaves no trace of who tried. Export
+routes therefore perform the capability check at their own boundary, record the
+denial as a `failed` attempt, and then return the same `403` envelope. This is
+a rule for exports, not a change to `require`: auditing every denied request in
+the panel is a separate decision with its own volume and privacy questions.
 
 Exports are mutating in the audit sense but not in the state sense: they never
 write world, player, or configuration data, and never take the operation lock.
@@ -55,6 +62,7 @@ contains:
 | `filters` | the effective filters after allowlisting and clamping, not the raw query |
 | `generated_at` | UNIX timestamp of the export |
 | `row_count` | number of records in the payload |
+| `timezone` | IANA identifier of the calendar timezone that produced any day key (for example `America/Sao_Paulo`) |
 | `row_limit` | the ceiling that applied to this request |
 | `truncated` | always `false`; an export that would exceed the ceiling is refused, never silently cut |
 
@@ -78,9 +86,9 @@ trusted to interpret an epoch number. Durations stay integer seconds in both.
 
 Calendar days are not UTC. Daily aggregates bucket by the deployment's `TZ`
 (`America/Sao_Paulo` unless configured otherwise), the same boundary the period
-rankings use. Any exported day key therefore means a local day, and the manifest
-records the timezone that produced it so an archive remains interpretable after
-the deployment's `TZ` changes.
+rankings use. Any exported day key therefore means a local day, and the
+manifest's `timezone` field carries the IANA identifier that produced it, so an
+archive remains interpretable after the deployment's `TZ` changes.
 
 Exports inherit the provenance rules of the endpoints they read: where the API
 labels a value's source and observation time, the export carries both. It does
@@ -112,15 +120,31 @@ it would exceed either ceiling:
 - **10 000 records** per export;
 - **5 MiB** of serialized payload.
 
-The ceilings are enforced by counting before serializing, so refusal costs a
-count query rather than a full materialization, and the panel's single worker is
-never occupied producing a file it will discard.
+The two ceilings are enforced differently, because a record count does not
+predict a payload size: the same number of rows serializes to different byte
+counts depending on field values, UTF-8 escaping, CSV quoting, and the header
+row.
+
+The record ceiling is a pre-check. The export counts matching rows before
+serializing anything and refuses beyond 10 000, so an obviously oversized
+request costs a count query rather than a full materialization.
+
+The byte ceiling is measured on the serialized payload — the exact bytes that
+would be sent, including the CSV header row and line endings, or the complete
+JSON object including its manifest. Serialization accumulates into a bounded
+buffer and stops at the first byte past 5 MiB; the export is then refused
+without sending anything. Because the payload is fully materialized before the
+response begins, a refusal never produces a partial file.
+
+Both ceilings are deterministic: the same records under the same filters
+serialize to the same byte count and produce the same outcome on every run.
 
 A refusal answers `422` with the standard error envelope, naming which ceiling
-was reached, the count that triggered it, and the filter that narrows the
-request — a period, a player, or a category. The same request with the same data
-always produces the same outcome: no partial file, no timeout-shaped failure, no
-retry that succeeds by luck.
+was reached, the measurement that triggered it — the record count or the
+serialized byte count — and the filter that narrows the request: a period, a
+player, or a category. The same request over the same data always produces the
+same outcome: no partial file, no timeout-shaped failure, no retry that succeeds
+by luck.
 
 There is deliberately no export job queue. An asynchronous boundary is reserved
 for the first resource that cannot be bounded by filters — a full-history

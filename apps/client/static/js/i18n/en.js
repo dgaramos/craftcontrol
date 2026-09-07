@@ -76,7 +76,7 @@ export const en = {
     advancedControls: "Advanced controls",
     pendingHelp: "Applying restarts the server. Players will be disconnected.",
     discardAll: "Discard all", applyChanges: "Apply and restart", removeChange: "Remove",
-    currentValue: "Before", newValue: "After", reviewCount: (count) => `Review (${count})`,
+    currentValue: "Before", newValue: "After",
     confirmedAt: "Confirmed",
     telemetryPack: "Telemetry Pack", telemetryPackHelp: "Native statistics and structured world history.",
     installedVersion: "Installed version", bundledVersion: "Available version", packHealth: "Health", lastResponse: "Last response",

@@ -66,7 +66,7 @@ export const es = {
   indicatorOperationTitle: "Operación en curso",
   indicatorOperationStalled: "Operación sin respuesta",
   indicatorOperationStalledHint: (minutes) => `Sin actualización por más de ${minutes} min — abre para revisar`,
-  advancedControls: "Controles avanzados", pendingHelp: "Aplicar reiniciará el servidor. Los jugadores serán desconectados.", discardAll: "Descartar todos", applyChanges: "Aplicar y reiniciar", removeChange: "Quitar", currentValue: "Antes", newValue: "Después", reviewCount: (count) => `Revisar (${count})`, confirmedAt: "Confirmado",
+  advancedControls: "Controles avanzados", pendingHelp: "Aplicar reiniciará el servidor. Los jugadores serán desconectados.", discardAll: "Descartar todos", applyChanges: "Aplicar y reiniciar", removeChange: "Quitar", currentValue: "Antes", newValue: "Después", confirmedAt: "Confirmado",
   telemetryPack: "Telemetry Pack", telemetryPackHelp: "Estadísticas nativas e historial estructurado del mundo.",
   installedVersion: "Versión instalada", bundledVersion: "Versión disponible", packHealth: "Estado", lastResponse: "Última respuesta",
   packActive: "Instalado y activo", packInactive: "Desactivado", packMissing: "No instalado", upgradeAvailable: "Actualización disponible",

@@ -76,7 +76,7 @@ export const pt = {
     advancedControls: "Controles avançados",
     pendingHelp: "Aplicar irá reiniciar o servidor. Jogadores serão desconectados.",
     discardAll: "Descartar tudo", applyChanges: "Aplicar e reiniciar", removeChange: "Remover",
-    currentValue: "Antes", newValue: "Depois", reviewCount: (count) => `Revisar (${count})`,
+    currentValue: "Antes", newValue: "Depois",
     confirmedAt: "Confirmado",
     telemetryPack: "Telemetry Pack", telemetryPackHelp: "Estatísticas nativas e histórico estruturado do mundo.",
     installedVersion: "Versão instalada", bundledVersion: "Versão disponível", packHealth: "Saúde", lastResponse: "Última resposta",

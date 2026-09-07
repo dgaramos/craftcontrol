@@ -205,32 +205,29 @@ describe("createSettingsFeature — renderChangesDrawer", () => {
 });
 
 describe("createSettingsFeature — updateSaveLabel", () => {
-  test("hides save button when no changes", () => {
+  test("hides the profile dot when nothing is pending", () => {
     const deps = makeDeps();
-    const saveEl = { hidden: false, textContent: "" };
-    deps.$ = jest.fn((sel) => {
-      if (sel === "#save") return saveEl;
-      if (sel === "#save-label") return { textContent: "" };
-      if (sel === "#changes-drawer") return { open: false };
-      return { hidden: false };
-    });
-    const { updateSaveLabel } = createSettingsFeature(deps);
-    updateSaveLabel();
-    expect(saveEl.hidden).toBe(true);
+    const dot = { hidden: false };
+    deps.document.querySelector = jest.fn((sel) => (sel === "#profile-dot" ? dot : null));
+    deps.$ = jest.fn(() => ({ open: false }));
+    createSettingsFeature(deps).updateSaveLabel();
+    expect(dot.hidden).toBe(true);
   });
 
-  test("shows save button when changes present", () => {
+  test("shows the profile dot while changes are pending", () => {
     const deps = makeDeps({ changes: { foo: "bar" } });
-    const saveEl = { hidden: true, textContent: "" };
-    deps.$ = jest.fn((sel) => {
-      if (sel === "#save") return saveEl;
-      if (sel === "#save-label") return { textContent: "" };
-      if (sel === "#changes-drawer") return { open: false };
-      return { hidden: false };
-    });
-    const { updateSaveLabel } = createSettingsFeature(deps);
-    updateSaveLabel();
-    expect(saveEl.hidden).toBe(false);
+    const dot = { hidden: true };
+    deps.document.querySelector = jest.fn((sel) => (sel === "#profile-dot" ? dot : null));
+    deps.$ = jest.fn(() => ({ open: false }));
+    createSettingsFeature(deps).updateSaveLabel();
+    expect(dot.hidden).toBe(false);
+  });
+
+  test("survives a shell without a profile dot", () => {
+    const deps = makeDeps({ changes: { foo: "bar" } });
+    deps.document.querySelector = jest.fn(() => null);
+    deps.$ = jest.fn(() => ({ open: false }));
+    expect(() => createSettingsFeature(deps).updateSaveLabel()).not.toThrow();
   });
 });
 

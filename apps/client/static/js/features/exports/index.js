@@ -52,9 +52,9 @@ export function createExportsFeature({ state, content, t, $, escapeHtml, toast, 
         <header class="inner-heading">
           <span class="eyebrow">${t("administration")}</span>
           <h2>${t("exportTitle")}</h2>
-          <p>${t("exportHelp")}</p>
+          <p>${t("exportHelp")} ${t("exportPrivacyNotice")}</p>
         </header>
-        <div class="block-panel card">
+        <div class="card">
           <div class="field">
             <div class="field-copy"><label for="export-family">${t("exportFamily")}</label></div>
             <div class="segmented" id="export-family-control">
@@ -66,7 +66,6 @@ export function createExportsFeature({ state, content, t, $, escapeHtml, toast, 
             <div class="field-copy">
               <label for="export-resource">${t("exportResource")}</label>
               <p>${t(`exportResource_${resource}`)}</p>
-              <span class="field-meta">${t("exportPrivacyNotice")}</span>
             </div>
             <select id="export-resource">${options(resources(), resource, (value) => t(`exportResourceName_${value}`))}</select>
           </div>
@@ -105,7 +104,7 @@ export function createExportsFeature({ state, content, t, $, escapeHtml, toast, 
               ${missingPlayer() ? `<span class="field-meta" role="status">${t("exportPlayerRequired")}</span>` : ""}
             </div>
             <div class="telemetry-pack-actions export-actions">
-              <button id="export-download" class="primary" type="button" ${missingPlayer() || busy ? "disabled" : ""}>
+              <button id="export-download" type="button" ${missingPlayer() || busy ? "disabled" : ""}>
                 ${busy ? t("exportRunning") : t("exportDownload")}
               </button>
             </div>

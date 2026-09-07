@@ -80,6 +80,26 @@ describe("createServerFeature", () => {
     expect(rendered).toContain("pendingGameruleRefreshes");
   });
 
+  test("the server settings screen fills its own diagnostics dashboard", async () => {
+    const deps = makeDeps();
+    const renderSettingsGroups = jest.fn();
+    deps.getSettingsFeature = () => ({ renderSettingsGroups });
+    deps.elements["#telemetry-pack-state"] = makeEl();
+    deps.elements["#diagnostics-state"] = makeEl();
+    deps.api.mockResolvedValue({
+      telemetry: { accepted: 1, rejected: 0, duplicates: 0, old: 0, sequence: { lost: 0, gaps: 0, resets: 0 }, by_topic: {} },
+      broker: { sse_connections: 1, events_by_topic: {} },
+      telemetry_state: { status: "healthy" },
+      persistence: { connections: 1 },
+      runtime: { refreshing: false },
+    });
+    createServerFeature(deps).renderServerSettings();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(renderSettingsGroups).toHaveBeenCalledWith(["Packs", "Rede", "Avançado"], expect.stringContaining('id="diagnostics-state"'));
+    expect(deps.api).toHaveBeenCalledWith("/api/diagnostics");
+    expect(deps.elements["#diagnostics-state"].children.length).toBeGreaterThan(0);
+  });
+
   test("hides diagnostics when its protected API request fails", async () => {
     const deps = makeDeps();
     const diagEl = makeEl();

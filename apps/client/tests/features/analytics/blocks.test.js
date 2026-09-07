@@ -16,6 +16,7 @@ describe("createBlocksPanel", () => {
     await createBlocksPanel(deps)();
     expect(deps.state.analytics.selectedOre).toBe("iron");
     expect(target.innerHTML).toContain("noBlockData");
+    expect(deps.content.innerHTML).toContain('<span class="eyebrow">worldStatisticsKicker</span>');
   });
 
   test("shows the API error", async () => {

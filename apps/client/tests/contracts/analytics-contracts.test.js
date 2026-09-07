@@ -36,7 +36,7 @@ describe("analytics activity and deaths have a feature boundary", () => {
 
   test("index.js imports activity.js with versioned query and delegates to activityView", () => {
     const index = readFileSync(join(ANALYTICS, "index.js"), "utf8");
-    expect(index).toContain('from "./activity.js?v=7"');
+    expect(index).toContain('from "./activity.js?v=8"');
     expect(index).toContain("activityView.eventsMarkup");
     expect(index).toContain("activityView.showDeathDetails");
   });
@@ -49,7 +49,7 @@ describe("analytics activity and deaths have a feature boundary", () => {
 
   test("bundle imports analytics feature from versioned path", () => {
     const script = frontendScript();
-    expect(script).toContain('from "./features/analytics/index.js?v=8"');
+    expect(script).toContain('from "./features/analytics/index.js?v=9"');
   });
 });
 
@@ -122,19 +122,19 @@ describe("activity timeline loads incrementally and stops at the last page", () 
 
 describe("analytics panels are owned by separate feature modules", () => {
   const panels = {
-    rankings: "createRankingsPanel",
-    blocks: "createBlocksPanel",
-    combat: "createCombatPanel",
-    exploration: "createExplorationPanel",
-    trends: "createTrendsPanel",
+    rankings: ["createRankingsPanel", 8],
+    blocks: ["createBlocksPanel", 8],
+    combat: ["createCombatPanel", 8],
+    exploration: ["createExplorationPanel", 8],
+    trends: ["createTrendsPanel", 7],
   };
 
-  for (const [name, factory] of Object.entries(panels)) {
+  for (const [name, [factory, version]] of Object.entries(panels)) {
     test(`${name}.js exports ${factory} and index.js imports it with versioned path`, () => {
       const module = readFileSync(join(ANALYTICS, `${name}.js`), "utf8");
       expect(module).toContain(`export function ${factory}`);
       const index = readFileSync(join(ANALYTICS, "index.js"), "utf8");
-      expect(index).toContain(`from "./${name}.js?v=7"`);
+      expect(index).toContain(`from "./${name}.js?v=${version}"`);
     });
   }
 

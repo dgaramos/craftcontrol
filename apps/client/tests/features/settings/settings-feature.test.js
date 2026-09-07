@@ -1,5 +1,6 @@
 import { jest } from "@jest/globals";
 import { createSettingsFeature } from "../../../static/js/features/settings/index.js";
+import { createI18n } from "../../../static/js/i18n/index.js";
 import { makeSettingsDeps as makeDeps } from "../../helpers.js";
 
 describe("booleanControl", () => {
@@ -23,18 +24,17 @@ describe("booleanControl", () => {
     expect(html).toContain("unknown");
   });
 
-  test("renders read-only badge for detail-operator without permission", () => {
-    const deps = makeDeps({ user: { capabilities: [] } });
+  test.each([
+    ["en", "Read only"],
+    ["pt", "Somente leitura"],
+    ["es", "Solo lectura"],
+  ])("renders the read-only badge for detail-operator without permission in %s", (locale, label) => {
+    const deps = makeDeps({ locale, user: { capabilities: [] } });
+    deps.t = createI18n(() => locale).t;
     const { booleanControl } = createSettingsFeature(deps);
     const html = booleanControl("detail-operator", "true");
-    expect(html).toContain("Read only");
-  });
-
-  test("renders pt read-only label", () => {
-    const deps = makeDeps({ locale: "pt", user: { capabilities: [] } });
-    const { booleanControl } = createSettingsFeature(deps);
-    const html = booleanControl("detail-operator", "true");
-    expect(html).toContain("Somente leitura");
+    expect(html).toContain('class="read-only-badge"');
+    expect(html).toContain(label);
   });
 
   test("wildcard capability allows operator toggle", () => {
@@ -126,11 +126,17 @@ describe("playerSettingsMarkup", () => {
     expect(html).toContain('value="20"');
   });
 
-  test("renders pt locale heading", () => {
-    const deps = makeDeps({ locale: "pt", schema: { settings: {}, gamerules: {} }, config: {}, changes: {} });
+  test.each([
+    ["pt", "Regras gerais", "Configurações para todos os jogadores"],
+    ["en", "General rules", "Settings for every player"],
+    ["es", "Reglas generales", "Configuración para todos los jugadores"],
+  ])("renders the general rules heading in %s", (locale, eyebrow, title) => {
+    const deps = makeDeps({ locale, schema: { settings: {}, gamerules: {} }, config: {}, changes: {} });
+    deps.t = createI18n(() => locale).t;
     const { playerSettingsMarkup } = createSettingsFeature(deps);
     const html = playerSettingsMarkup();
-    expect(html).toContain("REGRAS GERAIS");
+    expect(html).toContain(eyebrow);
+    expect(html).toContain(title);
   });
 });
 
@@ -251,6 +257,19 @@ describe("createSettingsFeature — renderSettingsGroups", () => {
     const { renderSettingsGroups } = createSettingsFeature(deps);
     renderSettingsGroups(["Interface"]);
     expect(deps.content.innerHTML).toContain("rulesIntro");
+  });
+
+  test.each([
+    ["world", "configuration", "worldIntro"],
+    ["rules", "instant", "rulesIntro"],
+    ["__server_settings__", "infrastructure", "serverIntro"],
+  ])("wraps the %s screen in the shared inner heading", (tab, kicker, title) => {
+    const deps = makeDeps({ tab, schema: { settings: {}, gamerules: {} } });
+    createSettingsFeature(deps).renderSettingsGroups(["Geral"]);
+    expect(deps.content.innerHTML).toContain('<section class="settings-screen">');
+    expect(deps.content.innerHTML).toContain('<header class="inner-heading">');
+    expect(deps.content.innerHTML).toContain(`<span class="eyebrow">${kicker}</span>`);
+    expect(deps.content.innerHTML).toContain(`<h2>${title}</h2>`);
   });
 
   test("renders settings from schema in accordion", () => {

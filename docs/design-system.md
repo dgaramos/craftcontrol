@@ -4,6 +4,28 @@ CraftControl uses original repository-owned SVG sprites instead of operating-sys
 emoji, icon fonts, or copied game textures. The visual language is inspired by the
 product's block interface without reproducing Mojang artwork.
 
+## Screen layout
+
+Home, Players, and the Server hub define the visual reference for inner screens.
+Use Oxanium for headings, control labels, and values; use Geist for descriptions
+and editable text. Page titles are 20px with a small copper eyebrow, placed on
+the page background rather than inside an additional hero card.
+
+Inner cards use flat stone surfaces, square corners, and raised top/left edges.
+Use the `--surface-inset`, `--surface-border-top`, and `--surface-border-left`
+tokens for inset fields and card edges. Keep groups 12px apart, with approximately
+13px of card padding. Selection uses sand; green remains the live/healthy signal,
+and red remains the destructive/error signal. Form controls have at least 44px
+of touch height. Forms stack on phones and place controls beside descriptions
+when space permits; audit records expose their column labels in stacked mobile
+rows. Data navigation uses four columns on phones and eight on wide screens.
+
+Every inner screen — including Time & weather — opens with the same heading
+block, and every inset field surface uses `--surface-inset` rather than a local
+hex value. Selection is sand on both segmented controls and the data view
+switch. Headings, eyebrows, and helper copy are localized through `i18n`; no
+screen may hard-code a language string.
+
 ## Icon families
 
 - `apps/client/static/craftcontrol-ui.svg` contains navigation, actions, states, and metric icons.

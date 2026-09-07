@@ -2,6 +2,7 @@ import { en } from "./en.js?v=7";
 
 export const es = {
   ...en,
+  generalPlayerRules: "Reglas generales", playerSettingsTitle: "Configuración para todos los jugadores", playerSettingsHelp: "Límites y reglas del servidor. Los cambios instantáneos se identifican con un rayo.",
   language: "Idioma", brandKicker: "CENTRAL DE CONTROL BEDROCK", refresh: "Actualizar", refreshAriaLabel: "Actualizar", profileAriaLabel: "Perfil", worldState: "ESTADO DEL MUNDO", quickActions: "Acciones rápidas",
   day: "Día", night: "Noche", clearWeather: "Clima despejado", server: "Servidor", homeDay: "Día", homeTime: "Hora", homeWeather: "Clima", homeTimeAction: "Tiempo y hora", serverRules: "Reglas del servidor", serverOperations: "Operaciones del servidor", recentActivity: "Actividad reciente", historyLabel: "Historial", instant: "Instantáneo", restartShort: "Reinicio", spectatorUnavailable: "El modo espectador aún no es compatible con el servidor", saveChanges: "Guardar cambios", control: "CONTROL", administration: "ADMINISTRACIÓN", serverStateLabel: "Estado", restartRequiredShort: "Requiere reinicio", analyticsKicker: "Analytics", configuration: "CONFIGURACIÓN", infrastructure: "INFRAESTRUCTURA", noRestart: "sin reiniciar", rulesLiveHelp: "Reglas aplicadas en vivo en el servidor.", serverOperation: "Operación del servidor",
   restartNotice: "Los cambios persistentes se aplican al guardar y reiniciar.", start: "Iniciar", restart: "Reiniciar", stop: "Detener", close: "Cerrar",
@@ -127,4 +128,23 @@ export const es = {
   diagUpdatedAt: "Actualizado a las", diagDashboard: "Diagnósticos", diagDashboardEyebrow: "SALUD", diagDashboardHelp: "Métricas en tiempo real del pipeline de telemetría y runtime.", diagKeyMetrics: "Métricas clave", diagRuntimeSection: "Runtime y reconciliación",
   navHome: "Inicio", navPlayers: "Jugadores", navServer: "Servidor",
   profileLanguage: "Idioma", profileSessions: "Gestionar sesiones", profileChangePassword: "Cambiar contraseña", profileSignOut: "Cerrar sesión",
+  // Pantallas internas — eyebrows, ayuda del tiempo, registros y acceso del jugador.
+  daylightCycleHelp: "Desactiva para congelar la hora actual.", weatherCycleHelp: "Desactiva para mantener el clima elegido.",
+  worldStatisticsKicker: "Estadísticas del mundo", combatLogKicker: "Registro de combate", oreTrackerKicker: "Rastreo de minerales", worldAtlasKicker: "Atlas del mundo", travelLogKicker: "Registro de viajes",
+  playerDataKicker: "Datos del jugador", playerDataTitle: "Datos individuales", playerDataHelp: (name) => `Todo lo que la telemetría sabe específicamente sobre ${name}.`,
+  noCreatureData: "Ninguna criatura registrada todavía.", noBlockRecords: "Ningún bloque registrado todavía.", noDimensionRecords: "Ninguna dimensión registrada todavía.",
+  activeSessionsCount: (count) => count === 1 ? "1 sesión activa" : `${count} sesiones activas`,
+  noAccess: "Sin acceso", roleLabel: "Rol", actionsLabel: "Acciones", panelAccess: "Acceso al panel",
+  roleViewerHint: "solo lectura", roleOperatorHint: "gestiona el servidor", roleOwnerHint: "control total",
+  generateRecovery: "Generar recuperación", generateAccess: "Generar acceso", suspendAccess: "Suspender acceso",
+  codeCopied: "Código copiado", codeCopyFailed: "No se pudo copiar el código", accessSuspended: "Acceso suspendido",
+  confirmSuspendAccess: (name) => `¿Suspender el acceso de ${name}?`,
+  historyJoined: "Se unió al servidor", historyLeft: "Salió del servidor", historyDied: "Murió", historyPermissionChanged: "Permiso modificado",
+  inferredExitDetail: "Cierre inferido por el estado del servidor", sessionInProgress: "Sesión en curso", sessionEnded: "Sesión finalizada", playerConnectedNow: "Jugador conectado ahora",
+  elapsedLabel: "Tiempo actual", durationLabel: "Duración", startedLabel: "Inicio", endedLabel: "Fin",
+  recentEvidenceKicker: "Evidencias recientes", playerRecordsTitle: "Historial del jugador", playerRecordsHelp: "Los totales de arriba vienen de agregados permanentes; estos registros solo explican los eventos recientes disponibles.", technicalTimeline: "Línea de tiempo técnica",
+  copyCode: "Copiar código", accessCodeHint: "Mostrado una vez. Expira en 15 minutos.",
+  readOnlyLabel: "Solo lectura",
+  topTenKicker: "Top 10", atlasKicker: "Atlas",
+  dimensionLabel: "Dimensión", coordinatesLabel: "Coordenadas", noteLabel: "Nota",
 };

@@ -260,12 +260,12 @@ describe("updateToggleLabel", () => {
 
   test("renders locale, boolean, select, and numeric field variants", () => {
     const deps = makeDeps({
-      locale: "es", tab: "server", user: { capabilities: [] },
+      locale: "es", tab: "__server_settings__", user: { capabilities: [] },
       changes: {}, config: { limit: null }, gamerules: {}, domains: { settings: {} },
       schema: { settings: { limit: { group: "G", type: "number", label: "PT", label_en: "EN", label_es: "ES", description: "d", description_en: "de", description_es: "des", min: 1, max: 9, warning: "warn", warning_en: "warning" } }, gamerules: {} },
     });
     const feature = createSettingsFeature(deps);
-    expect(feature.booleanControl("detail-operator", "unknown")).toContain("Solo lectura");
+    expect(feature.booleanControl("detail-operator", "unknown")).toContain("readOnlyLabel");
     feature.renderSettingsGroups(["G"]);
     expect(deps.content.innerHTML).toContain("serverIntro");
     expect(deps.content.innerHTML).toContain('min="1"');

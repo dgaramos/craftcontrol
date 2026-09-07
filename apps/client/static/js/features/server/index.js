@@ -452,6 +452,9 @@ async function initializeOperationProgress() {
   const renderServerSettings = () => {
     getSettingsFeature().renderSettingsGroups(["Packs", "Rede", "Avançado"], telemetryPackMarkup());
     loadTelemetryPack();
+    // The diagnostics dashboard only exists in this screen's markup, so it has
+    // to be filled here — the server hub has no #diagnostics-state to target.
+    loadDiagnostics();
   };
   return { renderServer, renderServerSettings, renderReleaseTags, loadFrontendVersion, initializeOperationProgress, loadDiagnostics, openOperationDrawer, refreshOperationPanel };
 }

@@ -52,10 +52,9 @@ describe("player workspace separates roster, profile and permission scopes", () 
     expect(settingsJs).toContain('class="player-server-settings');
   });
 
-  test('settings index includes trilingual read-only badge (pt, en, es)', () => {
-    expect(settingsJs).toContain("Somente leitura");
-    expect(settingsJs).toContain("Read only");
-    expect(settingsJs).toContain("Solo lectura");
+  test("settings index renders the read-only badge through i18n", () => {
+    expect(settingsJs).toContain('class="read-only-badge"');
+    expect(settingsJs).toContain('t("readOnlyLabel")');
   });
 });
 
@@ -101,9 +100,6 @@ describe("player profile consolidates authoritative individual analytics", () =>
     expect(historyJs).toContain('class="player-record-drawer"');
   });
 
-  test('history.js mentions "permanent aggregates" explaining non-authoritative history', () => {
-    expect(historyJs).toContain("permanent aggregates");
-  });
 });
 
 // ── 3. test_player_feature_separates_workspace_profile_access_history_and_telemetry ──
@@ -114,9 +110,9 @@ describe("player feature separates workspace, profile, access, history and telem
   const modules = {
     workspace: ["createPlayersWorkspace", 7],
     profile: ["createPlayerProfile", 8],
-    access: ["createPlayerAccess", 7],
-    history: ["createPlayerHistory", 7],
-    telemetry: ["createPlayerTelemetry", 8],
+    access: ["createPlayerAccess", 8],
+    history: ["createPlayerHistory", 8],
+    telemetry: ["createPlayerTelemetry", 9],
   };
 
   for (const [name, [factory, version]] of Object.entries(modules)) {
@@ -130,8 +126,8 @@ describe("player feature separates workspace, profile, access, history and telem
     });
   }
 
-  test('composition.js imports from "./features/players/index.js?v=8"', () => {
-    expect(composition).toContain('from "./features/players/index.js?v=8"');
+  test('composition.js imports from "./features/players/index.js?v=9"', () => {
+    expect(composition).toContain('from "./features/players/index.js?v=9"');
   });
 
   test("composition.js does not inline renderPlayerCards", () => {

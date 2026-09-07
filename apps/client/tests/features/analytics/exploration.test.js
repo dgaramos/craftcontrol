@@ -22,6 +22,7 @@ describe("createExplorationPanel", () => {
     const render = createExplorationPanel(deps);
     await render();
     expect(deps.content.innerHTML).toContain("exploration-screen");
+    expect(deps.content.innerHTML).toContain('<span class="eyebrow">worldAtlasKicker</span>');
   });
 
   test("empty ranking renders zero state", async () => {

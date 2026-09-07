@@ -1,5 +1,6 @@
 import { jest } from "@jest/globals";
 import { createWorldFeature } from "../../../static/js/features/world/index.js";
+import { createI18n } from "../../../static/js/i18n/index.js";
 import { makeEl } from "../../helpers.js";
 
 function makeDeps(overrides = {}) {
@@ -18,7 +19,7 @@ function makeDeps(overrides = {}) {
     innerHTML: "",
     querySelectorAll: jest.fn(() => []),
   };
-  const t = (key) => key;
+  const t = createI18n(() => state.locale).t;
   const uiIcon = (name) => `<svg icon="${name}"/>`;
   const booleanControl = jest.fn(() => `<div class="toggle-control"></div>`);
   const updateToggleLabel = jest.fn();
@@ -102,13 +103,19 @@ describe("renderTimePanel", () => {
     expect(deps.content.innerHTML).toContain("data-time-query");
   });
 
-  test("PT locale renders Portuguese text", () => {
-    const deps = makeDeps({ state: { locale: "pt", gamerules: {} } });
+  test.each([
+    ["pt", "Desative para congelar o horário atual.", "Tempo e clima"],
+    ["en", "Disable to freeze the current time.", "Time & weather"],
+    ["es", "Desactiva para congelar la hora actual.", "Hora y clima"],
+  ])("renders the time screen copy and heading in %s", (locale, cycleHelp, title) => {
+    const deps = makeDeps({ state: { locale, gamerules: {} } });
     deps.content.querySelectorAll = jest.fn(() => []);
     deps.$ = jest.fn(() => makeEl());
     const { renderTimePanel } = createWorldFeature(deps);
     renderTimePanel();
-    expect(deps.content.innerHTML).toContain("Desative para congelar o horário atual.");
+    expect(deps.content.innerHTML).toContain(cycleHelp);
+    expect(deps.content.innerHTML).toContain('<header class="inner-heading">');
+    expect(deps.content.innerHTML).toContain(title);
   });
 });
 
@@ -318,7 +325,7 @@ describe("renderTimePanel — remaining control paths", () => {
     const { renderTimePanel } = createWorldFeature(deps);
     renderTimePanel();
     await deps.elements["#weather-query"].onclick();
-    expect(deps.elements["#time-query-result"].textContent).toContain("rain");
+    expect(deps.elements["#time-query-result"].textContent).toContain("Rain");
   });
 
   test("a failing weather query surfaces the error", async () => {
@@ -336,7 +343,7 @@ describe("renderTimePanel — remaining control paths", () => {
     const { renderTimePanel } = createWorldFeature(deps);
     renderTimePanel();
     await buttons.find((b) => b.dataset.timeQuery).onclick();
-    expect(deps.elements["#time-query-result"].textContent).toContain("queryUnavailable");
+    expect(deps.elements["#time-query-result"].textContent).toContain("The server did not return a readable value.");
   });
 
   test("a failing time query surfaces the error", async () => {
@@ -362,7 +369,7 @@ describe("renderTimePanel — remaining control paths", () => {
     const { renderTimePanel } = createWorldFeature(deps);
     renderTimePanel();
     await deps.elements["#time-weather-cycle"].onchange({ target: { checked: false } });
-    expect(deps.toast).toHaveBeenCalledWith("operationLocked", true);
+    expect(deps.toast).toHaveBeenCalledWith("Changes are locked while a server operation is in progress.", true);
     expect(deps.api).not.toHaveBeenCalled();
   });
 
@@ -371,7 +378,7 @@ describe("renderTimePanel — remaining control paths", () => {
     const { renderTimePanel } = createWorldFeature(deps);
     renderTimePanel();
     await buttons.find((b) => b.dataset.timePreset).onclick();
-    expect(deps.toast).toHaveBeenCalledWith("operationLocked", true);
+    expect(deps.toast).toHaveBeenCalledWith("Changes are locked while a server operation is in progress.", true);
     expect(deps.api).not.toHaveBeenCalled();
   });
 });

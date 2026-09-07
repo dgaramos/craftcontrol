@@ -1,8 +1,9 @@
 import { createPlayerTelemetry } from "../../../static/js/features/players/telemetry.js";
+import { createI18n } from "../../../static/js/i18n/index.js";
 
 function makeDeps(locale = "en") {
   const state = { locale };
-  const t = (key) => key;
+  const t = createI18n(() => state.locale).t;
   const escapeHtml = (s) => String(s).replace(/</g, "&lt;");
   const gameTermMarkup = (v) => `<span>${escapeHtml(String(v))}</span>`;
   const blockTermMarkup = (v) => `<span>${escapeHtml(String(v))}</span>`;
@@ -83,7 +84,7 @@ describe("playerDataMarkup", () => {
   test("returns waiting message when no telemetry_updated_at", () => {
     const { playerDataMarkup } = createPlayerTelemetry(makeDeps());
     const html = playerDataMarkup({ name: "P", telemetry_updated_at: null, telemetry: {} });
-    expect(html).toContain("telemetryWaiting");
+    expect(html).toContain("Waiting for telemetry");
   });
 
   test("renders full stats when telemetry_updated_at set", () => {
@@ -111,10 +112,16 @@ describe("playerDataMarkup", () => {
     expect(() => playerDataMarkup(profile)).not.toThrow();
   });
 
-  test("pt locale uses pt labels", () => {
-    const { playerDataMarkup } = createPlayerTelemetry(makeDeps("pt"));
+  test.each([
+    ["pt", "Dados individuais", "Nenhuma criatura registrada ainda."],
+    ["en", "Individual data", "No creatures recorded yet."],
+    ["es", "Datos individuales", "Ninguna criatura registrada todavía."],
+  ])("localizes the player data workspace in %s", (locale, title, emptyKills) => {
+    const { playerDataMarkup } = createPlayerTelemetry(makeDeps(locale));
     const profile = { name: "Herói", telemetry_updated_at: 1700000000, telemetry: {} };
     const html = playerDataMarkup(profile);
     expect(html).toContain("Herói");
+    expect(html).toContain(title);
+    expect(html).toContain(emptyKills);
   });
 });

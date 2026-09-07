@@ -15,6 +15,7 @@ describe("createRankingsPanel", () => {
     deps.api = jest.fn().mockResolvedValue({ metrics: {}, generated_at: 0 });
     await createRankingsPanel(deps)();
     expect(target.innerHTML).toContain("noRankingData");
+    expect(deps.content.innerHTML).toContain('<span class="eyebrow">lifetime</span>');
     expect(deps.state.analytics.rankingMetric).toBe("play_time");
   });
 

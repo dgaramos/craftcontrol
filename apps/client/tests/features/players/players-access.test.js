@@ -1,10 +1,11 @@
 import { jest } from "@jest/globals";
 import { createPlayerAccess } from "../../../static/js/features/players/access.js";
+import { createI18n } from "../../../static/js/i18n/index.js";
 
 function makeDeps(locale = "en", role = "owner") {
   const state = { locale, user: { role } };
   const escapeHtml = (s) => String(s).replace(/</g, "&lt;");
-  const t = (key) => key;
+  const t = createI18n(() => state.locale).t;
   const $ = jest.fn(() => null);
   const api = jest.fn();
   const toast = jest.fn();

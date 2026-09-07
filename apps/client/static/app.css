@@ -577,23 +577,6 @@ main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-
 .danger-zone { border-top-color: #8f4039; }
 .danger-zone h3 { color: #ff9389; }
 
-footer {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 20;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 7px;
-  padding: 10px max(12px, env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom));
-  background: #0c120ff5;
-  border-top: 1px solid #4b5a50;
-  box-shadow: 0 -10px 30px #0008;
-}
-footer.has-pending { grid-template-columns: 1fr 1.8fr; }
-footer button span { display: inline-block; margin-right: 6px; color: var(--grass-light); }
-footer button span .cc-icon { width: 22px; height: 22px; }
 
 /* ── Bottom nav (Phase 1 mobile shell) ───────────────────────────────────── */
 .bottom-nav {

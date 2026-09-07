@@ -16,12 +16,12 @@ import { createRulesFeature } from "./features/rules/index.js?v=7";
 import { createServerFeature } from "./features/server/index.js?v=20";
 import { UNRESPONSIVE_AFTER_MS } from "./features/server/operation.js?v=15";
 import { startAuthenticatedApplication } from "./features/auth/bootstrap.js?v=7";
-import { createSettingsFeature } from "./features/settings/index.js?v=9";
+import { createSettingsFeature } from "./features/settings/index.js?v=10";
 import { createAuditFeature } from "./features/audit/index.js?v=2";
 import { createExportsFeature } from "./features/exports/index.js?v=1";
 import { downloadFile } from "./core/download.js?v=1";
 import { createHomeFeature } from "./features/home/index.js?v=7";
-import { createI18n } from "./i18n/index.js?v=15";
+import { createI18n } from "./i18n/index.js?v=16";
 import { createGameTerms } from "./i18n/game-terms.js?v=7";
 
 export function startApplication() {
@@ -530,11 +530,6 @@ export function startApplication() {
     } catch (error) { $("#refresh").classList.remove("spinning"); toast(error.message, true); }
   };
 
-  $("#save").onclick = () => {
-    getSettingsFeature().renderChangesDrawer();
-    $("#changes-drawer").showModal();
-  };
-
   $("#close-changes").onclick = () => $("#changes-drawer").close();
   $("#operation-indicator").onclick = () => getServerFeature().openOperationDrawer();
   $("#changes-bar")?.addEventListener("click", () => {
@@ -575,7 +570,6 @@ export function startApplication() {
     try { await api(`/api/world/${button.dataset.world}`, { method: "POST" }); toast(t("worldUpdated")); }
     catch (error) { toast(error.message, true); }
   });
-  $("#server-menu").onclick = () => $("#server-dialog").showModal();
   $("#close-dialog").onclick = () => $("#server-dialog").close();
   document.querySelectorAll("[data-server]").forEach((button) => button.onclick = async () => {
     if (!confirm(t("confirmAction", t(button.dataset.server)))) return;

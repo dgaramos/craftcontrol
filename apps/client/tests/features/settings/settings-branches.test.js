@@ -61,15 +61,14 @@ describe("updateSaveLabel", () => {
     expect(changesListEl.innerHTML).toContain("max_players");
   });
 
-  test("when no changes, hides #save", () => {
+  test("when no changes, hides the profile dot", () => {
     const deps = makeDeps();
-    const saveEl = makeEl({ hidden: false });
-    deps.elements["#save"] = saveEl;
-    deps.elements["#save-label"] = makeEl();
+    const dot = makeEl({ hidden: false });
+    deps.document.querySelector = jest.fn((sel) => (sel === "#profile-dot" ? dot : null));
     deps.elements["#changes-drawer"] = makeEl({ open: false });
     const { updateSaveLabel } = createSettingsFeature(deps);
     updateSaveLabel();
-    expect(saveEl.hidden).toBe(true);
+    expect(dot.hidden).toBe(true);
   });
 });
 
@@ -357,15 +356,16 @@ describe("operation lock", () => {
     expect(settingsEl.addEventListener).not.toHaveBeenCalled();
   });
 
-  test("updateSaveLabel hides save when operationActive even with pending changes", () => {
+  test("updateSaveLabel still marks pending changes during an operation", () => {
+    // The lock is the indicator bar's concern: an operation outranks pending
+    // changes there, while this only keeps the dot and the drawer in step.
     const deps = makeLockedDeps();
     deps.state.changes = { max_players: "20" };
-    const saveEl = makeEl({ hidden: false });
-    deps.elements["#save"] = saveEl;
-    deps.elements["#save-label"] = makeEl();
+    const dot = makeEl({ hidden: true });
+    deps.document.querySelector = jest.fn((sel) => (sel === "#profile-dot" ? dot : null));
     deps.elements["#changes-drawer"] = makeEl({ open: false });
     const { updateSaveLabel } = createSettingsFeature(deps);
     updateSaveLabel();
-    expect(saveEl.hidden).toBe(true);
+    expect(dot.hidden).toBe(false);
   });
 });

@@ -20,6 +20,14 @@ of touch height. Forms stack on phones and place controls beside descriptions
 when space permits; audit records expose their column labels in stacked mobile
 rows. Data navigation uses four columns on phones and eight on wide screens.
 
+An inner screen is built from the shared anatomy, not from new components. The
+heading block is `.inner-heading`: an eyebrow, a 20px title, and an optional
+11px muted paragraph. A form is one card of `.field` rows, each carrying a
+label, an optional description, an optional `.field-meta` line in copper for
+what qualifies the field — when it applies, what it excludes, why it is
+blocked — and then its control. Meta lines are the place for that kind of
+notice; a screen that needs one does not invent a banner.
+
 Every inner screen — including Time & weather — opens with the same heading
 block, and every inset field surface uses `--surface-inset` rather than a local
 hex value. Selection is sand on both segmented controls and the data view

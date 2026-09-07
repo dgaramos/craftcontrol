@@ -971,6 +971,7 @@ dialog.drawer::backdrop { background: rgba(0, 0, 0, .7); }
 .settings-screen, .audit-panel { display: grid; gap: 12px; min-width: 0; }
 .inner-heading { padding: 14px 2px 0; }
 .inner-heading h2 { margin: 4px 0 0; color: var(--text); font-family: var(--font-display); font-size: 20px; font-weight: 800; line-height: 1.15; }
+.inner-heading p { max-width: 62ch; margin: 6px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
 :is(.settings-screen, .audit-panel) :is(.block-panel, .card) {
   border-radius: 0;
   border-top-color: var(--surface-border-top);
@@ -1043,14 +1044,11 @@ dialog.drawer::backdrop { background: rgba(0, 0, 0, .7); }
   .audit-outcome { justify-self: start; }
 }
 
-/* Export controls — the notices carry the scope and the ceiling, so a refusal
-   is never the first time the owner hears about a limit. */
-.exports-screen .field select, .exports-screen .field input { max-width: 100%; }
-.exports-screen .export-notice { margin: 0; padding: 11px 13px; color: var(--muted); font-size: 11px; line-height: 1.5; background: var(--surface-inset); border-left: 3px solid var(--copper-light); }
-.exports-screen .export-actions { display: grid; gap: 8px; margin-top: 4px; }
-.exports-screen .export-actions button { min-height: 48px; border-radius: 0; font-family: var(--font-display); font-size: 12px; font-weight: 700; }
-.exports-screen .export-actions button[disabled] { opacity: .55; cursor: not-allowed; }
-.exports-screen .export-blocked { color: var(--copper-light); font-family: var(--font-display); font-size: 10px; font-weight: 700; text-align: center; }
+/* Export controls — the panel is built from the settings field anatomy; only
+   the blocked state needs a rule of its own, because a translucent primary
+   still reads as a live button on a dark ground. */
+.exports-screen .field :is(select, input) { width: 100%; }
+.exports-screen .export-actions button[disabled] { color: var(--muted); background: var(--stone); background-image: none; border-top-color: var(--surface-border-top); border-left-color: var(--surface-border-left); text-shadow: none; box-shadow: 0 2px 0 #080a08; cursor: not-allowed; }
 
 /* Bottom sheet */
 .bottom-sheet { position: fixed; inset: 0; z-index: 200; display: flex; flex-direction: column; justify-content: flex-end; }

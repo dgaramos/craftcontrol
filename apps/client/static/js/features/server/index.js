@@ -333,13 +333,11 @@ function refreshOperationPanel() {
   const indicator = $("#operation-indicator");
   const indicatorLabel = $("#operation-indicator-label");
   const op = operationFeature.getOperation();
-  if (indicator) {
-    indicator.hidden = !op;
-    indicator.classList?.toggle("op-indicator-terminal", !!op && !["pending", "running"].includes(op.state));
-  }
-  if (indicatorLabel) indicatorLabel.textContent = op ? (t(`opState_${op.state}`) || op.state) : "";
+  const opRunning = !!(op && ["pending", "running"].includes(op.state));
+  if (indicator) indicator.hidden = true;
+  if (indicatorLabel) indicatorLabel.textContent = "";
   const opBarLabel = $("#operation-bar-label");
-  if (opBarLabel) opBarLabel.textContent = op ? (t(`opState_${op.state}`) || op.state) : "";
+  if (opBarLabel) opBarLabel.textContent = opRunning ? (t(`opState_${op.state}`) || op.state) : "";
   if (!container) return;
   const frag = op ? operationFeature.renderOperation(op) : null;
   container.replaceChildren(...(frag ? [frag] : []));

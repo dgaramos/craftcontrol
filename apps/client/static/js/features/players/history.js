@@ -4,6 +4,8 @@ function historyMarkup(events) {
   const labels = {
     "player.connected": "historyJoined",
     "player.disconnected": "historyLeft",
+    "player.respawned": "historyRespawned",
+    "player.dimension.changed": "historyDimensionChanged",
     "player.death": "historyDied",
     "player.permission.changed": "historyPermissionChanged",
   };

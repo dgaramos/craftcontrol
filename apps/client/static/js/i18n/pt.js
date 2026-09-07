@@ -151,6 +151,7 @@ export const pt = {
     codeCopied: "Código copiado", codeCopyFailed: "Não foi possível copiar o código", accessSuspended: "Acesso suspenso",
     confirmSuspendAccess: (name) => `Suspender o acesso de ${name}?`,
     historyJoined: "Entrou no servidor", historyLeft: "Saiu do servidor", historyDied: "Morreu", historyPermissionChanged: "Permissão alterada",
+    historyRespawned: "Renasceu", historyDimensionChanged: "Mudou de dimensão",
     inferredExitDetail: "Encerramento inferido pelo estado do servidor", sessionInProgress: "Sessão em andamento", sessionEnded: "Sessão encerrada", playerConnectedNow: "Jogador conectado agora",
     elapsedLabel: "Tempo atual", durationLabel: "Duração", startedLabel: "Início", endedLabel: "Fim",
     recentEvidenceKicker: "Evidências recentes", playerRecordsTitle: "Histórico do jogador", playerRecordsHelp: "Os totais acima vêm dos agregados permanentes; estes registros explicam apenas os eventos recentes disponíveis.", technicalTimeline: "Linha do tempo técnica",

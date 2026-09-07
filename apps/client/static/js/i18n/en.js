@@ -151,6 +151,7 @@ export const en = {
     codeCopied: "Code copied", codeCopyFailed: "Could not copy code", accessSuspended: "Access suspended",
     confirmSuspendAccess: (name) => `Suspend ${name}'s access?`,
     historyJoined: "Joined the server", historyLeft: "Left the server", historyDied: "Died", historyPermissionChanged: "Permission changed",
+    historyRespawned: "Respawned", historyDimensionChanged: "Changed dimension",
     inferredExitDetail: "Inferred from server state", sessionInProgress: "Session in progress", sessionEnded: "Session ended", playerConnectedNow: "Player currently connected",
     elapsedLabel: "Elapsed", durationLabel: "Duration", startedLabel: "Started", endedLabel: "Ended",
     recentEvidenceKicker: "Recent evidence", playerRecordsTitle: "Player history", playerRecordsHelp: "The totals above come from permanent aggregates; these records explain only the recent events still available.", technicalTimeline: "Technical timeline",

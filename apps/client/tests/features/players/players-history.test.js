@@ -45,6 +45,20 @@ describe("createPlayerHistory — historyMarkup", () => {
     expect(html).toContain("fall");
   });
 
+  test.each([
+    ["player.respawned", "en", "Respawned"],
+    ["player.respawned", "pt", "Renasceu"],
+    ["player.respawned", "es", "Reapareció"],
+    ["player.dimension.changed", "en", "Changed dimension"],
+    ["player.dimension.changed", "pt", "Mudou de dimensão"],
+    ["player.dimension.changed", "es", "Cambió de dimensión"],
+  ])("labels %s in %s instead of the raw topic", (topic, locale, label) => {
+    const { historyMarkup } = createPlayerHistory(makeDeps(locale));
+    const html = historyMarkup([{ topic, timestamp: 1700000000, payload: {} }]);
+    expect(html).toContain(label);
+    expect(html).not.toContain(topic);
+  });
+
   test("unknown topic falls back to topic string", () => {
     const { historyMarkup } = createPlayerHistory(makeDeps());
     const events = [{ topic: "custom.event", timestamp: 1700000000, payload: {} }];

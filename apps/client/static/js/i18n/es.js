@@ -140,6 +140,7 @@ export const es = {
   codeCopied: "Código copiado", codeCopyFailed: "No se pudo copiar el código", accessSuspended: "Acceso suspendido",
   confirmSuspendAccess: (name) => `¿Suspender el acceso de ${name}?`,
   historyJoined: "Se unió al servidor", historyLeft: "Salió del servidor", historyDied: "Murió", historyPermissionChanged: "Permiso modificado",
+  historyRespawned: "Reapareció", historyDimensionChanged: "Cambió de dimensión",
   inferredExitDetail: "Cierre inferido por el estado del servidor", sessionInProgress: "Sesión en curso", sessionEnded: "Sesión finalizada", playerConnectedNow: "Jugador conectado ahora",
   elapsedLabel: "Tiempo actual", durationLabel: "Duración", startedLabel: "Inicio", endedLabel: "Fin",
   recentEvidenceKicker: "Evidencias recientes", playerRecordsTitle: "Historial del jugador", playerRecordsHelp: "Los totales de arriba vienen de agregados permanentes; estos registros solo explican los eventos recientes disponibles.", technicalTimeline: "Línea de tiempo técnica",

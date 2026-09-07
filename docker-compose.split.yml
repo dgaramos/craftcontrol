@@ -41,6 +41,8 @@ services:
       - /etc/craftcontrol/bedrock-proxy-token:/run/bedrock-proxy-token:ro
       - ../minecraft-bedrock:/minecraft-project
       - ./data:/data
+      # Written on first start; never leaves the volume and is never committed.
+      - craftcontrol-internal-tls:/tls
     security_opt:
       - no-new-privileges:true
     labels:
@@ -65,7 +67,13 @@ services:
       - /var/cache/nginx
       - /var/run
       - /tmp
+    volumes:
+      # Read-only: the proxy needs the CA to verify the backend, never the keys.
+      - craftcontrol-internal-tls:/tls:ro
     security_opt:
       - no-new-privileges:true
     labels:
       io.craftcontrol.release-pair: "${CRAFTCONTROL_RELEASE_PAIR:-frontend-0.3.6_backend-0.1.0}"
+
+volumes:
+  craftcontrol-internal-tls:

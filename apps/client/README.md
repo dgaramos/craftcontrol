@@ -111,8 +111,14 @@ separate check scripts. Requirements: Node.js 18+.
 `deploy/nginx.conf` configures:
 
 - Static asset serving with cache headers.
-- `/api/*` proxy to the CraftControl Server (`http://craftcontrol-backend:8082`),
-  with `no-store` so authenticated responses are never reused across sessions.
+- `/api/*` proxy to the CraftControl Server over TLS
+  (`https://craftcontrol-backend:8082`), verified against the internal CA the
+  backend writes to the shared `craftcontrol-internal-tls` volume on first
+  start. The session cookie rides every one of these calls, so the hop is not
+  cleartext on the Compose network. No key material is committed or baked into
+  an image.
+- `no-store` on `/api/`, so authenticated responses are never reused across a
+  logout and a different login in the same browser.
 - SSE (`/api/events`) with `proxy_buffering off` and extended timeouts.
 - gzip compression for text assets.
 

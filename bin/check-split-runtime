@@ -3,6 +3,7 @@ set -euo pipefail
 
 readonly CANARY_SUFFIX="$$"
 readonly CANARY_NETWORK="craftcontrol-split-canary-$CANARY_SUFFIX"
+readonly CANARY_TLS_VOLUME="craftcontrol-split-canary-tls-$CANARY_SUFFIX"
 readonly BACKEND_CONTAINER="craftcontrol-split-backend-$CANARY_SUFFIX"
 readonly FRONTEND_CONTAINER="craftcontrol-split-frontend-$CANARY_SUFFIX"
 source "$(git rev-parse --show-toplevel)/versions.env"
@@ -22,6 +23,7 @@ cleanup() {
   wait_removed "$FRONTEND_CONTAINER" || true
   wait_removed "$BACKEND_CONTAINER" || true
   docker network rm "$CANARY_NETWORK" >/dev/null 2>&1 || true
+  docker volume rm "$CANARY_TLS_VOLUME" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 
@@ -36,6 +38,7 @@ run_backend() {
     -e MINECRAFT_PROJECT=/tmp \
     -e BACKUP_ROOT=/tmp/backups \
     -e MINECRAFT_CONTAINER=craftcontrol-canary-no-bedrock \
+    -v "$CANARY_TLS_VOLUME:/tls" \
     "craftcontrol-backend:$CRAFTCONTROL_BACKEND_VERSION" >/dev/null
 }
 
@@ -49,7 +52,12 @@ wait_healthy() {
 }
 
 docker network create "$CANARY_NETWORK" >/dev/null
+docker volume create "$CANARY_TLS_VOLUME" >/dev/null
 run_backend
+# Nginx reads the CA when it loads its configuration, and the backend writes it
+# on first start, so the proxy must not come up before the backend is healthy.
+# The Compose topology expresses the same order with depends_on: service_healthy.
+wait_healthy "$BACKEND_CONTAINER"
 docker run -d --rm \
   --name "$FRONTEND_CONTAINER" \
   --network "$CANARY_NETWORK" \
@@ -57,9 +65,9 @@ docker run -d --rm \
   --tmpfs /var/cache/nginx \
   --tmpfs /var/run \
   --tmpfs /tmp \
+  -v "$CANARY_TLS_VOLUME:/tls:ro" \
   "craftcontrol-frontend:$CRAFTCONTROL_FRONTEND_VERSION" >/dev/null
 
-wait_healthy "$BACKEND_CONTAINER"
 wait_healthy "$FRONTEND_CONTAINER"
 docker exec "$FRONTEND_CONTAINER" wget -q -O - http://127.0.0.1:8080/ | grep -q '<title>CraftControl'
 app_script="$(docker exec "$FRONTEND_CONTAINER" wget -q -O - http://127.0.0.1:8080/static/app.js)"
@@ -68,6 +76,16 @@ composition_script="$(docker exec "$FRONTEND_CONTAINER" wget -q -O - http://127.
 grep -q 'import { state } from "./core/state.js?v=7"' <<<"$composition_script"
 state_module="$(docker exec "$FRONTEND_CONTAINER" wget -q -O - http://127.0.0.1:8080/static/js/core/state.js)"
 grep -q 'export const state' <<<"$state_module"
+
+# The frontend-to-backend hop must be TLS with a verified certificate: prove the
+# backend refuses plaintext and that a proxied API call still succeeds.
+docker exec "$BACKEND_CONTAINER" test -f /tls/ca.crt
+docker exec "$FRONTEND_CONTAINER" test -f /tls/ca.crt
+if docker exec "$FRONTEND_CONTAINER" wget -T 3 -q -O /dev/null http://craftcontrol-backend:8082/api/health 2>/dev/null; then
+  echo "split runtime: backend answered plaintext HTTP on the internal hop" >&2
+  exit 1
+fi
+docker exec "$FRONTEND_CONTAINER" wget -T 5 -q -O /dev/null http://127.0.0.1:8080/api/health
 docker exec "$FRONTEND_CONTAINER" wget -q -O - http://127.0.0.1:8080/version.json | grep -q "\"version\":\"$CRAFTCONTROL_FRONTEND_VERSION\""
 [[ "$(docker exec "$FRONTEND_CONTAINER" wget -q -O - http://127.0.0.1:8080/api/health)" == '{"ok":true}' ]]
 docker exec "$FRONTEND_CONTAINER" wget -q -O - http://127.0.0.1:8080/api/auth/me | grep -q 'Local administrator'

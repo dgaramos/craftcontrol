@@ -272,6 +272,9 @@ def test_frontend_proxy_preserves_same_origin_and_sse_streaming() -> None:
     assert "proxy_set_header Host $http_host" in nginx
     assert "proxy_buffering off" in nginx
     assert "proxy_read_timeout 1h" in nginx
+    # index.html carries every asset version, so it must never be served from
+    # cache without revalidating, or a deploy reaches nobody.
+    assert 'add_header Cache-Control "no-cache"' in nginx
 
 
 def test_backend_image_does_not_bundle_frontend_application() -> None:

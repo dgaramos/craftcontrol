@@ -16,8 +16,18 @@ class FakeBedrock:
         self.commands.append(parts)
 
     def send_and_read(self, parts: list[str]) -> str:
+        """Answer like the Bedrock console, which phrases each query its own way."""
         self.commands.append(parts)
-        return "The time is 34"
+        command = " ".join(parts)
+        if command == "time query day":
+            return "[INFO] Day is 34"
+        if command == "time query daytime":
+            return "[INFO] Daytime is 34"
+        if command == "time query gametime":
+            return "[INFO] Game time is 34"
+        if command == "weather query":
+            return "[INFO] Weather state is: clear"
+        return "[INFO] Daytime is 34"
 
     def set_operator(self, player: str, enabled: bool) -> None:
         self.commands.append(["op" if enabled else "deop", player])

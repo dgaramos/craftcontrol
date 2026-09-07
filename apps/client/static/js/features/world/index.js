@@ -1,4 +1,5 @@
 import { persistTab } from "../../core/route.js?v=8";
+import { resetPanelScroll } from "../../core/dom.js?v=8";
 
 export function createWorldFeature({ state, content, t, api, $, uiIcon, toast, getSettingsFeature, getNavigation, refreshWorldCells = () => {} }) {
 function renderTimePanel() {
@@ -120,7 +121,7 @@ function bindTimePanel() {
     persistTab(state.tab);
     getNavigation().renderTabs();
     renderTimePanel();
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    resetPanelScroll("smooth");
   };
   const renderWorld = () => {
     const prefix = `<button class="section-feature" id="open-time"><span>${uiIcon("sun")}</span><div><strong>${t("timeControls")}</strong><small>${t("timeControlsHint")}</small></div><b>›</b></button>`;

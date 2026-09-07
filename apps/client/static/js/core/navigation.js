@@ -1,10 +1,11 @@
-import { persistTab } from "./route.js?v=7";
+import { persistTab } from "./route.js?v=8";
+import { resetPanelScroll } from "./dom.js?v=8";
 
 export function createNavigation({ state, $, t, uiIcon }) {
   const icons = { home: "home", world: "world", players: "players", analytics: "data", rules: "rules", server: "server", audit: "audit" };
 
   function resetVerticalScroll() {
-    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    resetPanelScroll("auto");
   }
 
   function _bottomNavActive() {

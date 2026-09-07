@@ -90,9 +90,14 @@ describe("brand contracts — mobile scroll behaviour", () => {
     expect(css).toContain("overflow-x: clip");
   });
 
-  test("navigation.js scrolls to top on tab change", () => {
+  /* <main> is the scroll container in the mobile shell, so window.scrollTo is a
+     no-op: a screen opened after scrolling would appear already scrolled down. */
+  test("tab changes reset the scroll container, not the window", () => {
     const nav = readFileSync(join(JS, "core", "navigation.js"), "utf8");
-    expect(nav).toContain('window.scrollTo({ top: 0, left: 0, behavior: "auto" })');
+    expect(nav).toContain("resetPanelScroll");
+    expect(nav).not.toContain("window.scrollTo");
+    const dom = readFileSync(join(JS, "core", "dom.js"), "utf8");
+    expect(dom).toContain("export function resetPanelScroll");
   });
 
   test("index.html references app.css?v=48", () => {
@@ -100,9 +105,9 @@ describe("brand contracts — mobile scroll behaviour", () => {
     expect(template).toContain("/static/app.css?v=48");
   });
 
-  test("index.html references app.js?v=93", () => {
+  test("index.html references app.js?v=94", () => {
     const template = readFileSync(join(FRONTEND, "templates", "index.html"), "utf8");
-    expect(template).toContain("/static/app.js?v=93");
+    expect(template).toContain("/static/app.js?v=94");
   });
 
   test("index.html links the self-hosted display and body fonts", () => {

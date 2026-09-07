@@ -157,6 +157,26 @@ describe("feature contracts — pending changes and operation indicators", () =>
     expect(css).toMatch(/^\[hidden\]\s*\{[^}]*display:\s*none\s*!important/m);
   });
 
+  /* T12: the world clock and weather drift with no event to announce them, so
+     Home polls slowly — and only while Home is on screen. */
+  test("home polls every 45s and cancels itself off the Home tab", () => {
+    const composition = readFileSync(join(JS, "composition.js"), "utf8");
+    expect(composition).toContain("HOME_POLL_MS = 45000");
+    expect(composition).toContain('if (state.tab !== "home") return;');
+    expect(composition).toContain("stopHomePolling");
+  });
+
+  /* The back affordance must survive an async render: analytics and audit set
+     innerHTML after their fetch resolves, which would wipe anything the router
+     had prepended to the panel. */
+  test("the back affordance lives in the shell, not inside the panel", () => {
+    const template = readFileSync(join(FRONTEND, "templates", "index.html"), "utf8");
+    expect(template).toContain('id="panel-back"');
+    const composition = readFileSync(join(JS, "composition.js"), "utf8");
+    expect(composition).not.toContain("content.prepend");
+    expect(composition).toContain("createNavTrail");
+  });
+
   /* applyLocale translates [data-i18n] and only then re-renders the active
      panel, so any panel that ships the attribute with a literal string keeps
      that literal in every locale. Feature markup must resolve through t(). */

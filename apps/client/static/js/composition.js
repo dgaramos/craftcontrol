@@ -5,7 +5,7 @@ import { state } from "./core/state.js?v=7";
 import { createNavTrail } from "./core/route.js?v=8";
 import { $, escapeHtml } from "./core/dom.js?v=7";
 import { connectInvalidation } from "./core/invalidation.js?v=7";
-import { createNavigation } from "./core/navigation.js?v=8";
+import { createNavigation } from "./core/navigation.js?v=9";
 import { toast } from "./components/feedback.js?v=7";
 import { formatDate as formatLocalizedDate, formatDuration, sessionMoment as localizedSessionMoment, timelineTimestamp as localizedTimelineTimestamp } from "./components/time.js?v=9";
 import { createAnalyticsFeature } from "./features/analytics/index.js?v=8";
@@ -46,40 +46,31 @@ export function startApplication() {
      from the Server hub, Time from Home and from World — so a hard-coded
      destination sends you somewhere you were not. Keep the trail instead.
      Landing on a root tab clears it: the bottom nav is a fresh start. */
-  const ROOT_TABS = new Set(["home", "__players__", "server"]);
   const BACK_LABELS = { home: "navHome", __players__: "navPlayers", server: "navServer", world: "world", rules: "rules", analytics: "analytics", audit: "audit", __server_settings__: "settings", __time__: "timeControls" };
-  let _navTrail = [];
-  let _goingBack = false;
+  const navTrail = createNavTrail();
 
-  state.subscribe("tab", (value, previous) => {
-    if (_goingBack) { _goingBack = false; return; }
-    if (ROOT_TABS.has(value)) { _navTrail = []; return; }
-    if (previous && previous !== value) _navTrail.push(previous);
-  });
+  state.subscribe("tab", (value, previous) => navTrail.record(value, previous));
 
   function goBack() {
-    const target = _navTrail.pop() || "home";
-    _goingBack = true;
-    state.tab = target;
+    state.tab = navTrail.back();
   }
 
-  function addBackButton() {
-    if (typeof document === "undefined" || !content) return;
-    const target = _navTrail[_navTrail.length - 1] || "home";
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "panel-back btn";
-    button.dataset.panelBack = "";
-    button.innerHTML = uiIcon("chevron");
-    const label = document.createElement("span");
-    label.textContent = t(BACK_LABELS[target] || "navHome");
-    button.appendChild(label);
-    button.onclick = goBack;
-    content.prepend(button);
+  /* The affordance lives in the shell, not inside #content: analytics and audit
+     render asynchronously and would overwrite anything prepended to the panel. */
+  function showBackButton(visible) {
+    const button = $("#panel-back");
+    if (!button) return;
+    button.hidden = !visible;
+    if (!visible) return;
+    const label = $("#panel-back-label");
+    if (label) label.textContent = t(BACK_LABELS[navTrail.peek()] || "navHome");
   }
+
+  const ROOT_TABS = new Set(["home", "__players__", "server"]);
 
   function refreshActivePanel() {
     $("#hero").hidden = state.tab !== "home";
+    showBackButton(!ROOT_TABS.has(state.tab));
     // Home remains useful while the backend is reconnecting: its time shortcut,
     // game-mode review and navigation do not depend on the schema response.
     if (state.tab === "home") return getHomeFeature().render();
@@ -87,13 +78,13 @@ export function startApplication() {
       content.innerHTML = `<section class="panel-pending block-panel" role="status">${t("querying")}</section>`;
       return;
     }
-    if (state.tab === "__time__") { getWorldFeature().renderTimePanel(); return addBackButton(); }
-    if (state.tab === "__server_settings__") { getServerFeature().renderServerSettings(); return addBackButton(); }
+    if (state.tab === "__time__") return getWorldFeature().renderTimePanel();
+    if (state.tab === "__server_settings__") return getServerFeature().renderServerSettings();
     if (state.tab === "__players__") return renderPlayersPanel();
-    if (state.tab === "analytics") { renderAnalyticsPanel(); return addBackButton(); }
-    if (state.tab === "audit") { getAuditFeature().renderAuditPanel(); return addBackButton(); }
-    if (state.tab === "world") { getWorldFeature().renderWorld(); addBackButton(); }
-    else if (state.tab === "rules") { getRulesFeature().renderRules(); addBackButton(); }
+    if (state.tab === "analytics") return renderAnalyticsPanel();
+    if (state.tab === "audit") return getAuditFeature().renderAuditPanel();
+    if (state.tab === "world") getWorldFeature().renderWorld();
+    else if (state.tab === "rules") getRulesFeature().renderRules();
     else if (state.tab === "server") { getServerFeature().renderServer(); getServerFeature().loadDiagnostics(); }
   }
 
@@ -362,6 +353,25 @@ export function startApplication() {
     refreshIndicatorBars();
   }
 
+  /* SSE covers changes the server announces, but the world clock and weather
+     drift on their own with no event to carry them. A slow poll keeps the Home
+     cells honest, and only while Home is on screen — every other tab cancels
+     it, so a backgrounded screen costs nothing. */
+  const HOME_POLL_MS = 45000;
+  let _homePollTimer = null;
+
+  function startHomePolling() {
+    stopHomePolling();
+    if (state.tab !== "home") return;
+    _homePollTimer = setInterval(() => { loadState().catch(() => {}); }, HOME_POLL_MS);
+  }
+
+  function stopHomePolling() {
+    if (_homePollTimer) { clearInterval(_homePollTimer); _homePollTimer = null; }
+  }
+
+  state.subscribe("tab", startHomePolling);
+
   async function loadState() {
     const snapshot = await api("/api/state");
     state.batch(() => {
@@ -391,6 +401,7 @@ export function startApplication() {
 
   function connectEvents() {
     connectInvalidation({ connectEventStream, loadState, refreshStatus: () => api("/api/status"), setStatus });
+    startHomePolling();
   }
 
   state.subscribe("tab", () => {
@@ -528,6 +539,7 @@ export function startApplication() {
     $("#changes-drawer").showModal();
   });
   $("#operation-bar")?.addEventListener("click", () => getServerFeature().openOperationDrawer());
+  $("#panel-back").onclick = goBack;
   $("#close-operation-drawer").onclick = () => $("#operation-drawer").close();
   const dismissOperation = $("#dismiss-operation");
   if (dismissOperation) dismissOperation.onclick = () => $("#operation-drawer").close();

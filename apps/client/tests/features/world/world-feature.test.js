@@ -220,7 +220,9 @@ describe("openTimeControls", () => {
     expect(deps.state.tab).toBe("__time__");
     expect(deps.renderTabs).toHaveBeenCalled();
     expect(deps.content.innerHTML).toContain("time-screen");
-    expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: "smooth" });
+    // <main> owns the scroll in the mobile shell; the window is reset too, for
+    // any layout where the document is what scrolls.
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: "smooth" });
   });
 });
 

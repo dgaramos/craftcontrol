@@ -146,7 +146,7 @@ _frontend_host="$(ip route show default 2>/dev/null | awk 'NR==1{print $3}')"
 _frontend_host="${_frontend_host:-127.0.0.1}"
 curl --fail --silent --show-error "http://${_frontend_host}:$frontend_port/healthz" >/dev/null
 curl --fail --silent --show-error "http://${_frontend_host}:$frontend_port/api/health" >/dev/null \
-  || fail "the frontend could not proxy to the backend; verify the shared internal TLS material"
+  || fail "the frontend did not answer /api/health; check the frontend, DNS and connectivity, and the shared internal TLS material"
 [[ "$(curl --silent --output /dev/null --write-out '%{http_code}' "http://${_frontend_host}:$frontend_port/api/auth/me")" == "401" ]] \
   || fail "anonymous authentication canary did not return 401"
 compose exec -T craftcontrol-backend craftcontrol backup list >/dev/null

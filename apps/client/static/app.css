@@ -38,16 +38,18 @@
 [hidden] { display: none !important; }
 
 html {
-  min-height: 100%;
+  height: 100%;
+  overflow: hidden;
   overscroll-behavior-y: none;
 }
 
 body {
   margin: 0;
-  min-height: 100vh;
-  min-height: 100dvh;
+  /* The shell owns the viewport; the document itself never scrolls, so iOS
+     cannot leave the page parked past the end of the content. */
+  height: 100%;
   padding-bottom: 0;
-  overflow-x: clip;
+  overflow: hidden;
   overscroll-behavior-y: none;
   color: var(--text);
   background-color: var(--bg);
@@ -65,10 +67,12 @@ button { cursor: pointer; }
 
 /* ── Shell layout (mobile-first full-viewport flex column) ───────────────── */
 .shell {
+  /* Pinned to the viewport instead of sized by a viewport unit: Safari keeps
+     fixed elements on the visual viewport, so the bottom nav cannot drift. */
+  position: fixed;
+  inset: 0;
   display: flex;
   flex-direction: column;
-  height: 100svh; /* small viewport = always fits with browser chrome */
-  height: 100dvh; /* dynamic viewport for modern browsers */
   overflow: hidden;
 }
 
@@ -314,7 +318,7 @@ button > .cc-icon { width: 21px; height: 21px; margin-right: 5px; }
 /* Ensure #tabs (legacy nav, kept for JS compatibility) never appears */
 #tabs { display: none !important; }
 
-main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; width: min(940px, 100%); margin: 0 auto; padding: 2px 13px 24px; }
+main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior-y: contain; width: min(940px, 100%); margin: 0 auto; padding: 2px 13px 24px; }
 .block-panel, .card {
   position: relative;
   border: 4px solid #080a08;

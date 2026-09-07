@@ -30,11 +30,15 @@ horizontally scrolling row of options are not part of this language.
 
 Choices that carry an icon — the data view switch, the ranking categories, the
 block modes, the ore grid, the time presets and the weather options — are the
-second variant, taller because the icon leads. They are deliberately not folded
-into the text chips, and they do not yet share a rule among themselves: the data
-view switch is sand, the ranking categories gold, the block modes green and the
-ore grid blue. Unifying them is open work, not a settled convention — a screen
-adding an icon choice today should copy the closest existing one and say so.
+second variant, taller because the icon leads. Gold marks the selection in both
+variants, but it is drawn differently: a text chip fills with gold, while an
+icon chip keeps the dark surface and takes a gold edge and label. The sprites
+are multi-colour pixel art with no `currentColor`, so filling their ground would
+leave the artwork fighting the colour behind it.
+
+The time presets and the weather options look like a choice but are not one:
+pressing them sets the time or the weather rather than selecting a view that
+stays selected, so they carry no selected state.
 
 An inner screen is built from the shared anatomy, not from new components. The
 heading block is `.inner-heading`: an eyebrow, a 20px title, and an optional

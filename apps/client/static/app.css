@@ -509,6 +509,18 @@ main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-
   border-top-color: #ffe080; border-left-color: #d4a030; text-shadow: 1px 1px 0 #f0e090;
 }
 
+/* Selected, for the choices that carry an icon: the same gold, drawn as an
+   outline. The sprites are multi-colour pixel art with no `currentColor`, so a
+   filled gold ground would leave a blue icon sitting on it. Gold marks the
+   choice; the artwork keeps its own colours on the dark surface it was drawn
+   for. */
+.analytics-view-switch > button.active, .ranking-categories > button.active,
+.blocks-mode > button.active, .ore-grid > button.active {
+  color: var(--sand); background: linear-gradient(#302817, #1a211d);
+  border-color: #7a6130; border-top-color: #f0c040; border-left-color: #d4a030;
+  text-shadow: none;
+}
+
 .section-heading { margin: 14px 2px 12px; }
 .section-heading h2 { color: var(--text); font-size: 1.35rem; }
 .section-heading h3 { margin: 4px 0 0; color: var(--text); font-family: var(--font-display); font-size: 20px; font-weight: 800; line-height: 1; }

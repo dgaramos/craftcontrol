@@ -12,6 +12,7 @@ Read `README.md`, `docs/protocol.md`, and every Markdown file under the ignored 
 - Keep high-cardinality maps bounded and movement sampling conservative.
 - Installation must be reversible and must back up `world_behavior_packs.json`.
 - Never commit or package `roadmap/`.
+- This pack is developed inside the CraftControl repository. There is no separate upstream to push to or pull from.
 
 ## Testing conventions
 

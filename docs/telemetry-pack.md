@@ -1,6 +1,6 @@
 # CraftControl Telemetry Pack integration
 
-CraftControl embeds the independently versioned `craftcontrol-telemetry` repository under `packs/telemetry/` with Git subtree. A normal clone therefore includes a tested pack without requiring Git submodule initialization.
+The independently versioned behavior pack lives under `packs/telemetry/` in this repository. It arrived through a Git subtree import, which is why its history carries `Squashed 'packs/telemetry/'` commits, and a normal clone includes a tested pack without any submodule step.
 
 ## Operator commands
 
@@ -64,20 +64,16 @@ Backups live outside the world at:
 
 `disable` removes only the world association. `remove` also removes installed pack files, but retains a recoverable backup. Neither action deletes the behavior pack's dynamic property embedded in the world.
 
-## Subtree maintenance
+## Maintaining the pack
 
-The standalone telemetry repository remains the upstream release source. From the CraftControl repository, import a new release with:
+The pack is developed here. Its version is its own — `behavior_pack/manifest.json`, `package.json` and the `version` field in `telemetry.started` move together, and `docs/protocol.md` records what each release added — but there is no upstream to pull from: the standalone `craftcontrol-telemetry` repository this document once described no longer exists.
 
-```bash
-git subtree pull --prefix packs/telemetry ../craftcontrol-telemetry main --squash
-```
-
-When the remote repository is configured explicitly:
+Change the pack the way you change anything else in this repository, and run its own gate, which `bin/check` does not include:
 
 ```bash
-git subtree pull --prefix packs/telemetry craftcontrol-telemetry main --squash
+bin/check-telemetry
 ```
 
-Do not edit the embedded copy and standalone repository independently. Pack changes begin in the standalone repository, pass its Node.js checks, and are then pulled into CraftControl. The standalone and embedded trees must produce byte-equivalent `.mcpack` artifacts.
+Packaging stays reproducible — sorted paths, normalized timestamps, stripped ZIP metadata — so the same commit always produces a byte-equivalent `.mcpack`.
 
 Item use and interaction metrics are opt-in and bounded by an explicit policy: what may be counted, how far a map may grow, how a metric is switched on, and what the panel shows when the runtime cannot provide it. See [Opt-in telemetry metrics](telemetry-metrics.md).

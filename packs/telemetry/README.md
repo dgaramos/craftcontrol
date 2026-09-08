@@ -107,7 +107,7 @@ The package command creates:
 dist/craftcontrol-telemetry-0.6.0.mcpack
 ```
 
-Packaging uses sorted paths, normalized timestamps, and stripped ZIP metadata so the standalone repository and CraftControl subtree produce byte-equivalent artifacts from the same commit.
+Packaging uses sorted paths, normalized timestamps, and stripped ZIP metadata, so the same commit always produces a byte-equivalent artifact.
 
 ## Install on a dedicated server
 

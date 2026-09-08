@@ -21,14 +21,17 @@ function statCard(label, value, note = "") {
 }
 
 
-function capabilityRow(key, cap, uiIcon) {
+function capabilityRow(key, cap, uiIcon, t) {
   const row = el("li", "capability-row");
   const supported = typeof cap === "object" && cap !== null && cap.supported === true;
   row.classList.add(supported ? "cap-supported" : "cap-unsupported");
   const name = el("span", "cap-name");
   name.textContent = key;
   const mark = el("span", "cap-mark");
-  mark.innerHTML = uiIcon(supported ? "check" : "close");
+  mark.innerHTML = uiIcon(
+    supported ? "check" : "close",
+    t(supported ? "capabilitySupported" : "capabilityUnsupported"),
+  );
   row.append(mark, name);
   return row;
 }
@@ -120,7 +123,7 @@ export function createPackHealthPanel({ $, t, api, formatDate, uiIcon }) {
           text(capTitle, "h3", t("capabilities"));
           capSection.append(capTitle);
           const capList = el("ul", "capability-list");
-          capKeys.forEach((key) => capList.append(capabilityRow(key, capabilities[key], uiIcon)));
+          capKeys.forEach((key) => capList.append(capabilityRow(key, capabilities[key], uiIcon, t)));
           capSection.append(capList);
           fragment.append(capSection);
         }

@@ -1,3 +1,3 @@
-import { startApplication } from "./js/composition.js?v=48";
+import { startApplication } from "./js/composition.js?v=49";
 
 startApplication();

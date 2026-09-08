@@ -9,7 +9,7 @@ export const pt = {
     start: "Iniciar", restart: "Reiniciar", stop: "Parar", close: "Fechar",
     checking: "Verificando…", online: "Online", stopped: "Parado", serverOnline: "Servidor online",
     serverStopped: "Servidor parado", playersOnline: "jogadores online", nobody: "Ninguém conectado",
-    awaiting: "Aguardando atualização", updated: "Atualizado", enabled: "Ativado", disabled: "Desativado",
+    awaiting: "Aguardando atualização", updated: "Atualizado", enabled: "Ativado", disabled: "Desativado", capabilitySupported: "Recurso suportado", capabilityUnsupported: "Recurso não suportado",
     unknown: "Não consultado", immediate: "Aplicação imediata", restartRequired: "Aplicado ao salvar e reiniciar",
     saved: "Salvo. Aplicando no servidor…", serverUpdated: "Servidor atualizado",
     noChanges: "Nenhuma alteração pendente", querying: "Consultando o servidor…",

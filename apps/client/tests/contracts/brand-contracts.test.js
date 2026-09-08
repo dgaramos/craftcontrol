@@ -126,9 +126,9 @@ describe("brand contracts — mobile scroll behaviour", () => {
     expect(template).toContain("/static/app.css?v=61");
   });
 
-  test("index.html references app.js?v=101", () => {
+  test("index.html references app.js?v=102", () => {
     const template = readFileSync(join(FRONTEND, "templates", "index.html"), "utf8");
-    expect(template).toContain("/static/app.js?v=101");
+    expect(template).toContain("/static/app.js?v=102");
   });
 
   test("index.html links the self-hosted display and body fonts", () => {

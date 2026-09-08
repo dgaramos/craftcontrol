@@ -1,4 +1,4 @@
-import { en } from "./en.js?v=7";
+import { en } from "./en.js?v=8";
 
 export const es = {
   ...en,
@@ -7,7 +7,7 @@ export const es = {
   day: "Día", night: "Noche", clearWeather: "Clima despejado", server: "Servidor", homeDay: "Día", homeTime: "Hora", homeWeather: "Clima", homeTimeAction: "Tiempo y hora", serverRules: "Reglas del servidor", serverOperations: "Operaciones del servidor", recentActivity: "Actividad reciente", historyLabel: "Historial", instant: "Instantáneo", restartShort: "Reinicio", spectatorUnavailable: "El modo espectador aún no es compatible con el servidor", saveChanges: "Guardar cambios", control: "CONTROL", administration: "ADMINISTRACIÓN", serverStateLabel: "Estado", restartRequiredShort: "Requiere reinicio", analyticsKicker: "Analytics", configuration: "CONFIGURACIÓN", infrastructure: "INFRAESTRUCTURA", noRestart: "sin reiniciar", rulesLiveHelp: "Reglas aplicadas en vivo en el servidor.", serverOperation: "Operación del servidor",
   restartNotice: "Los cambios persistentes se aplican al guardar y reiniciar.", start: "Iniciar", restart: "Reiniciar", stop: "Detener", close: "Cerrar",
   checking: "Comprobando…", online: "En línea", stopped: "Detenido", serverOnline: "Servidor en línea", serverStopped: "Servidor detenido", playersOnline: "jugadores en línea", nobody: "Nadie conectado",
-  awaiting: "Esperando actualización", updated: "Actualizado", enabled: "Activado", disabled: "Desactivado", unknown: "Sin consultar", immediate: "Aplicación inmediata", restartRequired: "Se aplica al guardar y reiniciar",
+  awaiting: "Esperando actualización", updated: "Actualizado", enabled: "Activado", disabled: "Desactivado", capabilitySupported: "Funcionalidad compatible", capabilityUnsupported: "Funcionalidad no compatible", unknown: "Sin consultar", immediate: "Aplicación inmediata", restartRequired: "Se aplica al guardar y reiniciar",
   saved: "Guardado. Aplicando en el servidor…", serverUpdated: "Servidor actualizado", noChanges: "No hay cambios pendientes", querying: "Consultando el servidor…", stateUpdated: "Estado actualizado", worldUpdated: "Mundo actualizado", operationDone: "Operación completada",
   confirmAction: (action) => `¿${action} el servidor?`, saveCount: (count) => `Guardar (${count})`, fieldUpdated: (label) => `${label} actualizado`,
   timeControls: "Hora y clima", timeControlsHint: "Hora, ciclos y clima", timeOfDay: "Hora del mundo", sunrise: "Amanecer", noon: "Mediodía", sunset: "Atardecer", midnight: "Medianoche",

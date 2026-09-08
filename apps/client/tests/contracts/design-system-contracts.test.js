@@ -30,10 +30,6 @@ const SELECTION_GOLD = "#f0c040";
 const NOT_A_SELECTION = [
   // Navigation, not a choice: it uses the nav tokens the shell defines.
   ".bottom-nav-tab.active",
-  // Unreachable legacy tab strip: `#tabs` is hidden in the template and nothing
-  // unhides it, so its green selected state cannot be made to comply. Deleting
-  // it is issue #590; the exception is listed here rather than passing quietly.
-  "#tabs button.active",
 ];
 
 /** Every rule whose selector marks a selected state. */

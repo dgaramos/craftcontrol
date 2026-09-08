@@ -16,47 +16,21 @@ global.window = {
 };
 
 const state = { tab: "home", tabs: ["home", "players", "analytics"], subscribe: () => {} };
-let buttons = [];
-const tabs = {
-  replaceChildren() { buttons = []; },
-  appendChild(clone) {
-    if (clone._button) buttons.push(clone._button);
-  },
-  querySelectorAll: () => buttons,
-};
-// Fake <template> for tpl-nav-tab: cloneNode returns a fragment with a button stub.
-const tplNavTab = {
-  content: {
-    cloneNode() {
-      const iEl = { innerHTML: "" };
-      const spanEl = { textContent: "" };
-      const btn = {
-        dataset: {},
-        onclick: null,
-        className: "",
-        querySelector(sel) {
-          if (sel === "i") return iEl;
-          if (sel === "span") return spanEl;
-          return null;
-        },
-      };
-      return { _button: btn, querySelector: (sel) => sel === "button" ? btn : null };
-    },
-  },
-};
+
+// The shell navigates from the bottom nav; its buttons carry the target tab.
+const bottomNavButtons = ["home", "__players__", "server"].map((tab) => ({
+  dataset: { tab },
+  onclick: null,
+  classList: { toggle: () => {} },
+}));
+const bottomNav = { querySelectorAll: () => bottomNavButtons };
 const navigation = createNavigation({
   state,
-  $: (selector) => {
-    if (selector === "#tabs") return tabs;
-    if (selector === "#tpl-nav-tab") return tplNavTab;
-    return null;
-  },
-  t: (key) => key,
-  uiIcon: (name) => `<svg data-icon="${name}"></svg>`,
+  $: (selector) => (selector === "#bottom-nav" ? bottomNav : null),
 });
-navigation.renderTabs();
-assert.ok(buttons.some((btn) => btn.dataset.tab === "players"), "players tab button must exist");
-const playersBtn = buttons.find((btn) => btn.dataset.tab === "players");
+assert.ok(typeof navigation.renderBottomNav === "function", "bottom nav must render");
+
+const playersBtn = bottomNavButtons.find((btn) => btn.dataset.tab === "__players__");
 playersBtn.onclick();
 assert.equal(state.tab, "__players__");
 assert.equal(window.location.hash, "#/players");

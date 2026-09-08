@@ -109,7 +109,7 @@ describe("player feature separates workspace, profile, access, history and telem
   // every one is imported with a version, not that they share a number.
   const modules = {
     workspace: ["createPlayersWorkspace", 7],
-    profile: ["createPlayerProfile", 8],
+    profile: ["createPlayerProfile", 9],
     access: ["createPlayerAccess", 8],
     history: ["createPlayerHistory", 8],
     telemetry: ["createPlayerTelemetry", 9],
@@ -126,8 +126,8 @@ describe("player feature separates workspace, profile, access, history and telem
     });
   }
 
-  test('composition.js imports from "./features/players/index.js?v=9"', () => {
-    expect(composition).toContain('from "./features/players/index.js?v=9"');
+  test('composition.js imports from "./features/players/index.js?v=10"', () => {
+    expect(composition).toContain('from "./features/players/index.js?v=10"');
   });
 
   test("composition.js does not inline renderPlayerCards", () => {

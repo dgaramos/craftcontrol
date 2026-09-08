@@ -43,7 +43,7 @@ export function parseMetrics(value) {
  * unrecognized command returns an error and changes nothing.
  */
 export function applyMetricCommand(current, message) {
-  const [verb = "", name = ""] = String(message ?? "").trim().split(/\s+/);
+  const [verb, name = ""] = String(message ?? "").trim().split(/\s+/);
   const metrics = parseMetrics(current);
   if (verb === "status" && !name) return { metrics, changed: false, error: null };
   if (verb !== "enable" && verb !== "disable") return { metrics, changed: false, error: `unknown metric command: ${verb || "(empty)"}` };

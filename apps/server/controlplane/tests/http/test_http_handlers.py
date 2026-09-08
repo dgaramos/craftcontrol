@@ -756,6 +756,15 @@ def test_a_malformed_metric_request_is_refused(client, service: MagicMock, paylo
     assert service.set_telemetry_metric.called is False
 
 
+def test_a_console_failure_is_reported_instead_of_a_500(client, service: MagicMock) -> None:
+    # The command goes through Docker to the Bedrock console; when that is
+    # unavailable the panel needs the reason, not a stack trace.
+    service.set_telemetry_metric.side_effect = RuntimeError("container bedrock not found")
+    resp = client.post("/api/telemetry/metrics", json={"metric": "itemUse", "enabled": True})
+    assert resp.status_code == 400
+    assert "container bedrock not found" in resp.get_json()["error"]
+
+
 def test_an_unknown_metric_is_refused_with_the_reason(client, service: MagicMock) -> None:
     from src.telemetry.metrics import UnknownMetric
 

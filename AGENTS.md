@@ -58,7 +58,7 @@ New backend implementation modules must not be created in the `controlplane` pac
 - Assume trusted-LAN deployment only until authentication, CSRF, TLS, and restricted Docker access are implemented.
 - Keep panel roles independent from Minecraft operator status. Enforce capabilities in the backend, preserve the last owner, hash all passwords and tokens, and never expose session identifiers or credentials in logs.
 - Never overwrite `.env`, `data/manager.db`, or Minecraft world data during deployment.
-- Keep the embedded telemetry pack under `packs/telemetry/` synchronized from its standalone repository with Git subtree. Pack installation must use the shared installer, persistent Bedrock data, backups, atomic association updates, and explicit restart decisions.
+- The telemetry pack under `packs/telemetry/` is versioned independently and developed in this repository; run its own gate with `bin/check-telemetry`, which `bin/check` does not include. Pack installation must use the shared installer, persistent Bedrock data, backups, atomic association updates, and explicit restart decisions.
 
 ## Quality gate
 

@@ -1899,12 +1899,12 @@
         }
       }
     },
-    "/api/telemetry/metrics": {
+    "/api/telemetry/collection": {
       "get": {
         "tags": [
           "Telemetry"
         ],
-        "operationId": "getTelemetryMetrics",
+        "operationId": "getTelemetryCollection",
         "summary": "Get which opt-in telemetry metrics the pack reports collecting",
         "x-craftcontrol-capability": "telemetry.manage",
         "responses": {
@@ -1927,7 +1927,7 @@
         "tags": [
           "Telemetry"
         ],
-        "operationId": "setTelemetryMetric",
+        "operationId": "setTelemetryCollection",
         "summary": "Enable or disable one opt-in telemetry metric",
         "x-craftcontrol-capability": "telemetry.manage",
         "parameters": [

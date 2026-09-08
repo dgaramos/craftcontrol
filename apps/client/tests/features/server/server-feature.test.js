@@ -133,7 +133,7 @@ describe("createServerFeature", () => {
     const actions = [];
     deps.api = jest.fn((path) => {
       if (path === "/api/telemetry-pack") return Promise.resolve(packState);
-      if (path === "/api/telemetry/metrics") return Promise.resolve({ metrics: {}, available: [] });
+      if (path === "/api/telemetry/collection") return Promise.resolve({ metrics: {}, available: [] });
       actions.push(path);
       if (path === "/api/telemetry-pack/rollback") return Promise.reject(new Error("operation unavailable"));
       return Promise.resolve({ restart_required: true });
@@ -730,7 +730,7 @@ describe("opt-in metric switches", () => {
     deps.elements["#telemetry-metrics"] = target;
     const failures = { post: null };
     deps.api = jest.fn((path, options) => {
-      if (path === "/api/telemetry/metrics") {
+      if (path === "/api/telemetry/collection") {
         if (options?.method === "POST" && failures.post) return Promise.reject(failures.post);
         return Promise.resolve({ metrics, available: Object.keys(metrics) });
       }
@@ -776,7 +776,7 @@ describe("opt-in metric switches", () => {
     await settle();
 
     await button.onclick();
-    expect(deps.api).toHaveBeenCalledWith("/api/telemetry/metrics", {
+    expect(deps.api).toHaveBeenCalledWith("/api/telemetry/collection", {
       method: "POST",
       body: JSON.stringify({ metric: "itemUse", enabled: true }),
     });
@@ -805,7 +805,7 @@ describe("opt-in metric switches", () => {
 
   test("a failed metric read shows the reason instead of an empty card", async () => {
     const { deps, target } = metricDeps({});
-    deps.api = jest.fn((path) => (path === "/api/telemetry/metrics"
+    deps.api = jest.fn((path) => (path === "/api/telemetry/collection"
       ? Promise.reject(new Error("metrics unavailable"))
       : Promise.resolve({ installed: true, enabled: true, health: "healthy", capabilities: {}, application: {} })));
     createServerFeature(deps).renderServer();

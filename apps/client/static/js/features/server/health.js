@@ -42,14 +42,19 @@ function capabilityRow(key, cap) {
   return row;
 }
 
-export function createHealthPanel({ content, t, uiIcon, api, escapeHtml, analyticsViewSwitch, bindAnalyticsViewSwitch, formatDate }) {
-  return async function renderHealthPanel() {
+/**
+ * Behavior-pack health, rendered inside the server infrastructure screen.
+ *
+ * It reads `/api/telemetry-pack`: sequence, gaps, capabilities, storage. That
+ * is the state of a piece of infrastructure, not a fact about the world, so it
+ * belongs beside the pack's install and rollback controls rather than next to
+ * blocks and combat.
+ */
+export function createPackHealthPanel({ $, t, uiIcon, api, formatDate }) {
+  return async function renderPackHealth() {
+    const content = $("#pack-health");
+    if (!content) return;
     const screen = el("div", "health-screen");
-
-    const switchWrapper = el("div");
-    const range = document.createRange();
-    switchWrapper.append(range.createContextualFragment(analyticsViewSwitch("health")));
-    screen.append(switchWrapper);
 
     const hero = el("header", "health-hero block-panel");
     const heroCopy = el("div");
@@ -69,7 +74,6 @@ export function createHealthPanel({ content, t, uiIcon, api, escapeHtml, analyti
     screen.append(target);
 
     content.replaceChildren(screen);
-    bindAnalyticsViewSwitch();
 
     const load = async () => {
       target.replaceChildren(

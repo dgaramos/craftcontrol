@@ -330,7 +330,7 @@
       "owner": "backend"
     },
     {
-      "path": "/api/telemetry/metrics",
+      "path": "/api/telemetry/collection",
       "methods": [
         "GET",
         "POST"

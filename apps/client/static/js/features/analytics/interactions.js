@@ -7,6 +7,10 @@ import { renderMarkup } from "../../core/render.js";
  * before it draws it: a metric nobody enabled has no zero to show, and neither
  * does one the server cannot report. Only a metric that is both enabled and
  * supported may present a total — and a total of zero then means what it says.
+ *
+ * The notice explains the number in front of the reader. The pack's own state —
+ * which metrics are on, which capabilities it has — belongs to the server
+ * infrastructure screen, not here.
  */
 export function createInteractionsPanel({ state, content, t, uiIcon, api, $, escapeHtml, analyticsViewSwitch, bindAnalyticsViewSwitch, blockTermMarkup, gameTermMarkup, formatRankingValue, openAnalyticsPlayer, formatDate }) {
   const METRICS = [
@@ -55,11 +59,7 @@ export function createInteractionsPanel({ state, content, t, uiIcon, api, $, esc
           ? `<section class="analytics-empty interactions-unavailable block-panel"><h3>${notice.title}</h3><p>${notice.help}</p></section>`
           : `<section class="interactions-summary"><article><small>${t(selected.label)}</small><b>${formatRankingValue(total, "number")}</b><span>${uiIcon("data")}</span></article><p>${t("interactionsTelemetryHint")}<br><small>${t("updated")} ${formatDate(result.generated_at)}</small></p></section><div class="interactions-rank-grid"><section class="block-panel"><div class="ranking-section-title"><span class="eyebrow">${t("topTenKicker")}</span><h3>${t("topInteractionTypes")}</h3></div>${top.length ? `<ol>${top.map((entry, index) => `<li><b>${index + 1}</b>${typeMarkup(selected.metric, entry.type)}<strong>${formatRankingValue(entry.count, "number")}</strong></li>`).join("")}</ol>` : `<div class="analytics-empty"><p>${t(selected.empty)}</p></div>`}</section><section class="block-panel"><div class="ranking-section-title"><span class="eyebrow">${t("lifetime")}</span><h3>${t("players")}</h3></div>${ranking.length ? `<ol>${ranking.map((entry, index) => `<li><b>${index + 1}</b><button data-interaction-player="${escapeHtml(entry.player.id)}" type="button">${escapeHtml(entry.player.name)}</button><strong>${formatRankingValue(entry.value, "number")}</strong></li>`).join("")}</ol>` : `<div class="analytics-empty"><p>${t(selected.empty)}</p></div>`}</section></div>`;
 
-        renderMarkup(target, `${body}<section class="interactions-availability block-panel"><div class="ranking-section-title"><span class="eyebrow">${t("optInKicker")}</span><h3>${t("metricAvailability")}</h3></div><dl>${METRICS.map((item) => {
-          const state = (result.availability || {})[item.metric];
-          const status = !state ? t("metricUnknown") : !state.enabled ? t("metricDisabled") : state.supported === false ? t("metricUnsupported") : state.supported === null ? t("metricUnconfirmed") : t("metricCollecting");
-          return `<div><dt>${t(item.label)}</dt><dd>${status}</dd></div>`;
-        }).join("")}</dl><p>${t("metricEnableHint")}</p></section>`);
+        renderMarkup(target, body);
         target.querySelectorAll("[data-interaction-player]").forEach((button) => button.onclick = () => openAnalyticsPlayer(button.dataset.interactionPlayer));
       } catch (error) {
         renderMarkup(target, `<div class="analytics-empty"><p>${escapeHtml(error.message)}</p></div>`);

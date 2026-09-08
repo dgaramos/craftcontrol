@@ -110,6 +110,91 @@ describe("createInteractionsPanel", () => {
     expect(target.innerHTML).toContain("backend down");
   });
 
+  test("choosing a metric re-reads the panel for it", async () => {
+    const { deps, target, render } = panel();
+    const buttons = [];
+    deps.content.querySelectorAll = jest.fn((selector) =>
+      (selector === "[data-interaction-metric]" ? buttons : []));
+    const chip = makeEl({ dataset: { interactionMetric: "entityInteractions" } });
+    buttons.push(chip);
+    await render();
+
+    await chip.onclick();
+    expect(deps.state.analytics.interactionMetric).toBe("entityInteractions");
+    // The chip marks itself selected through the shared component's class.
+    expect(chip.classList.toggle).toHaveBeenCalledWith("active", true);
+    expect(target.innerHTML).toContain("metricUnsupported");
+  });
+
+  test("refreshing re-reads the endpoint", async () => {
+    const deps = makeSharedDeps();
+    const refresh = makeEl();
+    const target = makeEl();
+    deps.$ = jest.fn((selector) => {
+      if (selector === "#interactions-content") return target;
+      if (selector === "#interactions-refresh") return refresh;
+      return makeEl();
+    });
+    deps.api = jest.fn().mockResolvedValue(interactionsResult());
+    await createInteractionsPanel(deps)();
+    expect(deps.api).toHaveBeenCalledTimes(1);
+    await refresh.onclick();
+    expect(deps.api).toHaveBeenCalledTimes(2);
+  });
+
+  test("a ranked player opens their analytics profile", async () => {
+    const { deps, target, render } = panel();
+    const playerButton = makeEl({ dataset: { interactionPlayer: "player-1" } });
+    target.querySelectorAll = jest.fn((selector) =>
+      (selector === "[data-interaction-player]" ? [playerButton] : []));
+    await render();
+
+    playerButton.onclick();
+    expect(deps.openAnalyticsPlayer).toHaveBeenCalledWith("player-1");
+  });
+
+  test("entity types are named with the creature vocabulary, block types with the block one", async () => {
+    const result = interactionsResult({
+      totals: { entityInteractions: 3, blockInteractions: 2 },
+      top: {
+        entityInteractions: [{ type: "minecraft:villager", count: 3 }],
+        blockInteractions: [{ type: "minecraft:oak_door", count: 2 }],
+      },
+      rankings: { entityInteractions: [], blockInteractions: [] },
+      availability: {
+        entityInteractions: { enabled: true, supported: true },
+        blockInteractions: { enabled: true, supported: true },
+      },
+    });
+    const entities = panel(result, { interactionMetric: "entityInteractions" });
+    entities.deps.gameTermMarkup = jest.fn(() => "<span>creature</span>");
+    await createInteractionsPanel(entities.deps)();
+    expect(entities.deps.gameTermMarkup).toHaveBeenCalledWith("minecraft:villager");
+
+    const blocks = panel(result, { interactionMetric: "blockInteractions" });
+    blocks.deps.blockTermMarkup = jest.fn(() => "<span>block</span>");
+    await createInteractionsPanel(blocks.deps)();
+    expect(blocks.deps.blockTermMarkup).toHaveBeenCalledWith("minecraft:oak_door");
+  });
+
+  test("the availability card names a metric the pack never reported", async () => {
+    const { target, render } = panel(interactionsResult({ availability: { itemUse: { enabled: true, supported: true } } }));
+    await render();
+    // The three the pack said nothing about are listed as unknown rather than
+    // omitted, so the card always accounts for every metric.
+    expect(target.innerHTML).toContain("metricUnknown");
+    expect(target.innerHTML).toContain("metricCollecting");
+  });
+
+  test("a payload missing its sections renders the unknown state, not a crash", async () => {
+    // An older backend, or a partial response: every section is optional and
+    // the panel falls back to "the pack said nothing" rather than to zero.
+    const { target, render } = panel({ generated_at: 1 });
+    await render();
+    expect(target.innerHTML).toContain("metricUnknown");
+    expect(target.innerHTML).not.toContain("interactions-summary");
+  });
+
   test("requests the analytics endpoint with a bounded limit", async () => {
     const { deps, render } = panel();
     await render();

@@ -26,6 +26,16 @@ function makeDeps(overrides = {}) {
 
 describe("createServerFeature", () => {
 
+  test("uses a safe empty icon renderer when uiIcon is omitted", () => {
+    const deps = makeDeps();
+    delete deps.uiIcon;
+
+    const feature = createServerFeature(deps);
+
+    expect(() => feature.renderServer()).not.toThrow();
+    expect(deps.content.innerHTML).not.toContain("undefined");
+  });
+
 
   test("renders local diagnostics when the owner panel requests them", async () => {
     const deps = makeDeps();

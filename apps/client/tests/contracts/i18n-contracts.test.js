@@ -83,7 +83,7 @@ describe("i18n contracts — SVG sprite usage in game-terms.js", () => {
 
 describe("i18n contracts — ES locale wired up in i18n index", () => {
   test('i18n/index.js imports es.js', () => {
-    expect(i18nIndex).toContain('from "./es.js?v=17"');
+    expect(i18nIndex).toContain('from "./es.js?v=18"');
   });
 });
 
@@ -106,7 +106,7 @@ describe("i18n contracts — template locale and flag icons", () => {
 });
 
 describe("i18n contracts — no legacy Unicode icons in bundled script or template", () => {
-  const legacyIconPattern = /[☀☠⚔♛♟⚙◆◇◈▦▥▤☷⌂⌛♥▶↝➶✦✓↻⛏⚡⚠]/;
+  const legacyIconPattern = /[☀☠⚔♛♟⚙◆◇◈▦▥▤☷⌂⌛♥▶↝➶✦✓✗↻⛏⚡⚠🥇🥈🥉]/u;
 
   test("frontend script bundle has no legacy Unicode icons", () => {
     expect(legacyIconPattern.test(frontendScript())).toBe(false);

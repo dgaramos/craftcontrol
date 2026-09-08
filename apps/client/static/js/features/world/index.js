@@ -16,8 +16,8 @@ function renderTimePanel() {
         <div class="grass-edge" aria-hidden="true"></div>
         <div class="world-summary">
           <div><small>${t("homeDay")}</small><strong data-world="day">—</strong></div>
-          <div><span class="world-label-row"><small>${t("homeTime")}</small><small class="world-ticks" data-world="ticks"></small></span><span class="world-value"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use data-world-icon="time" href="/static/craftcontrol-ui.svg#ui-sun"></use></svg><strong data-world="time">—</strong></span></div>
-          <div class="world-weather" data-world-cell="weather"><small>${t("homeWeather")}</small><span class="world-value"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use data-world-icon="weather" href="/static/craftcontrol-ui.svg#ui-sun"></use></svg><strong data-world="weather">—</strong></span></div>
+          <div><span class="world-label-row"><small>${t("homeTime")}</small><small class="world-ticks" data-world="ticks"></small></span><span class="world-value"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use data-world-icon="time" href="/static/craftcontrol-ui.svg?v=9#ui-sun"></use></svg><strong data-world="time">—</strong></span></div>
+          <div class="world-weather" data-world-cell="weather"><small>${t("homeWeather")}</small><span class="world-value"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use data-world-icon="weather" href="/static/craftcontrol-ui.svg?v=9#ui-sun"></use></svg><strong data-world="weather">—</strong></span></div>
         </div>
       </section>
       <section class="time-group">

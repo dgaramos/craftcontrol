@@ -1,4 +1,4 @@
-import { createPackHealthPanel } from "./health.js?v=2";
+import { createPackHealthPanel } from "./health.js?v=3";
 
 /**
  * The Telemetry Pack screen (issue #275 follow-up).
@@ -19,7 +19,7 @@ export function createTelemetryPackScreen({ content, t, api, $, escapeHtml, uiIc
     ["containerInteractions", "containerInteractionsMetric"],
   ];
 
-  const renderPackHealth = createPackHealthPanel({ $, t, api, formatDate });
+  const renderPackHealth = createPackHealthPanel({ $, t, api, formatDate, uiIcon });
 
   function markup() {
     return `<section class="settings-screen telemetry-screen">

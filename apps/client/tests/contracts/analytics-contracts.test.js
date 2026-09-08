@@ -49,7 +49,7 @@ describe("analytics activity and deaths have a feature boundary", () => {
 
   test("bundle imports analytics feature from versioned path", () => {
     const script = frontendScript();
-    expect(script).toContain('from "./features/analytics/index.js?v=11"');
+    expect(script).toContain('from "./features/analytics/index.js?v=12"');
   });
 });
 
@@ -122,7 +122,7 @@ describe("activity timeline loads incrementally and stops at the last page", () 
 
 describe("analytics panels are owned by separate feature modules", () => {
   const panels = {
-    rankings: ["createRankingsPanel", 8],
+    rankings: ["createRankingsPanel", 9],
     blocks: ["createBlocksPanel", 8],
     combat: ["createCombatPanel", 8],
     exploration: ["createExplorationPanel", 8],

@@ -21,14 +21,17 @@ function statCard(label, value, note = "") {
 }
 
 
-function capabilityRow(key, cap) {
+function capabilityRow(key, cap, uiIcon, t) {
   const row = el("li", "capability-row");
   const supported = typeof cap === "object" && cap !== null && cap.supported === true;
   row.classList.add(supported ? "cap-supported" : "cap-unsupported");
   const name = el("span", "cap-name");
   name.textContent = key;
   const mark = el("span", "cap-mark");
-  mark.textContent = supported ? "✓" : "✗";
+  mark.innerHTML = uiIcon(
+    supported ? "check" : "close",
+    t(supported ? "capabilitySupported" : "capabilityUnsupported"),
+  );
   row.append(mark, name);
   return row;
 }
@@ -40,7 +43,7 @@ function capabilityRow(key, cap) {
  * something is wrong. Health, versions and freshness are *not* here — the
  * screen states those once, at the top, where the question is asked.
  */
-export function createPackHealthPanel({ $, t, api, formatDate }) {
+export function createPackHealthPanel({ $, t, api, formatDate, uiIcon }) {
   return async function renderPackHealth() {
     const content = $("#pack-health");
     if (!content) return;
@@ -120,7 +123,7 @@ export function createPackHealthPanel({ $, t, api, formatDate }) {
           text(capTitle, "h3", t("capabilities"));
           capSection.append(capTitle);
           const capList = el("ul", "capability-list");
-          capKeys.forEach((key) => capList.append(capabilityRow(key, capabilities[key])));
+          capKeys.forEach((key) => capList.append(capabilityRow(key, capabilities[key], uiIcon, t)));
           capSection.append(capList);
           fragment.append(capSection);
         }

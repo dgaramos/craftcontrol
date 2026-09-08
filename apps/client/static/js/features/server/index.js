@@ -1,7 +1,7 @@
-import { createTelemetryPackScreen } from "./telemetry-pack.js?v=2";
+import { createTelemetryPackScreen } from "./telemetry-pack.js?v=3";
 import { createOperationFeature, isUnresponsiveOperation, nextOperationTransition } from "./operation.js?v=15";
 
-export function createServerFeature({ state, content, t, api, $, escapeHtml, uiIcon, formatDate, toast, getSettingsFeature }) {
+export function createServerFeature({ state, content, t, api, $, escapeHtml, uiIcon = () => "", formatDate, toast, getSettingsFeature }) {
 
 function formatBytes(n) {
   if (n == null) return "—";
@@ -63,7 +63,10 @@ async function loadDiagnostics() {
     const btn = document.createElement("button");
     btn.className = "secondary diag-refresh-btn";
     btn.id = "diag-refresh";
-    btn.textContent = `↻ ${t("refresh")}`;
+    btn.innerHTML = uiIcon("refresh");
+    const btnLabel = document.createElement("span");
+    btnLabel.textContent = t("refresh");
+    btn.append(btnLabel);
     btn.addEventListener("click", () => loadDiagnostics());
     toolbar.append(stamp, btn);
 
@@ -395,14 +398,14 @@ async function initializeOperationProgress() {
           </div>
           <span class="server-nav-item-arrow" aria-hidden="true">›</span>
         </button>
-        <p class="server-restart-label"><span aria-hidden="true">↻</span><span>${t("restartRequiredShort")}</span></p>
+        <p class="server-restart-label">${uiIcon("restart")}<span>${t("restartRequiredShort")}</span></p>
         <nav class="server-nav-list">
           <button class="server-nav-item" type="button" data-sp-tab="world">${uiIcon("world")}<span><small>${t("configuration")}</small><strong>${t("world")}</strong></span><span class="server-nav-item-arrow">›</span></button>
-          <button class="server-nav-item" type="button" data-sp-tab="__server_settings__">${uiIcon("server")}<span><small>${t("infrastructure")}</small><strong>${t("settings")}</strong></span><span class="server-nav-item-arrow">›</span></button>
-          <button class="server-nav-item" type="button" data-sp-tab="__telemetry_pack__">${uiIcon("data")}<span><small>${t("behaviorPackEyebrow")}</small><strong>${t("telemetryPack")}</strong></span><span class="server-nav-item-arrow">›</span></button>
+          <button class="server-nav-item" type="button" data-sp-tab="__server_settings__">${uiIcon("settings")}<span><small>${t("infrastructure")}</small><strong>${t("settings")}</strong></span><span class="server-nav-item-arrow">›</span></button>
+          <button class="server-nav-item" type="button" data-sp-tab="__telemetry_pack__">${uiIcon("telemetry")}<span><small>${t("behaviorPackEyebrow")}</small><strong>${t("telemetryPack")}</strong></span><span class="server-nav-item-arrow">›</span></button>
           <button class="server-nav-item" type="button" data-sp-tab="analytics">${uiIcon("data")}<span><small>${t("analyticsKicker")}</small><strong>${t("analytics")}</strong></span><span class="server-nav-item-arrow">›</span></button>
-          ${isOwner ? `<button class="server-nav-item" type="button" data-sp-tab="audit">${uiIcon("activity")}<span><small>${t("historyLabel")}</small><strong>${t("audit")}</strong></span><span class="server-nav-item-arrow">›</span></button>` : ""}
-          ${isOwner ? `<button class="server-nav-item" type="button" data-sp-tab="exports">${uiIcon("data")}<span><small>${t("administration")}</small><strong>${t("exportTitle")}</strong></span><span class="server-nav-item-arrow">›</span></button>` : ""}
+          ${isOwner ? `<button class="server-nav-item" type="button" data-sp-tab="audit">${uiIcon("history")}<span><small>${t("historyLabel")}</small><strong>${t("audit")}</strong></span><span class="server-nav-item-arrow">›</span></button>` : ""}
+          ${isOwner ? `<button class="server-nav-item" type="button" data-sp-tab="exports">${uiIcon("export")}<span><small>${t("administration")}</small><strong>${t("exportTitle")}</strong></span><span class="server-nav-item-arrow">›</span></button>` : ""}
         </nav>
       </section>`;
     content.querySelector("#sp-restart")?.addEventListener("click", async () => {

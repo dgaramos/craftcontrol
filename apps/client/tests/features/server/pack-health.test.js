@@ -32,7 +32,7 @@ function makeDeps() {
   // which it resolves the way every other card there does.
   const content = { children: [], replaceChildren(...children) { this.children = children; } };
   const t = (key) => key;
-  const uiIcon = (name) => `<svg icon="${name}"/>`;
+  const uiIcon = jest.fn((name, label = "") => `<svg icon="${name}" aria-label="${label}"/>`);
   const formatDate = (ts) => ts ? "2024-01-01" : "—";
   const api = jest.fn().mockRejectedValue(new Error("no api"));
   const $ = jest.fn((selector) => (selector === "#pack-health" ? content : null));
@@ -86,6 +86,8 @@ describe("createPackHealthPanel", () => {
     const screen = deps.content.children[0];
     expect(findNodes(screen, (n) => n.className?.includes("cap-supported"))).toHaveLength(1);
     expect(findNodes(screen, (n) => n.className?.includes("cap-unsupported"))).toHaveLength(1);
+    expect(deps.uiIcon).toHaveBeenCalledWith("check", "capabilitySupported");
+    expect(deps.uiIcon).toHaveBeenCalledWith("close", "capabilityUnsupported");
   });
 
   test("does not render capabilities section when capabilities is null or empty", async () => {

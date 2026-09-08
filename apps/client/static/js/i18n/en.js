@@ -9,7 +9,7 @@ export const en = {
     start: "Start", restart: "Restart", stop: "Stop", close: "Close",
     checking: "Checking…", online: "Online", stopped: "Stopped", serverOnline: "Server online",
     serverStopped: "Server stopped", playersOnline: "players online", nobody: "Nobody connected",
-    awaiting: "Waiting for an update", updated: "Updated", enabled: "Enabled", disabled: "Disabled",
+    awaiting: "Waiting for an update", updated: "Updated", enabled: "Enabled", disabled: "Disabled", capabilitySupported: "Capability supported", capabilityUnsupported: "Capability not supported",
     unknown: "Not queried", immediate: "Applied immediately", restartRequired: "Applied when saved and restarted",
     saved: "Saved. Applying to the server…", serverUpdated: "Server updated",
     noChanges: "No pending changes", querying: "Querying the server…",

@@ -59,14 +59,18 @@ def telemetry_pack_status():
         return jsonify(error=str(error)), 400
 
 
-@telemetry_api.get("/api/telemetry/metrics")
+@telemetry_api.get("/api/telemetry/collection")
 @require("telemetry.manage")
-def telemetry_metrics():
-    """Report which opt-in metrics the pack says it is collecting."""
+def telemetry_collection():
+    """Report which opt-in metrics the pack says it is collecting.
+
+    Named for what it is: `/metrics` is the Prometheus exposition endpoint, and
+    this is the pack's collection policy.
+    """
     return jsonify(metrics=manager().telemetry_metrics(), available=list(METRICS))
 
 
-@telemetry_api.post("/api/telemetry/metrics")
+@telemetry_api.post("/api/telemetry/collection")
 @require("telemetry.manage")
 def set_telemetry_metric():
     """Enable or disable one opt-in metric.

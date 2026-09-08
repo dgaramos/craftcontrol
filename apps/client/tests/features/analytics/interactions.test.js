@@ -88,12 +88,13 @@ describe("createInteractionsPanel", () => {
     expect(target.innerHTML).toContain("noItemUseYet");
   });
 
-  test("the availability card lists every metric's status", async () => {
+  test("the pack's own state is left to the infrastructure screen", async () => {
+    // Which metrics are on and what the runtime supports is the state of a
+    // component, not a fact about the world: it lives in Server → Settings.
     const { target, render } = panel();
     await render();
-    expect(target.innerHTML).toContain("interactions-availability");
-    expect(target.innerHTML).toContain("metricCollecting");
-    expect(target.innerHTML).toContain("metricEnableHint");
+    expect(target.innerHTML).not.toContain("interactions-availability");
+    expect(target.innerHTML).not.toContain("metricAvailability");
   });
 
   test("an unknown stored metric falls back to the first one", async () => {
@@ -177,13 +178,11 @@ describe("createInteractionsPanel", () => {
     expect(blocks.deps.blockTermMarkup).toHaveBeenCalledWith("minecraft:oak_door");
   });
 
-  test("the availability card names a metric the pack never reported", async () => {
-    const { target, render } = panel(interactionsResult({ availability: { itemUse: { enabled: true, supported: true } } }));
+  test("a metric the pack never reported still explains itself in place", async () => {
+    const { target, render } = panel(
+      interactionsResult({ availability: {} }), { interactionMetric: "blockInteractions" });
     await render();
-    // The three the pack said nothing about are listed as unknown rather than
-    // omitted, so the card always accounts for every metric.
     expect(target.innerHTML).toContain("metricUnknown");
-    expect(target.innerHTML).toContain("metricCollecting");
   });
 
   test("a payload missing its sections renders the unknown state, not a crash", async () => {

@@ -717,7 +717,7 @@ def test_reconcile_operation_returns_404_when_not_found(op_client, op_service: M
 
 def test_telemetry_metrics_reports_state_and_the_allowlist(client, service: MagicMock) -> None:
     service.telemetry_metrics.return_value = {"itemUse": True}
-    resp = client.get("/api/telemetry/metrics")
+    resp = client.get("/api/telemetry/collection")
     assert resp.status_code == 200
     payload = resp.get_json()
     assert payload["metrics"] == {"itemUse": True}
@@ -727,14 +727,14 @@ def test_telemetry_metrics_reports_state_and_the_allowlist(client, service: Magi
 
 
 def test_telemetry_metrics_requires_telemetry_manage_capability(service: MagicMock) -> None:
-    assert_capability_required(service, "get", "/api/telemetry/metrics", "telemetry.manage")
+    assert_capability_required(service, "get", "/api/telemetry/collection", "telemetry.manage")
 
 
 def test_setting_a_metric_returns_the_pending_result(client, service: MagicMock) -> None:
     service.set_telemetry_metric.return_value = {
         "metric": "itemUse", "enabled": True, "metrics": {"itemUse": False}, "pending": True,
     }
-    resp = client.post("/api/telemetry/metrics", json={"metric": "itemUse", "enabled": True})
+    resp = client.post("/api/telemetry/collection", json={"metric": "itemUse", "enabled": True})
     assert resp.status_code == 200
     assert resp.get_json()["pending"] is True
     assert service.set_telemetry_metric.call_args[0][:2] == ("itemUse", True)
@@ -742,7 +742,7 @@ def test_setting_a_metric_returns_the_pending_result(client, service: MagicMock)
 
 def test_setting_a_metric_requires_telemetry_manage_capability(service: MagicMock) -> None:
     assert_capability_required(
-        service, "post", "/api/telemetry/metrics", "telemetry.manage",
+        service, "post", "/api/telemetry/collection", "telemetry.manage",
         json={"metric": "itemUse", "enabled": True},
     )
 
@@ -755,7 +755,7 @@ def test_setting_a_metric_requires_telemetry_manage_capability(service: MagicMoc
     [],
 ])
 def test_a_malformed_metric_request_is_refused(client, service: MagicMock, payload) -> None:
-    resp = client.post("/api/telemetry/metrics", json=payload)
+    resp = client.post("/api/telemetry/collection", json=payload)
     assert resp.status_code == 400
     assert service.set_telemetry_metric.called is False
 
@@ -764,7 +764,7 @@ def test_a_console_failure_is_reported_instead_of_a_500(client, service: MagicMo
     # The command goes through Docker to the Bedrock console; when that is
     # unavailable the panel needs the reason, not a stack trace.
     service.set_telemetry_metric.side_effect = RuntimeError("container bedrock not found")
-    resp = client.post("/api/telemetry/metrics", json={"metric": "itemUse", "enabled": True})
+    resp = client.post("/api/telemetry/collection", json={"metric": "itemUse", "enabled": True})
     assert resp.status_code == 400
     assert "container bedrock not found" in resp.get_json()["error"]
 
@@ -773,7 +773,7 @@ def test_an_unknown_metric_is_refused_with_the_reason(client, service: MagicMock
     from src.telemetry.metrics import UnknownMetric
 
     service.set_telemetry_metric.side_effect = UnknownMetric("chatCapture")
-    resp = client.post("/api/telemetry/metrics", json={"metric": "chatCapture", "enabled": True})
+    resp = client.post("/api/telemetry/collection", json={"metric": "chatCapture", "enabled": True})
     assert resp.status_code == 400
     assert "chatCapture" in resp.get_json()["error"]
 

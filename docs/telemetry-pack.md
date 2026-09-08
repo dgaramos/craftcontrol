@@ -71,3 +71,5 @@ git subtree pull --prefix packs/telemetry craftcontrol-telemetry main --squash
 ```
 
 Do not edit the embedded copy and standalone repository independently. Pack changes begin in the standalone repository, pass its Node.js checks, and are then pulled into CraftControl. The standalone and embedded trees must produce byte-equivalent `.mcpack` artifacts.
+
+Item use and interaction metrics are opt-in and bounded by an explicit policy: what may be counted, how far a map may grow, how a metric is switched on, and what the panel shows when the runtime cannot provide it. See [Opt-in telemetry metrics](telemetry-metrics.md).

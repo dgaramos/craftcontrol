@@ -17,6 +17,8 @@ export const world = {
     playerPlaceBlock: new Signal(),
     playerDimensionChange: new Signal(),
     itemUse: new Signal(),
+    playerInteractWithBlock: new Signal(),
+    playerInteractWithEntity: new Signal(),
   },
   players: [],
   getAllPlayers() { return this.players; },

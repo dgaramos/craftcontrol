@@ -1,6 +1,6 @@
-import { en } from "./en.js?v=14";
-import { es } from "./es.js?v=14";
-import { pt } from "./pt.js?v=14";
+import { en } from "./en.js?v=15";
+import { es } from "./es.js?v=15";
+import { pt } from "./pt.js?v=15";
 
 export const messages = Object.freeze({ pt, en, es });
 

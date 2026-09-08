@@ -446,3 +446,15 @@ def test_set_game_mode_offline_player_not_called_via_observe_presence(
     repo.snapshot.return_value = {"players": [], "known_players": {}, "bootstrap": {}}
     service.set_game_mode("VonCrush", "survival")
     console.set_game_mode.assert_not_called()
+
+
+def test_interactions_limit_out_of_range_raises(service: PlayerService) -> None:
+    for limit in (0, 26):
+        with pytest.raises(ValueError, match="invalid interaction analytics limit"):
+            service.interactions(limit)
+
+
+def test_interactions_delegates_valid_limit(service: PlayerService, repo: MagicMock) -> None:
+    repo.interaction_analytics.return_value = {"totals": {"itemUse": 3}}
+    assert service.interactions(5) == {"totals": {"itemUse": 3}}
+    repo.interaction_analytics.assert_called_once_with(5)

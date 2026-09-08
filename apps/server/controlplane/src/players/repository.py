@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from ..core.sqlite import open_connection
+from ..telemetry.metrics import is_metric_key
 from .sqlite import (
     add_daily,
     allocate_daily_play,
@@ -36,6 +37,24 @@ ORE_BLOCKS = {
     "quartz": {"minecraft:nether_quartz_ore"},
     "ancient_debris": {"minecraft:ancient_debris"},
 }
+
+
+def _clean_metric_map(value: Any) -> dict[str, int]:
+    """Keep namespaced identifiers with positive counts and nothing else."""
+    if not isinstance(value, dict):
+        return {}
+    return {
+        str(name): int(count) for name, count in value.items()
+        if is_metric_key(name)
+        and isinstance(count, (int, float)) and not isinstance(count, bool) and count > 0
+    }
+
+
+def _favorite(values: dict[str, int]) -> dict[str, Any] | None:
+    if not values:
+        return None
+    name, count = min(values.items(), key=lambda item: (-item[1], item[0]))
+    return {"type": name, "count": count}
 
 
 class SQLitePlayerRepository:
@@ -753,6 +772,68 @@ class SQLitePlayerRepository:
             ],
             "pvp": duels,
             "rankings": {field: ranking(field) for field in ("deaths", "player_kills", "mob_kills", "damage_dealt", "damage_taken")},
+            "players": players,
+        }
+
+    #: The opt-in metrics of epic #21, as (metric, counter, map) triples. The
+    #: metric name is the one the pack reports enabling, so the panel can tell
+    #: "nothing observed" from "not collected".
+    INTERACTION_METRICS = (
+        ("itemUse", "itemsUsed", "usedByType"),
+        ("blockInteractions", "blockInteractions", "interactedBlocksByType"),
+        ("entityInteractions", "entityInteractions", "interactedEntitiesByType"),
+        ("containerInteractions", "containerOpens", "openedContainersByType"),
+    )
+
+    def interaction_analytics(self, limit: int = 10) -> dict[str, Any]:
+        """Aggregate the opt-in item and interaction metrics.
+
+        Reports the same shape for every metric, including the ones nobody
+        enabled: a caller cannot tell an empty result from an absent one, and
+        it is the availability map added by the manager — not this total — that
+        says which is which.
+        """
+        profiles = [p for p in self.player_profiles() if p.get("telemetry_updated_at")]
+        totals = {metric: 0 for metric, _, _ in self.INTERACTION_METRICS}
+        type_totals: dict[str, dict[str, int]] = {metric: {} for metric, _, _ in self.INTERACTION_METRICS}
+        players = []
+
+        for profile in profiles:
+            telemetry = profile.get("telemetry", {})
+            entry: dict[str, Any] = {
+                "player": {"id": profile["id"], "name": profile["name"]},
+                "updated_at": profile.get("telemetry_updated_at"),
+            }
+            for metric, counter, map_field in self.INTERACTION_METRICS:
+                count = telemetry.get(counter)
+                count = int(count) if isinstance(count, (int, float)) and not isinstance(count, bool) and count > 0 else 0
+                by_type = _clean_metric_map(telemetry.get(map_field))
+                for name, value in by_type.items():
+                    type_totals[metric][name] = type_totals[metric].get(name, 0) + value
+                totals[metric] += count
+                entry[metric] = {"total": count, "favorite": _favorite(by_type)}
+            players.append(entry)
+
+        def ranking(metric: str) -> list[dict[str, Any]]:
+            entries = [
+                {"player": item["player"], "value": item[metric]["total"], "updated_at": item["updated_at"]}
+                for item in players if item[metric]["total"] > 0
+            ]
+            return sorted(entries, key=lambda item: (-item["value"], item["player"]["name"].casefold()))[:limit]
+
+        def top(values: dict[str, int]) -> list[dict[str, Any]]:
+            return [
+                {"type": name, "count": count}
+                for name, count in sorted(values.items(), key=lambda item: (-item[1], item[0]))[:limit]
+            ]
+
+        return {
+            "generated_at": time.time(),
+            "period": "lifetime",
+            "metrics": [metric for metric, _, _ in self.INTERACTION_METRICS],
+            "totals": totals,
+            "top": {metric: top(values) for metric, values in type_totals.items()},
+            "rankings": {metric: ranking(metric) for metric, _, _ in self.INTERACTION_METRICS},
             "players": players,
         }
 

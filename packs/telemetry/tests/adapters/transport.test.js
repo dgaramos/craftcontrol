@@ -13,10 +13,10 @@ const mockStorageStatus = jest.fn(() => ({ persistenceBlocked: false }));
 
 const mockCapabilitySnapshot = jest.fn(() => ({}));
 const mockReadGameMode = jest.fn(() => null);
-const mockMetricsSnapshot = jest.fn(() => ({ itemUse: false }));
+const mockMetricsSnapshot = jest.fn(() => ({ itemUse: false, blockInteractions: false, entityInteractions: false, containerInteractions: false }));
 
 const { world } = await import("@minecraft/server");
-const { configureTransport, resetTransport, publish, queueBlockChange, publishBlockChanges, publishItemUse, publishMetrics, publishSnapshot, queueItemUse } =
+const { configureTransport, resetTransport, publish, queueBlockChange, publishBlockChanges, publishInteractions, publishItemUse, publishMetrics, publishSnapshot, queueInteraction, queueItemUse } =
   await import("../../behavior_pack/scripts/adapters/transport.js");
 
 beforeEach(() => {
@@ -26,7 +26,7 @@ beforeEach(() => {
   mockStorageStatus.mockReturnValue({ persistenceBlocked: false });
   mockCapabilitySnapshot.mockReturnValue({});
   mockReadGameMode.mockReturnValue(null);
-  mockMetricsSnapshot.mockReturnValue({ itemUse: false });
+  mockMetricsSnapshot.mockReturnValue({ itemUse: false, blockInteractions: false, entityInteractions: false, containerInteractions: false });
   world.players = [];
   resetTransport();
   configureTransport({
@@ -346,5 +346,73 @@ describe("metric announcements", () => {
     expect(logged[0].type).toBe("metrics.changed");
     expect(logged[0].player).toBeNull();
     expect(logged[0].data).toEqual({ metrics: { itemUse: true } });
+  });
+});
+
+describe("opt-in interactions", () => {
+  test("coalesces the three kinds into one envelope per player", () => {
+    queueInteraction("Alice", "block", "minecraft:oak_door");
+    queueInteraction("Alice", "block", "minecraft:oak_door");
+    queueInteraction("Alice", "entity", "minecraft:villager");
+    queueInteraction("Alice", "container", "minecraft:chest");
+    const warn = suppressConsoleWarn();
+    publishInteractions();
+    const logged = capturedTelemetryRecords(warn);
+    warn.mockRestore();
+
+    expect(logged).toHaveLength(1);
+    expect(logged[0].type).toBe("interactions.changed");
+    expect(logged[0].data).toEqual({
+      block: { total: 2, byType: { "minecraft:oak_door": 2 } },
+      entity: { total: 1, byType: { "minecraft:villager": 1 } },
+      container: { total: 1, byType: { "minecraft:chest": 1 } },
+    });
+  });
+
+  test("an envelope carries empty buckets for the kinds that saw nothing", () => {
+    queueInteraction("Alice", "entity", "minecraft:villager");
+    const warn = suppressConsoleWarn();
+    publishInteractions();
+    const logged = capturedTelemetryRecords(warn);
+    warn.mockRestore();
+    expect(logged[0].data.block).toEqual({ total: 0, byType: {} });
+    expect(logged[0].data.container).toEqual({ total: 0, byType: {} });
+  });
+
+  test("carries no coordinates", () => {
+    queueInteraction("Alice", "block", "minecraft:chest");
+    const warn = suppressConsoleWarn();
+    publishInteractions();
+    const emitted = JSON.stringify(capturedTelemetryRecords(warn));
+    warn.mockRestore();
+    for (const forbidden of ["\"x\"", "\"y\"", "\"z\"", "location"]) expect(emitted).not.toContain(forbidden);
+  });
+
+  test("publishes nothing when nobody interacted", () => {
+    const warn = suppressConsoleWarn();
+    publishInteractions();
+    expect(capturedTelemetryRecords(warn)).toEqual([]);
+    warn.mockRestore();
+  });
+
+  test("drains the batch so an interaction is never published twice", () => {
+    queueInteraction("Alice", "block", "minecraft:chest");
+    const warn = suppressConsoleWarn();
+    publishInteractions();
+    publishInteractions();
+    expect(capturedTelemetryRecords(warn)).toHaveLength(1);
+    warn.mockRestore();
+  });
+
+  test("a snapshot drains pending interactions before reading the state", () => {
+    queueInteraction("Alice", "block", "minecraft:chest");
+    const warn = suppressConsoleWarn();
+    publishSnapshot();
+    const logged = capturedTelemetryRecords(warn);
+    warn.mockRestore();
+    const interactions = logged.findIndex((record) => record.type === "interactions.changed");
+    const started = logged.findIndex((record) => record.type === "snapshot.started");
+    expect(interactions).toBeGreaterThanOrEqual(0);
+    expect(interactions).toBeLessThan(started);
   });
 });

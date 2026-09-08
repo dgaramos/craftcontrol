@@ -3,10 +3,12 @@ import { STORAGE_VERSION } from "./versions.js";
 const NUMBER_FIELDS = [
   "joins", "deaths", "playerKills", "mobKills", "blocksBroken", "blocksPlaced",
   "damageDealt", "damageTaken", "distance", "itemsUsed",
+  "blockInteractions", "entityInteractions", "containerOpens",
 ];
 const MAP_FIELDS = [
   "dimensions", "brokenByType", "placedByType", "killsByType", "distanceByDimension",
   "activeTimeByDimension", "firstDimensionVisitAt", "lastDimensionVisitAt", "usedByType",
+  "interactedBlocksByType", "interactedEntitiesByType", "openedContainersByType",
 ];
 
 function record(value) {

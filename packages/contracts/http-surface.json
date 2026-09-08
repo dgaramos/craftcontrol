@@ -40,6 +40,13 @@
       "owner": "backend"
     },
     {
+      "path": "/api/analytics/interactions",
+      "methods": [
+        "GET"
+      ],
+      "owner": "backend"
+    },
+    {
       "path": "/api/analytics/periods",
       "methods": [
         "GET"

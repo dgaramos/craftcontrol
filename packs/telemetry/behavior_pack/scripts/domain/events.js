@@ -16,6 +16,8 @@ import { subscribeWorldEvent } from "../adapters/capabilities.js";
  * @param {Function} [handlers.onPlayerPlaceBlock]
  * @param {Function} [handlers.onPlayerDimensionChange]
  * @param {Function} [handlers.onPlayerUseItem]
+ * @param {Function} [handlers.onPlayerInteractWithBlock]
+ * @param {Function} [handlers.onPlayerInteractWithEntity]
  */
 export function registerEvents(handlers = {}, subscribe = subscribeWorldEvent) {
   // Player lifecycle
@@ -57,5 +59,13 @@ export function registerEvents(handlers = {}, subscribe = subscribeWorldEvent) {
   // anything is counted is the owner's separate decision (docs/telemetry-metrics.md).
   subscribe("itemUse", "itemUse", (event) => {
     handlers.onPlayerUseItem?.(event);
+  });
+
+  subscribe("playerInteractWithBlock", "blockInteractions", (event) => {
+    handlers.onPlayerInteractWithBlock?.(event);
+  });
+
+  subscribe("playerInteractWithEntity", "entityInteractions", (event) => {
+    handlers.onPlayerInteractWithEntity?.(event);
   });
 }

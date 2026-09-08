@@ -209,6 +209,43 @@
         }
       }
     },
+    "/api/analytics/interactions": {
+      "get": {
+        "tags": [
+          "Analytics"
+        ],
+        "operationId": "getInteractionAnalytics",
+        "summary": "Aggregate opt-in item and interaction metrics with their availability",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 25,
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Opt-in interaction analytics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionAnalytics"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      }
+    },
     "/api/analytics/periods": {
       "get": {
         "tags": [
@@ -4141,6 +4178,143 @@
           "pending": {
             "type": "boolean",
             "description": "True until the pack answers with the requested state; the command travels the server console, so the change is not immediate."
+          }
+        }
+      },
+      "InteractionTypeCount": {
+        "type": "object",
+        "required": [
+          "type",
+          "count"
+        ],
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer"
+          }
+        }
+      },
+      "InteractionPlayerMetric": {
+        "type": "object",
+        "required": [
+          "total",
+          "favorite"
+        ],
+        "properties": {
+          "total": {
+            "type": "integer"
+          },
+          "favorite": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/InteractionTypeCount"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "InteractionRankingEntry": {
+        "type": "object",
+        "required": [
+          "player",
+          "value"
+        ],
+        "properties": {
+          "player": {
+            "$ref": "#/components/schemas/PlayerReference"
+          },
+          "value": {
+            "type": "integer"
+          },
+          "updated_at": {
+            "$ref": "#/components/schemas/NullableTimestamp"
+          }
+        }
+      },
+      "InteractionAvailability": {
+        "type": "object",
+        "description": "Per metric: whether the pack reports collecting it, and whether the runtime supports it. `supported: null` means the pack has not reported the capability yet, which is not the same as reporting it unsupported.",
+        "additionalProperties": {
+          "type": "object",
+          "required": [
+            "enabled",
+            "supported"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "supported": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      "InteractionAnalytics": {
+        "type": "object",
+        "required": [
+          "generated_at",
+          "period",
+          "metrics",
+          "totals",
+          "top",
+          "rankings",
+          "players",
+          "availability"
+        ],
+        "properties": {
+          "generated_at": {
+            "type": "number"
+          },
+          "period": {
+            "const": "lifetime"
+          },
+          "metrics": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "totals": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          },
+          "top": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/InteractionTypeCount"
+              }
+            }
+          },
+          "rankings": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/InteractionRankingEntry"
+              }
+            }
+          },
+          "players": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "availability": {
+            "$ref": "#/components/schemas/InteractionAvailability"
           }
         }
       }

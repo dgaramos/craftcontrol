@@ -49,7 +49,7 @@ describe("analytics activity and deaths have a feature boundary", () => {
 
   test("bundle imports analytics feature from versioned path", () => {
     const script = frontendScript();
-    expect(script).toContain('from "./features/analytics/index.js?v=9"');
+    expect(script).toContain('from "./features/analytics/index.js?v=10"');
   });
 });
 

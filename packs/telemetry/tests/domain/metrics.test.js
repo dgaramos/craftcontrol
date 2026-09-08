@@ -1,14 +1,17 @@
 import { test, expect, describe } from "@jest/globals";
 import { METRICS, applyMetricCommand, emptyMetrics, metricKey, parseMetrics } from "../../behavior_pack/scripts/domain/metrics.js";
 
+/** The full state with only the named metrics on. */
+const all = (overrides = {}) => ({ ...emptyMetrics(), ...overrides });
+
 describe("metric state", () => {
   test("every known metric starts disabled", () => {
-    expect(emptyMetrics()).toEqual({ itemUse: false });
-    expect(METRICS).toContain("itemUse");
+    expect(METRICS).toEqual(["itemUse", "blockInteractions", "entityInteractions", "containerInteractions"]);
+    expect(Object.values(emptyMetrics())).toEqual(METRICS.map(() => false));
   });
 
   test("persisted state reads back as written", () => {
-    expect(parseMetrics({ itemUse: true })).toEqual({ itemUse: true });
+    expect(parseMetrics(all({ itemUse: true }))).toEqual(all({ itemUse: true }));
   });
 
   test.each([
@@ -20,36 +23,36 @@ describe("metric state", () => {
   ])("%s never enables collection", (_label, persisted) => {
     // Anything but an explicit `true` must read as disabled: a damaged
     // property may not opt a server in by accident.
-    expect(parseMetrics(persisted)).toEqual({ itemUse: false });
+    expect(parseMetrics(persisted)).toEqual(all());
   });
 
   test("an unknown persisted name is dropped rather than carried", () => {
-    expect(parseMetrics({ itemUse: true, chatCapture: true })).toEqual({ itemUse: true });
+    expect(parseMetrics({ itemUse: true, chatCapture: true })).toEqual(all({ itemUse: true }));
   });
 });
 
 describe("metric commands", () => {
   test("enable turns one metric on and reports the change", () => {
     expect(applyMetricCommand(emptyMetrics(), "enable itemUse")).toEqual({
-      metrics: { itemUse: true }, changed: true, error: null,
+      metrics: all({ itemUse: true }), changed: true, error: null,
     });
   });
 
   test("disable turns it back off", () => {
-    expect(applyMetricCommand({ itemUse: true }, "disable itemUse")).toEqual({
-      metrics: { itemUse: false }, changed: true, error: null,
+    expect(applyMetricCommand(all({ itemUse: true }), "disable itemUse")).toEqual({
+      metrics: all(), changed: true, error: null,
     });
   });
 
   test("re-enabling an enabled metric is understood but changes nothing", () => {
-    expect(applyMetricCommand({ itemUse: true }, "enable itemUse")).toEqual({
-      metrics: { itemUse: true }, changed: false, error: null,
+    expect(applyMetricCommand(all({ itemUse: true }), "enable itemUse")).toEqual({
+      metrics: all({ itemUse: true }), changed: false, error: null,
     });
   });
 
   test("status reports the current state without changing it", () => {
-    expect(applyMetricCommand({ itemUse: true }, "status")).toEqual({
-      metrics: { itemUse: true }, changed: false, error: null,
+    expect(applyMetricCommand(all({ itemUse: true }), "status")).toEqual({
+      metrics: all({ itemUse: true }), changed: false, error: null,
     });
   });
 
@@ -60,16 +63,23 @@ describe("metric commands", () => {
     ["a metric-less verb", "enable", /unknown metric: \(none\)/],
     ["a missing message", undefined, /unknown metric command/],
   ])("%s is refused and leaves the state alone", (_label, message, expected) => {
-    const result = applyMetricCommand({ itemUse: true }, message);
-    expect(result.metrics).toEqual({ itemUse: true });
+    const result = applyMetricCommand(all({ itemUse: true }), message);
+    expect(result.metrics).toEqual(all({ itemUse: true }));
     expect(result.changed).toBe(false);
     expect(result.error).toMatch(expected);
   });
 
   test("extra whitespace in a command is tolerated", () => {
-    expect(applyMetricCommand(emptyMetrics(), "  enable   itemUse  ").metrics).toEqual({ itemUse: true });
+    expect(applyMetricCommand(emptyMetrics(), "  enable   itemUse  ").metrics).toEqual(all({ itemUse: true }));
   });
 });
+
+test.each(["blockInteractions", "entityInteractions", "containerInteractions"])(
+  "%s is enabled on its own and leaves the others alone", (metric) => {
+    const result = applyMetricCommand(emptyMetrics(), `enable ${metric}`);
+    expect(result.metrics[metric]).toBe(true);
+    expect(Object.entries(result.metrics).filter(([, on]) => on)).toHaveLength(1);
+  });
 
 describe("map keys", () => {
   test.each(["minecraft:diamond_sword", "minecraft:potion", "someaddon:magic_wand", "minecraft:oak_door"])(

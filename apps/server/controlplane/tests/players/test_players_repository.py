@@ -175,3 +175,98 @@ def test_reconcile_online_marks_absent_players_offline(player_repo: SQLitePlayer
     profiles = {p["name"]: p for p in player_repo.player_profiles()}
     assert profiles["VonCrush"]["online"] is False
     assert profiles["Nicole"]["online"] is True
+
+
+# ---------------------------------------------------------------------------
+# Opt-in interaction analytics (issue #275)
+# ---------------------------------------------------------------------------
+
+def test_interaction_analytics_reports_every_metric_even_when_nothing_is_collected(
+    player_repo: SQLitePlayerRepository,
+) -> None:
+    result = player_repo.interaction_analytics(5)
+    assert result["metrics"] == [
+        "itemUse", "blockInteractions", "entityInteractions", "containerInteractions",
+    ]
+    # Zero for every metric, with no claim about why: availability answers that.
+    assert result["totals"] == {metric: 0 for metric in result["metrics"]}
+    assert result["top"]["itemUse"] == []
+    assert result["players"] == []
+
+
+def test_interaction_analytics_aggregates_totals_tops_and_rankings(
+    player_repo: SQLitePlayerRepository,
+    telemetry_repo: SQLiteTelemetryRepository,
+) -> None:
+    from factories import telemetry_envelope
+
+    player_repo.observe_player("VonCrush", True, "99")
+    player_repo.observe_player("Nicole", True, "77")
+    telemetry_repo.ingest_telemetry(telemetry_envelope(
+        "snapshot.player", sequence=1, player="VonCrush", data={
+            "itemsUsed": 10, "usedByType": {"minecraft:bow": 7, "minecraft:potion": 3},
+            "blockInteractions": 4, "interactedBlocksByType": {"minecraft:chest": 4},
+            "containerOpens": 4, "openedContainersByType": {"minecraft:chest": 4},
+        },
+    ))
+    telemetry_repo.ingest_telemetry(telemetry_envelope(
+        "snapshot.player", sequence=2, timestamp=2, player="Nicole", data={
+            "itemsUsed": 2, "usedByType": {"minecraft:bow": 2},
+            "entityInteractions": 6, "interactedEntitiesByType": {"minecraft:villager": 6},
+        },
+    ))
+
+    result = player_repo.interaction_analytics(5)
+    assert result["totals"]["itemUse"] == 12
+    assert result["totals"]["entityInteractions"] == 6
+    assert result["top"]["itemUse"] == [
+        {"type": "minecraft:bow", "count": 9}, {"type": "minecraft:potion", "count": 3},
+    ]
+    assert [entry["player"]["name"] for entry in result["rankings"]["itemUse"]] == ["VonCrush", "Nicole"]
+    # A player who collected nothing for a metric is absent from its ranking
+    # rather than sitting at the bottom with a zero.
+    assert [entry["player"]["name"] for entry in result["rankings"]["entityInteractions"]] == ["Nicole"]
+    favorite = next(item for item in result["players"] if item["player"]["name"] == "VonCrush")
+    assert favorite["itemUse"] == {"total": 10, "favorite": {"type": "minecraft:bow", "count": 7}}
+    assert favorite["entityInteractions"] == {"total": 0, "favorite": None}
+
+
+def test_interaction_analytics_ignores_values_the_policy_would_not_store(
+    player_repo: SQLitePlayerRepository,
+    telemetry_repo: SQLiteTelemetryRepository,
+) -> None:
+    from factories import telemetry_envelope
+
+    player_repo.observe_player("VonCrush", True, "99")
+    telemetry_repo.ingest_telemetry(telemetry_envelope(
+        "snapshot.player", sequence=1, player="VonCrush", data={
+            "itemsUsed": 3,
+            "usedByType": {"minecraft:bow": 2, "Excalibur": 5, "minecraft:potion": 0, "someaddon:wand": 1},
+        },
+    ))
+    result = player_repo.interaction_analytics(5)
+    assert result["top"]["itemUse"] == [
+        {"type": "minecraft:bow", "count": 2}, {"type": "someaddon:wand", "count": 1},
+    ]
+
+
+def test_interaction_analytics_limit_caps_every_list(
+    player_repo: SQLitePlayerRepository,
+    telemetry_repo: SQLiteTelemetryRepository,
+) -> None:
+    from factories import telemetry_envelope
+
+    for index in range(4):
+        name = f"Player{index}"
+        player_repo.observe_player(name, True, str(index))
+        telemetry_repo.ingest_telemetry(telemetry_envelope(
+            "snapshot.player", sequence=index + 1, timestamp=index + 1, player=name, data={
+                "itemsUsed": index + 1,
+                "usedByType": {f"minecraft:item_{item}": item + 1 for item in range(index + 1)},
+            },
+        ))
+    result = player_repo.interaction_analytics(2)
+    assert len(result["rankings"]["itemUse"]) == 2
+    assert len(result["top"]["itemUse"]) == 2
+    # Every player is still reported; only the ranked lists are capped.
+    assert len(result["players"]) == 4

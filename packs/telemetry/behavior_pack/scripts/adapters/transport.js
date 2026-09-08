@@ -5,6 +5,7 @@ import { capabilitySnapshot, readGameMode } from "./capabilities.js";
 
 const pendingBlocks = new Map();
 const pendingItems = new Map();
+const pendingInteractions = new Map();
 const productionDependencies = { world, flush, loadState, metricsSnapshot, nextSequence, storageStatus, capabilitySnapshot, readGameMode };
 let dependencies = productionDependencies;
 
@@ -15,6 +16,7 @@ export function configureTransport(overrides = {}) {
 export function resetTransport() {
   pendingBlocks.clear();
   pendingItems.clear();
+  pendingInteractions.clear();
   dependencies = productionDependencies;
 }
 
@@ -66,6 +68,30 @@ export function publishItemUse() {
   pendingItems.clear();
 }
 
+/**
+ * Accumulate one interaction for the next five-second batch.
+ *
+ * `kind` is "block", "entity" or "container"; the type is a namespaced
+ * identifier the caller already validated. No coordinates travel with it —
+ * where a player interacted is not collected (docs/telemetry-metrics.md).
+ */
+export function queueInteraction(player, kind, type) {
+  const pending = pendingInteractions.get(player) || {
+    block: { total: 0, byType: {} },
+    entity: { total: 0, byType: {} },
+    container: { total: 0, byType: {} },
+  };
+  const bucket = pending[kind];
+  bucket.total += 1;
+  bucket.byType[type] = (bucket.byType[type] || 0) + 1;
+  pendingInteractions.set(player, pending);
+}
+
+export function publishInteractions() {
+  for (const [player, data] of pendingInteractions) publish("interactions.changed", player, data);
+  pendingInteractions.clear();
+}
+
 export function publishMetrics(metrics) {
   return publish("metrics.changed", null, { metrics });
 }
@@ -73,6 +99,7 @@ export function publishMetrics(metrics) {
 export function publishSnapshot() {
   publishBlockChanges();
   publishItemUse();
+  publishInteractions();
   dependencies.flush(true);
   const state = dependencies.loadState();
   console.warn(`${LOG_PREFIX} ${JSON.stringify({ schema: SCHEMA_VERSION, sequence: state.sequence, type: "snapshot.started", timestamp: Date.now(), player: null, data: { players: Object.keys(state.players).length, storage: dependencies.storageStatus(), capabilities: dependencies.capabilitySnapshot(), metrics: dependencies.metricsSnapshot() } })}`);

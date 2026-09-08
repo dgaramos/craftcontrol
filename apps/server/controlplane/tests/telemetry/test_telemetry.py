@@ -317,3 +317,87 @@ def test_metrics_changed_is_an_accepted_topic() -> None:
         '"timestamp":1,"player":null,"data":{"metrics":{"itemUse":true}}}'
     )
     assert parse_telemetry_line(line)["data"]["metrics"] == {"itemUse": True}
+
+
+# ---------------------------------------------------------------------------
+# Opt-in interactions (issue #275)
+# ---------------------------------------------------------------------------
+
+def _interaction_batch(**buckets: dict) -> dict:
+    empty = {"total": 0, "byType": {}}
+    return {kind: buckets.get(kind, empty) for kind in ("block", "entity", "container")}
+
+
+def test_interaction_batches_update_each_counter_and_map(
+    player_repo: SQLitePlayerRepository,
+    telemetry_repo: SQLiteTelemetryRepository,
+) -> None:
+    player_repo.observe_player("VonCrush", True, "99")
+    batch = telemetry_envelope(
+        "interactions.changed", sequence=1, player="VonCrush",
+        data=_interaction_batch(
+            block={"total": 3, "byType": {"minecraft:oak_door": 2, "minecraft:chest": 1}},
+            entity={"total": 1, "byType": {"minecraft:villager": 1}},
+            container={"total": 1, "byType": {"minecraft:chest": 1}},
+        ),
+    )
+    assert telemetry_repo.ingest_telemetry(batch)[0]
+    assert not telemetry_repo.ingest_telemetry(batch)[0]
+    stats = player_repo.player_profiles()[0]["telemetry"]
+    assert stats["blockInteractions"] == 3
+    assert stats["interactedBlocksByType"] == {"minecraft:oak_door": 2, "minecraft:chest": 1}
+    assert stats["entityInteractions"] == 1
+    assert stats["containerOpens"] == 1
+    assert stats["openedContainersByType"] == {"minecraft:chest": 1}
+
+
+def test_an_empty_bucket_leaves_its_counter_alone(
+    player_repo: SQLitePlayerRepository,
+    telemetry_repo: SQLiteTelemetryRepository,
+) -> None:
+    player_repo.observe_player("VonCrush", True, "99")
+    telemetry_repo.ingest_telemetry(telemetry_envelope(
+        "snapshot.player", sequence=1, player="VonCrush",
+        data={"entityInteractions": 5, "interactedEntitiesByType": {"minecraft:villager": 5}},
+    ))
+    telemetry_repo.ingest_telemetry(telemetry_envelope(
+        "interactions.changed", sequence=2, timestamp=2, player="VonCrush",
+        data=_interaction_batch(block={"total": 1, "byType": {"minecraft:chest": 1}}),
+    ))
+    stats = player_repo.player_profiles()[0]["telemetry"]
+    assert stats["blockInteractions"] == 1
+    # A metric nobody enabled must not be touched by another metric's batch.
+    assert stats["entityInteractions"] == 5
+
+
+def test_interaction_keys_follow_the_same_shape_rule_as_item_use(
+    player_repo: SQLitePlayerRepository,
+    telemetry_repo: SQLiteTelemetryRepository,
+) -> None:
+    player_repo.observe_player("VonCrush", True, "99")
+    telemetry_repo.ingest_telemetry(telemetry_envelope(
+        "interactions.changed", sequence=1, player="VonCrush",
+        data=_interaction_batch(
+            entity={"total": 2, "byType": {"minecraft:villager": 1, "Fluffy the Cow": 1}},
+        ),
+    ))
+    stats = player_repo.player_profiles()[0]["telemetry"]
+    assert stats["interactedEntitiesByType"] == {"minecraft:villager": 1}
+    assert stats["entityInteractions"] == 1
+
+
+def test_a_snapshot_reconciles_the_interaction_counters(
+    player_repo: SQLitePlayerRepository,
+    telemetry_repo: SQLiteTelemetryRepository,
+) -> None:
+    player_repo.observe_player("VonCrush", True, "99")
+    telemetry_repo.ingest_telemetry(telemetry_envelope(
+        "interactions.changed", sequence=1, player="VonCrush",
+        data=_interaction_batch(block={"total": 2, "byType": {"minecraft:chest": 2}}),
+    ))
+    telemetry_repo.ingest_telemetry(telemetry_envelope(
+        "snapshot.player", sequence=9, timestamp=9, player="VonCrush",
+        data={"blockInteractions": 40, "interactedBlocksByType": {"minecraft:chest": 40}},
+    ))
+    stats = player_repo.player_profiles()[0]["telemetry"]
+    assert stats["blockInteractions"] == 40

@@ -250,16 +250,22 @@ describe("flush", () => {
 // ---------------------------------------------------------------------------
 
 describe("metrics", () => {
+  /** The full state with only the named metrics on. */
+  const all = (overrides = {}) => ({
+    itemUse: false, blockInteractions: false, entityInteractions: false,
+    containerInteractions: false, ...overrides,
+  });
+
   test("a pack that was never told anything collects nothing", async () => {
     const { store } = await loadStore();
-    expect(store.metricsSnapshot()).toEqual({ itemUse: false });
+    expect(store.metricsSnapshot()).toEqual(all());
     expect(store.metricEnabled("itemUse")).toBe(false);
   });
 
   test("enabling a metric persists it so it survives a restart", async () => {
     const { mock, store } = await loadStore();
-    expect(store.applyMetrics("enable itemUse")).toEqual({ itemUse: true });
-    expect(JSON.parse(mock.getMockDynamicProperty(METRICS_KEY))).toEqual({ itemUse: true });
+    expect(store.applyMetrics("enable itemUse")).toEqual(all({ itemUse: true }));
+    expect(JSON.parse(mock.getMockDynamicProperty(METRICS_KEY))).toEqual(all({ itemUse: true }));
 
     // A fresh process reading the same world keeps the decision. Reloading the
     // modules gives the mock a clean property map, so the persisted value is
@@ -273,8 +279,8 @@ describe("metrics", () => {
   test("disabling a metric persists too", async () => {
     const { mock, store } = await loadStore();
     store.applyMetrics("enable itemUse");
-    expect(store.applyMetrics("disable itemUse")).toEqual({ itemUse: false });
-    expect(JSON.parse(mock.getMockDynamicProperty(METRICS_KEY))).toEqual({ itemUse: false });
+    expect(store.applyMetrics("disable itemUse")).toEqual(all());
+    expect(JSON.parse(mock.getMockDynamicProperty(METRICS_KEY))).toEqual(all());
   });
 
   test("an unknown command warns and leaves collection untouched", async () => {
@@ -289,7 +295,7 @@ describe("metrics", () => {
 
   test("status reports the current state without writing", async () => {
     const { mock, store } = await loadStore();
-    expect(store.applyMetrics("status")).toEqual({ itemUse: false });
+    expect(store.applyMetrics("status")).toEqual(all());
     expect(mock.getMockDynamicProperty(METRICS_KEY)).toBeUndefined();
   });
 
@@ -300,9 +306,19 @@ describe("metrics", () => {
     mock.setMockDynamicProperty(METRICS_KEY, "{not json");
     const store = await import("../../behavior_pack/scripts/adapters/store.js");
     const error = suppressConsoleError();
-    expect(store.metricsSnapshot()).toEqual({ itemUse: false });
+    expect(store.metricsSnapshot()).toEqual(all());
     expect(error).toHaveBeenCalledWith(expect.stringContaining("invalid persisted metrics"));
     error.mockRestore();
+  });
+
+  test("each metric is stored on its own", async () => {
+    const { store } = await loadStore();
+    store.applyMetrics("enable blockInteractions");
+    store.applyMetrics("enable containerInteractions");
+    expect(store.metricsSnapshot()).toEqual(all({ blockInteractions: true, containerInteractions: true }));
+    store.applyMetrics("disable blockInteractions");
+    expect(store.metricEnabled("blockInteractions")).toBe(false);
+    expect(store.metricEnabled("containerInteractions")).toBe(true);
   });
 
   test("a failed write is reported and the decision still applies this session", async () => {
@@ -310,7 +326,7 @@ describe("metrics", () => {
     const original = mock.world.setDynamicProperty.bind(mock.world);
     mock.world.setDynamicProperty = () => { throw new Error("quota exceeded"); };
     const error = suppressConsoleError();
-    expect(store.applyMetrics("enable itemUse")).toEqual({ itemUse: true });
+    expect(store.applyMetrics("enable itemUse")).toEqual(all({ itemUse: true }));
     expect(error).toHaveBeenCalledWith(expect.stringContaining("failed to persist metrics"));
     error.mockRestore();
     mock.world.setDynamicProperty = original;

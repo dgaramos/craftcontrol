@@ -2,7 +2,7 @@ import { jest, beforeEach, test, expect } from "@jest/globals";
 import { world } from "@minecraft/server";
 import { startTelemetryRuntime } from "../../behavior_pack/scripts/main.js";
 
-const emptyStats = () => ({ joins: 0, deaths: 0, playerKills: 0, mobKills: 0, killsByType: {}, damageTaken: 0, damageDealt: 0, blocksBroken: 0, brokenByType: {}, blocksPlaced: 0, placedByType: {}, itemsUsed: 0, usedByType: {}, distance: 0, distanceByDimension: {}, activeTimeByDimension: {} });
+const emptyStats = () => ({ joins: 0, deaths: 0, playerKills: 0, mobKills: 0, killsByType: {}, damageTaken: 0, damageDealt: 0, blocksBroken: 0, brokenByType: {}, blocksPlaced: 0, placedByType: {}, itemsUsed: 0, usedByType: {}, blockInteractions: 0, interactedBlocksByType: {}, entityInteractions: 0, interactedEntitiesByType: {}, containerOpens: 0, openedContainersByType: {}, distance: 0, distanceByDimension: {}, activeTimeByDimension: {} });
 const mockSystem = { run: jest.fn(), runTimeout: jest.fn() };
 const mockEnsurePlayer = jest.fn((state, name) => {
   state.players[name] ??= emptyStats();
@@ -20,10 +20,14 @@ const mockPublishBlockChanges = jest.fn();
 const mockPublishSnapshot = jest.fn();
 const mockQueueBlockChange = jest.fn();
 const mockQueueItemUse = jest.fn();
+const mockQueueInteraction = jest.fn();
+const mockPublishInteractions = jest.fn();
+const mockProbeContainerReading = jest.fn();
+const mockIsContainer = jest.fn(() => false);
 const mockPublishItemUse = jest.fn();
 const mockPublishMetrics = jest.fn();
 const mockApplyMetrics = jest.fn(() => ({ itemUse: true }));
-const mockMetricsSnapshot = jest.fn(() => ({ itemUse: false }));
+const mockMetricsSnapshot = jest.fn(() => ({ itemUse: false, blockInteractions: false, entityInteractions: false, containerInteractions: false }));
 const mockMetricEnabled = jest.fn(() => false);
 const mockMetricKey = jest.fn((value) => (typeof value === "string" && value.includes(":") ? value : null));
 const mockCapabilitySnapshot = jest.fn(() => ({}));
@@ -59,6 +63,10 @@ function startRuntime() {
     publishSnapshot: mockPublishSnapshot,
     queueBlockChange: mockQueueBlockChange,
     queueItemUse: mockQueueItemUse,
+    queueInteraction: mockQueueInteraction,
+    publishInteractions: mockPublishInteractions,
+    probeContainerReading: mockProbeContainerReading,
+    isContainer: mockIsContainer,
     publishItemUse: mockPublishItemUse,
     publishMetrics: mockPublishMetrics,
     applyMetrics: mockApplyMetrics,
@@ -85,8 +93,9 @@ beforeEach(() => {
   mockMutatePlayer.mockImplementation((name, callback) => callback({ players: {} }));
   mockReadGameMode.mockReturnValue(null);
   mockMetricEnabled.mockReturnValue(false);
+  mockIsContainer.mockReturnValue(false);
   mockApplyMetrics.mockReturnValue({ itemUse: true });
-  mockMetricsSnapshot.mockReturnValue({ itemUse: false });
+  mockMetricsSnapshot.mockReturnValue({ itemUse: false, blockInteractions: false, entityInteractions: false, containerInteractions: false });
   mockSamplePlayerMovement.mockImplementation((positions, player, onDistance) => { onDistance("minecraft:overworld", 10); });
   world.players = [];
   startRuntime();
@@ -173,7 +182,7 @@ test("telemetry.started reports which metrics are enabled", () => {
   // The startup announcement is scheduled, not immediate.
   mockSystem.runTimeout.mock.calls.at(-1)[0]();
   expect(mockPublish).toHaveBeenCalledWith("telemetry.started", null, expect.objectContaining({
-    metrics: { itemUse: false },
+    metrics: { itemUse: false, blockInteractions: false, entityInteractions: false, containerInteractions: false },
   }));
 });
 
@@ -263,4 +272,91 @@ test("onPlayerDimensionChange records new position and publishes dimension chang
   capturedHandlers.onPlayerDimensionChange({ player: { id: "p1", name: "VonCrush" }, toLocation: { x: 10, y: 64, z: 20 }, fromDimension: { id: "minecraft:overworld" }, toDimension: { id: "minecraft:nether" } });
   expect(mockMutatePlayer).toHaveBeenCalledWith("VonCrush", expect.any(Function));
   expect(mockPublish).toHaveBeenCalledWith("player.dimension.changed", "VonCrush", { from: "minecraft:overworld", to: "minecraft:nether" });
+});
+
+// -- opt-in interactions ----------------------------------------------------
+
+const blockEvent = (typeId = "minecraft:oak_door", name = "VonCrush") => ({
+  player: { name }, block: { typeId, getComponent: () => null },
+});
+const entityEvent = (typeId = "minecraft:villager", name = "VonCrush") => ({
+  player: { name }, target: { typeId },
+});
+const enable = (...metrics) => mockMetricEnabled.mockImplementation((metric) => metrics.includes(metric));
+
+test("block interactions are not collected while the metric is disabled", () => {
+  capturedHandlers.onPlayerInteractWithBlock(blockEvent());
+  expect(mockMutatePlayer).not.toHaveBeenCalled();
+  expect(mockQueueInteraction).not.toHaveBeenCalled();
+});
+
+test("block interactions are counted and queued once enabled", () => {
+  enable("blockInteractions");
+  capturedHandlers.onPlayerInteractWithBlock(blockEvent());
+  expect(mockMutatePlayer).toHaveBeenCalledWith("VonCrush", expect.any(Function));
+  expect(mockIncrementMap).toHaveBeenCalledWith(expect.any(Object), "minecraft:oak_door", 1, 24);
+  expect(mockQueueInteraction).toHaveBeenCalledWith("VonCrush", "block", "minecraft:oak_door");
+});
+
+test("the runtime is probed for container reading even before the metric is on", () => {
+  // The capability is about what the runtime can do, not about what the owner
+  // asked for, so the panel can say "unavailable" instead of drawing a zero.
+  capturedHandlers.onPlayerInteractWithBlock(blockEvent());
+  expect(mockProbeContainerReading).toHaveBeenCalled();
+});
+
+test("a container open is counted only when the block holds an inventory", () => {
+  enable("containerInteractions");
+  mockIsContainer.mockReturnValue(false);
+  capturedHandlers.onPlayerInteractWithBlock(blockEvent("minecraft:stone"));
+  expect(mockQueueInteraction).not.toHaveBeenCalled();
+
+  mockIsContainer.mockReturnValue(true);
+  capturedHandlers.onPlayerInteractWithBlock(blockEvent("minecraft:chest"));
+  expect(mockQueueInteraction).toHaveBeenCalledWith("VonCrush", "container", "minecraft:chest");
+});
+
+test("container opens and block interactions are independent", () => {
+  // Opening a chest with only containers enabled counts the open and nothing
+  // else; the two metrics never imply each other.
+  enable("containerInteractions");
+  mockIsContainer.mockReturnValue(true);
+  capturedHandlers.onPlayerInteractWithBlock(blockEvent("minecraft:chest"));
+  expect(mockQueueInteraction).toHaveBeenCalledTimes(1);
+  expect(mockQueueInteraction).toHaveBeenCalledWith("VonCrush", "container", "minecraft:chest");
+});
+
+test("both are counted when both are enabled", () => {
+  enable("blockInteractions", "containerInteractions");
+  mockIsContainer.mockReturnValue(true);
+  capturedHandlers.onPlayerInteractWithBlock(blockEvent("minecraft:chest"));
+  expect(mockQueueInteraction.mock.calls.map((call) => call[1])).toEqual(["block", "container"]);
+});
+
+test("entity interactions are counted only once enabled", () => {
+  capturedHandlers.onPlayerInteractWithEntity(entityEvent());
+  expect(mockQueueInteraction).not.toHaveBeenCalled();
+
+  enable("entityInteractions");
+  capturedHandlers.onPlayerInteractWithEntity(entityEvent());
+  expect(mockQueueInteraction).toHaveBeenCalledWith("VonCrush", "entity", "minecraft:villager");
+});
+
+test("an interaction with an identifier the policy will not store is discarded", () => {
+  enable("blockInteractions", "entityInteractions");
+  capturedHandlers.onPlayerInteractWithBlock(blockEvent("A Chest Named Bob"));
+  capturedHandlers.onPlayerInteractWithEntity(entityEvent("Fluffy"));
+  expect(mockMutatePlayer).not.toHaveBeenCalled();
+});
+
+test("an interaction without a player is ignored", () => {
+  enable("blockInteractions", "entityInteractions");
+  capturedHandlers.onPlayerInteractWithBlock({ block: { typeId: "minecraft:chest" } });
+  capturedHandlers.onPlayerInteractWithEntity({ target: { typeId: "minecraft:villager" } });
+  expect(mockMutatePlayer).not.toHaveBeenCalled();
+});
+
+test("the five-second cycle drains pending interactions", () => {
+  capturedSamplingCallback();
+  expect(mockPublishInteractions).toHaveBeenCalled();
 });

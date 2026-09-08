@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from ..ports import ContainerOperations, EventPublisher, RuntimeSupervisor, ServerConfiguration, ServerConsole, StateStore
 from ..players import PlayerService
+from ..telemetry.metrics import loads as load_metrics
 from ..telemetry.service import TelemetryService
 from ..server import WorldService
 from .reconciliation import ReconciliationService
@@ -340,6 +342,37 @@ class ManagerService:
 
     def exploration_analytics(self, limit: int = 10) -> dict[str, Any]:
         return self.player_service.exploration(limit)
+
+    def interaction_analytics(self, limit: int = 10) -> dict[str, Any]:
+        """Aggregate the opt-in metrics and say, per metric, whether they mean anything.
+
+        A total of zero has two very different causes — nobody did it, or
+        nobody is collecting it — and only the pack knows which. Availability
+        joins the numbers here so the panel never has to guess.
+        """
+        result = self.player_service.interactions(limit)
+        result["availability"] = self.telemetry_metric_availability()
+        return result
+
+    def telemetry_metric_availability(self) -> dict[str, dict[str, Any]]:
+        """Per metric: whether it is enabled, and whether the runtime supports it."""
+        telemetry = self.repository.snapshot().get("telemetry", {})
+        enabled = load_metrics(telemetry.get("metrics"))
+        try:
+            capabilities = json.loads(telemetry.get("capabilities") or "{}")
+        except (TypeError, ValueError):
+            capabilities = {}
+        availability = {}
+        for metric, state in enabled.items():
+            capability = capabilities.get(metric) if isinstance(capabilities, dict) else None
+            supported = capability.get("supported") if isinstance(capability, dict) else None
+            availability[metric] = {
+                "enabled": state,
+                # None means the pack has not reported the capability yet, which
+                # is not the same as reporting that it is unsupported.
+                "supported": supported if isinstance(supported, bool) else None,
+            }
+        return availability
 
     def period_analytics(self, days: int = 30, limit: int = 10) -> dict[str, Any]:
         return self.player_service.periods(days, limit)

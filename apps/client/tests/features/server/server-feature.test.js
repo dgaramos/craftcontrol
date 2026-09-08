@@ -127,13 +127,17 @@ describe("createServerFeature", () => {
     const rollback = makeEl({ dataset: { packAction: "rollback" } });
     deps.elements["#telemetry-pack-state"] = makeEl({ querySelectorAll: jest.fn(() => [install, disable, rollback]) });
     deps.elements["#release-tags"] = makeEl();
-    deps.api = jest.fn()
-      // Initial telemetry pack load.
-      .mockResolvedValueOnce({ installed: false, enabled: false, health: "", storage_status: "not-required", capabilities: {}, application: {}, installed_version: "", runtime_version: "", source_version: "1" })
-      // install button click: restart_required; then telemetry reload; then rollback error
-      .mockResolvedValueOnce({ restart_required: true })
-      .mockResolvedValueOnce({ installed: false, enabled: false, health: "", storage_status: "not-required", capabilities: {}, application: {}, installed_version: "", runtime_version: "", source_version: "1" })
-      .mockRejectedValueOnce(new Error("operation unavailable"));
+    // Path-aware: the card also reads the opt-in metric state, so a positional
+    // mock chain would drift as soon as another read is added.
+    const packState = { installed: false, enabled: false, health: "", storage_status: "not-required", capabilities: {}, application: {}, installed_version: "", runtime_version: "", source_version: "1" };
+    const actions = [];
+    deps.api = jest.fn((path) => {
+      if (path === "/api/telemetry-pack") return Promise.resolve(packState);
+      if (path === "/api/telemetry/metrics") return Promise.resolve({ metrics: {}, available: [] });
+      actions.push(path);
+      if (path === "/api/telemetry-pack/rollback") return Promise.reject(new Error("operation unavailable"));
+      return Promise.resolve({ restart_required: true });
+    });
     global.confirm = jest.fn().mockReturnValueOnce(false).mockReturnValue(true);
 
     try {
@@ -144,7 +148,7 @@ describe("createServerFeature", () => {
       await install.onclick();
       // confirm returns false — install was skipped; operation initialization is
       // owned by application bootstrap rather than the Server area.
-      expect(deps.api).toHaveBeenCalledTimes(1);
+      expect(actions).toEqual([]);
       await disable.onclick();
       expect(deps.toast).toHaveBeenCalledWith("restartPackNotice");
       await rollback.onclick();
@@ -712,5 +716,59 @@ describe("createServerFeature — loadFrontendVersion", () => {
     await createServerFeature(deps).loadDiagnostics();
     const rendered = diagText(deps);
     expect(rendered).toContain("1m 0s");
+  });
+});
+
+describe("opt-in metric switches", () => {
+  function metricDeps(metrics, packOverrides = {}) {
+    const deps = makeDeps();
+    deps.elements["#telemetry-pack-state"] = makeEl();
+    deps.elements["#release-tags"] = makeEl();
+    const target = makeEl();
+    const rows = [];
+    target.querySelectorAll = jest.fn(() => rows);
+    deps.elements["#telemetry-metrics"] = target;
+    deps.api = jest.fn((path) => {
+      if (path === "/api/telemetry/metrics") return Promise.resolve({ metrics, available: Object.keys(metrics) });
+      return Promise.resolve({
+        installed: true, enabled: true, health: "healthy", capabilities: {}, application: {},
+        capabilities_supported: 0, capabilities_total: 0, ...packOverrides,
+      });
+    });
+    return { deps, target, rows };
+  }
+
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+  test("lists every metric with the control its state implies", async () => {
+    const { deps, target } = metricDeps({ itemUse: true, blockInteractions: false, entityInteractions: false, containerInteractions: false });
+    createServerFeature(deps).renderServer();
+    await settle();
+    expect(target.innerHTML).toContain("optInMetrics");
+    expect(target.innerHTML).toContain("metricCollecting");
+    expect(target.innerHTML).toContain("metricDisabled");
+    // The control offers the opposite of the current state, per metric.
+    expect(target.innerHTML).toContain('data-metric="itemUse" data-metric-enabled="false"');
+    expect(target.innerHTML).toContain('data-metric="blockInteractions" data-metric-enabled="true"');
+  });
+
+  test("an enabled metric the runtime cannot deliver is labelled unsupported", async () => {
+    const { deps, target } = metricDeps(
+      { itemUse: true, blockInteractions: false, entityInteractions: false, containerInteractions: false },
+      { capabilities: { itemUse: { supported: false } } },
+    );
+    createServerFeature(deps).renderServer();
+    await settle();
+    expect(target.innerHTML).toContain("metricUnsupported");
+  });
+
+  test("a failed metric read shows the reason instead of an empty card", async () => {
+    const { deps, target } = metricDeps({});
+    deps.api = jest.fn((path) => (path === "/api/telemetry/metrics"
+      ? Promise.reject(new Error("metrics unavailable"))
+      : Promise.resolve({ installed: true, enabled: true, health: "healthy", capabilities: {}, application: {} })));
+    createServerFeature(deps).renderServer();
+    await settle();
+    expect(target.textContent).toBe("metrics unavailable");
   });
 });

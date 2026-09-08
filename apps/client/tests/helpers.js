@@ -247,6 +247,7 @@ export function makeSharedDeps(stateOverrides = {}) {
   const uiIcon = (name) => `<svg icon="${name}"/>`;
   const escapeHtml = (s) => String(s ?? "").replace(/</g, "&lt;");
   const gameTermMarkup = (v) => `<span>${String(v)}</span>`;
+  const blockTermMarkup = (v) => `<span>${String(v)}</span>`;
   const timelineTimestamp = (ts) => ts ? `<time>${ts}</time>` : "<span>—</span>";
   const formatRankingValue = (v) => String(v ?? 0);
   const formatDate = (ts) => ts ? "2024-01-01" : "—";
@@ -258,7 +259,7 @@ export function makeSharedDeps(stateOverrides = {}) {
   const openAnalyticsPlayer = jest.fn();
   const api = jest.fn().mockRejectedValue(new Error("no api"));
   return {
-    state, content, t, uiIcon, escapeHtml, gameTermMarkup, timelineTimestamp,
+    state, content, t, uiIcon, escapeHtml, gameTermMarkup, blockTermMarkup, timelineTimestamp,
     formatRankingValue, formatDate, formatDuration, dimensionName, localeTag,
     analyticsViewSwitch, bindAnalyticsViewSwitch, openAnalyticsPlayer, api, $, elements,
   };

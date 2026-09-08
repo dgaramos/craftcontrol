@@ -1023,7 +1023,10 @@ def test_mixed_ingest_no_cross_contamination(manager_service: ManagerService) ->
 # ---------------------------------------------------------------------------
 
 def test_a_pack_that_reported_nothing_reads_as_collecting_nothing(manager_service: ManagerService) -> None:
-    assert manager_service.telemetry_metrics() == {"itemUse": False}
+    assert manager_service.telemetry_metrics() == {
+        "itemUse": False, "blockInteractions": False,
+        "entityInteractions": False, "containerInteractions": False,
+    }
 
 
 def test_enabling_a_metric_sends_the_console_command(
@@ -1036,7 +1039,7 @@ def test_enabling_a_metric_sends_the_console_command(
     # The pack has not answered yet, and the manager says so rather than
     # reporting a change that may never arrive.
     assert result["pending"] is True
-    assert result["metrics"] == {"itemUse": False}
+    assert result["metrics"]["itemUse"] is False
 
 
 def test_the_state_follows_what_the_pack_reported(
@@ -1045,7 +1048,7 @@ def test_the_state_follows_what_the_pack_reported(
     manager_service.telemetry_event(telemetry_envelope(
         "metrics.changed", sequence=30, player=None, data={"metrics": {"itemUse": True}},
     ))
-    assert manager_service.telemetry_metrics() == {"itemUse": True}
+    assert manager_service.telemetry_metrics()["itemUse"] is True
     # Once the pack agrees, the same request is no longer pending.
     assert manager_service.set_telemetry_metric("itemUse", True)["pending"] is False
 
@@ -1063,4 +1066,35 @@ def test_a_telemetry_started_envelope_also_reports_the_metrics(manager_service: 
         "telemetry.started", sequence=40, player=None,
         data={"version": "0.5.0", "metrics": {"itemUse": True}},
     ))
-    assert manager_service.telemetry_metrics() == {"itemUse": True}
+    assert manager_service.telemetry_metrics()["itemUse"] is True
+
+
+def test_availability_separates_not_collected_from_unsupported(manager_service: ManagerService) -> None:
+    manager_service.telemetry_event(telemetry_envelope(
+        "telemetry.started", sequence=50, player=None, data={
+            "metrics": {"itemUse": True, "blockInteractions": True},
+            "capabilities": {
+                "itemUse": {"supported": True},
+                "blockInteractions": {"supported": False, "error": "signal missing"},
+            },
+        },
+    ))
+    availability = manager_service.telemetry_metric_availability()
+    # Enabled and working.
+    assert availability["itemUse"] == {"enabled": True, "supported": True}
+    # Enabled but the runtime cannot deliver it: a zero here is not a measurement.
+    assert availability["blockInteractions"] == {"enabled": True, "supported": False}
+    # Never enabled, and the pack said nothing about the capability.
+    assert availability["entityInteractions"] == {"enabled": False, "supported": None}
+
+
+def test_interaction_analytics_carry_their_availability(manager_service: ManagerService) -> None:
+    result = manager_service.interaction_analytics(5)
+    assert result["totals"]["itemUse"] == 0
+    assert result["availability"]["itemUse"] == {"enabled": False, "supported": None}
+
+
+def test_availability_survives_a_corrupt_capability_payload(manager_service: ManagerService) -> None:
+    manager_service.repository.store("telemetry", {"capabilities": "{not json"}, "test")
+    availability = manager_service.telemetry_metric_availability()
+    assert availability["itemUse"] == {"enabled": False, "supported": None}

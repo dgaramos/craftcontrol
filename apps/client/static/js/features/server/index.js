@@ -1,4 +1,4 @@
-import { createTelemetryPackScreen } from "./telemetry-pack.js?v=1";
+import { createTelemetryPackScreen } from "./telemetry-pack.js?v=2";
 import { createOperationFeature, isUnresponsiveOperation, nextOperationTransition } from "./operation.js?v=15";
 
 export function createServerFeature({ state, content, t, api, $, escapeHtml, uiIcon, formatDate, toast, getSettingsFeature }) {

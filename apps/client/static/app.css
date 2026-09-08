@@ -792,6 +792,7 @@ dialog.drawer::backdrop { background: rgba(0, 0, 0, .7); }
 .telemetry-metrics li div { display: grid; gap: .15rem; min-width: 0; }
 .telemetry-metrics li small { font-weight: 700; overflow-wrap: anywhere; }
 .telemetry-metrics li button { min-height: 36px; padding: 4px 10px; font-size: 10px; }
+.telemetry-metrics li button[disabled] { opacity: .45; cursor: not-allowed; }
 
 /* Opt-in analytics (issue #275). The availability card sits under the numbers
    on every width, and the unavailable state replaces them entirely rather than

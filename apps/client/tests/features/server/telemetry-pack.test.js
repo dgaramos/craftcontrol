@@ -114,6 +114,10 @@ describe("the Telemetry Pack screen", () => {
       await upgrade.onclick();
       expect(deps.api).toHaveBeenCalledWith("/api/telemetry-pack/upgrade", { method: "POST" });
       expect(deps.toast).toHaveBeenCalledWith("restartPackNotice");
+      // The folded panels describe the installation that just changed, so they
+      // are re-read rather than left showing the numbers from before it.
+      expect(deps.api.mock.calls.filter(([path]) => path === "/api/diagnostics").length).toBeGreaterThan(1);
+      expect(deps.api.mock.calls.filter(([path]) => path === "/api/analytics/activity?kind=all&days=0&page=1&page_size=1").length).toBeGreaterThan(1);
     } finally { global.confirm = savedConfirm; }
   });
 
@@ -205,11 +209,36 @@ describe("opt-in collection on the Telemetry Pack screen", () => {
     expect(target.innerHTML).toContain('data-metric="blockInteractions" data-metric-enabled="true"');
   });
 
-  test("an enabled metric the runtime cannot deliver is labelled unsupported", async () => {
+  test("an enabled metric the runtime cannot deliver is labelled unsupported and can still be turned off", async () => {
     const { deps, target } = withSwitches({ pack: { ...PACK, capabilities: { itemUse: { supported: false } } } });
     await createServerFeature(deps).renderTelemetryPack();
     await settle();
     expect(target.innerHTML).toContain("metricUnsupported");
+    // What is on must be stoppable, even when the runtime cannot deliver it.
+    expect(target.innerHTML).toContain('data-metric="itemUse" data-metric-enabled="false" type="button">metricDisable');
+  });
+
+  test("a metric this server cannot report is not offered for activation", async () => {
+    // Turning it on would collect nothing and read as unavailable in
+    // Analytics, so the control is withheld rather than left to disappoint.
+    const { deps, target } = withSwitches({
+      metrics: { ...METRICS, itemUse: false },
+      pack: { ...PACK, capabilities: { itemUse: { supported: false } } },
+    });
+    await createServerFeature(deps).renderTelemetryPack();
+    await settle();
+    expect(target.innerHTML).toContain('data-metric="itemUse" data-metric-enabled="true" type="button" disabled');
+    expect(target.innerHTML).toContain("metricUnsupported");
+  });
+
+  test("a capability the pack has not probed yet never blocks the control", async () => {
+    // `containerInteractions` is only probed on the first block interaction; an
+    // absent capability is unknown, not unsupported.
+    const { deps, target } = withSwitches({ pack: { ...PACK, capabilities: {} } });
+    await createServerFeature(deps).renderTelemetryPack();
+    await settle();
+    expect(target.innerHTML).not.toContain("disabled");
+    expect(target.innerHTML).not.toContain("metricUnsupported");
   });
 
   test("switching a metric posts the opposite state and re-reads the card", async () => {

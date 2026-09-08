@@ -58,9 +58,16 @@ export function createTelemetryPackScreen({ content, t, api, $, escapeHtml, uiIc
       const metrics = result.metrics || {};
       target.innerHTML = `<ul>${OPT_IN_METRICS.map(([metric, label]) => {
         const enabled = metrics[metric] === true;
-        const supported = capabilities[metric]?.supported;
-        const status = enabled && supported === false ? t("metricUnsupported") : enabled ? t("metricCollecting") : t("metricDisabled");
-        return `<li class="${enabled ? "supported" : "unavailable"}"><span>${uiIcon(enabled ? "check" : "close")}</span><div><strong>${escapeHtml(t(label))}</strong><small>${escapeHtml(status)}</small></div><button class="secondary" data-metric="${metric}" data-metric-enabled="${enabled ? "false" : "true"}" type="button">${enabled ? t("metricDisable") : t("metricEnable")}</button></li>`;
+        // Only an explicit `false` means the runtime cannot deliver it. An
+        // absent capability is unprobed — `containerInteractions` is only
+        // probed on the first block interaction — and must not block anything.
+        const unsupported = capabilities[metric]?.supported === false;
+        const status = unsupported ? t("metricUnsupported") : enabled ? t("metricCollecting") : t("metricDisabled");
+        // Turning on a metric this server cannot report would collect nothing
+        // and read as unavailable in Analytics, so the control is withheld.
+        // Turning one off stays available: what is on must be stoppable.
+        const blocked = unsupported && !enabled;
+        return `<li class="${enabled ? "supported" : "unavailable"}"><span>${uiIcon(enabled ? "check" : "close")}</span><div><strong>${escapeHtml(t(label))}</strong><small>${escapeHtml(status)}</small></div><button class="secondary" data-metric="${metric}" data-metric-enabled="${enabled ? "false" : "true"}" type="button"${blocked ? " disabled" : ""}>${enabled ? t("metricDisable") : t("metricEnable")}</button></li>`;
       }).join("")}</ul>`;
       target.querySelectorAll("[data-metric]").forEach((button) => button.onclick = async () => {
         button.disabled = true;
@@ -92,7 +99,12 @@ export function createTelemetryPackScreen({ content, t, api, $, escapeHtml, uiIc
           try {
             const result = await api(`/api/telemetry-pack/${button.dataset.packAction}`, { method: "POST" });
             toast(result.restart_required ? t("restartPackNotice") : t("operationDone"));
+            // An install or a rollback changes what the folded panels report,
+            // so they are re-read too: stale sequence and capability numbers
+            // under a fresh status line would be worse than none.
             await load();
+            await renderPackHealth();
+            loadDiagnostics();
           } catch (error) { toast(error.message, true); button.disabled = false; }
         });
       }

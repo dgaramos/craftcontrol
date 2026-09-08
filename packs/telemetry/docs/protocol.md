@@ -34,6 +34,7 @@ Protocol `schema` and pack `storageVersion` are intentionally independent. Stora
 - `entity.died`
 - `blocks.changed`
 - `items.used`
+- `interactions.changed`
 - `metrics.changed`
 - `snapshot.started`
 - `snapshot.player`
@@ -46,6 +47,8 @@ Send `/scriptevent bedrock_telemetry:sync full` from the dedicated-server consol
 Pack `0.5.0` adds metrics that are collected only when a server owner turns them on. `telemetry.started` and `snapshot.started` carry a `metrics` map of metric name to `true` or `false`; a metric absent from the map is not collected. The rules these metrics follow — what may be counted, what is never collected, and how far a map may grow — live in the manager repository's `docs/telemetry-metrics.md`.
 
 Send `/scriptevent bedrock_telemetry:metrics enable <metric>` or `disable <metric>` from the dedicated-server console to change one metric, and `status` to have the current state re-announced. Every accepted command is answered with a `metrics.changed` envelope whose `data.metrics` is the resulting map; an unrecognized command changes nothing and is logged as `[BEDROCK_TELEMETRY_METRICS]`. The decision is persisted in the world and survives a restart.
+
+Pack `0.6.0` completes the set with three interaction metrics. While enabled, `interactions.changed` coalesces them per player and five-second cycle into `block`, `entity` and `container` buckets, each with a `total` and a bounded `byType` map, and `snapshot.player` carries `blockInteractions`/`interactedBlocksByType`, `entityInteractions`/`interactedEntitiesByType` and `containerOpens`/`openedContainersByType`. A container open is a block interaction with a block that exposes an inventory component, so it counts the container's block type; the block and container metrics are independent and either may be enabled alone. No interaction carries a coordinate, a block face, an item stack or a custom name.
 
 `itemUse` is the first such metric. While enabled, `items.used` coalesces item use per player and five-second cycle with a `total` and a bounded `byType` map, and `snapshot.player` carries the reconciled `itemsUsed` counter and `usedByType` map. Map keys are namespaced identifiers (`minecraft:bow`); anything else — a custom item name above all — is discarded rather than stored. Opt-in metric maps are bounded to 24 entries, tighter than the 128-entry block maps, so a player shard with every metric of the epic enabled still fits the 30 KB budget.
 
@@ -63,6 +66,7 @@ Snapshot player data in pack `0.3.0` adds `killsByType`, `distanceByDimension`, 
 
 | Pack | Storage | Key additions |
 | --- | --- | --- |
+| 0.6.0 | 3 | Opt-in `blockInteractions`, `entityInteractions` and `containerInteractions` metrics with the `interactions.changed` topic |
 | 0.5.0 | 3 | Opt-in metrics with `metrics.changed` and the `bedrock_telemetry:metrics` command channel; `items.used` and `itemsUsed`/`usedByType` in snapshot player data |
 | 0.4.0 | 3 | Removes deprecated per-block topics; `blocks.changed` is the sole incremental block-activity topic |
 | 0.3.0 | 3 | `killsByType`, `distanceByDimension`, `activeTimeByDimension`, `firstDimensionVisitAt`, `lastDimensionVisitAt` in snapshot player data; bounded type and dimension maps |
@@ -84,6 +88,9 @@ The `capabilities` map in `telemetry.started` and `snapshot.started` lists the r
 | `dimensionChanges` | `playerDimensionChange` event subscription |
 | `gameModeReading` | `Player.getGameMode()` — present from pack 0.3.2 |
 | `itemUse` | `world.afterEvents.itemUse` subscription — present from pack 0.5.0 |
+| `blockInteractions` | `playerInteractWithBlock` event subscription — present from pack 0.6.0 |
+| `containerInteractions` | `Block.getComponent()` reading, probed on the first block interaction — present from pack 0.6.0 |
+| `entityInteractions` | `playerInteractWithEntity` event subscription — present from pack 0.6.0 |
 | `movementSampling` | `system.runInterval` + `world.getAllPlayers` |
 | `playerJoins` | `playerJoin` event subscription |
 | `playerLeaves` | `playerLeave` event subscription |

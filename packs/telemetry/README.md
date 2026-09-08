@@ -104,7 +104,7 @@ The runtime integration test loads the production `main.js` through a determinis
 The package command creates:
 
 ```text
-dist/craftcontrol-telemetry-0.5.0.mcpack
+dist/craftcontrol-telemetry-0.6.0.mcpack
 ```
 
 Packaging uses sorted paths, normalized timestamps, and stripped ZIP metadata so the standalone repository and CraftControl subtree produce byte-equivalent artifacts from the same commit.
@@ -185,6 +185,13 @@ Active time means sampled movement time, not total online time: a player contrib
 The pack has no network module, no HTTP client, no player-facing commands, and no generic remote execution path. Snapshot requests use the namespaced `scriptevent` channel and only cause read-only telemetry output. Consumers must strictly validate the prefix, schema, topic, size, and field types before persistence.
 
 ## Changelog
+
+### 0.6.0
+
+- Adds the opt-in `blockInteractions`, `entityInteractions` and `containerInteractions` metrics, each enabled on its own and each bounded like `itemUse`.
+- Coalesces them into `interactions.changed` once per five-second cycle, with `block`, `entity` and `container` buckets.
+- Detects a container open as a block interaction with a block exposing an inventory component, and registers `containerInteractions` as a capability so a runtime without component access reports the metric unavailable rather than zero.
+- Emits no coordinate, block face, item stack or custom name with an interaction.
 
 ### 0.5.0
 

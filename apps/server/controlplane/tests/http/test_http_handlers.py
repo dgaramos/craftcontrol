@@ -719,7 +719,11 @@ def test_telemetry_metrics_reports_state_and_the_allowlist(client, service: Magi
     service.telemetry_metrics.return_value = {"itemUse": True}
     resp = client.get("/api/telemetry/metrics")
     assert resp.status_code == 200
-    assert resp.get_json() == {"metrics": {"itemUse": True}, "available": ["itemUse"]}
+    payload = resp.get_json()
+    assert payload["metrics"] == {"itemUse": True}
+    assert payload["available"] == [
+        "itemUse", "blockInteractions", "entityInteractions", "containerInteractions",
+    ]
 
 
 def test_telemetry_metrics_requires_telemetry_manage_capability(service: MagicMock) -> None:
@@ -772,3 +776,17 @@ def test_an_unknown_metric_is_refused_with_the_reason(client, service: MagicMock
     resp = client.post("/api/telemetry/metrics", json={"metric": "chatCapture", "enabled": True})
     assert resp.status_code == 400
     assert "chatCapture" in resp.get_json()["error"]
+
+
+def test_interaction_analytics_route_passes_the_limit(client, service: MagicMock) -> None:
+    service.interaction_analytics.return_value = {"totals": {"itemUse": 1}, "availability": {}}
+    resp = client.get("/api/analytics/interactions?limit=5")
+    assert resp.status_code == 200
+    service.interaction_analytics.assert_called_once_with(5)
+
+
+def test_interaction_analytics_route_refuses_an_invalid_limit(client, service: MagicMock) -> None:
+    service.interaction_analytics.side_effect = ValueError("invalid interaction analytics limit")
+    resp = client.get("/api/analytics/interactions?limit=99")
+    assert resp.status_code == 400
+    assert "limit" in resp.get_json()["error"]

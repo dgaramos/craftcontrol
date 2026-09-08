@@ -13,13 +13,15 @@ const EXPECTED_SIGNALS = [
   "playerPlaceBlock",
   "playerDimensionChange",
   "itemUse",
+  "playerInteractWithBlock",
+  "playerInteractWithEntity",
 ];
 
 beforeEach(() => {
   jest.clearAllMocks();
 });
 
-test("registerEvents registers all nine world event signals", () => {
+test("registerEvents registers all eleven world event signals", () => {
   registerEvents({}, mockSubscribeWorldEvent);
 
   const registeredSignals = mockSubscribeWorldEvent.mock.calls.map(([signal]) => signal);
@@ -67,6 +69,8 @@ test.each([
   ["playerBreakBlock", "onPlayerBreakBlock"],
   ["playerPlaceBlock", "onPlayerPlaceBlock"],
   ["itemUse", "onPlayerUseItem"],
+  ["playerInteractWithBlock", "onPlayerInteractWithBlock"],
+  ["playerInteractWithEntity", "onPlayerInteractWithEntity"],
 ])("%s handler invokes %s with the event", (signal, handlerName) => {
   const handler = jest.fn();
   registerEvents({ [handlerName]: handler }, mockSubscribeWorldEvent);

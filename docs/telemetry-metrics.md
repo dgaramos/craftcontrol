@@ -94,7 +94,7 @@ Each metric declares a capability, reported in `telemetry.started` and
 | `itemUse` | `world.afterEvents.itemUse` subscription |
 | `blockInteractions` | `playerInteractWithBlock` event subscription |
 | `entityInteractions` | `playerInteractWithEntity` event subscription |
-| `containerInteractions` | container open detection |
+| `containerInteractions` | `Block.getComponent()` reading, probed on the first block interaction |
 
 An unsupported capability is reported `supported: false` with its bounded error
 string, exactly as today. Collection continues for everything else — a missing
@@ -102,8 +102,14 @@ event subscription never stops the pack.
 
 An unsupported metric is **unavailable, not zero**. The panel says the server
 cannot report it; it does not draw a zero, because zero is a measurement and
-this is the absence of one. This is the same distinction the analytics screens
-already make between "nothing observed yet" and "not collected".
+this is the absence of one.
+
+The Interactions view distinguishes four states, and only the last one may show
+a number: not collected (nobody enabled it), unsupported (enabled, but this
+runtime lacks the event), unconfirmed (enabled, and the pack has not yet said
+whether it can), and collecting. A total of zero appears only in the last one,
+where it means what it says, alongside an empty state that names the window it
+covers — nothing recorded *since the metric was turned on*.
 
 ## Protocol and recovery
 

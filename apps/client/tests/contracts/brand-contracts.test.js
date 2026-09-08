@@ -121,9 +121,9 @@ describe("brand contracts — mobile scroll behaviour", () => {
     expect(dom).toContain("export function resetPanelScroll");
   });
 
-  test("index.html references app.css?v=56", () => {
+  test("index.html references app.css?v=57", () => {
     const template = readFileSync(join(FRONTEND, "templates", "index.html"), "utf8");
-    expect(template).toContain("/static/app.css?v=56");
+    expect(template).toContain("/static/app.css?v=57");
   });
 
   test("index.html references app.js?v=100", () => {
@@ -151,9 +151,9 @@ describe("brand contracts — mobile scroll behaviour", () => {
 });
 
 describe("brand contracts — core module ownership (state and dom)", () => {
-  test("composition.js imports from core/state.js?v=7", () => {
+  test("composition.js imports from core/state.js?v=8", () => {
     const script = compositionScript();
-    expect(script).toContain('from "./core/state.js?v=7"');
+    expect(script).toContain('from "./core/state.js?v=8"');
   });
 
   test("composition.js imports from core/dom.js?v=7", () => {

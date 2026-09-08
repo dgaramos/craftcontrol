@@ -3,6 +3,7 @@ import { createRankingsPanel } from "./rankings.js?v=8";
 import { createBlocksPanel } from "./blocks.js?v=8";
 import { createCombatPanel } from "./combat.js?v=8";
 import { createExplorationPanel } from "./exploration.js?v=8";
+import { createInteractionsPanel } from "./interactions.js?v=1";
 import { createTrendsPanel } from "./trends.js?v=7";
 import { createHealthPanel } from "./health.js?v=8";
 import { renderMarkup } from "../../core/render.js";
@@ -10,8 +11,8 @@ import { renderMarkup } from "../../core/render.js";
 export function createAnalyticsFeature(deps) {
   const { state, content, t, uiIcon, api, $, escapeHtml, optionLabel, gameTermMarkup, timelineTimestamp, rankingDefinitions, formatRankingValue, formatDate, openAnalyticsPlayer, blockTermMarkup, blockIcon, oreLabel, formatDuration, dimensionName, localeTag, requestRender } = deps;
   const analyticsViewSwitch = (active) => {
-    const views = [["all", "activity", "activityView"], ["deaths", "deaths", "deathsView"], ["rankings", "rankings", "rankingsView"], ["blocks", "blocks", "blocksView"], ["combat", "combat", "combatView"], ["exploration", "exploration", "explorationView"], ["trends", "periods", "trendsView"], ["health", "activity", "healthView"]];
-    return `<div class="analytics-view-switch">${views.map(([view, icon, label]) => `<button data-analytics-view="${view}" class="${view} ${(view === "all" ? !["deaths", "rankings", "blocks", "combat", "exploration", "trends", "health"].includes(active) : active === view) ? "active" : ""}" type="button">${uiIcon(icon)} ${t(label)}</button>`).join("")}</div>`;
+    const views = [["all", "activity", "activityView"], ["deaths", "deaths", "deathsView"], ["rankings", "rankings", "rankingsView"], ["blocks", "blocks", "blocksView"], ["combat", "combat", "combatView"], ["exploration", "exploration", "explorationView"], ["interactions", "data", "interactionsView"], ["trends", "periods", "trendsView"], ["health", "activity", "healthView"]];
+    return `<div class="analytics-view-switch">${views.map(([view, icon, label]) => `<button data-analytics-view="${view}" class="${view} ${(view === "all" ? !["deaths", "rankings", "blocks", "combat", "exploration", "interactions", "trends", "health"].includes(active) : active === view) ? "active" : ""}" type="button">${uiIcon(icon)} ${t(label)}</button>`).join("")}</div>`;
   };
   const bindAnalyticsViewSwitch = () => {
     content.querySelectorAll("[data-analytics-view]").forEach((button) => button.onclick = () => {
@@ -25,6 +26,7 @@ export function createAnalyticsFeature(deps) {
   const renderBlocksPanel = createBlocksPanel({ state, content, t, uiIcon, api, $, escapeHtml, analyticsViewSwitch, bindAnalyticsViewSwitch, blockTermMarkup, blockIcon, oreLabel, formatRankingValue, openAnalyticsPlayer, formatDate });
   const renderCombatPanel = createCombatPanel({ state, content, t, uiIcon, gameTermMarkup, api, $, escapeHtml, analyticsViewSwitch, bindAnalyticsViewSwitch, formatRankingValue, openAnalyticsPlayer, formatDate });
   const renderExplorationPanel = createExplorationPanel({ state, content, t, uiIcon, api, $, escapeHtml, analyticsViewSwitch, bindAnalyticsViewSwitch, formatRankingValue, openAnalyticsPlayer, formatDate, formatDuration, dimensionName, timelineTimestamp });
+  const renderInteractionsPanel = createInteractionsPanel({ state, content, t, uiIcon, api, $, escapeHtml, analyticsViewSwitch, bindAnalyticsViewSwitch, blockTermMarkup, gameTermMarkup, formatRankingValue, openAnalyticsPlayer, formatDate });
   const renderTrendsPanel = createTrendsPanel({ state, content, t, uiIcon, api, $, analyticsViewSwitch, bindAnalyticsViewSwitch, formatRankingValue, openAnalyticsPlayer, formatDate, formatDuration, localeTag });
   const renderHealthPanel = createHealthPanel({ state, content, t, uiIcon, api, $, escapeHtml, analyticsViewSwitch, bindAnalyticsViewSwitch, formatDate });
   let activityObserver = null;
@@ -53,6 +55,10 @@ async function renderAnalyticsPanel() {
   }
   if (filters.kind === "exploration") {
     await renderExplorationPanel();
+    return;
+  }
+  if (filters.kind === "interactions") {
+    await renderInteractionsPanel();
     return;
   }
   if (filters.kind === "trends") {

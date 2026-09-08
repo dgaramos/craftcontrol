@@ -8,7 +8,7 @@
  */
 
 /** Every metric this pack knows. A name outside this list is refused. */
-export const METRICS = ["itemUse"];
+export const METRICS = ["itemUse", "blockInteractions", "entityInteractions", "containerInteractions"];
 
 /**
  * A Minecraft namespaced identifier: lowercase namespace, colon, path.

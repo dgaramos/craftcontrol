@@ -25,7 +25,8 @@ assert.equal(envelopes().some((item) => item.type === "items.used"), false, "ite
 
 system.afterEvents.scriptEventReceive.emit({ id: "bedrock_telemetry:metrics", message: "enable itemUse" });
 const announced = envelopes().findLast((item) => item.type === "metrics.changed");
-assert.deepEqual(announced?.data.metrics, { itemUse: true }, "enabling a metric must be announced");
+assert.equal(announced?.data.metrics.itemUse, true, "enabling a metric must be announced");
+assert.equal(announced?.data.metrics.blockInteractions, false, "enabling one metric must not enable another");
 
 use("minecraft:bow");
 use("minecraft:bow");
@@ -44,7 +45,7 @@ assert.equal(snapshot?.data.itemsUsed, 3, "the snapshot must reconcile the count
 assert.deepEqual(snapshot?.data.usedByType, { "minecraft:bow": 2, "minecraft:splash_potion": 1 });
 
 const started = envelopes().findLast((item) => item.type === "snapshot.started");
-assert.deepEqual(started?.data.metrics, { itemUse: true }, "a snapshot must report which metrics are enabled");
+assert.equal(started?.data.metrics.itemUse, true, "a snapshot must report which metrics are enabled");
 
 // Turning it off stops collection without disturbing what was already counted.
 system.afterEvents.scriptEventReceive.emit({ id: "bedrock_telemetry:metrics", message: "disable itemUse" });

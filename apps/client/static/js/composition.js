@@ -1,7 +1,7 @@
 import { api } from "./api.js?v=7";
 import { connectEventStream } from "./events.js";
 import { requireSession, showSessions, showPasswordChange } from "./auth.js?v=8";
-import { state } from "./core/state.js?v=7";
+import { state } from "./core/state.js?v=8";
 import { createNavTrail } from "./core/route.js?v=8";
 import { indicatorState, worldPresentation } from "./core/panel-state.js?v=1";
 import { $, escapeHtml } from "./core/dom.js?v=7";
@@ -9,11 +9,11 @@ import { connectInvalidation } from "./core/invalidation.js?v=7";
 import { createNavigation } from "./core/navigation.js?v=10";
 import { toast } from "./components/feedback.js?v=7";
 import { formatDate as formatLocalizedDate, formatDuration, sessionMoment as localizedSessionMoment, timelineTimestamp as localizedTimelineTimestamp } from "./components/time.js?v=9";
-import { createAnalyticsFeature } from "./features/analytics/index.js?v=9";
+import { createAnalyticsFeature } from "./features/analytics/index.js?v=10";
 import { createPlayersFeature } from "./features/players/index.js?v=10";
 import { createWorldFeature } from "./features/world/index.js?v=13";
 import { createRulesFeature } from "./features/rules/index.js?v=7";
-import { createServerFeature } from "./features/server/index.js?v=20";
+import { createServerFeature } from "./features/server/index.js?v=21";
 import { UNRESPONSIVE_AFTER_MS } from "./features/server/operation.js?v=15";
 import { startAuthenticatedApplication } from "./features/auth/bootstrap.js?v=7";
 import { createSettingsFeature } from "./features/settings/index.js?v=10";
@@ -21,7 +21,7 @@ import { createAuditFeature } from "./features/audit/index.js?v=2";
 import { createExportsFeature } from "./features/exports/index.js?v=1";
 import { downloadFile } from "./core/download.js?v=1";
 import { createHomeFeature } from "./features/home/index.js?v=7";
-import { createI18n } from "./i18n/index.js?v=16";
+import { createI18n } from "./i18n/index.js?v=17";
 import { createGameTerms } from "./i18n/game-terms.js?v=7";
 
 export function startApplication() {

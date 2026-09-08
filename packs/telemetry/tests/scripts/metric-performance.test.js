@@ -20,7 +20,7 @@ const SHARD_BUDGET_BYTES = 30000;
 const LONGEST_IDENTIFIER = 43;
 
 const BLOCK_MAPS = ["brokenByType", "placedByType", "killsByType"];
-// Every map epic #21 adds, including the three #275 still owes.
+// Every map epic #21 added.
 const METRIC_MAPS = ["usedByType", "interactedBlocksByType", "interactedEntitiesByType", "openedContainersByType"];
 
 function identifiers(prefix, count, length) {
@@ -50,7 +50,7 @@ test("a player shard with item use enabled and every map full fits the budget", 
   expect(shardBytes(fullPlayer({ metricMaps: ["usedByType"] }))).toBeLessThan(SHARD_BUDGET_BYTES);
 });
 
-test("the budget still holds once the interaction metrics of #275 land", () => {
+test("the budget holds with every metric of the epic enabled and every map full", () => {
   // The bound was chosen from this number, not the other way round: at 128
   // entries these four maps overflow the shard by more than 50%.
   expect(shardBytes(fullPlayer())).toBeLessThan(SHARD_BUDGET_BYTES);
@@ -64,6 +64,16 @@ test("128-entry metric maps would overflow the shard, which is why they are smal
   }
   expect(shardBytes(overflowing)).toBeGreaterThan(SHARD_BUDGET_BYTES);
   expect(MAX_METRIC_TYPES).toBeLessThan(MAX_BLOCK_TYPES);
+});
+
+test("a full shard still fits when every counter is a large number", () => {
+  // Counters are exact and unbounded; only the breakdowns are capped. A
+  // long-lived world must not lose a shard because the totals grew.
+  const player = fullPlayer();
+  for (const counter of ["itemsUsed", "blockInteractions", "entityInteractions", "containerOpens", "blocksBroken", "distance"]) {
+    player[counter] = 9_999_999_999;
+  }
+  expect(shardBytes(player)).toBeLessThan(SHARD_BUDGET_BYTES);
 });
 
 test("eviction costs the long tail and never the total", () => {

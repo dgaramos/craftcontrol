@@ -7,6 +7,8 @@ let subscribeScriptEvents;
 let startMovementSampling;
 let readGameMode;
 let probeGameModeReading;
+let probeContainerReading;
+let isContainer;
 let capabilitySnapshot;
 
 let mockWorld;
@@ -47,6 +49,8 @@ beforeEach(async () => {
     startMovementSampling,
     readGameMode,
     probeGameModeReading,
+    probeContainerReading,
+    isContainer,
     capabilitySnapshot,
   } = await import("../../behavior_pack/scripts/adapters/capabilities.js"));
 });
@@ -265,5 +269,53 @@ describe("capabilitySnapshot", () => {
 
     const keys = Object.keys(capabilitySnapshot());
     expect(keys).toEqual([...keys].sort());
+  });
+});
+
+// ---------------------------------------------------------------------------
+// container reading (issue #275)
+// ---------------------------------------------------------------------------
+
+describe("probeContainerReading", () => {
+  test("records the capability as supported when the runtime exposes components", () => {
+    probeContainerReading({ getComponent: jest.fn() });
+    expect(capabilitySnapshot().containerInteractions.supported).toBe(true);
+  });
+
+  test("records it as unsupported on a runtime without component access", () => {
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    probeContainerReading({});
+    expect(capabilitySnapshot().containerInteractions.supported).toBe(false);
+    warn.mockRestore();
+  });
+
+  test("does nothing without a block to probe", () => {
+    probeContainerReading(undefined);
+    expect(capabilitySnapshot()).toEqual({});
+  });
+
+  test("only records once", () => {
+    probeContainerReading({ getComponent: jest.fn() });
+    probeContainerReading({});
+    expect(capabilitySnapshot().containerInteractions.supported).toBe(true);
+  });
+});
+
+describe("isContainer", () => {
+  test("a block with an inventory component is a container", () => {
+    expect(isContainer({ getComponent: (name) => (name === "minecraft:inventory" ? {} : null) })).toBe(true);
+  });
+
+  test("a block without one is not", () => {
+    expect(isContainer({ getComponent: () => null })).toBe(false);
+  });
+
+  test("a runtime that throws reads as not a container rather than crashing the handler", () => {
+    expect(isContainer({ getComponent: () => { throw new Error("unsupported"); } })).toBe(false);
+  });
+
+  test("a missing block is not a container", () => {
+    expect(isContainer(undefined)).toBe(false);
+    expect(isContainer({})).toBe(false);
   });
 });

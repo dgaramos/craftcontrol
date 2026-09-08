@@ -59,6 +59,29 @@ export function probeGameModeReading(players) {
   record("gameModeReading", players.some((p) => typeof p?.getGameMode === "function"));
 }
 
+let containerProbed = false;
+
+/**
+ * Record whether this runtime lets the pack tell a container from a block.
+ *
+ * There is no container-open event: a container open is a block interaction
+ * with a block that has an inventory component. A runtime that does not expose
+ * the component makes the metric unavailable rather than zero.
+ */
+export function probeContainerReading(block) {
+  if (containerProbed || !block) return;
+  containerProbed = true;
+  record("containerInteractions", typeof block.getComponent === "function");
+}
+
+export function isContainer(block) {
+  try {
+    return Boolean(block?.getComponent?.("minecraft:inventory"));
+  } catch {
+    return false;
+  }
+}
+
 export function capabilitySnapshot() {
   return Object.fromEntries(Object.entries(capabilities).sort(([left], [right]) => left.localeCompare(right)));
 }

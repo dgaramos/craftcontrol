@@ -33,6 +33,8 @@ Telemetry Pack `0.2.3` also probes optional stable event signals before subscrib
 
 Telemetry Pack `0.5.0` adds metrics that collect nothing until a server owner enables them. `GET /api/telemetry/metrics` reports the state the pack itself announced — never the state CraftControl last requested — and `POST /api/telemetry/metrics` (`telemetry.manage`, audited) asks the pack to change one metric over the console channel. The pack answers with `metrics.changed`, so the response carries `pending: true` until that answer arrives. Storage stays at v3: the new aggregates are additive and the pack's loader already reads a missing one as zero, so no world is migrated.
 
+Telemetry Pack `0.6.0` adds the three interaction metrics. `GET /api/analytics/interactions` aggregates every opt-in metric and carries an `availability` map beside the totals, because a zero has two very different causes — nobody did it, or nobody is collecting it — and only the pack knows which. The **Analytics → Interactions** view uses it: a metric that is disabled, unsupported, or not yet confirmed by the pack replaces its numbers with the reason, and only a metric that is both enabled and supported may show a total. The switches live in the **Server → Telemetry Pack** card, one per metric, and say "sent to the server" until the pack confirms the change.
+
 Telemetry Pack `0.3.0` upgrades persisted storage to v3 and adds bounded kills by creature type plus per-dimension distance, sampled active movement time, and first/last observations. The v2 metadata and every original v2 player shard are retained under backup dynamic properties before v3 is committed. Existing counters survive; only newly introduced metrics begin at zero.
 
 ## Safety and persistence

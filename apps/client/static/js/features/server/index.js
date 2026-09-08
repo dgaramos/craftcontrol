@@ -2,7 +2,7 @@ import { createOperationFeature, isUnresponsiveOperation, nextOperationTransitio
 
 export function createServerFeature({ state, content, t, api, $, escapeHtml, uiIcon, formatDate, toast, getSettingsFeature }) {
 function telemetryPackMarkup() {
-  return `<section class="telemetry-pack-card block-panel"><div><span class="eyebrow">CRAFTCONTROL</span><h3>${t("telemetryPack")}</h3><p>${t("telemetryPackHelp")}</p></div><div id="telemetry-pack-state" class="telemetry-pack-state">${t("checking")}</div><details id="diagnostics-details" class="telemetry-pack-diagnostics diag-details"><summary><div class="diag-summary-header"><div><span class="eyebrow">${t("diagDashboardEyebrow")}</span><h3 class="diag-summary-title">${t("diagDashboard")}</h3><p class="diag-summary-sub">${t("diagDashboardHelp")}</p></div><span class="diag-summary-toggle"></span></div></summary><div id="diagnostics-state" class="diag-details-body"></div></details></section>`;
+  return `<section class="telemetry-pack-card block-panel"><div><span class="eyebrow">CRAFTCONTROL</span><h3>${t("telemetryPack")}</h3><p>${t("telemetryPackHelp")}</p></div><div id="telemetry-pack-state" class="telemetry-pack-state">${t("checking")}</div><section id="telemetry-metrics" class="telemetry-metrics capability-panel">${t("checking")}</section><details id="diagnostics-details" class="telemetry-pack-diagnostics diag-details"><summary><div class="diag-summary-header"><div><span class="eyebrow">${t("diagDashboardEyebrow")}</span><h3 class="diag-summary-title">${t("diagDashboard")}</h3><p class="diag-summary-sub">${t("diagDashboardHelp")}</p></div><span class="diag-summary-toggle"></span></div></summary><div id="diagnostics-state" class="diag-details-body"></div></details></section>`;
 }
 
 function formatBytes(n) {
@@ -280,6 +280,50 @@ async function loadDiagnostics() {
   }
 }
 
+const OPT_IN_METRICS = [
+  ["itemUse", "itemUseMetric"],
+  ["blockInteractions", "blockInteractionsMetric"],
+  ["entityInteractions", "entityInteractionsMetric"],
+  ["containerInteractions", "containerInteractionsMetric"],
+];
+
+/**
+ * The opt-in metric switches (issue #275).
+ *
+ * A change travels the Bedrock console, so the pack answers a moment later:
+ * the row says "sent to the server" until it does, instead of flipping to a
+ * state nobody has confirmed. Capabilities come from the same pack payload, so
+ * a metric this runtime cannot deliver is labelled rather than offered.
+ */
+async function loadTelemetryMetrics(capabilities = {}) {
+  const target = $("#telemetry-metrics");
+  if (!target) return;
+  try {
+    const result = await api("/api/telemetry/metrics");
+    const metrics = result.metrics || {};
+    target.innerHTML = `<div><strong>${t("optInMetrics")}</strong><small>${t("optInMetricsHelp")}</small></div><ul>${OPT_IN_METRICS.map(([metric, label]) => {
+      const enabled = metrics[metric] === true;
+      const supported = capabilities[metric]?.supported;
+      const status = enabled && supported === false ? t("metricUnsupported") : enabled ? t("metricCollecting") : t("metricDisabled");
+      return `<li class="${enabled ? "supported" : "unavailable"}"><span>${uiIcon(enabled ? "check" : "close")}</span><div><strong>${escapeHtml(t(label))}</strong><small>${escapeHtml(status)}</small></div><button class="secondary" data-metric="${metric}" data-metric-enabled="${enabled ? "false" : "true"}" type="button">${enabled ? t("metricDisable") : t("metricEnable")}</button></li>`;
+    }).join("")}</ul>`;
+    target.querySelectorAll("[data-metric]").forEach((button) => button.onclick = async () => {
+      button.disabled = true;
+      const row = button.closest("li");
+      const note = row?.querySelector("small");
+      if (note) note.textContent = t("metricPending");
+      try {
+        await api("/api/telemetry/metrics", {
+          method: "POST",
+          body: JSON.stringify({ metric: button.dataset.metric, enabled: button.dataset.metricEnabled === "true" }),
+        });
+        toast(t("metricChanged"));
+        await loadTelemetryMetrics(capabilities);
+      } catch (error) { toast(error.message, true); button.disabled = false; }
+    });
+  } catch (error) { target.textContent = error.message; }
+}
+
 async function loadTelemetryPack() {
   const target = $("#telemetry-pack-state");
   if (!target) return;
@@ -303,6 +347,7 @@ async function loadTelemetryPack() {
         await loadTelemetryPack();
       } catch (error) { toast(error.message, true); button.disabled = false; }
     });
+    await loadTelemetryMetrics(pack.capabilities || {});
   } catch (error) { target.textContent = error.message; }
 }
 

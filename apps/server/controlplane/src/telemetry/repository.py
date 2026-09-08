@@ -11,12 +11,12 @@ keep those reconciliation rules in the player domain without duplicating them.
 from __future__ import annotations
 
 import json
-import re
 import time
 from pathlib import Path
 from typing import Any
 
 from ..core.sqlite import open_connection
+from .metrics import is_metric_key
 from ..players.sqlite import (
     add_daily,
     player_identity,
@@ -27,10 +27,8 @@ from ..players.sqlite import (
 STALE_THRESHOLD_SECONDS = 1200
 
 # Opt-in metric maps are bounded tighter than the block maps and accept any
-# namespaced identifier, matching the pack (docs/telemetry-metrics.md). The
-# shape is the privacy boundary: player-authored text cannot match it.
+# namespaced identifier, matching the pack (docs/telemetry-metrics.md).
 METRIC_MAP_LIMIT = 24
-_NAMESPACED_IDENTIFIER = re.compile(r"^[a-z0-9_]+:[a-z0-9_./-]+$")
 
 
 def _is_minecraft_key(value: str) -> bool:
@@ -38,7 +36,7 @@ def _is_minecraft_key(value: str) -> bool:
 
 
 def _is_namespaced_key(value: str) -> bool:
-    return bool(_NAMESPACED_IDENTIFIER.match(value))
+    return is_metric_key(value)
 
 _ALL_DOMAINS = ("settings", "gamerules", "players", "server", "telemetry")
 
@@ -178,7 +176,7 @@ class SQLiteTelemetryRepository:
                 )
                 changed.append(player)
             elif topic in {
-                "blocks.changed", "items.used", "player.respawned",
+                "blocks.changed", "items.used", "interactions.changed", "player.respawned",
                 "player.dimension.changed", "entity.died",
             }:
                 changed.extend(self._apply_telemetry_delta(connection, envelope, now))
@@ -247,6 +245,17 @@ class SQLiteTelemetryRepository:
                         stats, "itemsUsed", "usedByType", data,
                         limit=METRIC_MAP_LIMIT, accepts=_is_namespaced_key,
                     )
+                if topic == "interactions.changed" and name == names[0]:
+                    for bucket, total_field, map_field in (
+                        ("block", "blockInteractions", "interactedBlocksByType"),
+                        ("entity", "entityInteractions", "interactedEntitiesByType"),
+                        ("container", "containerOpens", "openedContainersByType"),
+                    ):
+                        batch = data.get(bucket) if isinstance(data.get(bucket), dict) else {}
+                        self._apply_block_batch(
+                            stats, total_field, map_field, batch,
+                            limit=METRIC_MAP_LIMIT, accepts=_is_namespaced_key,
+                        )
                 if topic == "entity.died" and name == data.get("victim"):
                     stats["deaths"] = int(stats.get("deaths", 0)) + 1
                     derived = connection.execute(

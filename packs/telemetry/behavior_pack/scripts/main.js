@@ -2,20 +2,20 @@ import { system, world } from "@minecraft/server";
 import { MAX_METRIC_TYPES, ensurePlayer, incrementMap, observeDimension, round } from "./model.js";
 import { metricKey } from "./domain/metrics.js";
 import { applyMetrics, flush, loadState, metricEnabled, metricsSnapshot, mutatePlayer, storageStatus } from "./adapters/store.js";
-import { publish, publishBlockChanges, publishItemUse, publishMetrics, publishSnapshot, queueBlockChange, queueItemUse } from "./adapters/transport.js";
-import { capabilitySnapshot, probeGameModeReading, readGameMode, startMovementSampling, subscribeScriptEvents } from "./adapters/capabilities.js";
+import { publish, publishBlockChanges, publishInteractions, publishItemUse, publishMetrics, publishSnapshot, queueBlockChange, queueInteraction, queueItemUse } from "./adapters/transport.js";
+import { capabilitySnapshot, isContainer, probeContainerReading, probeGameModeReading, readGameMode, startMovementSampling, subscribeScriptEvents } from "./adapters/capabilities.js";
 import { samplePlayerMovement } from "./domain/movement.js";
 import { trackGameModes, removePlayer } from "./domain/gamemode.js";
 import { registerEvents } from "./domain/events.js";
 
-const productionDependencies = { system, world, ensurePlayer, incrementMap, observeDimension, round, applyMetrics, flush, loadState, metricEnabled, metricKey, metricsSnapshot, mutatePlayer, storageStatus, publish, publishBlockChanges, publishItemUse, publishMetrics, publishSnapshot, queueBlockChange, queueItemUse, capabilitySnapshot, probeGameModeReading, readGameMode, startMovementSampling, subscribeScriptEvents, samplePlayerMovement, trackGameModes, removePlayer, registerEvents };
+const productionDependencies = { system, world, ensurePlayer, incrementMap, observeDimension, round, applyMetrics, flush, loadState, metricEnabled, metricKey, metricsSnapshot, mutatePlayer, storageStatus, publish, publishBlockChanges, publishInteractions, publishItemUse, publishMetrics, publishSnapshot, queueBlockChange, queueInteraction, queueItemUse, capabilitySnapshot, isContainer, probeContainerReading, probeGameModeReading, readGameMode, startMovementSampling, subscribeScriptEvents, samplePlayerMovement, trackGameModes, removePlayer, registerEvents };
 
 function playerName(entity) {
   return entity?.typeId === "minecraft:player" ? entity.name : null;
 }
 
 export function startTelemetryRuntime(overrides = {}) {
-  const { system, world, ensurePlayer, incrementMap, observeDimension, round, applyMetrics, flush, loadState, metricEnabled, metricKey, metricsSnapshot, mutatePlayer, storageStatus, publish, publishBlockChanges, publishItemUse, publishMetrics, publishSnapshot, queueBlockChange, queueItemUse, capabilitySnapshot, probeGameModeReading, readGameMode, startMovementSampling, subscribeScriptEvents, samplePlayerMovement, trackGameModes, removePlayer, registerEvents } = { ...productionDependencies, ...overrides };
+  const { system, world, ensurePlayer, incrementMap, observeDimension, round, applyMetrics, flush, loadState, metricEnabled, metricKey, metricsSnapshot, mutatePlayer, storageStatus, publish, publishBlockChanges, publishInteractions, publishItemUse, publishMetrics, publishSnapshot, queueBlockChange, queueInteraction, queueItemUse, capabilitySnapshot, isContainer, probeContainerReading, probeGameModeReading, readGameMode, startMovementSampling, subscribeScriptEvents, samplePlayerMovement, trackGameModes, removePlayer, registerEvents } = { ...productionDependencies, ...overrides };
   const positions = new Map();
   const gameModes = new Map();
 
@@ -105,6 +105,41 @@ registerEvents({
     queueItemUse(name, type);
   },
 
+  onPlayerInteractWithBlock(event) {
+    const name = event.player?.name;
+    const type = metricKey(event.block?.typeId);
+    if (!name || !type) return;
+    probeContainerReading(event.block);
+    if (metricEnabled("blockInteractions")) {
+      update(name, (stats) => {
+        stats.blockInteractions += 1;
+        incrementMap(stats.interactedBlocksByType, type, 1, MAX_METRIC_TYPES);
+      });
+      queueInteraction(name, "block", type);
+    }
+    // A container open is a block interaction with a block that has an
+    // inventory; the two metrics are independent, so one may be on alone.
+    if (metricEnabled("containerInteractions") && isContainer(event.block)) {
+      update(name, (stats) => {
+        stats.containerOpens += 1;
+        incrementMap(stats.openedContainersByType, type, 1, MAX_METRIC_TYPES);
+      });
+      queueInteraction(name, "container", type);
+    }
+  },
+
+  onPlayerInteractWithEntity(event) {
+    if (!metricEnabled("entityInteractions")) return;
+    const name = event.player?.name;
+    const type = metricKey(event.target?.typeId);
+    if (!name || !type) return;
+    update(name, (stats) => {
+      stats.entityInteractions += 1;
+      incrementMap(stats.interactedEntitiesByType, type, 1, MAX_METRIC_TYPES);
+    });
+    queueInteraction(name, "entity", type);
+  },
+
   onPlayerDimensionChange(event) {
     update(event.player.name, (stats) => observeDimension(stats, event.toDimension.id, Date.now(), true));
     positions.set(event.player.id, { ...event.toLocation, dimension: event.toDimension.id });
@@ -137,13 +172,14 @@ startMovementSampling(() => {
   trackGameModes(gameModes, livePlayers, readGameMode, publish);
   publishBlockChanges();
   publishItemUse();
+  publishInteractions();
   flush();
 }, 100);
 
 system.runTimeout(() => {
   loadState();
   probeGameModeReading(world.getAllPlayers());
-  publish("telemetry.started", null, { version: "0.5.0", product: "CraftControl Telemetry Pack", storage: storageStatus(), capabilities: capabilitySnapshot(), metrics: metricsSnapshot() });
+  publish("telemetry.started", null, { version: "0.6.0", product: "CraftControl Telemetry Pack", storage: storageStatus(), capabilities: capabilitySnapshot(), metrics: metricsSnapshot() });
   publishSnapshot();
 }, 1);
 }

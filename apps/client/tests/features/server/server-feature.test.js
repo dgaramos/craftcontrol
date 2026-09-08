@@ -133,7 +133,7 @@ describe("createServerFeature", () => {
     const actions = [];
     deps.api = jest.fn((path) => {
       if (path === "/api/telemetry-pack") return Promise.resolve(packState);
-      if (path === "/api/telemetry/metrics") return Promise.resolve({ metrics: {}, available: [] });
+      if (path === "/api/telemetry/collection") return Promise.resolve({ metrics: {}, available: [] });
       actions.push(path);
       if (path === "/api/telemetry-pack/rollback") return Promise.reject(new Error("operation unavailable"));
       return Promise.resolve({ restart_required: true });
@@ -728,14 +728,18 @@ describe("opt-in metric switches", () => {
     const rows = [];
     target.querySelectorAll = jest.fn(() => rows);
     deps.elements["#telemetry-metrics"] = target;
-    deps.api = jest.fn((path) => {
-      if (path === "/api/telemetry/metrics") return Promise.resolve({ metrics, available: Object.keys(metrics) });
+    const failures = { post: null };
+    deps.api = jest.fn((path, options) => {
+      if (path === "/api/telemetry/collection") {
+        if (options?.method === "POST" && failures.post) return Promise.reject(failures.post);
+        return Promise.resolve({ metrics, available: Object.keys(metrics) });
+      }
       return Promise.resolve({
         installed: true, enabled: true, health: "healthy", capabilities: {}, application: {},
         capabilities_supported: 0, capabilities_total: 0, ...packOverrides,
       });
     });
-    return { deps, target, rows };
+    return { deps, target, rows, failures };
   }
 
   const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -762,9 +766,46 @@ describe("opt-in metric switches", () => {
     expect(target.innerHTML).toContain("metricUnsupported");
   });
 
+  test("switching a metric posts the opposite state and re-reads the card", async () => {
+    const { deps, target, rows } = metricDeps({ itemUse: false, blockInteractions: false, entityInteractions: false, containerInteractions: false });
+    const note = makeEl();
+    const button = makeEl({ dataset: { metric: "itemUse", metricEnabled: "true" }, disabled: false });
+    button.closest = jest.fn(() => makeEl({ querySelector: jest.fn(() => note) }));
+    rows.push(button);
+    createServerFeature(deps).renderServer();
+    await settle();
+
+    await button.onclick();
+    expect(deps.api).toHaveBeenCalledWith("/api/telemetry/collection", {
+      method: "POST",
+      body: JSON.stringify({ metric: "itemUse", enabled: true }),
+    });
+    // The row says the request is in flight rather than flipping to a state
+    // the pack has not confirmed.
+    expect(note.textContent).toBe("metricPending");
+    expect(deps.toast).toHaveBeenCalledWith("metricChanged");
+    expect(target.innerHTML).toContain("optInMetrics");
+  });
+
+  test("a refused switch reports the reason and gives the control back", async () => {
+    const { deps, rows, failures } = metricDeps({ itemUse: true, blockInteractions: false, entityInteractions: false, containerInteractions: false });
+    const button = makeEl({ dataset: { metric: "itemUse", metricEnabled: "false" }, disabled: false });
+    button.closest = jest.fn(() => makeEl({ querySelector: jest.fn(() => null) }));
+    rows.push(button);
+    createServerFeature(deps).renderServer();
+    await settle();
+
+    // The console is unreachable, which the panel must report rather than
+    // leaving the switch stuck.
+    failures.post = new Error("container bedrock not found");
+    await button.onclick();
+    expect(deps.toast).toHaveBeenCalledWith("container bedrock not found", true);
+    expect(button.disabled).toBe(false);
+  });
+
   test("a failed metric read shows the reason instead of an empty card", async () => {
     const { deps, target } = metricDeps({});
-    deps.api = jest.fn((path) => (path === "/api/telemetry/metrics"
+    deps.api = jest.fn((path) => (path === "/api/telemetry/collection"
       ? Promise.reject(new Error("metrics unavailable"))
       : Promise.resolve({ installed: true, enabled: true, health: "healthy", capabilities: {}, application: {} })));
     createServerFeature(deps).renderServer();

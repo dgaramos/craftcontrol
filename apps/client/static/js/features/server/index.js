@@ -1,8 +1,15 @@
+import { createPackHealthPanel } from "./health.js?v=1";
 import { createOperationFeature, isUnresponsiveOperation, nextOperationTransition } from "./operation.js?v=15";
 
 export function createServerFeature({ state, content, t, api, $, escapeHtml, uiIcon, formatDate, toast, getSettingsFeature }) {
 function telemetryPackMarkup() {
-  return `<section class="telemetry-pack-card block-panel"><div><span class="eyebrow">CRAFTCONTROL</span><h3>${t("telemetryPack")}</h3><p>${t("telemetryPackHelp")}</p></div><div id="telemetry-pack-state" class="telemetry-pack-state">${t("checking")}</div><section id="telemetry-metrics" class="telemetry-metrics capability-panel">${t("checking")}</section><details id="diagnostics-details" class="telemetry-pack-diagnostics diag-details"><summary><div class="diag-summary-header"><div><span class="eyebrow">${t("diagDashboardEyebrow")}</span><h3 class="diag-summary-title">${t("diagDashboard")}</h3><p class="diag-summary-sub">${t("diagDashboardHelp")}</p></div><span class="diag-summary-toggle"></span></div></summary><div id="diagnostics-state" class="diag-details-body"></div></details></section>`;
+  // Three cards, one concern each: what is installed, what it is allowed to
+  // collect, and how it is behaving. Pack health used to live in Analytics,
+  // which put infrastructure next to facts about the world.
+  const packCard = `<section class="telemetry-pack-card block-panel"><div><span class="eyebrow">CRAFTCONTROL</span><h3>${t("telemetryPack")}</h3><p>${t("telemetryPackHelp")}</p></div><div id="telemetry-pack-state" class="telemetry-pack-state">${t("checking")}</div><section id="telemetry-metrics" class="telemetry-metrics capability-panel">${t("checking")}</section></section>`;
+  const healthCard = `<section id="pack-health" class="pack-health"><div class="analytics-loading">${t("checking")}</div></section>`;
+  const diagnosticsCard = `<section class="telemetry-pack-card block-panel"><details id="diagnostics-details" class="telemetry-pack-diagnostics diag-details"><summary><div class="diag-summary-header"><div><span class="eyebrow">${t("diagDashboardEyebrow")}</span><h3 class="diag-summary-title">${t("diagDashboard")}</h3><p class="diag-summary-sub">${t("diagDashboardHelp")}</p></div><span class="diag-summary-toggle"></span></div></summary><div id="diagnostics-state" class="diag-details-body"></div></details></section>`;
+  return `${packCard}${healthCard}${diagnosticsCard}`;
 }
 
 function formatBytes(n) {
@@ -299,7 +306,7 @@ async function loadTelemetryMetrics(capabilities = {}) {
   const target = $("#telemetry-metrics");
   if (!target) return;
   try {
-    const result = await api("/api/telemetry/metrics");
+    const result = await api("/api/telemetry/collection");
     const metrics = result.metrics || {};
     target.innerHTML = `<div><strong>${t("optInMetrics")}</strong><small>${t("optInMetricsHelp")}</small></div><ul>${OPT_IN_METRICS.map(([metric, label]) => {
       const enabled = metrics[metric] === true;
@@ -313,7 +320,7 @@ async function loadTelemetryMetrics(capabilities = {}) {
       const note = row?.querySelector("small");
       if (note) note.textContent = t("metricPending");
       try {
-        await api("/api/telemetry/metrics", {
+        await api("/api/telemetry/collection", {
           method: "POST",
           body: JSON.stringify({ metric: button.dataset.metric, enabled: button.dataset.metricEnabled === "true" }),
         });
@@ -494,10 +501,16 @@ async function initializeOperationProgress() {
     loadTelemetryPack();
   }
 
+  // Pack health reads the same infrastructure this screen manages, so it is
+  // rendered here rather than in Analytics, where it used to sit next to facts
+  // about the world (issue #275 follow-up).
+  const renderPackHealth = createPackHealthPanel({ $, t, uiIcon, api, formatDate });
+
   const renderServer = renderServerPanel;
   const renderServerSettings = () => {
     getSettingsFeature().renderSettingsGroups(["Packs", "Rede", "Avançado"], telemetryPackMarkup());
     loadTelemetryPack();
+    renderPackHealth();
     // The diagnostics dashboard only exists in this screen's markup, so it has
     // to be filled here — the server hub has no #diagnostics-state to target.
     loadDiagnostics();

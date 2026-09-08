@@ -123,6 +123,17 @@ describe("createAnalyticsFeature — factory setup", () => {
     await expect(render()).resolves.toBeUndefined();
   });
 
+  test("render with kind=interactions routes to the interactions panel", async () => {
+    const deps = makeAnalyticsDeps({ kind: "interactions" });
+    deps.api = jest.fn().mockResolvedValue({
+      totals: {}, top: {}, rankings: {}, players: [], availability: {}, generated_at: 1,
+    });
+    deps.$ = jest.fn(() => makeEl());
+    const { render } = createAnalyticsFeature(deps);
+    await render();
+    expect(deps.content.innerHTML).toContain("interactions-screen");
+  });
+
   test("render with kind=trends falls through", async () => {
     const deps = makeAnalyticsDeps({ kind: "trends" });
     deps.api = jest.fn().mockRejectedValue(new Error("api error"));

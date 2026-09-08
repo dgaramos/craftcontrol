@@ -121,9 +121,9 @@ describe("brand contracts — mobile scroll behaviour", () => {
     expect(dom).toContain("export function resetPanelScroll");
   });
 
-  test("index.html references app.css?v=57", () => {
+  test("index.html references app.css?v=58", () => {
     const template = readFileSync(join(FRONTEND, "templates", "index.html"), "utf8");
-    expect(template).toContain("/static/app.css?v=57");
+    expect(template).toContain("/static/app.css?v=58");
   });
 
   test("index.html references app.js?v=100", () => {

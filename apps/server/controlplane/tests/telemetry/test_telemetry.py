@@ -211,3 +211,109 @@ def test_batched_block_deltas_update_totals_maps_and_daily_buckets(
     with sqlite3.connect(tmp_path / "state.db") as connection:
         daily = connection.execute("SELECT blocks_broken,blocks_placed FROM player_daily").fetchone()
     assert daily == (3, 2)
+
+
+# ---------------------------------------------------------------------------
+# Opt-in metrics (issue #274)
+# ---------------------------------------------------------------------------
+
+def test_item_use_batch_updates_the_counter_and_the_bounded_map(
+    player_repo: SQLitePlayerRepository,
+    telemetry_repo: SQLiteTelemetryRepository,
+) -> None:
+    telemetry_repo.ingest_telemetry(telemetry_envelope(
+        "snapshot.player", sequence=1, player="VonCrush",
+        data={"itemsUsed": 4, "usedByType": {"minecraft:bow": 4}},
+    ))
+    batch = telemetry_envelope(
+        "items.used", sequence=2, timestamp=2, player="VonCrush",
+        data={"total": 3, "byType": {"minecraft:bow": 2, "minecraft:splash_potion": 1}},
+    )
+    assert telemetry_repo.ingest_telemetry(batch)[0]
+    assert not telemetry_repo.ingest_telemetry(batch)[0]
+    stats = player_repo.player_profiles()[0]["telemetry"]
+    assert stats["itemsUsed"] == 7
+    assert stats["usedByType"] == {"minecraft:bow": 6, "minecraft:splash_potion": 1}
+
+
+def test_item_use_accepts_an_addon_identifier_but_not_a_custom_name(
+    player_repo: SQLitePlayerRepository,
+    telemetry_repo: SQLiteTelemetryRepository,
+) -> None:
+    player_repo.observe_player("VonCrush", True, "99")
+    telemetry_repo.ingest_telemetry(telemetry_envelope(
+        "items.used", sequence=1, player="VonCrush",
+        data={"total": 3, "byType": {
+            "someaddon:magic_wand": 1,
+            "Excalibur": 1,
+            "minecraft:bow": 1,
+        }},
+    ))
+    stats = player_repo.player_profiles()[0]["telemetry"]
+    # A player-authored name is not an identifier and never becomes a key; the
+    # total follows the keys that were kept rather than the declared count.
+    assert stats["usedByType"] == {"someaddon:magic_wand": 1, "minecraft:bow": 1}
+    assert stats["itemsUsed"] == 2
+
+
+def test_item_use_map_is_bounded_tighter_than_the_block_maps(
+    player_repo: SQLitePlayerRepository,
+    telemetry_repo: SQLiteTelemetryRepository,
+) -> None:
+    from src.telemetry.repository import METRIC_MAP_LIMIT
+
+    player_repo.observe_player("VonCrush", True, "99")
+    counts = {f"minecraft:item_{index:03d}": index + 1 for index in range(METRIC_MAP_LIMIT * 3)}
+    telemetry_repo.ingest_telemetry(telemetry_envelope(
+        "items.used", sequence=1, player="VonCrush",
+        data={"total": sum(counts.values()), "byType": counts},
+    ))
+    stats = player_repo.player_profiles()[0]["telemetry"]
+    assert len(stats["usedByType"]) == METRIC_MAP_LIMIT
+    # Eviction costs the long tail, never the total.
+    assert stats["itemsUsed"] == sum(counts.values())
+    assert min(stats["usedByType"].values()) > 1
+
+
+def test_item_use_batch_does_not_disturb_the_block_maps(
+    player_repo: SQLitePlayerRepository,
+    telemetry_repo: SQLiteTelemetryRepository,
+) -> None:
+    telemetry_repo.ingest_telemetry(telemetry_envelope(
+        "snapshot.player", sequence=1, player="VonCrush",
+        data={"blocksBroken": 5, "brokenByType": {"minecraft:stone": 5}},
+    ))
+    telemetry_repo.ingest_telemetry(telemetry_envelope(
+        "items.used", sequence=2, timestamp=2, player="VonCrush",
+        data={"total": 1, "byType": {"minecraft:bow": 1}},
+    ))
+    stats = player_repo.player_profiles()[0]["telemetry"]
+    assert stats["blocksBroken"] == 5
+    assert stats["brokenByType"] == {"minecraft:stone": 5}
+    assert stats["itemsUsed"] == 1
+
+
+def test_a_snapshot_reconciles_the_item_counter_after_lost_batches(
+    player_repo: SQLitePlayerRepository,
+    telemetry_repo: SQLiteTelemetryRepository,
+) -> None:
+    telemetry_repo.ingest_telemetry(telemetry_envelope(
+        "items.used", sequence=1, player="VonCrush",
+        data={"total": 2, "byType": {"minecraft:bow": 2}},
+    ))
+    # The pack counted more than the manager saw; the snapshot is authoritative.
+    telemetry_repo.ingest_telemetry(telemetry_envelope(
+        "snapshot.player", sequence=9, timestamp=9, player="VonCrush",
+        data={"itemsUsed": 11, "usedByType": {"minecraft:bow": 11}},
+    ))
+    stats = player_repo.player_profiles()[0]["telemetry"]
+    assert stats["itemsUsed"] == 11
+    assert stats["usedByType"] == {"minecraft:bow": 11}
+
+
+def test_metrics_changed_is_an_accepted_topic() -> None:
+    line = (
+        '[BEDROCK_TELEMETRY] {"schema":1,"sequence":3,"type":"metrics.changed",'
+        '"timestamp":1,"player":null,"data":{"metrics":{"itemUse":true}}}'
+    )
+    assert parse_telemetry_line(line)["data"]["metrics"] == {"itemUse": True}

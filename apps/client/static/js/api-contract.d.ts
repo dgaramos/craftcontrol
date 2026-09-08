@@ -54,3 +54,6 @@ export type ServerOperation = { operation_id?: string; server_id?: string; state
 export type OperationStageRecord = { stage?: string; result?: "pending" | "running" | "completed" | "failed" | "skipped"; started_at?: string | null; completed_at?: string | null; evidence?: { [key: string]: unknown; }; error?: string | null; };
 export type AuditRecord = { id: number; occurred_at: number; actor: string | null; action: string; target: string | null; result: string; metadata: { [key: string]: unknown; }; };
 export type AuditPage = { records: Array<AuditRecord>; total: number; page: number; page_size: number; pages: number; };
+export type TelemetryMetricMap = { [key: string]: boolean; };
+export type TelemetryMetricState = { metrics: TelemetryMetricMap; available: Array<string>; };
+export type TelemetryMetricUpdate = { metric: string; enabled: boolean; metrics: TelemetryMetricMap; pending: boolean; };

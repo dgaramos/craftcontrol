@@ -2,11 +2,18 @@ from __future__ import annotations
 
 import json
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, g, jsonify, request
 
 from .dependencies import manager, telemetry_installer
 from ..auth.http import require
+from ..telemetry.metrics import METRICS, UnknownMetric
 from ..version import STARTED_AT, VERSION
+
+
+def _actor() -> str | None:
+    """Return the current user's id when auth context is available."""
+    user = getattr(g, "user", None)
+    return user.get("id") if user else None
 
 telemetry_api = Blueprint("telemetry_api", __name__)
 
@@ -50,6 +57,37 @@ def telemetry_pack_status():
         return jsonify(pack)
     except (FileNotFoundError, TypeError, ValueError) as error:
         return jsonify(error=str(error)), 400
+
+
+@telemetry_api.get("/api/telemetry/metrics")
+@require("telemetry.manage")
+def telemetry_metrics():
+    """Report which opt-in metrics the pack says it is collecting."""
+    return jsonify(metrics=manager().telemetry_metrics(), available=list(METRICS))
+
+
+@telemetry_api.post("/api/telemetry/metrics")
+@require("telemetry.manage")
+def set_telemetry_metric():
+    """Enable or disable one opt-in metric.
+
+    Collection is the pack's decision to make; this asks it to change, and the
+    pack's own answer arrives over telemetry. `pending` is true until it does.
+    """
+    payload = request.get_json(silent=True)
+    if (
+        not isinstance(payload, dict)
+        or not isinstance(payload.get("metric"), str)
+        or not isinstance(payload.get("enabled"), bool)
+    ):
+        return jsonify(error="Informe a métrica e se ela fica ativa"), 400
+    try:
+        result = manager().set_telemetry_metric(payload["metric"], payload["enabled"], actor=_actor())
+    except UnknownMetric as error:
+        return jsonify(error=str(error)), 400
+    except (RuntimeError, ValueError) as error:
+        return jsonify(error=str(error)), 400
+    return jsonify(result)
 
 
 @telemetry_api.post("/api/telemetry-pack/<action>")

@@ -1,5 +1,6 @@
 import { world } from "@minecraft/server";
-import { PLAYER_BACKUP_V2_PREFIX, PLAYER_STATE_PREFIX, STATE_BACKUP_KEY, STATE_BACKUP_V1_KEY, STATE_BACKUP_V2_KEY, STATE_KEY, emptyState, playerKey, playerStateKey } from "../model.js";
+import { METRICS_KEY, PLAYER_BACKUP_V2_PREFIX, PLAYER_STATE_PREFIX, STATE_BACKUP_KEY, STATE_BACKUP_V1_KEY, STATE_BACKUP_V2_KEY, STATE_KEY, emptyState, playerKey, playerStateKey } from "../model.js";
+import { applyMetricCommand, parseMetrics } from "../domain/metrics.js";
 import { migrateShardedV2, migrateState, validateMeta, validatePlayerShard } from "../migrations.js";
 import { STORAGE_VERSION } from "../versions.js";
 
@@ -102,6 +103,58 @@ export function mutatePlayer(name, callback) {
   dirtyPlayers.add(key);
   metaDirty = true;
   return result;
+}
+
+// -- opt-in metrics ---------------------------------------------------------
+//
+// Metric state lives in its own dynamic property, outside the player shards and
+// their 30 KB budget: it is a handful of booleans, it changes only on an owner's
+// command, and keeping it separate means a blocked player-state write can never
+// silently re-enable collection.
+
+let metrics;
+
+export function metricsSnapshot() {
+  if (!metrics) {
+    let persisted = null;
+    try {
+      const raw = world.getDynamicProperty(METRICS_KEY);
+      persisted = typeof raw === "string" ? JSON.parse(raw) : null;
+    } catch (error) {
+      console.error(`[BEDROCK_TELEMETRY_ERROR] invalid persisted metrics: ${error}`);
+    }
+    metrics = parseMetrics(persisted);
+  }
+  return { ...metrics };
+}
+
+export function metricEnabled(name) {
+  return metricsSnapshot()[name] === true;
+}
+
+/**
+ * Apply one metric command and persist the result.
+ *
+ * Returns the resulting state for a command that was understood, so the caller
+ * can announce it, and `null` for one that was not.
+ */
+export function applyMetrics(message) {
+  const result = applyMetricCommand(metricsSnapshot(), message);
+  if (result.error) {
+    console.warn(`[BEDROCK_TELEMETRY_METRICS] ${result.error}`);
+    return null;
+  }
+  if (result.changed) {
+    metrics = result.metrics;
+    try {
+      world.setDynamicProperty(METRICS_KEY, JSON.stringify(metrics));
+    } catch (error) {
+      // The owner's decision still takes effect for this session; only its
+      // persistence failed, and that must be visible rather than silent.
+      console.error(`[BEDROCK_TELEMETRY_ERROR] failed to persist metrics: ${error}`);
+    }
+  }
+  return { ...result.metrics };
 }
 
 export function nextSequence() {

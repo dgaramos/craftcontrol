@@ -15,6 +15,7 @@ import { subscribeWorldEvent } from "../adapters/capabilities.js";
  * @param {Function} [handlers.onPlayerBreakBlock]
  * @param {Function} [handlers.onPlayerPlaceBlock]
  * @param {Function} [handlers.onPlayerDimensionChange]
+ * @param {Function} [handlers.onPlayerUseItem]
  */
 export function registerEvents(handlers = {}, subscribe = subscribeWorldEvent) {
   // Player lifecycle
@@ -50,5 +51,11 @@ export function registerEvents(handlers = {}, subscribe = subscribeWorldEvent) {
 
   subscribe("playerPlaceBlock", "blocksPlaced", (event) => {
     handlers.onPlayerPlaceBlock?.(event);
+  });
+
+  // Opt-in metrics. The subscription is what the capability reports; whether
+  // anything is counted is the owner's separate decision (docs/telemetry-metrics.md).
+  subscribe("itemUse", "itemUse", (event) => {
+    handlers.onPlayerUseItem?.(event);
   });
 }

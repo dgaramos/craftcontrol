@@ -12,7 +12,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { MAX_BLOCK_TYPES, emptyPlayer } from "../../behavior_pack/scripts/model.js";
+import { MAX_BLOCK_TYPES, MAX_METRIC_TYPES, emptyPlayer } from "../../behavior_pack/scripts/model.js";
+import { METRICS } from "../../behavior_pack/scripts/domain/metrics.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const POLICY = readFileSync(join(ROOT, "docs", "telemetry-metrics.md"), "utf8");
@@ -57,13 +58,22 @@ test("interaction metrics carry no coordinates", () => {
 
 test("the bound the policy states is the bound the pack applies", () => {
   assert.equal(MAX_BLOCK_TYPES, 128);
+  assert.equal(MAX_METRIC_TYPES, 24);
   assert.ok(POLICY.includes("128"));
+  assert.ok(POLICY.includes("(24)"), "the policy must state the bound opt-in metric maps actually use");
   assert.ok(POLICY.includes("30 KB"));
 });
 
+test("every metric the pack knows is named by the policy and declares a capability", () => {
+  for (const metric of METRICS) {
+    assert.ok(POLICY.includes(`\`${metric}\``), `the policy does not describe the ${metric} metric`);
+    assert.match(POLICY, new RegExp(`\\| \`${metric}\` \\|`), `the policy declares no capability for ${metric}`);
+  }
+});
+
 test("eviction drops the smallest counts and leaves the totals exact", () => {
-  assert.match(POLICY, /the lowest counts are\s*\n?dropped/);
-  assert.match(POLICY, /counters that accompany them stay exact/);
+  assert.match(POLICY, /the lowest counts are\s+dropped/);
+  assert.match(POLICY, /counters that accompany\s+them stay exact/);
 });
 
 test("every metric ships disabled and is enabled on its own", () => {

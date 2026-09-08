@@ -1,20 +1,21 @@
 import { system, world } from "@minecraft/server";
-import { ensurePlayer, incrementMap, observeDimension, round } from "./model.js";
-import { flush, loadState, mutatePlayer, storageStatus } from "./adapters/store.js";
-import { publish, publishBlockChanges, publishSnapshot, queueBlockChange } from "./adapters/transport.js";
+import { MAX_METRIC_TYPES, ensurePlayer, incrementMap, observeDimension, round } from "./model.js";
+import { metricKey } from "./domain/metrics.js";
+import { applyMetrics, flush, loadState, metricEnabled, metricsSnapshot, mutatePlayer, storageStatus } from "./adapters/store.js";
+import { publish, publishBlockChanges, publishItemUse, publishMetrics, publishSnapshot, queueBlockChange, queueItemUse } from "./adapters/transport.js";
 import { capabilitySnapshot, probeGameModeReading, readGameMode, startMovementSampling, subscribeScriptEvents } from "./adapters/capabilities.js";
 import { samplePlayerMovement } from "./domain/movement.js";
 import { trackGameModes, removePlayer } from "./domain/gamemode.js";
 import { registerEvents } from "./domain/events.js";
 
-const productionDependencies = { system, world, ensurePlayer, incrementMap, observeDimension, round, flush, loadState, mutatePlayer, storageStatus, publish, publishBlockChanges, publishSnapshot, queueBlockChange, capabilitySnapshot, probeGameModeReading, readGameMode, startMovementSampling, subscribeScriptEvents, samplePlayerMovement, trackGameModes, removePlayer, registerEvents };
+const productionDependencies = { system, world, ensurePlayer, incrementMap, observeDimension, round, applyMetrics, flush, loadState, metricEnabled, metricKey, metricsSnapshot, mutatePlayer, storageStatus, publish, publishBlockChanges, publishItemUse, publishMetrics, publishSnapshot, queueBlockChange, queueItemUse, capabilitySnapshot, probeGameModeReading, readGameMode, startMovementSampling, subscribeScriptEvents, samplePlayerMovement, trackGameModes, removePlayer, registerEvents };
 
 function playerName(entity) {
   return entity?.typeId === "minecraft:player" ? entity.name : null;
 }
 
 export function startTelemetryRuntime(overrides = {}) {
-  const { system, world, ensurePlayer, incrementMap, observeDimension, round, flush, loadState, mutatePlayer, storageStatus, publish, publishBlockChanges, publishSnapshot, queueBlockChange, capabilitySnapshot, probeGameModeReading, readGameMode, startMovementSampling, subscribeScriptEvents, samplePlayerMovement, trackGameModes, removePlayer, registerEvents } = { ...productionDependencies, ...overrides };
+  const { system, world, ensurePlayer, incrementMap, observeDimension, round, applyMetrics, flush, loadState, metricEnabled, metricKey, metricsSnapshot, mutatePlayer, storageStatus, publish, publishBlockChanges, publishItemUse, publishMetrics, publishSnapshot, queueBlockChange, queueItemUse, capabilitySnapshot, probeGameModeReading, readGameMode, startMovementSampling, subscribeScriptEvents, samplePlayerMovement, trackGameModes, removePlayer, registerEvents } = { ...productionDependencies, ...overrides };
   const positions = new Map();
   const gameModes = new Map();
 
@@ -89,6 +90,21 @@ registerEvents({
     queueBlockChange(event.player.name, "placed", type);
   },
 
+  onPlayerUseItem(event) {
+    // Opt-in: a pack that was never told to collect item use collects none of
+    // it, and an identifier that is not a namespaced id is discarded rather
+    // than stored (docs/telemetry-metrics.md).
+    if (!metricEnabled("itemUse")) return;
+    const type = metricKey(event.itemStack?.typeId);
+    const name = event.source?.name;
+    if (!type || !name) return;
+    update(name, (stats) => {
+      stats.itemsUsed += 1;
+      incrementMap(stats.usedByType, type, 1, MAX_METRIC_TYPES);
+    });
+    queueItemUse(name, type);
+  },
+
   onPlayerDimensionChange(event) {
     update(event.player.name, (stats) => observeDimension(stats, event.toDimension.id, Date.now(), true));
     positions.set(event.player.id, { ...event.toLocation, dimension: event.toDimension.id });
@@ -98,6 +114,10 @@ registerEvents({
 
 subscribeScriptEvents((event) => {
   if (event.id === "bedrock_telemetry:sync") system.run(publishSnapshot);
+  else if (event.id === "bedrock_telemetry:metrics") system.run(() => {
+    const metrics = applyMetrics(event.message);
+    if (metrics) publishMetrics(metrics);
+  });
 });
 
 startMovementSampling(() => {
@@ -116,13 +136,14 @@ startMovementSampling(() => {
   probeGameModeReading(livePlayers);
   trackGameModes(gameModes, livePlayers, readGameMode, publish);
   publishBlockChanges();
+  publishItemUse();
   flush();
 }, 100);
 
 system.runTimeout(() => {
   loadState();
   probeGameModeReading(world.getAllPlayers());
-  publish("telemetry.started", null, { version: "0.4.0", product: "CraftControl Telemetry Pack", storage: storageStatus(), capabilities: capabilitySnapshot() });
+  publish("telemetry.started", null, { version: "0.5.0", product: "CraftControl Telemetry Pack", storage: storageStatus(), capabilities: capabilitySnapshot(), metrics: metricsSnapshot() });
   publishSnapshot();
 }, 1);
 }

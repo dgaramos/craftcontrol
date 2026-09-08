@@ -60,18 +60,6 @@
       ]
     },
     {
-      "path": "/api/exports/analytics/<resource>",
-      "methods": [
-        "GET"
-      ]
-    },
-    {
-      "path": "/api/exports/players/<resource>",
-      "methods": [
-        "GET"
-      ]
-    },
-    {
       "path": "/api/auth/access",
       "methods": [
         "GET"
@@ -178,6 +166,18 @@
       ],
       "owner": "backend",
       "protocol": "sse"
+    },
+    {
+      "path": "/api/exports/analytics/<resource>",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/api/exports/players/<resource>",
+      "methods": [
+        "GET"
+      ]
     },
     {
       "path": "/api/gamerules/<rule>",
@@ -318,6 +318,14 @@
     {
       "path": "/api/telemetry-pack/<action>",
       "methods": [
+        "POST"
+      ],
+      "owner": "backend"
+    },
+    {
+      "path": "/api/telemetry/metrics",
+      "methods": [
+        "GET",
         "POST"
       ],
       "owner": "backend"

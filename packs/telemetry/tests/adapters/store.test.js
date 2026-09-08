@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test, jest } from "@jest/globals";
-import { suppressConsoleError } from "../helpers.mjs";
+import { suppressConsoleError, suppressConsoleWarn } from "../helpers.mjs";
 import { playerShard, playerSnapshot, storageMetadata } from "../factories.mjs";
-import { STATE_KEY, PLAYER_STATE_PREFIX, STATE_BACKUP_KEY, STATE_BACKUP_V1_KEY, STATE_BACKUP_V2_KEY, playerKey, playerStateKey } from "../../behavior_pack/scripts/model.js";
+import { METRICS_KEY, STATE_KEY, PLAYER_STATE_PREFIX, STATE_BACKUP_KEY, STATE_BACKUP_V1_KEY, STATE_BACKUP_V2_KEY, playerKey, playerStateKey } from "../../behavior_pack/scripts/model.js";
 import { STORAGE_VERSION } from "../../behavior_pack/scripts/versions.js";
 
 // store.js uses module-level mutable state. Each test reloads both the mock
@@ -242,5 +242,78 @@ describe("flush", () => {
     // A second flush with no further mutations must be a no-op
     store.flush(false);
     expect(mock.getMockDynamicProperty(STATE_KEY)).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// opt-in metrics — persistence of the owner's decision
+// ---------------------------------------------------------------------------
+
+describe("metrics", () => {
+  test("a pack that was never told anything collects nothing", async () => {
+    const { store } = await loadStore();
+    expect(store.metricsSnapshot()).toEqual({ itemUse: false });
+    expect(store.metricEnabled("itemUse")).toBe(false);
+  });
+
+  test("enabling a metric persists it so it survives a restart", async () => {
+    const { mock, store } = await loadStore();
+    expect(store.applyMetrics("enable itemUse")).toEqual({ itemUse: true });
+    expect(JSON.parse(mock.getMockDynamicProperty(METRICS_KEY))).toEqual({ itemUse: true });
+
+    // A fresh process reading the same world keeps the decision. Reloading the
+    // modules gives the mock a clean property map, so the persisted value is
+    // carried over the way the world file carries it across a restart.
+    const persisted = mock.getMockDynamicProperty(METRICS_KEY);
+    const restarted = await loadStore();
+    restarted.mock.setMockDynamicProperty(METRICS_KEY, persisted);
+    expect(restarted.store.metricEnabled("itemUse")).toBe(true);
+  });
+
+  test("disabling a metric persists too", async () => {
+    const { mock, store } = await loadStore();
+    store.applyMetrics("enable itemUse");
+    expect(store.applyMetrics("disable itemUse")).toEqual({ itemUse: false });
+    expect(JSON.parse(mock.getMockDynamicProperty(METRICS_KEY))).toEqual({ itemUse: false });
+  });
+
+  test("an unknown command warns and leaves collection untouched", async () => {
+    const { mock, store } = await loadStore();
+    const warn = suppressConsoleWarn();
+    expect(store.applyMetrics("enable chatCapture")).toBeNull();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("unknown metric: chatCapture"));
+    warn.mockRestore();
+    expect(store.metricEnabled("itemUse")).toBe(false);
+    expect(mock.getMockDynamicProperty(METRICS_KEY)).toBeUndefined();
+  });
+
+  test("status reports the current state without writing", async () => {
+    const { mock, store } = await loadStore();
+    expect(store.applyMetrics("status")).toEqual({ itemUse: false });
+    expect(mock.getMockDynamicProperty(METRICS_KEY)).toBeUndefined();
+  });
+
+  test("a corrupt persisted value reads as disabled and is reported", async () => {
+    jest.resetModules();
+    const mock = await import("../minecraft-server.mock.js");
+    mock.clearMockDynamicProperties();
+    mock.setMockDynamicProperty(METRICS_KEY, "{not json");
+    const store = await import("../../behavior_pack/scripts/adapters/store.js");
+    const error = suppressConsoleError();
+    expect(store.metricsSnapshot()).toEqual({ itemUse: false });
+    expect(error).toHaveBeenCalledWith(expect.stringContaining("invalid persisted metrics"));
+    error.mockRestore();
+  });
+
+  test("a failed write is reported and the decision still applies this session", async () => {
+    const { mock, store } = await loadStore();
+    const original = mock.world.setDynamicProperty.bind(mock.world);
+    mock.world.setDynamicProperty = () => { throw new Error("quota exceeded"); };
+    const error = suppressConsoleError();
+    expect(store.applyMetrics("enable itemUse")).toEqual({ itemUse: true });
+    expect(error).toHaveBeenCalledWith(expect.stringContaining("failed to persist metrics"));
+    error.mockRestore();
+    mock.world.setDynamicProperty = original;
+    expect(store.metricEnabled("itemUse")).toBe(true);
   });
 });

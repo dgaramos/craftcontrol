@@ -70,6 +70,23 @@ class BedrockClient:
         finally:
             client.close()
 
+    def set_telemetry_metric(self, metric: str, enabled: bool) -> None:
+        """Enable or disable one opt-in telemetry metric in the pack.
+
+        The name is checked against the manager's allowlist before it gets
+        here; this guard is the second one, so no caller can turn this into a
+        generic console channel.
+        """
+        if not re.fullmatch(r"[A-Za-z]{1,32}", metric):
+            raise ValueError("Métrica de telemetria inválida")
+        client = self._docker_factory()
+        try:
+            container = client.containers.get(self.container_name)
+            verb = "enable" if enabled else "disable"
+            self._write(container, f"scriptevent bedrock_telemetry:metrics {verb} {metric}\n")
+        finally:
+            client.close()
+
     def request_telemetry_snapshot(self) -> str:
         client = self._docker_factory()
         try:

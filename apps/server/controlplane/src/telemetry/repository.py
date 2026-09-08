@@ -11,6 +11,7 @@ keep those reconciliation rules in the player domain without duplicating them.
 from __future__ import annotations
 
 import json
+import re
 import time
 from pathlib import Path
 from typing import Any
@@ -24,6 +25,20 @@ from ..players.sqlite import (
 
 
 STALE_THRESHOLD_SECONDS = 1200
+
+# Opt-in metric maps are bounded tighter than the block maps and accept any
+# namespaced identifier, matching the pack (docs/telemetry-metrics.md). The
+# shape is the privacy boundary: player-authored text cannot match it.
+METRIC_MAP_LIMIT = 24
+_NAMESPACED_IDENTIFIER = re.compile(r"^[a-z0-9_]+:[a-z0-9_./-]+$")
+
+
+def _is_minecraft_key(value: str) -> bool:
+    return value.startswith("minecraft:")
+
+
+def _is_namespaced_key(value: str) -> bool:
+    return bool(_NAMESPACED_IDENTIFIER.match(value))
 
 _ALL_DOMAINS = ("settings", "gamerules", "players", "server", "telemetry")
 
@@ -163,7 +178,8 @@ class SQLiteTelemetryRepository:
                 )
                 changed.append(player)
             elif topic in {
-                "blocks.changed", "player.respawned", "player.dimension.changed", "entity.died",
+                "blocks.changed", "items.used", "player.respawned",
+                "player.dimension.changed", "entity.died",
             }:
                 changed.extend(self._apply_telemetry_delta(connection, envelope, now))
         return True, changed
@@ -224,6 +240,13 @@ class SQLiteTelemetryRepository:
                     placed_total = self._apply_block_batch(stats, "blocksPlaced", "placedByType", placed)
                     if broken_total or placed_total:
                         add_daily(connection, identity, now, blocks_broken=broken_total, blocks_placed=placed_total)
+                if topic == "items.used" and name == names[0]:
+                    # Opt-in aggregate: one batched envelope per player per
+                    # five-second cycle, reconciled by the next snapshot.
+                    self._apply_block_batch(
+                        stats, "itemsUsed", "usedByType", data,
+                        limit=METRIC_MAP_LIMIT, accepts=_is_namespaced_key,
+                    )
                 if topic == "entity.died" and name == data.get("victim"):
                     stats["deaths"] = int(stats.get("deaths", 0)) + 1
                     derived = connection.execute(
@@ -308,12 +331,14 @@ class SQLiteTelemetryRepository:
         total_field: str,
         map_field: str,
         batch: dict[str, Any],
+        limit: int = 128,
+        accepts: Any = _is_minecraft_key,
     ) -> int:
         by_type = batch.get("byType") if isinstance(batch.get("byType"), dict) else {}
         counts = {
             block_type: int(count)
             for block_type, count in by_type.items()
-            if isinstance(block_type, str) and block_type.startswith("minecraft:")
+            if isinstance(block_type, str) and accepts(block_type) and len(block_type) <= 112
             and isinstance(count, int) and not isinstance(count, bool) and count > 0
         }
         declared = batch.get("total")
@@ -329,6 +354,6 @@ class SQLiteTelemetryRepository:
         for block_type, count in counts.items():
             values[block_type] = int(values.get(block_type, 0)) + count
         stats[map_field] = dict(
-            sorted(values.items(), key=lambda item: (-int(item[1]), item[0]))[:128]
+            sorted(values.items(), key=lambda item: (-int(item[1]), item[0]))[:limit]
         )
         return total

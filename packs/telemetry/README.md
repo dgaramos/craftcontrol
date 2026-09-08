@@ -104,7 +104,7 @@ The runtime integration test loads the production `main.js` through a determinis
 The package command creates:
 
 ```text
-dist/craftcontrol-telemetry-0.4.0.mcpack
+dist/craftcontrol-telemetry-0.5.0.mcpack
 ```
 
 Packaging uses sorted paths, normalized timestamps, and stripped ZIP metadata so the standalone repository and CraftControl subtree produce byte-equivalent artifacts from the same commit.
@@ -185,6 +185,14 @@ Active time means sampled movement time, not total online time: a player contrib
 The pack has no network module, no HTTP client, no player-facing commands, and no generic remote execution path. Snapshot requests use the namespaced `scriptevent` channel and only cause read-only telemetry output. Consumers must strictly validate the prefix, schema, topic, size, and field types before persistence.
 
 ## Changelog
+
+### 0.5.0
+
+- Adds opt-in metrics: nothing new is collected until a server owner enables it over the `bedrock_telemetry:metrics` console channel, and each metric is enabled on its own.
+- Adds the `itemUse` metric — the bounded `itemsUsed` counter and `usedByType` map in `snapshot.player`, coalesced into `items.used` once per five-second cycle while enabled.
+- Answers every accepted metric command with `metrics.changed`, and reports the enabled metrics in `telemetry.started` and `snapshot.started`.
+- Registers the `itemUse` capability so a runtime without `world.afterEvents.itemUse` reports the metric as unavailable rather than as zero.
+- Bounds opt-in metric maps to 24 entries so a full player shard stays inside the 30 KB budget; storage version 3 is unchanged and no migration is required.
 
 ### 0.4.0
 

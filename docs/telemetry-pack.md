@@ -31,6 +31,8 @@ Pack storage and wire protocol are versioned independently. Telemetry Pack `0.2.
 
 Telemetry Pack `0.2.3` also probes optional stable event signals before subscribing. Capability results travel in `telemetry.started` and `snapshot.started`, are persisted by CraftControl, and appear as a bilingual support list in the panel. Unsupported metrics remain explicitly unavailable rather than being silently interpreted as zero; other supported collectors continue running.
 
+Telemetry Pack `0.5.0` adds metrics that collect nothing until a server owner enables them. `GET /api/telemetry/metrics` reports the state the pack itself announced — never the state CraftControl last requested — and `POST /api/telemetry/metrics` (`telemetry.manage`, audited) asks the pack to change one metric over the console channel. The pack answers with `metrics.changed`, so the response carries `pending: true` until that answer arrives. Storage stays at v3: the new aggregates are additive and the pack's loader already reads a missing one as zero, so no world is migrated.
+
 Telemetry Pack `0.3.0` upgrades persisted storage to v3 and adds bounded kills by creature type plus per-dimension distance, sampled active movement time, and first/last observations. The v2 metadata and every original v2 player shard are retained under backup dynamic properties before v3 is committed. Existing counters survive; only newly introduced metrics begin at zero.
 
 ## Safety and persistence

@@ -40,6 +40,9 @@ class FakeBedrock:
     def query_gamerules(self, rules: set) -> dict:
         return self.gamerule_result
 
+    def set_telemetry_metric(self, metric: str, enabled: bool) -> None:
+        self.commands.append(["scriptevent", "bedrock_telemetry:metrics", "enable" if enabled else "disable", metric])
+
     def request_telemetry_snapshot(self) -> str:
         if self.telemetry_output is not None:
             return self.telemetry_output

@@ -13,6 +13,7 @@ from collections.abc import Callable
 from typing import Any
 
 from ..ports import EventPublisher, TelemetryStore
+from .metrics import dumps as dump_metrics
 
 
 class TelemetryService:
@@ -73,6 +74,8 @@ class TelemetryService:
             storage = storage if isinstance(storage, dict) else None
             capabilities = envelope.get("data", {}).get("capabilities")
             capabilities = capabilities if isinstance(capabilities, dict) else None
+            metrics = envelope.get("data", {}).get("metrics")
+            metrics = metrics if isinstance(metrics, dict) else None
             storage_blocked = bool(storage and (storage.get("persistenceBlocked") is True or storage.get("status") == "blocked"))
             known_storage_blocked = storage_blocked or telemetry.get("persistence_blocked") == "true"
 
@@ -110,6 +113,11 @@ class TelemetryService:
                     capabilities_supported=str(supported),
                     capabilities_total=str(len(capabilities)),
                 )
+            if metrics is not None:
+                # The pack is authoritative about what it collects: the panel
+                # reports the state the pack reported, never the state the
+                # manager last asked for.
+                updates["metrics"] = dump_metrics(metrics)
             if snapshot_topic:
                 if topic == "snapshot.started":
                     updates.update(status="degraded" if storage_blocked else "syncing", snapshot_started_at=str(time.time()))

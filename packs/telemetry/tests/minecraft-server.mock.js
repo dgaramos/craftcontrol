@@ -16,6 +16,7 @@ export const world = {
     playerBreakBlock: new Signal(),
     playerPlaceBlock: new Signal(),
     playerDimensionChange: new Signal(),
+    itemUse: new Signal(),
   },
   players: [],
   getAllPlayers() { return this.players; },

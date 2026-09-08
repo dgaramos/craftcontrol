@@ -709,3 +709,57 @@ def test_reconcile_operation_returns_404_when_not_found(op_client, op_service: M
     op_service.operation_service.request_reconciliation.return_value = None
     resp = op_client.post("/api/operations/ghost/reconcile")
     assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# telemetry metrics (issue #274)
+# ---------------------------------------------------------------------------
+
+def test_telemetry_metrics_reports_state_and_the_allowlist(client, service: MagicMock) -> None:
+    service.telemetry_metrics.return_value = {"itemUse": True}
+    resp = client.get("/api/telemetry/metrics")
+    assert resp.status_code == 200
+    assert resp.get_json() == {"metrics": {"itemUse": True}, "available": ["itemUse"]}
+
+
+def test_telemetry_metrics_requires_telemetry_manage_capability(service: MagicMock) -> None:
+    assert_capability_required(service, "get", "/api/telemetry/metrics", "telemetry.manage")
+
+
+def test_setting_a_metric_returns_the_pending_result(client, service: MagicMock) -> None:
+    service.set_telemetry_metric.return_value = {
+        "metric": "itemUse", "enabled": True, "metrics": {"itemUse": False}, "pending": True,
+    }
+    resp = client.post("/api/telemetry/metrics", json={"metric": "itemUse", "enabled": True})
+    assert resp.status_code == 200
+    assert resp.get_json()["pending"] is True
+    assert service.set_telemetry_metric.call_args[0][:2] == ("itemUse", True)
+
+
+def test_setting_a_metric_requires_telemetry_manage_capability(service: MagicMock) -> None:
+    assert_capability_required(
+        service, "post", "/api/telemetry/metrics", "telemetry.manage",
+        json={"metric": "itemUse", "enabled": True},
+    )
+
+
+@pytest.mark.parametrize("payload", [
+    {},
+    {"metric": "itemUse"},
+    {"metric": "itemUse", "enabled": "yes"},
+    {"enabled": True},
+    [],
+])
+def test_a_malformed_metric_request_is_refused(client, service: MagicMock, payload) -> None:
+    resp = client.post("/api/telemetry/metrics", json=payload)
+    assert resp.status_code == 400
+    assert service.set_telemetry_metric.called is False
+
+
+def test_an_unknown_metric_is_refused_with_the_reason(client, service: MagicMock) -> None:
+    from src.telemetry.metrics import UnknownMetric
+
+    service.set_telemetry_metric.side_effect = UnknownMetric("chatCapture")
+    resp = client.post("/api/telemetry/metrics", json={"metric": "chatCapture", "enabled": True})
+    assert resp.status_code == 400
+    assert "chatCapture" in resp.get_json()["error"]

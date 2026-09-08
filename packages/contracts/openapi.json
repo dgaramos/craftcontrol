@@ -1862,6 +1862,85 @@
         }
       }
     },
+    "/api/telemetry/metrics": {
+      "get": {
+        "tags": [
+          "Telemetry"
+        ],
+        "operationId": "getTelemetryMetrics",
+        "summary": "Get which opt-in telemetry metrics the pack reports collecting",
+        "x-craftcontrol-capability": "telemetry.manage",
+        "responses": {
+          "200": {
+            "description": "Opt-in metric state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelemetryMetricState"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Telemetry"
+        ],
+        "operationId": "setTelemetryMetric",
+        "summary": "Enable or disable one opt-in telemetry metric",
+        "x-craftcontrol-capability": "telemetry.manage",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CsrfToken"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "metric",
+                  "enabled"
+                ],
+                "properties": {
+                  "metric": {
+                    "type": "string",
+                    "description": "An allowlisted metric name."
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Metric change requested",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelemetryMetricUpdate"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
     "/api/diagnostics": {
       "get": {
         "tags": [
@@ -4011,6 +4090,57 @@
           "pages": {
             "type": "integer",
             "description": "Total pages."
+          }
+        }
+      },
+      "TelemetryMetricMap": {
+        "type": "object",
+        "description": "Opt-in metric name to whether the pack reports collecting it. A metric the pack does not report is not enabled.",
+        "additionalProperties": {
+          "type": "boolean"
+        }
+      },
+      "TelemetryMetricState": {
+        "type": "object",
+        "required": [
+          "metrics",
+          "available"
+        ],
+        "properties": {
+          "metrics": {
+            "$ref": "#/components/schemas/TelemetryMetricMap"
+          },
+          "available": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Every metric this manager may switch."
+          }
+        }
+      },
+      "TelemetryMetricUpdate": {
+        "type": "object",
+        "required": [
+          "metric",
+          "enabled",
+          "metrics",
+          "pending"
+        ],
+        "properties": {
+          "metric": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "The state that was requested."
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/TelemetryMetricMap"
+          },
+          "pending": {
+            "type": "boolean",
+            "description": "True until the pack answers with the requested state; the command travels the server console, so the change is not immediate."
           }
         }
       }

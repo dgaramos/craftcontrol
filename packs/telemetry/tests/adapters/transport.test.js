@@ -13,9 +13,10 @@ const mockStorageStatus = jest.fn(() => ({ persistenceBlocked: false }));
 
 const mockCapabilitySnapshot = jest.fn(() => ({}));
 const mockReadGameMode = jest.fn(() => null);
+const mockMetricsSnapshot = jest.fn(() => ({ itemUse: false }));
 
 const { world } = await import("@minecraft/server");
-const { configureTransport, resetTransport, publish, queueBlockChange, publishBlockChanges, publishSnapshot } =
+const { configureTransport, resetTransport, publish, queueBlockChange, publishBlockChanges, publishItemUse, publishMetrics, publishSnapshot, queueItemUse } =
   await import("../../behavior_pack/scripts/adapters/transport.js");
 
 beforeEach(() => {
@@ -25,6 +26,7 @@ beforeEach(() => {
   mockStorageStatus.mockReturnValue({ persistenceBlocked: false });
   mockCapabilitySnapshot.mockReturnValue({});
   mockReadGameMode.mockReturnValue(null);
+  mockMetricsSnapshot.mockReturnValue({ itemUse: false });
   world.players = [];
   resetTransport();
   configureTransport({
@@ -35,6 +37,7 @@ beforeEach(() => {
     storageStatus: mockStorageStatus,
     capabilitySnapshot: mockCapabilitySnapshot,
     readGameMode: mockReadGameMode,
+    metricsSnapshot: mockMetricsSnapshot,
   });
 });
 
@@ -266,5 +269,82 @@ describe("publishSnapshot", () => {
     expect(finished.data).toEqual({});
     expect(finished.player).toBeNull();
     warn.mockRestore();
+  });
+});
+
+describe("opt-in item use", () => {
+  test("coalesces a player's item uses into one batched envelope", () => {
+    queueItemUse("Alice", "minecraft:bow");
+    queueItemUse("Alice", "minecraft:bow");
+    queueItemUse("Alice", "minecraft:potion");
+    const warn = suppressConsoleWarn();
+    publishItemUse();
+    const logged = capturedTelemetryRecords(warn);
+    warn.mockRestore();
+
+    // One line per player per interval, the same shape blocks.changed uses.
+    expect(logged).toHaveLength(1);
+    expect(logged[0].type).toBe("items.used");
+    expect(logged[0].player).toEqual({ name: "Alice" });
+    expect(logged[0].data).toEqual({ total: 3, byType: { "minecraft:bow": 2, "minecraft:potion": 1 } });
+  });
+
+  test("publishes one envelope per player", () => {
+    queueItemUse("Alice", "minecraft:bow");
+    queueItemUse("Bob", "minecraft:bow");
+    const warn = suppressConsoleWarn();
+    publishItemUse();
+    const logged = capturedTelemetryRecords(warn);
+    warn.mockRestore();
+    expect(logged.map((record) => record.player.name).sort()).toEqual(["Alice", "Bob"]);
+  });
+
+  test("publishes nothing when no item was used", () => {
+    const warn = suppressConsoleWarn();
+    publishItemUse();
+    expect(capturedTelemetryRecords(warn)).toEqual([]);
+    warn.mockRestore();
+  });
+
+  test("drains the pending batch so a use is never published twice", () => {
+    queueItemUse("Alice", "minecraft:bow");
+    const warn = suppressConsoleWarn();
+    publishItemUse();
+    publishItemUse();
+    expect(capturedTelemetryRecords(warn)).toHaveLength(1);
+    warn.mockRestore();
+  });
+
+  test("a snapshot drains pending item use before reading the state", () => {
+    queueItemUse("Alice", "minecraft:bow");
+    const warn = suppressConsoleWarn();
+    publishSnapshot();
+    const logged = capturedTelemetryRecords(warn);
+    warn.mockRestore();
+    const items = logged.findIndex((record) => record.type === "items.used");
+    const started = logged.findIndex((record) => record.type === "snapshot.started");
+    expect(items).toBeGreaterThanOrEqual(0);
+    expect(items).toBeLessThan(started);
+  });
+});
+
+describe("metric announcements", () => {
+  test("snapshot.started reports which metrics are enabled", () => {
+    mockMetricsSnapshot.mockReturnValue({ itemUse: true });
+    const warn = suppressConsoleWarn();
+    publishSnapshot();
+    const logged = capturedTelemetryRecords(warn);
+    warn.mockRestore();
+    expect(logged.find((record) => record.type === "snapshot.started").data.metrics).toEqual({ itemUse: true });
+  });
+
+  test("a metric change is announced on its own topic", () => {
+    const warn = suppressConsoleWarn();
+    publishMetrics({ itemUse: true });
+    const logged = capturedTelemetryRecords(warn);
+    warn.mockRestore();
+    expect(logged[0].type).toBe("metrics.changed");
+    expect(logged[0].player).toBeNull();
+    expect(logged[0].data).toEqual({ metrics: { itemUse: true } });
   });
 });

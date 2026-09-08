@@ -227,3 +227,37 @@ def test_set_game_mode_closes_client_after_write() -> None:
     factory, docker_client, _ = _fake_docker()
     _client(factory).set_game_mode("VonCrush", "creative")
     docker_client.close.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# set_telemetry_metric
+# ---------------------------------------------------------------------------
+
+def test_set_telemetry_metric_sends_the_enable_command() -> None:
+    factory, _, container = _fake_docker()
+    _client(factory).set_telemetry_metric("itemUse", True)
+    sent = container.attach_socket.return_value._sock.sendall.call_args[0][0]
+    assert sent == b"scriptevent bedrock_telemetry:metrics enable itemUse\n"
+
+
+def test_set_telemetry_metric_sends_the_disable_command() -> None:
+    factory, _, container = _fake_docker()
+    _client(factory).set_telemetry_metric("itemUse", False)
+    sent = container.attach_socket.return_value._sock.sendall.call_args[0][0]
+    assert sent == b"scriptevent bedrock_telemetry:metrics disable itemUse\n"
+
+
+@pytest.mark.parametrize("metric", ["item use", "itemUse; op VonCrush", "", "a" * 33, "item\nUse"])
+def test_set_telemetry_metric_refuses_anything_but_a_bare_name(metric: str) -> None:
+    # The console is not a generic command channel: a name that could carry a
+    # second command never reaches the container.
+    factory, _, container = _fake_docker()
+    with pytest.raises(ValueError, match="Métrica"):
+        _client(factory).set_telemetry_metric(metric, True)
+    container.attach_socket.assert_not_called()
+
+
+def test_set_telemetry_metric_closes_the_client() -> None:
+    factory, docker_client, _ = _fake_docker()
+    _client(factory).set_telemetry_metric("itemUse", True)
+    docker_client.close.assert_called_once()

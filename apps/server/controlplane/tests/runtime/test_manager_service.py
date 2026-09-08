@@ -1016,3 +1016,51 @@ def test_mixed_ingest_no_cross_contamination(manager_service: ManagerService) ->
     assert blocks["total_blocks_declared"] == 5
     assert snapshots["count"] == 1
     assert snapshots["last_player_count"] == 1
+
+
+# ---------------------------------------------------------------------------
+# Opt-in telemetry metrics (issue #274)
+# ---------------------------------------------------------------------------
+
+def test_a_pack_that_reported_nothing_reads_as_collecting_nothing(manager_service: ManagerService) -> None:
+    assert manager_service.telemetry_metrics() == {"itemUse": False}
+
+
+def test_enabling_a_metric_sends_the_console_command(
+    manager_service: ManagerService, fake_bedrock: FakeBedrock,
+) -> None:
+    result = manager_service.set_telemetry_metric("itemUse", True, actor="owner")
+    assert ["scriptevent", "bedrock_telemetry:metrics", "enable", "itemUse"] in fake_bedrock.commands
+    assert result["metric"] == "itemUse"
+    assert result["enabled"] is True
+    # The pack has not answered yet, and the manager says so rather than
+    # reporting a change that may never arrive.
+    assert result["pending"] is True
+    assert result["metrics"] == {"itemUse": False}
+
+
+def test_the_state_follows_what_the_pack_reported(
+    manager_service: ManagerService, fake_bedrock: FakeBedrock,
+) -> None:
+    manager_service.telemetry_event(telemetry_envelope(
+        "metrics.changed", sequence=30, player=None, data={"metrics": {"itemUse": True}},
+    ))
+    assert manager_service.telemetry_metrics() == {"itemUse": True}
+    # Once the pack agrees, the same request is no longer pending.
+    assert manager_service.set_telemetry_metric("itemUse", True)["pending"] is False
+
+
+def test_an_unknown_metric_never_reaches_the_console(
+    manager_service: ManagerService, fake_bedrock: FakeBedrock,
+) -> None:
+    with pytest.raises(ValueError, match="desconhecida"):
+        manager_service.set_telemetry_metric("chatCapture", True)
+    assert fake_bedrock.commands == []
+
+
+def test_a_telemetry_started_envelope_also_reports_the_metrics(manager_service: ManagerService) -> None:
+    manager_service.telemetry_event(telemetry_envelope(
+        "telemetry.started", sequence=40, player=None,
+        data={"version": "0.5.0", "metrics": {"itemUse": True}},
+    ))
+    assert manager_service.telemetry_metrics() == {"itemUse": True}

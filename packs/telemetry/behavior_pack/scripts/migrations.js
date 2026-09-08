@@ -2,11 +2,11 @@ import { STORAGE_VERSION } from "./versions.js";
 
 const NUMBER_FIELDS = [
   "joins", "deaths", "playerKills", "mobKills", "blocksBroken", "blocksPlaced",
-  "damageDealt", "damageTaken", "distance",
+  "damageDealt", "damageTaken", "distance", "itemsUsed",
 ];
 const MAP_FIELDS = [
   "dimensions", "brokenByType", "placedByType", "killsByType", "distanceByDimension",
-  "activeTimeByDimension", "firstDimensionVisitAt", "lastDimensionVisitAt",
+  "activeTimeByDimension", "firstDimensionVisitAt", "lastDimensionVisitAt", "usedByType",
 ];
 
 function record(value) {

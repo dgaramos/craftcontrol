@@ -9,6 +9,7 @@ from typing import Any
 
 from ..players import PlayerService
 from ..server.world import WorldService
+from ..telemetry.metrics import loads as load_metrics, validate as validate_metric
 from ..telemetry.service import TelemetryService
 from ..ports import EventPublisher, ServerConfiguration, ServerConsole, StateStore
 from ..core.schema import GAMERULES, PROPERTY_NAMES, SETTINGS
@@ -238,6 +239,40 @@ class ReconciliationService:
                     self._telemetry_sync_running = False
 
         self._thread_factory(target=work, name="telemetry-sync", daemon=True).start()
+
+    # ------------------------------------------------------------------
+    # Opt-in telemetry metrics
+    # ------------------------------------------------------------------
+
+    def telemetry_metrics(self) -> dict[str, bool]:
+        """Return the metric state the pack last reported.
+
+        The pack is authoritative: this is what it says it collects, not what
+        the manager last asked for. A pack that never reported anything reads
+        as every metric disabled.
+        """
+        return load_metrics(self.repository.snapshot().get("telemetry", {}).get("metrics"))
+
+    def set_telemetry_metric(self, metric: str, enabled: bool) -> dict[str, Any]:
+        """Ask the pack to enable or disable one metric.
+
+        The command travels the console channel and the pack answers with a
+        `metrics.changed` envelope, so the state reported here is the state
+        before that answer arrives. `pending` says so rather than pretending
+        the change already took effect.
+        """
+        name = validate_metric(metric)
+        self.bedrock.set_telemetry_metric(name, enabled)
+        self.broker.publish(
+            "telemetry.metric.requested", "manager", {"metric": name, "enabled": enabled},
+        )
+        metrics = self.telemetry_metrics()
+        return {
+            "metric": name,
+            "enabled": enabled,
+            "metrics": metrics,
+            "pending": metrics.get(name) is not enabled,
+        }
 
     def request_telemetry_snapshot(self, reason: str) -> int:
         try:

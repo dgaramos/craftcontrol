@@ -7,6 +7,7 @@ PREFIX = "[BEDROCK_TELEMETRY]"
 TOPICS = {
     "telemetry.started", "player.joined", "player.left", "player.respawned",
     "player.dimension.changed", "entity.died", "blocks.changed",
+    "items.used", "metrics.changed",
     "snapshot.started", "snapshot.player", "snapshot.finished",
 }
 

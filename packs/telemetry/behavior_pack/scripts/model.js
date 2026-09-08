@@ -7,8 +7,14 @@ export const STATE_BACKUP_V1_KEY = "bedrock_telemetry:state_backup_v1";
 export const STATE_BACKUP_V2_KEY = "bedrock_telemetry:state_backup_v2";
 export const PLAYER_STATE_PREFIX = "bedrock_telemetry:player:";
 export const PLAYER_BACKUP_V2_PREFIX = "bedrock_telemetry:backup_v2_player:";
+export const METRICS_KEY = "bedrock_telemetry:metrics";
 export const LOG_PREFIX = "[BEDROCK_TELEMETRY]";
 export const MAX_BLOCK_TYPES = 128;
+// Opt-in metric maps are bounded tighter than the block maps they sit beside.
+// Measured, not guessed: at 128 entries the four maps epic #21 adds would push
+// a full player shard past the 30 KB dynamic-property budget, and a shard that
+// does not fit is a shard that is not written. See docs/telemetry-metrics.md.
+export const MAX_METRIC_TYPES = 24;
 
 export function emptyState() {
   return { storageVersion: STORAGE_VERSION, sequence: 0, players: {} };
@@ -27,6 +33,7 @@ export function emptyPlayer(name, now) {
     name, aliases: [name], firstSeenAt: now, lastSeenAt: now,
     joins: 0, deaths: 0, playerKills: 0, mobKills: 0,
     blocksBroken: 0, blocksPlaced: 0, damageDealt: 0, damageTaken: 0,
+    itemsUsed: 0, usedByType: {},
     distance: 0, dimensions: {}, brokenByType: {}, placedByType: {},
     killsByType: {}, distanceByDimension: {}, activeTimeByDimension: {},
     firstDimensionVisitAt: {}, lastDimensionVisitAt: {},

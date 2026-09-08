@@ -47,15 +47,20 @@ Keys are Minecraft namespaced identifiers (`minecraft:oak_door`). A key that
 does not match that shape is discarded rather than stored, which keeps a
 player-authored name from becoming a map entry.
 
-Each map is bounded to `MAX_BLOCK_TYPES` (128) entries with the eviction the
-pack already implements: when the limit is exceeded, the lowest counts are
-dropped. The counters that accompany them stay exact, so a total is never
-distorted by eviction — only the breakdown loses its long tail.
+Each map is bounded with the eviction the pack already implements: when the
+limit is exceeded, the lowest counts are dropped. The counters that accompany
+them stay exact, so a total is never distorted by eviction — only the breakdown
+loses its long tail.
 
-Per-player state remains inside the 30 KB dynamic-property shard budget. Five
-new maps at 128 entries would not fit alongside the existing five, so the
-implementation adds them within the same budget and the packing test that
-guards it: a metric enabled at runtime is a metric that must fit at runtime.
+The block maps this pack already keeps are bounded to `MAX_BLOCK_TYPES` (128).
+Opt-in metric maps are bounded to `MAX_METRIC_TYPES` (24), and that number came
+from measurement rather than preference: at 128 entries the four maps this epic
+adds push a full player shard past the 30 KB dynamic-property budget by more
+than half, and a shard that does not fit is a shard the store refuses to write.
+At 24 the worst case — every map full of the longest identifiers Minecraft
+ships — stays inside the budget. The packing test in the pack is that
+measurement, and it fails if a later metric spends the remaining headroom: a
+metric enabled at runtime is a metric that must fit at runtime.
 
 ## Enabling a metric
 
@@ -65,9 +70,15 @@ owner turns it on, and turning one on does not turn on another.
 Enablement travels the channel that already exists between the manager and the
 pack — the dedicated-server console, where CraftControl sends
 `/scriptevent bedrock_telemetry:sync full` today. Metric state arrives the same
-way, is persisted in the pack's own state, and survives a restart. A pack that
-has never been told anything collects nothing beyond what it collected before
-this epic.
+way as `/scriptevent bedrock_telemetry:metrics enable <metric>`, is persisted in
+its own dynamic property, and survives a restart. A pack that has never been
+told anything collects nothing beyond what it collected before this epic.
+
+The state lives outside the player shards on purpose: it is a handful of
+booleans that change only on an owner's command, and keeping it separate means a
+blocked player-state write can never silently re-enable collection. Every
+accepted command is answered with a `metrics.changed` envelope, so the manager
+learns the resulting state without asking.
 
 Each metric is independent: enabling item use says nothing about interactions,
 and a metric can be disabled without disturbing the others or the aggregates
@@ -80,7 +91,7 @@ Each metric declares a capability, reported in `telemetry.started` and
 
 | Capability | Feature |
 | --- | --- |
-| `itemUse` | `playerUseItem` event subscription |
+| `itemUse` | `world.afterEvents.itemUse` subscription |
 | `blockInteractions` | `playerInteractWithBlock` event subscription |
 | `entityInteractions` | `playerInteractWithEntity` event subscription |
 | `containerInteractions` | container open detection |
@@ -98,8 +109,15 @@ already make between "nothing observed yet" and "not collected".
 
 New fields are additive: they appear in `snapshot.player` alongside the existing
 aggregates, so protocol schema `1` is unchanged and a consumer that does not
-know them ignores them. Storage version increases, with a migration that adds
-the new maps as empty rather than discarding a player's history.
+know them ignores them.
+
+Storage version stays at `3`. The design issue expected a bump, and the pack
+says otherwise: the loader already normalizes a missing aggregate to zero and a
+missing map to empty, so an existing world reads its full history without a
+migration. Raising the version would buy nothing and cost a whole-world
+migration that writes a backup shard per player — real risk against no
+compatibility gain. A version rises when an old reader would misread new data;
+here it would not.
 
 Snapshots stay authoritative. Incremental events update the counters live, and
 the next snapshot reconciles them after downtime or a detected sequence gap,
@@ -111,9 +129,12 @@ repair a total; it cannot reconstruct when the actions happened.
 Item use and interactions fire far more often than joins or deaths, so the
 implementation measures rather than assumes:
 
-- the per-event handler cost, sampled the way the ingestion duration already is;
-- the five-second flush duration, which must not grow with the number of enabled
-  metrics beyond the noise of the existing flush;
+- the per-event handler cost, which must stay flat as a map saturates — the
+  bound is what keeps the eviction sort small, and a quadratic regression there
+  would only appear on a busy server;
+- the number of log lines, which must not grow with the number of actions: item
+  use is coalesced into one `items.used` envelope per player per five-second
+  cycle, exactly as block activity is;
 - the serialized size of a player shard, which must stay inside the 30 KB
   budget with every metric enabled and every map full.
 

@@ -142,6 +142,26 @@ class ManagerService:
     def request_telemetry_snapshot(self, reason: str) -> int:
         return self._reconciliation.request_telemetry_snapshot(reason)
 
+    def telemetry_metrics(self) -> dict[str, bool]:
+        return self._reconciliation.telemetry_metrics()
+
+    def set_telemetry_metric(self, metric: str, enabled: bool, actor: str | None = None) -> dict[str, Any]:
+        """Change one opt-in metric, recording who asked for it.
+
+        Turning collection on is a privacy decision, so it is audited whether it
+        succeeds or is refused.
+        """
+        try:
+            result = self._reconciliation.set_telemetry_metric(metric, enabled)
+        except (ValueError, RuntimeError):
+            self._audit(actor=actor, action="telemetry.metric.set", target=str(metric)[:64], result="failure")
+            raise
+        self._audit(
+            actor=actor, action="telemetry.metric.set",
+            target=f"{result['metric']}={'enabled' if enabled else 'disabled'}", result="success",
+        )
+        return result
+
     # ------------------------------------------------------------------
     # Telemetry event ingestion
     # ------------------------------------------------------------------

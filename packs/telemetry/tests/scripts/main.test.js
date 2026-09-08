@@ -2,7 +2,7 @@ import { jest, beforeEach, test, expect } from "@jest/globals";
 import { world } from "@minecraft/server";
 import { startTelemetryRuntime } from "../../behavior_pack/scripts/main.js";
 
-const emptyStats = () => ({ joins: 0, deaths: 0, playerKills: 0, mobKills: 0, killsByType: {}, damageTaken: 0, damageDealt: 0, blocksBroken: 0, brokenByType: {}, blocksPlaced: 0, placedByType: {}, distance: 0, distanceByDimension: {}, activeTimeByDimension: {} });
+const emptyStats = () => ({ joins: 0, deaths: 0, playerKills: 0, mobKills: 0, killsByType: {}, damageTaken: 0, damageDealt: 0, blocksBroken: 0, brokenByType: {}, blocksPlaced: 0, placedByType: {}, itemsUsed: 0, usedByType: {}, distance: 0, distanceByDimension: {}, activeTimeByDimension: {} });
 const mockSystem = { run: jest.fn(), runTimeout: jest.fn() };
 const mockEnsurePlayer = jest.fn((state, name) => {
   state.players[name] ??= emptyStats();
@@ -19,6 +19,13 @@ const mockPublish = jest.fn();
 const mockPublishBlockChanges = jest.fn();
 const mockPublishSnapshot = jest.fn();
 const mockQueueBlockChange = jest.fn();
+const mockQueueItemUse = jest.fn();
+const mockPublishItemUse = jest.fn();
+const mockPublishMetrics = jest.fn();
+const mockApplyMetrics = jest.fn(() => ({ itemUse: true }));
+const mockMetricsSnapshot = jest.fn(() => ({ itemUse: false }));
+const mockMetricEnabled = jest.fn(() => false);
+const mockMetricKey = jest.fn((value) => (typeof value === "string" && value.includes(":") ? value : null));
 const mockCapabilitySnapshot = jest.fn(() => ({}));
 const mockProbeGameModeReading = jest.fn();
 const mockReadGameMode = jest.fn(() => null);
@@ -51,6 +58,13 @@ function startRuntime() {
     publishBlockChanges: mockPublishBlockChanges,
     publishSnapshot: mockPublishSnapshot,
     queueBlockChange: mockQueueBlockChange,
+    queueItemUse: mockQueueItemUse,
+    publishItemUse: mockPublishItemUse,
+    publishMetrics: mockPublishMetrics,
+    applyMetrics: mockApplyMetrics,
+    metricsSnapshot: mockMetricsSnapshot,
+    metricEnabled: mockMetricEnabled,
+    metricKey: mockMetricKey,
     capabilitySnapshot: mockCapabilitySnapshot,
     probeGameModeReading: mockProbeGameModeReading,
     readGameMode: mockReadGameMode,
@@ -70,6 +84,9 @@ beforeEach(() => {
   mockRegisterEvents.mockImplementation((handlers) => { capturedHandlers = handlers; });
   mockMutatePlayer.mockImplementation((name, callback) => callback({ players: {} }));
   mockReadGameMode.mockReturnValue(null);
+  mockMetricEnabled.mockReturnValue(false);
+  mockApplyMetrics.mockReturnValue({ itemUse: true });
+  mockMetricsSnapshot.mockReturnValue({ itemUse: false });
   mockSamplePlayerMovement.mockImplementation((positions, player, onDistance) => { onDistance("minecraft:overworld", 10); });
   world.players = [];
   startRuntime();
@@ -89,6 +106,75 @@ test("script event collaborator schedules a snapshot only for the sync event", (
 
   expect(mockSystem.run).toHaveBeenCalledTimes(1);
   expect(mockSystem.run).toHaveBeenCalledWith(mockPublishSnapshot);
+});
+
+// -- opt-in item use --------------------------------------------------------
+
+const useEvent = (typeId = "minecraft:bow", name = "VonCrush") => ({
+  source: { name }, itemStack: { typeId },
+});
+
+test("onPlayerUseItem collects nothing while the metric is disabled", () => {
+  // The subscription exists so the capability can be reported; the owner's
+  // decision is what turns counting on.
+  capturedHandlers.onPlayerUseItem(useEvent());
+  expect(mockMutatePlayer).not.toHaveBeenCalled();
+  expect(mockQueueItemUse).not.toHaveBeenCalled();
+});
+
+test("onPlayerUseItem counts the use and queues the batch once enabled", () => {
+  mockMetricEnabled.mockReturnValue(true);
+  capturedHandlers.onPlayerUseItem(useEvent());
+  expect(mockMetricEnabled).toHaveBeenCalledWith("itemUse");
+  expect(mockMutatePlayer).toHaveBeenCalledWith("VonCrush", expect.any(Function));
+  expect(mockIncrementMap).toHaveBeenCalledWith(expect.any(Object), "minecraft:bow", 1, 24);
+  expect(mockQueueItemUse).toHaveBeenCalledWith("VonCrush", "minecraft:bow");
+});
+
+test("onPlayerUseItem discards an identifier the policy will not store", () => {
+  mockMetricEnabled.mockReturnValue(true);
+  capturedHandlers.onPlayerUseItem(useEvent("Excalibur"));
+  expect(mockMutatePlayer).not.toHaveBeenCalled();
+  expect(mockQueueItemUse).not.toHaveBeenCalled();
+});
+
+test("onPlayerUseItem ignores an event with no item or no player", () => {
+  mockMetricEnabled.mockReturnValue(true);
+  capturedHandlers.onPlayerUseItem({ source: { name: "VonCrush" } });
+  capturedHandlers.onPlayerUseItem({ itemStack: { typeId: "minecraft:bow" } });
+  expect(mockMutatePlayer).not.toHaveBeenCalled();
+});
+
+test("the metrics script event applies the command and announces the result", () => {
+  const callback = mockSubscribeScriptEvents.mock.calls[0][0];
+  callback({ id: "bedrock_telemetry:metrics", message: "enable itemUse" });
+  const scheduled = mockSystem.run.mock.calls.at(-1)[0];
+  scheduled();
+
+  expect(mockApplyMetrics).toHaveBeenCalledWith("enable itemUse");
+  expect(mockPublishMetrics).toHaveBeenCalledWith({ itemUse: true });
+});
+
+test("a refused metric command announces nothing", () => {
+  mockApplyMetrics.mockReturnValue(null);
+  const callback = mockSubscribeScriptEvents.mock.calls[0][0];
+  callback({ id: "bedrock_telemetry:metrics", message: "enable chatCapture" });
+  mockSystem.run.mock.calls.at(-1)[0]();
+
+  expect(mockPublishMetrics).not.toHaveBeenCalled();
+});
+
+test("the five-second cycle drains pending item use", () => {
+  capturedSamplingCallback();
+  expect(mockPublishItemUse).toHaveBeenCalled();
+});
+
+test("telemetry.started reports which metrics are enabled", () => {
+  // The startup announcement is scheduled, not immediate.
+  mockSystem.runTimeout.mock.calls.at(-1)[0]();
+  expect(mockPublish).toHaveBeenCalledWith("telemetry.started", null, expect.objectContaining({
+    metrics: { itemUse: false },
+  }));
 });
 
 test("movement sampling callback updates distance stats for each live player", () => {

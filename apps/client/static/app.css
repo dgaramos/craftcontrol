@@ -907,7 +907,7 @@ dialog.drawer::backdrop { background: rgba(0, 0, 0, .7); }
   color: var(--muted); font-size: .7rem;
   background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08);
 }
-.diag-summary-toggle::before { content: "▶"; transition: transform .15s; }
+.diag-summary-toggle::before { content: ""; width: 8px; height: 10px; background: currentColor; clip-path: polygon(0 0, 38% 0, 38% 20%, 63% 20%, 63% 40%, 88% 40%, 88% 60%, 63% 60%, 63% 80%, 38% 80%, 38% 100%, 0 100%); transition: transform .15s; }
 .diag-details[open] .diag-summary-toggle::before { transform: rotate(90deg); }
 .diag-details[open] .diag-summary-header { border-bottom: 1px solid rgba(255,255,255,.07); }
 .diag-details-body { padding-top: .85rem; }
@@ -1126,7 +1126,7 @@ dialog.drawer::backdrop { background: rgba(0, 0, 0, .7); }
 .server-rules-card-text strong { font-family: var(--font-display); font-size: 16px; font-weight: 800; }
 .server-rules-card-text > small { overflow: hidden; color: #b5c3b6; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .server-restart-label { display: flex; align-items: center; gap: 6px; margin: -1px 2px -4px; color: #f0a06f; font-size: 9px; }
-.server-restart-label > span:first-child { color: var(--grass); font-size: 14px; }
+.server-restart-label > .cc-icon { width: 14px; height: 14px; color: var(--grass); }
 .server-nav-list { overflow: hidden; border: 4px solid #080a08; border-top-color: #4a544d; border-left-color: #3a443d; box-shadow: var(--pixel-shadow); }
 .server-nav-item { display: grid; grid-template-columns: 27px minmax(0, 1fr) auto; align-items: center; gap: 10px; width: 100%; min-height: 58px; padding: 9px 13px; color: var(--text); text-align: left; background: #202923; border: 0; border-bottom: 3px solid #0b0e0c; box-shadow: inset 0 -1px #3a433e; }
 .server-nav-item:last-child { border-bottom: 0; box-shadow: none; }

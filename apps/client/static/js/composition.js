@@ -9,11 +9,11 @@ import { connectInvalidation } from "./core/invalidation.js?v=7";
 import { createNavigation } from "./core/navigation.js?v=11";
 import { toast } from "./components/feedback.js?v=7";
 import { formatDate as formatLocalizedDate, formatDuration, sessionMoment as localizedSessionMoment, timelineTimestamp as localizedTimelineTimestamp } from "./components/time.js?v=9";
-import { createAnalyticsFeature } from "./features/analytics/index.js?v=11";
+import { createAnalyticsFeature } from "./features/analytics/index.js?v=12";
 import { createPlayersFeature } from "./features/players/index.js?v=10";
 import { createWorldFeature } from "./features/world/index.js?v=13";
 import { createRulesFeature } from "./features/rules/index.js?v=7";
-import { createServerFeature } from "./features/server/index.js?v=24";
+import { createServerFeature } from "./features/server/index.js?v=25";
 import { UNRESPONSIVE_AFTER_MS } from "./features/server/operation.js?v=15";
 import { startAuthenticatedApplication } from "./features/auth/bootstrap.js?v=7";
 import { createSettingsFeature } from "./features/settings/index.js?v=10";
@@ -279,7 +279,7 @@ export function startApplication() {
 
   function setIcon(useEl, symbol) {
     if (!useEl) return;
-    const href = `/static/craftcontrol-ui.svg#${symbol}`;
+    const href = `/static/craftcontrol-ui.svg?v=9#${symbol}`;
     if (useEl.getAttribute("href") !== href) useEl.setAttribute("href", href);
   }
 
@@ -341,7 +341,7 @@ export function startApplication() {
     const languageNames = { pt: "Português", en: "English", es: "Español" };
     const languageFlags = { pt: "br", en: "us", es: "es" };
     const langSpan = $("#language span"); if (langSpan) langSpan.textContent = languageNames[state.locale];
-    const langUse = $("#language use"); if (langUse) langUse.setAttribute("href", `/static/craftcontrol-ui.svg?v=8#ui-flag-${languageFlags[state.locale]}`);
+    const langUse = $("#language use"); if (langUse) langUse.setAttribute("href", `/static/craftcontrol-ui.svg?v=9#ui-flag-${languageFlags[state.locale]}`);
     const langBtn = $("#language"); if (langBtn) langBtn.setAttribute("aria-label", t("language"));
     $("#close-operation-drawer").setAttribute("aria-label", t("close"));
     document.querySelectorAll("[data-locale]").forEach((option) => option.setAttribute("aria-selected", String(option.dataset.locale === state.locale)));
@@ -446,7 +446,7 @@ export function startApplication() {
     const opIcon = $("#operation-bar-icon");
     if (opIcon) opIcon.classList.toggle("indicator-bar-live", !opStalled);
     const opIconUse = $("#operation-bar-icon-use");
-    if (opIconUse) opIconUse.setAttribute("href", `/static/craftcontrol-ui.svg#${opStalled ? "ui-warning" : "ui-live"}`);
+    if (opIconUse) opIconUse.setAttribute("href", `/static/craftcontrol-ui.svg?v=9#${opStalled ? "ui-warning" : "ui-live"}`);
     const opTitle = $("#operation-bar-title");
     if (opTitle && showOperation) opTitle.textContent = opStalled ? t("indicatorOperationStalled") : t("indicatorOperationTitle");
     const opLabel = $("#operation-bar-label");

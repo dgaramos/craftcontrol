@@ -1,5 +1,5 @@
 import { createActivityView } from "./activity.js?v=8";
-import { createRankingsPanel } from "./rankings.js?v=8";
+import { createRankingsPanel } from "./rankings.js?v=9";
 import { createBlocksPanel } from "./blocks.js?v=8";
 import { createCombatPanel } from "./combat.js?v=8";
 import { createExplorationPanel } from "./exploration.js?v=8";

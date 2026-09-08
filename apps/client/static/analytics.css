@@ -35,7 +35,8 @@
 .capability-row { display: flex; align-items: center; gap: 8px; padding: 8px 10px; font-size: .68rem; background: #0e1410; border: 1px solid #2a312c; }
 .capability-row.cap-supported { border-color: #2a5038; }
 .capability-row.cap-unsupported { opacity: .55; }
-.cap-mark { font-weight: 900; }
+.cap-mark { display: grid; place-items: center; width: 18px; height: 18px; }
+.cap-mark .cc-icon { width: 16px; height: 16px; filter: none; }
 .cap-supported .cap-mark { color: var(--grass-light); }
 .cap-unsupported .cap-mark { color: #ff887d; }
 .cap-name { color: var(--muted); font-family: monospace; font-size: .65rem; }
@@ -115,7 +116,8 @@
 .podium-place.rank-1 { min-height: 154px; padding-top: 20px; background: linear-gradient(#4b3e1b, #18160e); border-color: #c89c37; order: 2; }
 .podium-place.rank-2 { min-height: 128px; order: 1; }
 .podium-place.rank-3 { min-height: 112px; order: 3; }
-.podium-medal { font-size: 1.65rem; }
+.podium-medal { display: grid; place-items: center; width: 38px; height: 38px; }
+.podium-medal .cc-icon { width: 36px; height: 36px; }
 .podium-place button, .record-cards button, .leaderboard-panel li button { min-height: 0; padding: 0; overflow: hidden; color: var(--grass-light); text-overflow: ellipsis; white-space: nowrap; background: transparent; border: 0; box-shadow: none; text-shadow: none; }
 .podium-place b { color: #ffe083; font-size: 1rem; }
 .podium-place small { color: var(--muted); font-size: .52rem; text-transform: uppercase; }

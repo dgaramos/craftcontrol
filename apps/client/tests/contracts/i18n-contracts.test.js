@@ -106,7 +106,7 @@ describe("i18n contracts — template locale and flag icons", () => {
 });
 
 describe("i18n contracts — no legacy Unicode icons in bundled script or template", () => {
-  const legacyIconPattern = /[☀☠⚔♛♟⚙◆◇◈▦▥▤☷⌂⌛♥▶↝➶✦✓↻⛏⚡⚠]/;
+  const legacyIconPattern = /[☀☠⚔♛♟⚙◆◇◈▦▥▤☷⌂⌛♥▶↝➶✦✓✗↻⛏⚡⚠🥇🥈🥉]/u;
 
   test("frontend script bundle has no legacy Unicode icons", () => {
     expect(legacyIconPattern.test(frontendScript())).toBe(false);

@@ -68,6 +68,12 @@ and a small palette derived from CraftControl's deepslate, grass, copper, sand,
 water, and danger colors. Icons must remain recognizable at 16–24 pixels, avoid
 fine strokes, and use no more detail than survives mobile rendering.
 
+Navigation symbols use a dark one-pixel silhouette, a dominant semantic color,
+and one highlight plane. Operational destinations such as settings, telemetry,
+history, and export have distinct symbols; a generic data symbol must not stand
+in for them. Ranking positions use the bundled numbered pixel badges rather than
+operating-system medals.
+
 ## Usage rules
 
 1. Use an existing semantic symbol before adding a new one. One meaning keeps one

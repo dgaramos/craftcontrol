@@ -12,7 +12,7 @@ export function createNavigation({ state, $ }) {
     // the top horizontal nav; none of the 3 bottom-nav buttons should appear
     // active for them, so return null.
     if (state.tab === "__players__") return "__players__";
-    if (state.tab === "server" || state.tab === "__server_settings__") return "server";
+    if (["server", "__server_settings__", "__telemetry_pack__"].includes(state.tab)) return "server";
     if (state.tab === "home") return "home";
     return null;
   }

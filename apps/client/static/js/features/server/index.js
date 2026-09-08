@@ -1,16 +1,7 @@
-import { createPackHealthPanel } from "./health.js?v=1";
+import { createTelemetryPackScreen } from "./telemetry-pack.js?v=1";
 import { createOperationFeature, isUnresponsiveOperation, nextOperationTransition } from "./operation.js?v=15";
 
 export function createServerFeature({ state, content, t, api, $, escapeHtml, uiIcon, formatDate, toast, getSettingsFeature }) {
-function telemetryPackMarkup() {
-  // Three cards, one concern each: what is installed, what it is allowed to
-  // collect, and how it is behaving. Pack health used to live in Analytics,
-  // which put infrastructure next to facts about the world.
-  const packCard = `<section class="telemetry-pack-card block-panel"><div><span class="eyebrow">CRAFTCONTROL</span><h3>${t("telemetryPack")}</h3><p>${t("telemetryPackHelp")}</p></div><div id="telemetry-pack-state" class="telemetry-pack-state">${t("checking")}</div><section id="telemetry-metrics" class="telemetry-metrics capability-panel">${t("checking")}</section></section>`;
-  const healthCard = `<section id="pack-health" class="pack-health"><div class="analytics-loading">${t("checking")}</div></section>`;
-  const diagnosticsCard = `<section class="telemetry-pack-card block-panel"><details id="diagnostics-details" class="telemetry-pack-diagnostics diag-details"><summary><div class="diag-summary-header"><div><span class="eyebrow">${t("diagDashboardEyebrow")}</span><h3 class="diag-summary-title">${t("diagDashboard")}</h3><p class="diag-summary-sub">${t("diagDashboardHelp")}</p></div><span class="diag-summary-toggle"></span></div></summary><div id="diagnostics-state" class="diag-details-body"></div></details></section>`;
-  return `${packCard}${healthCard}${diagnosticsCard}`;
-}
 
 function formatBytes(n) {
   if (n == null) return "—";
@@ -287,77 +278,6 @@ async function loadDiagnostics() {
   }
 }
 
-const OPT_IN_METRICS = [
-  ["itemUse", "itemUseMetric"],
-  ["blockInteractions", "blockInteractionsMetric"],
-  ["entityInteractions", "entityInteractionsMetric"],
-  ["containerInteractions", "containerInteractionsMetric"],
-];
-
-/**
- * The opt-in metric switches (issue #275).
- *
- * A change travels the Bedrock console, so the pack answers a moment later:
- * the row says "sent to the server" until it does, instead of flipping to a
- * state nobody has confirmed. Capabilities come from the same pack payload, so
- * a metric this runtime cannot deliver is labelled rather than offered.
- */
-async function loadTelemetryMetrics(capabilities = {}) {
-  const target = $("#telemetry-metrics");
-  if (!target) return;
-  try {
-    const result = await api("/api/telemetry/collection");
-    const metrics = result.metrics || {};
-    target.innerHTML = `<div><strong>${t("optInMetrics")}</strong><small>${t("optInMetricsHelp")}</small></div><ul>${OPT_IN_METRICS.map(([metric, label]) => {
-      const enabled = metrics[metric] === true;
-      const supported = capabilities[metric]?.supported;
-      const status = enabled && supported === false ? t("metricUnsupported") : enabled ? t("metricCollecting") : t("metricDisabled");
-      return `<li class="${enabled ? "supported" : "unavailable"}"><span>${uiIcon(enabled ? "check" : "close")}</span><div><strong>${escapeHtml(t(label))}</strong><small>${escapeHtml(status)}</small></div><button class="secondary" data-metric="${metric}" data-metric-enabled="${enabled ? "false" : "true"}" type="button">${enabled ? t("metricDisable") : t("metricEnable")}</button></li>`;
-    }).join("")}</ul>`;
-    target.querySelectorAll("[data-metric]").forEach((button) => button.onclick = async () => {
-      button.disabled = true;
-      const row = button.closest("li");
-      const note = row?.querySelector("small");
-      if (note) note.textContent = t("metricPending");
-      try {
-        await api("/api/telemetry/collection", {
-          method: "POST",
-          body: JSON.stringify({ metric: button.dataset.metric, enabled: button.dataset.metricEnabled === "true" }),
-        });
-        toast(t("metricChanged"));
-        await loadTelemetryMetrics(capabilities);
-      } catch (error) { toast(error.message, true); button.disabled = false; }
-    });
-  } catch (error) { target.textContent = error.message; }
-}
-
-async function loadTelemetryPack() {
-  const target = $("#telemetry-pack-state");
-  if (!target) return;
-  try {
-    const pack = await api("/api/telemetry-pack");
-    renderReleaseTags(pack);
-    const status = pack.installed ? (pack.enabled ? t("packActive") : t("packInactive")) : t("packMissing");
-    const primaryAction = pack.installed ? (pack.upgrade_available ? "upgrade" : null) : "install";
-    const health = t(pack.health) || pack.health || t("waiting");
-    const storageState = pack.storage_status === "migrated" ? t("migrated") : pack.storage_status === "not-required" ? t("notRequired") : pack.storage_status || "—";
-    const capabilityEntries = Object.entries(pack.capabilities || {});
-    const capabilityState = pack.capability_status === "limited" ? t("capabilityLimited") : capabilityEntries.length ? t("capabilityFull") : t("unknown");
-    const capabilityMarkup = capabilityEntries.length ? `<section class="capability-panel"><div><strong>${t("capabilities")}</strong><small>${escapeHtml(capabilityState)} · ${pack.capabilities_supported}/${pack.capabilities_total}</small></div><ul>${capabilityEntries.map(([name, value]) => `<li class="${value.supported ? "supported" : "unavailable"}"><span>${uiIcon(value.supported ? "check" : "close")}</span>${escapeHtml(t(name) || name)}</li>`).join("")}</ul></section>` : "";
-    target.innerHTML = `<div class="release-version-grid"><article><small>${t("craftControlImage")}</small><strong>v${escapeHtml(pack.application?.version || "—")}</strong><span>${t("activeSince")} ${formatDate(pack.application?.started_at)}</span></article><article><small>BEHAVIOR PACK</small><strong>v${escapeHtml(pack.runtime_version || pack.installed_version || "—")}</strong><span>${t("packInstalledAt")} ${formatDate(pack.installed_updated_at)}</span></article></div><div class="telemetry-pack-summary"><strong>${escapeHtml(status)}</strong><span class="health-${escapeHtml(pack.health || "waiting")}">${escapeHtml(health)}</span>${pack.upgrade_available && pack.installed ? `<span>${t("upgradeAvailable")}</span>` : ""}</div><dl><div><dt>${t("installedVersion")}</dt><dd>${escapeHtml(pack.installed_version || "—")}</dd></div><div><dt>${t("packObserved")}</dt><dd>${escapeHtml(pack.runtime_version || "—")}</dd></div><div><dt>${t("bundledVersion")}</dt><dd>${escapeHtml(pack.source_version)}</dd></div><div><dt>${t("storageVersion")}</dt><dd>${escapeHtml(pack.storage_version || "—")}</dd></div><div><dt>${t("storageStatus")}</dt><dd>${escapeHtml(storageState)}</dd></div><div><dt>${t("telemetrySequence")}</dt><dd>${escapeHtml(pack.sequence || "—")}</dd></div><div><dt>${t("lastResponse")}</dt><dd>${formatDate(pack.last_response_at)}</dd></div><div><dt>${t("lastSnapshot")}</dt><dd>${formatDate(pack.last_snapshot_at)}</dd></div><div><dt>${t("detectedGaps")}</dt><dd>${escapeHtml(pack.gap_count || 0)}</dd></div><div><dt>${t("missingEvents")}</dt><dd>${escapeHtml(pack.missing_events || 0)}</dd></div><div><dt>${t("packHealth")}</dt><dd>${escapeHtml(health)}</dd></div></dl>${capabilityMarkup}${pack.last_error ? `<p class="telemetry-pack-error">${escapeHtml(pack.last_error)}</p>` : ""}<div class="telemetry-pack-actions">${primaryAction ? `<button data-pack-action="${primaryAction}">${t(primaryAction === "install" ? "installPack" : "upgradePack")}</button>` : ""}${pack.enabled ? `<button class="secondary" data-pack-action="disable">${t("disablePack")}</button>` : ""}<button class="secondary" data-pack-action="rollback">${t("rollbackPack")}</button></div>`;
-    target.querySelectorAll("[data-pack-action]").forEach((button) => button.onclick = async () => {
-      if (!confirm(t("packActionConfirm"))) return;
-      button.disabled = true;
-      try {
-        const result = await api(`/api/telemetry-pack/${button.dataset.packAction}`, { method: "POST" });
-        toast(result.restart_required ? t("restartPackNotice") : t("operationDone"));
-        await loadTelemetryPack();
-      } catch (error) { toast(error.message, true); button.disabled = false; }
-    });
-    await loadTelemetryMetrics(pack.capabilities || {});
-  } catch (error) { target.textContent = error.message; }
-}
-
 function renderReleaseTags(pack) {
   const target = $("#release-tags");
   if (!target) return;
@@ -479,6 +399,7 @@ async function initializeOperationProgress() {
         <nav class="server-nav-list">
           <button class="server-nav-item" type="button" data-sp-tab="world">${uiIcon("world")}<span><small>${t("configuration")}</small><strong>${t("world")}</strong></span><span class="server-nav-item-arrow">›</span></button>
           <button class="server-nav-item" type="button" data-sp-tab="__server_settings__">${uiIcon("server")}<span><small>${t("infrastructure")}</small><strong>${t("settings")}</strong></span><span class="server-nav-item-arrow">›</span></button>
+          <button class="server-nav-item" type="button" data-sp-tab="__telemetry_pack__">${uiIcon("data")}<span><small>${t("behaviorPackEyebrow")}</small><strong>${t("telemetryPack")}</strong></span><span class="server-nav-item-arrow">›</span></button>
           <button class="server-nav-item" type="button" data-sp-tab="analytics">${uiIcon("data")}<span><small>${t("analyticsKicker")}</small><strong>${t("analytics")}</strong></span><span class="server-nav-item-arrow">›</span></button>
           ${isOwner ? `<button class="server-nav-item" type="button" data-sp-tab="audit">${uiIcon("activity")}<span><small>${t("historyLabel")}</small><strong>${t("audit")}</strong></span><span class="server-nav-item-arrow">›</span></button>` : ""}
           ${isOwner ? `<button class="server-nav-item" type="button" data-sp-tab="exports">${uiIcon("data")}<span><small>${t("administration")}</small><strong>${t("exportTitle")}</strong></span><span class="server-nav-item-arrow">›</span></button>` : ""}
@@ -498,22 +419,18 @@ async function initializeOperationProgress() {
     content.querySelectorAll("[data-sp-tab]").forEach((btn) => {
       btn.addEventListener("click", () => { state.tab = btn.dataset.spTab; });
     });
-    loadTelemetryPack();
   }
 
-  // Pack health reads the same infrastructure this screen manages, so it is
-  // rendered here rather than in Analytics, where it used to sit next to facts
-  // about the world (issue #275 follow-up).
-  const renderPackHealth = createPackHealthPanel({ $, t, uiIcon, api, formatDate });
-
   const renderServer = renderServerPanel;
+  // Server settings are server settings: the behavior pack moved to its own
+  // screen, where its status, collection policy and installation live together
+  // instead of pushing these fields to the bottom of the page.
   const renderServerSettings = () => {
-    getSettingsFeature().renderSettingsGroups(["Packs", "Rede", "Avançado"], telemetryPackMarkup());
-    loadTelemetryPack();
-    renderPackHealth();
-    // The diagnostics dashboard only exists in this screen's markup, so it has
-    // to be filled here — the server hub has no #diagnostics-state to target.
-    loadDiagnostics();
+    getSettingsFeature().renderSettingsGroups(["Packs", "Rede", "Avançado"]);
   };
-  return { renderServer, renderServerSettings, renderReleaseTags, loadFrontendVersion, initializeOperationProgress, loadDiagnostics, openOperationDrawer, refreshOperationPanel };
+
+  const renderTelemetryPack = createTelemetryPackScreen({
+    content, t, api, $, escapeHtml, uiIcon, formatDate, toast, loadDiagnostics,
+  });
+  return { renderServer, renderServerSettings, renderTelemetryPack, renderReleaseTags, loadFrontendVersion, initializeOperationProgress, loadDiagnostics, openOperationDrawer, refreshOperationPanel };
 }

@@ -25,26 +25,7 @@ function makeDeps(overrides = {}) {
 }
 
 describe("createServerFeature", () => {
-  test("renders telemetry pack state and capability branches", async () => {
-    const deps = makeDeps();
-    deps.elements["#telemetry-pack-state"] = makeEl();
-    deps.elements["#release-tags"] = makeEl();
-    deps.api.mockResolvedValue({ installed: true, enabled: true, upgrade_available: true, health: "healthy", storage_status: "migrated", capability_status: "limited", capabilities: { playerJoins: { supported: true }, playerLeaves: { supported: false } }, capabilities_supported: 1, capabilities_total: 2, application: { version: "2", started_at: 1 }, runtime_version: "3", installed_version: "2", source_version: "4", storage_version: "1", sequence: 4, last_response_at: 1, last_snapshot_at: 1 });
-    const feature = createServerFeature(deps);
-    feature.renderServer();
-    await new Promise((resolve) => queueMicrotask(resolve));
-    expect(deps.elements["#telemetry-pack-state"].innerHTML).toContain("upgrade");
-    expect(deps.elements["#release-tags"].innerHTML).toContain("API v2");
-  });
 
-  test("handles telemetry API failure", async () => {
-    const deps = makeDeps();
-    deps.elements["#telemetry-pack-state"] = makeEl();
-    deps.api.mockRejectedValue(new Error("telemetry unavailable"));
-    createServerFeature(deps).renderServer();
-    await new Promise((resolve) => queueMicrotask(resolve));
-    expect(deps.elements["#telemetry-pack-state"].textContent).toBe("telemetry unavailable");
-  });
 
   test("renders local diagnostics when the owner panel requests them", async () => {
     const deps = makeDeps();
@@ -80,7 +61,7 @@ describe("createServerFeature", () => {
     expect(rendered).toContain("pendingGameruleRefreshes");
   });
 
-  test("the server settings screen fills its own diagnostics dashboard", async () => {
+  test("the server settings screen carries only server settings", async () => {
     const deps = makeDeps();
     const renderSettingsGroups = jest.fn();
     deps.getSettingsFeature = () => ({ renderSettingsGroups });
@@ -95,9 +76,10 @@ describe("createServerFeature", () => {
     });
     createServerFeature(deps).renderServerSettings();
     await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(renderSettingsGroups).toHaveBeenCalledWith(["Packs", "Rede", "Avançado"], expect.stringContaining('id="diagnostics-state"'));
-    expect(deps.api).toHaveBeenCalledWith("/api/diagnostics");
-    expect(deps.elements["#diagnostics-state"].children.length).toBeGreaterThan(0);
+    // Server settings are server settings: the pack, its collection policy and
+    // its diagnostics moved to their own screen.
+    expect(renderSettingsGroups).toHaveBeenCalledWith(["Packs", "Rede", "Avançado"]);
+    expect(deps.api).not.toHaveBeenCalledWith("/api/telemetry-pack");
   });
 
   test("hides diagnostics when its protected API request fails", async () => {
@@ -119,45 +101,6 @@ describe("createServerFeature", () => {
     expect(deps.elements["#release-tags"].innerHTML).not.toContain("UI v");
   });
 
-  test("covers pack status, actions, and action failures", async () => {
-    const savedConfirm = global.confirm;
-    const deps = makeDeps();
-    const install = makeEl({ dataset: { packAction: "install" } });
-    const disable = makeEl({ dataset: { packAction: "disable" } });
-    const rollback = makeEl({ dataset: { packAction: "rollback" } });
-    deps.elements["#telemetry-pack-state"] = makeEl({ querySelectorAll: jest.fn(() => [install, disable, rollback]) });
-    deps.elements["#release-tags"] = makeEl();
-    // Path-aware: the card also reads the opt-in metric state, so a positional
-    // mock chain would drift as soon as another read is added.
-    const packState = { installed: false, enabled: false, health: "", storage_status: "not-required", capabilities: {}, application: {}, installed_version: "", runtime_version: "", source_version: "1" };
-    const actions = [];
-    deps.api = jest.fn((path) => {
-      if (path === "/api/telemetry-pack") return Promise.resolve(packState);
-      if (path === "/api/telemetry/collection") return Promise.resolve({ metrics: {}, available: [] });
-      actions.push(path);
-      if (path === "/api/telemetry-pack/rollback") return Promise.reject(new Error("operation unavailable"));
-      return Promise.resolve({ restart_required: true });
-    });
-    global.confirm = jest.fn().mockReturnValueOnce(false).mockReturnValue(true);
-
-    try {
-      const feature = createServerFeature(deps);
-      feature.renderServer();
-      await new Promise((resolve) => queueMicrotask(resolve));
-      expect(deps.elements["#telemetry-pack-state"].innerHTML).toContain("installPack");
-      await install.onclick();
-      // confirm returns false — install was skipped; operation initialization is
-      // owned by application bootstrap rather than the Server area.
-      expect(actions).toEqual([]);
-      await disable.onclick();
-      expect(deps.toast).toHaveBeenCalledWith("restartPackNotice");
-      await rollback.onclick();
-      expect(deps.toast).toHaveBeenCalledWith("operation unavailable", true);
-      expect(rollback.disabled).toBe(false);
-    } finally {
-      global.confirm = savedConfirm;
-    }
-  });
 
   test("sets state.operationActive true for running/pending operations", async () => {
     const deps = makeDeps();
@@ -397,22 +340,6 @@ describe("createServerFeature", () => {
     }
   });
 
-  test("renders inactive packs, fallbacks, errors, and supported capabilities", async () => {
-    const deps = makeDeps({ state: { frontendVersion: null } });
-    const action = makeEl({ dataset: { packAction: "disable" } });
-    deps.elements["#telemetry-pack-state"] = makeEl({ querySelectorAll: jest.fn(() => [action]) });
-    deps.elements["#release-tags"] = makeEl();
-    deps.api.mockResolvedValue({
-      installed: true, enabled: false, upgrade_available: false, health: null, storage_status: "blocked", capabilities: { joins: { supported: true } },
-      capability_status: "full", capabilities_supported: 1, capabilities_total: 1, application: null, installed_version: "4", runtime_version: "", source_version: null,
-      installed_updated_at: null, last_response_at: null, last_snapshot_at: null, gap_count: null, missing_events: null, last_error: "pack warning",
-    });
-    createServerFeature(deps).renderServer();
-    await new Promise((resolve) => queueMicrotask(resolve));
-    expect(deps.elements["#telemetry-pack-state"].innerHTML).toContain("packInactive");
-    expect(deps.elements["#telemetry-pack-state"].innerHTML).toContain("pack warning");
-    expect(deps.elements["#telemetry-pack-state"].innerHTML).toContain("capabilityFull");
-  });
 
   test("renders reconciliation sub-panel when data is present", async () => {
     const deps = makeDeps();
@@ -716,100 +643,5 @@ describe("createServerFeature — loadFrontendVersion", () => {
     await createServerFeature(deps).loadDiagnostics();
     const rendered = diagText(deps);
     expect(rendered).toContain("1m 0s");
-  });
-});
-
-describe("opt-in metric switches", () => {
-  function metricDeps(metrics, packOverrides = {}) {
-    const deps = makeDeps();
-    deps.elements["#telemetry-pack-state"] = makeEl();
-    deps.elements["#release-tags"] = makeEl();
-    const target = makeEl();
-    const rows = [];
-    target.querySelectorAll = jest.fn(() => rows);
-    deps.elements["#telemetry-metrics"] = target;
-    const failures = { post: null };
-    deps.api = jest.fn((path, options) => {
-      if (path === "/api/telemetry/collection") {
-        if (options?.method === "POST" && failures.post) return Promise.reject(failures.post);
-        return Promise.resolve({ metrics, available: Object.keys(metrics) });
-      }
-      return Promise.resolve({
-        installed: true, enabled: true, health: "healthy", capabilities: {}, application: {},
-        capabilities_supported: 0, capabilities_total: 0, ...packOverrides,
-      });
-    });
-    return { deps, target, rows, failures };
-  }
-
-  const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
-
-  test("lists every metric with the control its state implies", async () => {
-    const { deps, target } = metricDeps({ itemUse: true, blockInteractions: false, entityInteractions: false, containerInteractions: false });
-    createServerFeature(deps).renderServer();
-    await settle();
-    expect(target.innerHTML).toContain("optInMetrics");
-    expect(target.innerHTML).toContain("metricCollecting");
-    expect(target.innerHTML).toContain("metricDisabled");
-    // The control offers the opposite of the current state, per metric.
-    expect(target.innerHTML).toContain('data-metric="itemUse" data-metric-enabled="false"');
-    expect(target.innerHTML).toContain('data-metric="blockInteractions" data-metric-enabled="true"');
-  });
-
-  test("an enabled metric the runtime cannot deliver is labelled unsupported", async () => {
-    const { deps, target } = metricDeps(
-      { itemUse: true, blockInteractions: false, entityInteractions: false, containerInteractions: false },
-      { capabilities: { itemUse: { supported: false } } },
-    );
-    createServerFeature(deps).renderServer();
-    await settle();
-    expect(target.innerHTML).toContain("metricUnsupported");
-  });
-
-  test("switching a metric posts the opposite state and re-reads the card", async () => {
-    const { deps, target, rows } = metricDeps({ itemUse: false, blockInteractions: false, entityInteractions: false, containerInteractions: false });
-    const note = makeEl();
-    const button = makeEl({ dataset: { metric: "itemUse", metricEnabled: "true" }, disabled: false });
-    button.closest = jest.fn(() => makeEl({ querySelector: jest.fn(() => note) }));
-    rows.push(button);
-    createServerFeature(deps).renderServer();
-    await settle();
-
-    await button.onclick();
-    expect(deps.api).toHaveBeenCalledWith("/api/telemetry/collection", {
-      method: "POST",
-      body: JSON.stringify({ metric: "itemUse", enabled: true }),
-    });
-    // The row says the request is in flight rather than flipping to a state
-    // the pack has not confirmed.
-    expect(note.textContent).toBe("metricPending");
-    expect(deps.toast).toHaveBeenCalledWith("metricChanged");
-    expect(target.innerHTML).toContain("optInMetrics");
-  });
-
-  test("a refused switch reports the reason and gives the control back", async () => {
-    const { deps, rows, failures } = metricDeps({ itemUse: true, blockInteractions: false, entityInteractions: false, containerInteractions: false });
-    const button = makeEl({ dataset: { metric: "itemUse", metricEnabled: "false" }, disabled: false });
-    button.closest = jest.fn(() => makeEl({ querySelector: jest.fn(() => null) }));
-    rows.push(button);
-    createServerFeature(deps).renderServer();
-    await settle();
-
-    // The console is unreachable, which the panel must report rather than
-    // leaving the switch stuck.
-    failures.post = new Error("container bedrock not found");
-    await button.onclick();
-    expect(deps.toast).toHaveBeenCalledWith("container bedrock not found", true);
-    expect(button.disabled).toBe(false);
-  });
-
-  test("a failed metric read shows the reason instead of an empty card", async () => {
-    const { deps, target } = metricDeps({});
-    deps.api = jest.fn((path) => (path === "/api/telemetry/collection"
-      ? Promise.reject(new Error("metrics unavailable"))
-      : Promise.resolve({ installed: true, enabled: true, health: "healthy", capabilities: {}, application: {} })));
-    createServerFeature(deps).renderServer();
-    await settle();
-    expect(target.textContent).toBe("metrics unavailable");
   });
 });

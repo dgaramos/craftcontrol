@@ -6,14 +6,14 @@ import { createNavTrail } from "./core/route.js?v=8";
 import { indicatorState, worldPresentation } from "./core/panel-state.js?v=1";
 import { $, escapeHtml } from "./core/dom.js?v=7";
 import { connectInvalidation } from "./core/invalidation.js?v=7";
-import { createNavigation } from "./core/navigation.js?v=10";
+import { createNavigation } from "./core/navigation.js?v=11";
 import { toast } from "./components/feedback.js?v=7";
 import { formatDate as formatLocalizedDate, formatDuration, sessionMoment as localizedSessionMoment, timelineTimestamp as localizedTimelineTimestamp } from "./components/time.js?v=9";
 import { createAnalyticsFeature } from "./features/analytics/index.js?v=11";
 import { createPlayersFeature } from "./features/players/index.js?v=10";
 import { createWorldFeature } from "./features/world/index.js?v=13";
 import { createRulesFeature } from "./features/rules/index.js?v=7";
-import { createServerFeature } from "./features/server/index.js?v=22";
+import { createServerFeature } from "./features/server/index.js?v=23";
 import { UNRESPONSIVE_AFTER_MS } from "./features/server/operation.js?v=15";
 import { startAuthenticatedApplication } from "./features/auth/bootstrap.js?v=7";
 import { createSettingsFeature } from "./features/settings/index.js?v=10";
@@ -21,7 +21,7 @@ import { createAuditFeature } from "./features/audit/index.js?v=2";
 import { createExportsFeature } from "./features/exports/index.js?v=1";
 import { downloadFile } from "./core/download.js?v=1";
 import { createHomeFeature } from "./features/home/index.js?v=7";
-import { createI18n } from "./i18n/index.js?v=18";
+import { createI18n } from "./i18n/index.js?v=19";
 import { createGameTerms } from "./i18n/game-terms.js?v=7";
 
 export function startApplication() {
@@ -49,7 +49,7 @@ export function startApplication() {
      from the Server hub, Time from Home and from World — so a hard-coded
      destination sends you somewhere you were not. Keep the trail instead.
      Landing on a root tab clears it: the bottom nav is a fresh start. */
-  const BACK_LABELS = { home: "navHome", __players__: "navPlayers", server: "navServer", world: "world", rules: "rules", analytics: "analytics", audit: "audit", exports: "exportTitle", __server_settings__: "settings", __time__: "timeControls" };
+  const BACK_LABELS = { home: "navHome", __players__: "navPlayers", server: "navServer", world: "world", rules: "rules", analytics: "analytics", audit: "audit", exports: "exportTitle", __server_settings__: "settings", __telemetry_pack__: "telemetryPack", __time__: "timeControls" };
   const navTrail = createNavTrail();
 
   state.subscribe("tab", (value, previous) => navTrail.record(value, previous));
@@ -83,6 +83,7 @@ export function startApplication() {
     }
     if (state.tab === "__time__") return getWorldFeature().renderTimePanel();
     if (state.tab === "__server_settings__") return getServerFeature().renderServerSettings();
+    if (state.tab === "__telemetry_pack__") return getServerFeature().renderTelemetryPack();
     if (state.tab === "__players__") return renderPlayersPanel();
     if (state.tab === "analytics") return renderAnalyticsPanel();
     if (state.tab === "audit") return getAuditFeature().renderAuditPanel();

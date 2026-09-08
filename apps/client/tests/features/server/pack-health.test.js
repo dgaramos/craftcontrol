@@ -44,6 +44,8 @@ describe("createPackHealthPanel", () => {
   beforeEach(() => { savedDocument = global.document; global.document = makeDom().document; });
   afterEach(() => { global.document = savedDocument; });
 
+  // Health, version and freshness are stated once by the screen header; this
+  // panel is the detail behind them.
   test("renders health-screen element as the first child of content", async () => {
     const deps = makeDeps();
     deps.api = jest.fn()
@@ -53,16 +55,6 @@ describe("createPackHealthPanel", () => {
     expect(deps.content.children[0].className).toBe("health-screen");
   });
 
-  test("renders health-status section with badge for healthy pack", async () => {
-    const deps = makeDeps();
-    deps.api = jest.fn()
-      .mockResolvedValueOnce(packResult())
-      .mockResolvedValueOnce(activityResult);
-    await createPackHealthPanel(deps)();
-    const screen = deps.content.children[0];
-    expect(findNodes(screen, (n) => n.className === "health-status block-panel")).toHaveLength(1);
-    expect(findNodes(screen, (n) => n.className?.includes("health-healthy"))).toHaveLength(1);
-  });
 
   test("shows noPackHealth empty state when health is waiting and pack not installed", async () => {
     const deps = makeDeps();
@@ -84,15 +76,6 @@ describe("createPackHealthPanel", () => {
     expect(findNodes(screen, (n) => n.textContent === "5-7")).toHaveLength(1);
   });
 
-  test("renders last_error paragraph when pack is degraded", async () => {
-    const deps = makeDeps();
-    deps.api = jest.fn()
-      .mockResolvedValueOnce(packResult({ health: "degraded", last_error: "sequence gap: expected 5, received 8" }))
-      .mockResolvedValueOnce(activityResult);
-    await createPackHealthPanel(deps)();
-    const screen = deps.content.children[0];
-    expect(findNodes(screen, (n) => n.textContent === "sequence gap: expected 5, received 8")).toHaveLength(1);
-  });
 
   test("renders capability rows with supported and unsupported indicators", async () => {
     const deps = makeDeps();

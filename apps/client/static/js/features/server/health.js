@@ -11,10 +11,6 @@ function text(parent, tag, content, className = "") {
   return node;
 }
 
-function icon(parent, svg) {
-  const range = document.createRange();
-  parent.append(range.createContextualFragment(svg));
-}
 
 function statCard(label, value, note = "") {
   const article = el("article", "health-stat");
@@ -24,11 +20,6 @@ function statCard(label, value, note = "") {
   return article;
 }
 
-function healthBadge(status, t) {
-  const badge = el("span", `health-badge health-${status}`);
-  badge.textContent = t(status) || status;
-  return badge;
-}
 
 function capabilityRow(key, cap) {
   const row = el("li", "capability-row");
@@ -43,32 +34,17 @@ function capabilityRow(key, cap) {
 }
 
 /**
- * Behavior-pack health, rendered inside the server infrastructure screen.
+ * The pack's technical detail, folded away inside the Telemetry Pack screen.
  *
- * It reads `/api/telemetry-pack`: sequence, gaps, capabilities, storage. That
- * is the state of a piece of infrastructure, not a fact about the world, so it
- * belongs beside the pack's install and rollback controls rather than next to
- * blocks and combat.
+ * Sequence, gaps, storage and capabilities: the numbers that only matter while
+ * something is wrong. Health, versions and freshness are *not* here — the
+ * screen states those once, at the top, where the question is asked.
  */
-export function createPackHealthPanel({ $, t, uiIcon, api, formatDate }) {
+export function createPackHealthPanel({ $, t, api, formatDate }) {
   return async function renderPackHealth() {
     const content = $("#pack-health");
     if (!content) return;
     const screen = el("div", "health-screen");
-
-    const hero = el("header", "health-hero block-panel");
-    const heroCopy = el("div");
-    text(heroCopy, "span", t("behaviorPackEyebrow"), "eyebrow");
-    text(heroCopy, "h2", t("packHealthTitle"));
-    text(heroCopy, "p", t("packHealthHelp"));
-    const refreshBtn = el("button", "secondary");
-    refreshBtn.id = "health-refresh";
-    refreshBtn.type = "button";
-    icon(refreshBtn, uiIcon("refresh"));
-    refreshBtn.append(document.createTextNode(` ${t("refreshData")}`));
-    hero.append(heroCopy, refreshBtn);
-    screen.append(hero);
-
     const target = el("div");
     target.id = "health-content";
     screen.append(target);
@@ -101,31 +77,6 @@ export function createPackHealthPanel({ $, t, uiIcon, api, formatDate }) {
 
         const fragment = document.createDocumentFragment();
 
-        const statusSection = el("section", "health-status block-panel");
-        const statusTitle = el("div", "ranking-section-title");
-        text(statusTitle, "span", t("statusEyebrow"), "eyebrow");
-        text(statusTitle, "h3", t("packHealth"));
-        statusSection.append(statusTitle);
-        const statusRow = el("div", "health-status-row");
-        statusRow.append(healthBadge(health, t));
-        if (pack.runtime_version) {
-          const ver = el("span", "health-version");
-          ver.textContent = `v${pack.runtime_version}`;
-          statusRow.append(ver);
-        }
-        if (pack.last_error) {
-          const err = el("p", "health-error");
-          err.textContent = pack.last_error;
-          statusSection.append(statusRow, err);
-        } else {
-          statusSection.append(statusRow);
-        }
-        const freshness = el("p", "health-freshness");
-        text(freshness, "span", t("lastResponse") + " " + formatDate(pack.last_response_at));
-        text(freshness, "small", t("updated") + " " + formatDate(pack.last_snapshot_at));
-        statusSection.append(freshness);
-        fragment.append(statusSection);
-
         const volumeSection = el("section", "health-volume block-panel");
         const volTitle = el("div", "ranking-section-title");
         text(volTitle, "span", t("volumeEyebrow"), "eyebrow");
@@ -151,9 +102,6 @@ export function createPackHealthPanel({ $, t, uiIcon, api, formatDate }) {
         const seqGrid = el("div", "health-stats-grid");
         seqGrid.append(
           statCard(t("lastSnapshot"), formatDate(pack.last_snapshot_at)),
-          statCard(t("lastResponse"), formatDate(pack.last_response_at)),
-          statCard(t("installedVersion"), pack.installed_version || "—"),
-          statCard(t("bundledVersion"), pack.source_version || "—"),
           statCard(t("storageVersion"), pack.storage_version || "—"),
           statCard(t("storageStatus"), pack.storage_status || "—"),
         );
@@ -185,7 +133,6 @@ export function createPackHealthPanel({ $, t, uiIcon, api, formatDate }) {
       }
     };
 
-    refreshBtn.onclick = load;
     await load();
   };
 }

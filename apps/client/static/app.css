@@ -769,14 +769,30 @@ dialog.drawer::backdrop { background: rgba(0, 0, 0, .7); }
 .capability-panel li { display: flex; gap: .35rem; align-items: center; padding: .35rem .5rem; background: #202722; font-size: .75rem; font-weight: 800; }
 .capability-panel li.supported span { color: #8bd66f; }
 .capability-panel li.unavailable { color: #ffb0a7; }
+/* The Telemetry Pack screen. The status line answers "is it working?" before
+   anything else is offered, so it reads as one sentence — version, health,
+   installation state — instead of a grid to scan. */
+.telemetry-screen { display: grid; gap: 12px; }
+.pack-status-line { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.pack-status-version { color: #bcefff; font-family: var(--font-display); font-size: 1.05rem; font-weight: 900; }
+.pack-status-state { color: var(--muted); font-size: .8rem; font-weight: 800; text-transform: uppercase; }
+.pack-status-note { margin: .5rem 0 0; color: var(--muted); font-size: .78rem; }
+.pack-collection > p { margin: .4rem 0 .8rem; color: var(--muted); font-size: .8rem; }
+.pack-install .release-version-grid { margin-bottom: .8rem; }
+.pack-details { margin: 0; }
+
 /* Opt-in metric switches (issue #275). One row per metric, because each is
    turned on by itself; the row states where the metric stands before it offers
    the control, so nobody flips a switch expecting numbers this server cannot
    produce. */
-.telemetry-metrics li { flex: 1 1 210px; justify-content: space-between; gap: .6rem; padding: .55rem .6rem; }
+.telemetry-metrics ul { display: flex; flex-wrap: wrap; gap: .45rem; margin: 0; padding: 0; list-style: none; }
+.telemetry-metrics li { display: flex; flex: 1 1 210px; align-items: center; justify-content: space-between; gap: .6rem; padding: .55rem .6rem; background: #202722; font-size: .75rem; font-weight: 800; }
+.telemetry-metrics li.supported > span { color: #8bd66f; }
+.telemetry-metrics li.unavailable { color: #ffb0a7; }
 .telemetry-metrics li div { display: grid; gap: .15rem; min-width: 0; }
 .telemetry-metrics li small { font-weight: 700; overflow-wrap: anywhere; }
 .telemetry-metrics li button { min-height: 36px; padding: 4px 10px; font-size: 10px; }
+.telemetry-metrics li button[disabled] { opacity: .45; cursor: not-allowed; }
 
 /* Opt-in analytics (issue #275). The availability card sits under the numbers
    on every width, and the unavailable state replaces them entirely rather than

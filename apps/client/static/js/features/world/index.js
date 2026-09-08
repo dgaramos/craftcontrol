@@ -123,7 +123,6 @@ function bindTimePanel() {
   const openTimeControls = () => {
     state.tab = "__time__";
     persistTab(state.tab);
-    getNavigation().renderTabs();
     renderTimePanel();
     resetPanelScroll("smooth");
   };

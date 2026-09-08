@@ -69,10 +69,15 @@ describe("brand contracts — CSRF and API versioning", () => {
 });
 
 describe("brand contracts — mobile scroll behaviour", () => {
-  test("scopes legacy sticky navigation styles to #tabs", () => {
+  test("the shell has one navigation, with no legacy tab strip left behind", () => {
     const css = readFileSync(join(STATIC, "app.css"), "utf8");
-    expect(css).toContain("#tabs {\n  display: grid;");
-    expect(css).not.toMatch(/(?:^|\n)nav\s*\{/);
+    const template = readFileSync(join(FRONTEND, "templates", "index.html"), "utf8");
+    // #tabs was hidden and rebuilt on every tab change; the bottom nav is the
+    // only navigation the shell renders.
+    expect(css).not.toContain("#tabs");
+    expect(template).not.toContain('id="tabs"');
+    expect(template).not.toContain("tpl-nav-tab");
+    expect(css).toMatch(/\.bottom-nav \{/);
   });
 
   test("app.css sets overscroll-behavior-y: none", () => {
@@ -116,14 +121,14 @@ describe("brand contracts — mobile scroll behaviour", () => {
     expect(dom).toContain("export function resetPanelScroll");
   });
 
-  test("index.html references app.css?v=55", () => {
+  test("index.html references app.css?v=56", () => {
     const template = readFileSync(join(FRONTEND, "templates", "index.html"), "utf8");
-    expect(template).toContain("/static/app.css?v=55");
+    expect(template).toContain("/static/app.css?v=56");
   });
 
-  test("index.html references app.js?v=99", () => {
+  test("index.html references app.js?v=100", () => {
     const template = readFileSync(join(FRONTEND, "templates", "index.html"), "utf8");
-    expect(template).toContain("/static/app.js?v=99");
+    expect(template).toContain("/static/app.js?v=100");
   });
 
   test("index.html links the self-hosted display and body fonts", () => {

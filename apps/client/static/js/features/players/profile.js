@@ -113,7 +113,6 @@ return async function renderPlayerDetail(player, account, back = renderPlayersPa
       state.analytics.page = 1;
       state.tab = "analytics";
       persistTab(state.tab);
-      getNavigation().renderTabs();
       renderAnalyticsPanel();
     };
     const operator = $("#detail-operator");
@@ -160,7 +159,7 @@ return async function renderPlayerDetail(player, account, back = renderPlayersPa
       forceNotice.hidden = false;
       forceNotice.innerHTML = `<p class="gamemode-force-notice">${escapeHtml ? escapeHtml(t("forcedGameModeNotice")) : t("forcedGameModeNotice")}</p><button id="detail-gamemode-settings-link" class="secondary" type="button">${t("forcedGameModeLink")}</button>`;
       const settingsLink = $("#detail-gamemode-settings-link");
-      if (settingsLink) settingsLink.onclick = () => { state.tab = "settings"; getNavigation().renderTabs(); };
+      if (settingsLink) settingsLink.onclick = () => { state.tab = "settings"; };
     }
 
     // Observed game mode — read-only, sourced from Telemetry Pack snapshot

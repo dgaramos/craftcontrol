@@ -216,7 +216,7 @@ describe("openTimeControls", () => {
   beforeEach(() => { _savedWindow = global.window; });
   afterEach(() => { global.window = _savedWindow; });
 
-  test("sets state.tab, calls renderTabs, renders time panel markup, and scrolls to top", () => {
+  test("sets state.tab, renders the time panel and scrolls to top", () => {
     const deps = makeDeps();
     deps.content.querySelectorAll = jest.fn(() => []);
     deps.$ = jest.fn(() => makeEl());
@@ -225,7 +225,6 @@ describe("openTimeControls", () => {
     const { openTimeControls } = createWorldFeature(deps);
     openTimeControls();
     expect(deps.state.tab).toBe("__time__");
-    expect(deps.renderTabs).toHaveBeenCalled();
     expect(deps.content.innerHTML).toContain("time-screen");
     // <main> owns the scroll in the mobile shell; the window is reset too, for
     // any layout where the document is what scrolls.

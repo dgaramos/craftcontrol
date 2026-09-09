@@ -1,4 +1,4 @@
-# claudio-dr: v0.1.13
+# claudio-dr: v0.1.29
 name: Publish Claudio DR review
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
       event: { description: Review event, required: true, default: COMMENT, type: choice, options: [COMMENT] }
       review_body: { description: Review summary in Markdown, required: false, default: '', type: string }
       reviewed_head_sha: { description: Full PR head SHA reviewed, required: true, type: string }
-      inline_comments_json: { description: JSON array of path, line, and body findings, required: false, default: '[]', type: string }
+      inline_comments_json: { description: "JSON array of path, line, and body findings", required: false, default: '[]', type: string }
       replies_json: { description: JSON array of comment_id and body replies, required: false, default: '[]', type: string }
       resolve_thread_ids_json: { description: JSON array of thread node IDs, required: false, default: '[]', type: string }
 permissions: { contents: read }
@@ -17,6 +17,9 @@ jobs:
     steps:
       # v4
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: refs/heads/main
       - id: claudio-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
         with:
@@ -37,4 +40,4 @@ jobs:
           RESOLVE_THREAD_IDS_JSON: ${{ inputs.resolve_thread_ids_json }}
           EXPECTED_AUTHOR: claudio-dr[bot]
           PUBLISHER_APP_SLUG: ${{ steps.claudio-token.outputs.app-slug }}
-        run: bash .github/scripts/publish-review.sh
+        run: bash .github/scripts/agent-workflows/publish-review.sh

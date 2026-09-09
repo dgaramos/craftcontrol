@@ -1,4 +1,4 @@
-# cody-dr: v0.1.13
+# cody-dr: v0.1.29
 name: Publish Cody DR issue
 
 on:
@@ -73,10 +73,10 @@ jobs:
              + (if $assignees == "" then {} else {assignees: ($assignees | split(",") | map(select(length > 0)))} end)
              + (if $milestone == "" then {} else {milestone: ($milestone | tonumber)} end)' > issue.json
           if [[ -n "$ISSUE_NUMBER" ]]; then
+            existing_author="$(gh api --method GET "repos/${GITHUB_REPOSITORY}/issues/${ISSUE_NUMBER}" | jq -r '.user.login')"
+            [[ "$existing_author" == "$EXPECTED_AUTHOR" ]] || { echo "author validation failed: expected ${EXPECTED_AUTHOR}, got ${existing_author}" >&2; exit 1; }
             gh api --method PATCH "repos/${GITHUB_REPOSITORY}/issues/${ISSUE_NUMBER}" --input issue.json > created-issue.json
           else
             gh api --method POST "repos/${GITHUB_REPOSITORY}/issues" --input issue.json > created-issue.json
           fi
-          actual_author="$(jq -r '.user.login' created-issue.json)"
-          [[ "$actual_author" == "$EXPECTED_AUTHOR" ]] || { echo "unexpected issue author: $actual_author" >&2; exit 1; }
           jq -r '"Created and verified Cody DR issue #\(.number): \(.html_url)"' created-issue.json

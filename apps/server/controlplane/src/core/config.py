@@ -16,6 +16,22 @@ HOST_AGENT_RESTART_TIMEOUT_MAX = 300
 HOST_AGENT_RESTART_TIMEOUT_DEFAULT = 180
 
 
+def _proxy_env(name: str, default: str = "") -> tuple[str, str]:
+    """Read a bedrock-proxy setting, accepting the pre-rename HOST_AGENT_ name.
+
+    The deployment renamed these variables to BEDROCK_PROXY_*; the legacy names
+    are still honoured so an older .env keeps working. Returns the value along
+    with the variable name it came from, so errors name what the operator set.
+    """
+    current = f"BEDROCK_PROXY_{name}"
+    legacy = f"HOST_AGENT_{name}"
+    for variable in (current, legacy):
+        value = os.getenv(variable)
+        if value is not None:
+            return value, variable
+    return default, current
+
+
 @dataclass(frozen=True)
 class Settings:
     container: str
@@ -38,29 +54,31 @@ class Settings:
         compose_project = os.getenv("MINECRAFT_COMPOSE_PROJECT", "minecraft-bedrock")
         if not COMPOSE_PROJECT_NAME.fullmatch(compose_project):
             raise ValueError("MINECRAFT_COMPOSE_PROJECT must be a valid Docker Compose project name")
-        host_agent_url = os.getenv("HOST_AGENT_URL", "")
+        host_agent_url, url_variable = _proxy_env("URL")
         if host_agent_url and not HOST_AGENT_URL_PATTERN.fullmatch(host_agent_url):
-            raise ValueError("HOST_AGENT_URL must be an http:// or https:// URL")
+            raise ValueError(f"{url_variable} must be an http:// or https:// URL")
+        health_value, health_variable = _proxy_env(
+            "HEALTH_TIMEOUT_SECONDS", str(HOST_AGENT_HEALTH_TIMEOUT_DEFAULT)
+        )
         try:
-            host_agent_health_timeout_seconds = int(
-                os.getenv("HOST_AGENT_HEALTH_TIMEOUT_SECONDS", str(HOST_AGENT_HEALTH_TIMEOUT_DEFAULT))
-            )
+            host_agent_health_timeout_seconds = int(health_value)
         except ValueError as exc:
-            raise ValueError("HOST_AGENT_HEALTH_TIMEOUT_SECONDS must be an integer") from exc
+            raise ValueError(f"{health_variable} must be an integer") from exc
         if not HOST_AGENT_HEALTH_TIMEOUT_MIN <= host_agent_health_timeout_seconds <= HOST_AGENT_HEALTH_TIMEOUT_MAX:
             raise ValueError(
-                "HOST_AGENT_HEALTH_TIMEOUT_SECONDS must be between "
+                f"{health_variable} must be between "
                 f"{HOST_AGENT_HEALTH_TIMEOUT_MIN} and {HOST_AGENT_HEALTH_TIMEOUT_MAX}"
             )
+        restart_value, restart_variable = _proxy_env(
+            "RESTART_TIMEOUT_SECONDS", str(HOST_AGENT_RESTART_TIMEOUT_DEFAULT)
+        )
         try:
-            host_agent_restart_timeout_seconds = int(
-                os.getenv("HOST_AGENT_RESTART_TIMEOUT_SECONDS", str(HOST_AGENT_RESTART_TIMEOUT_DEFAULT))
-            )
+            host_agent_restart_timeout_seconds = int(restart_value)
         except ValueError as exc:
-            raise ValueError("HOST_AGENT_RESTART_TIMEOUT_SECONDS must be an integer") from exc
+            raise ValueError(f"{restart_variable} must be an integer") from exc
         if not HOST_AGENT_RESTART_TIMEOUT_MIN <= host_agent_restart_timeout_seconds <= HOST_AGENT_RESTART_TIMEOUT_MAX:
             raise ValueError(
-                "HOST_AGENT_RESTART_TIMEOUT_SECONDS must be between "
+                f"{restart_variable} must be between "
                 f"{HOST_AGENT_RESTART_TIMEOUT_MIN} and {HOST_AGENT_RESTART_TIMEOUT_MAX}"
             )
         return cls(
@@ -75,7 +93,7 @@ class Settings:
             auth_mode=os.getenv("AUTH_MODE", "local").lower(),
             auth_cookie_secure=os.getenv("AUTH_COOKIE_SECURE", "true").lower() == "true",
             host_agent_url=host_agent_url,
-            host_agent_token_file=os.getenv("HOST_AGENT_TOKEN_FILE", "/run/secrets/host_agent_token"),
+            host_agent_token_file=_proxy_env("TOKEN_FILE", "/run/secrets/host_agent_token")[0],
             host_agent_health_timeout_seconds=host_agent_health_timeout_seconds,
             host_agent_restart_timeout_seconds=host_agent_restart_timeout_seconds,
         )

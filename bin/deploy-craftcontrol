@@ -84,12 +84,24 @@ git -C "$SOURCE_ROOT" ls-files -z \
 compose config --quiet
 compose up -d --build
 
-for _ in $(seq 1 30); do
-  [[ "$(docker inspect --format '{{.State.Health.Status}}' craftcontrol 2>/dev/null || true)" == "healthy" ]] && break
+# Docker only reports "healthy" after a successful probe, so this window must
+# comfortably exceed the image health-check cadence (start period plus a few
+# intervals). A container that exits or restarts is reported immediately with
+# its logs instead of being waited out.
+for _ in $(seq 1 90); do
+  state="$(docker inspect craftcontrol --format '{{.State.Status}}' 2>/dev/null || true)"
+  health="$(docker inspect craftcontrol --format '{{.State.Health.Status}}' 2>/dev/null || true)"
+  [[ "$health" == "healthy" ]] && break
+  if [[ "$state" != "running" && "$state" != "created" ]]; then
+    docker logs --tail 50 craftcontrol >&2 || true
+    fail "CraftControl stopped while starting (state=$state)"
+  fi
   sleep 2
 done
-[[ "$(docker inspect --format '{{.State.Health.Status}}' craftcontrol)" == "healthy" ]] \
-  || fail "CraftControl did not become healthy"
+if [[ "$(docker inspect craftcontrol --format '{{.State.Health.Status}}')" != "healthy" ]]; then
+  docker logs --tail 50 craftcontrol >&2 || true
+  fail "CraftControl did not become healthy"
+fi
 
 validate_mounts
 curl --fail --silent --show-error http://127.0.0.1:8082/api/health >/dev/null

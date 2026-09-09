@@ -193,7 +193,7 @@ def test_split_images_isolate_privileged_backend_from_frontend() -> None:
 
 def test_backend_healthcheck_bounds_its_http_request_before_docker_timeout() -> None:
     dockerfile = (ROOT / "apps" / "server" / "controlplane" / "Dockerfile").read_text()
-    assert "HEALTHCHECK --interval=30s --timeout=3s" in dockerfile
+    assert "HEALTHCHECK --interval=10s --timeout=3s" in dockerfile
     assert "wget -T 2 -q -O /dev/null http://127.0.0.1:8082/api/health" in dockerfile
 
 

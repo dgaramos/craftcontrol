@@ -21,7 +21,7 @@ COPY apps/server/controlplane/docker-entrypoint.sh /usr/local/bin/docker-entrypo
 RUN chmod 755 /usr/local/bin/craftcontrol /usr/local/bin/docker-entrypoint.sh
 
 EXPOSE 8082
-HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+HEALTHCHECK --interval=10s --timeout=3s --start-period=30s --retries=5 \
   CMD wget -T 2 -q -O /dev/null --no-check-certificate https://127.0.0.1:8082/api/health \
    || wget -T 2 -q -O /dev/null http://127.0.0.1:8082/api/health || exit 1
 

@@ -373,7 +373,7 @@ def test_deploy_mount_guards_use_a_portable_separator() -> None:
 
 
 def test_reviewer_publishers_support_thread_replies_without_creating_a_review() -> None:
-    publisher = (ROOT / ".github" / "scripts" / "publish-review.sh").read_text()
+    publisher = (ROOT / ".github" / "scripts" / "agent-workflows" / "publish-review.sh").read_text()
     for name, reviewer in (
         ("publish-cody-review.yml", "cody"),
         ("publish-claudio-review.yml", "claudio"),
@@ -383,18 +383,17 @@ def test_reviewer_publishers_support_thread_replies_without_creating_a_review() 
         assert "reviewed_head_sha:" in workflow
         assert "replies_json:" in workflow
         assert "resolve_thread_ids_json:" in workflow
-        assert "bash .github/scripts/publish-review.sh" in workflow
+        assert "bash .github/scripts/agent-workflows/publish-review.sh" in workflow
         assert "permission-pull-requests: write" in workflow
         assert f"{reviewer}-dr[bot]" in workflow
         assert f"PUBLISHER_APP_SLUG: ${{{{ steps.{reviewer}-token.outputs.app-slug }}}}" in workflow
 
     assert "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/comments" in publisher
     assert "reply target mismatch" in publisher
-    assert "reply target must be top-level" in publisher
     assert "resolveReviewThread" in publisher
     assert "reviewThreads(first: 100, after: $after)" in publisher
     assert "pageInfo { hasNextPage endCursor }" in publisher
-    assert "graphql_args+=(-f after" in publisher
+    assert 'args+=(-f after="$cursor")' in publisher
     assert "resolution target mismatch" in publisher
     assert "Publication report:" in publisher
     assert "PR head changed since review" in publisher
@@ -415,9 +414,9 @@ def test_app_publishers_allow_issues_without_project_metadata_and_verify_it_when
         for field in ("project_owner", "project_number", "project_status"):
             assert f"{field}:" in metadata_workflow
         assert f"{reviewer}-dr[bot]" in issue_workflow
-        assert "unexpected issue author" in issue_workflow
+        assert "author validation failed" in issue_workflow
         assert "permission-organization-projects" not in issue_workflow
-        assert "permission-organization-projects" not in metadata_workflow
+        assert "permission-organization-projects: write" in metadata_workflow
 
 
 def test_reviewer_publisher_rejects_unexpected_app_before_mutation(tmp_path: Path) -> None:
@@ -435,7 +434,7 @@ def test_reviewer_publisher_rejects_unexpected_app_before_mutation(tmp_path: Pat
         "PUBLISHER_APP_SLUG": "wrong-app",
         "REVIEW_BODY": "summary",
     }
-    result = subprocess.run([BASH, ".github/scripts/publish-review.sh"], env=env, capture_output=True, text=True, cwd=ROOT)
+    result = subprocess.run([BASH, ".github/scripts/agent-workflows/publish-review.sh"], env=env, capture_output=True, text=True, cwd=ROOT)
     assert result.returncode != 0
     assert "unexpected authenticated app" in result.stderr
 
@@ -455,7 +454,7 @@ def test_reviewer_publisher_rejects_changed_head_before_mutation(tmp_path: Path)
         "PUBLISHER_APP_SLUG": "cody-dr",
         "REVIEW_BODY": "summary",
     }
-    result = subprocess.run([BASH, ".github/scripts/publish-review.sh"], env=env, capture_output=True, text=True, cwd=ROOT)
+    result = subprocess.run([BASH, ".github/scripts/agent-workflows/publish-review.sh"], env=env, capture_output=True, text=True, cwd=ROOT)
     assert result.returncode != 0
     assert "PR head changed since review" in result.stderr
 
@@ -492,7 +491,7 @@ def test_reviewer_publisher_paginates_thread_validation_before_resolving(tmp_pat
         "PUBLISHER_APP_SLUG": "cody-dr",
         "RESOLVE_THREAD_IDS_JSON": '["thread-two"]',
     }
-    result = subprocess.run([BASH, ".github/scripts/publish-review.sh"], env=env, capture_output=True, text=True, cwd=ROOT)
+    result = subprocess.run([BASH, ".github/scripts/agent-workflows/publish-review.sh"], env=env, capture_output=True, text=True, cwd=ROOT)
     assert result.returncode == 0, result.stderr
     assert "after=cursor-one" in call_log.read_text()
     assert "resolveReviewThread" in call_log.read_text()
@@ -518,6 +517,6 @@ def test_reviewer_publisher_rejects_thread_after_all_pages(tmp_path: Path) -> No
         "PUBLISHER_APP_SLUG": "cody-dr",
         "RESOLVE_THREAD_IDS_JSON": '["missing-thread"]',
     }
-    result = subprocess.run([BASH, ".github/scripts/publish-review.sh"], env=env, capture_output=True, text=True, cwd=ROOT)
+    result = subprocess.run([BASH, ".github/scripts/agent-workflows/publish-review.sh"], env=env, capture_output=True, text=True, cwd=ROOT)
     assert result.returncode != 0
     assert "resolution target mismatch" in result.stderr

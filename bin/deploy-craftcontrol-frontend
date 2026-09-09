@@ -25,6 +25,7 @@ readonly SOURCE_ROOT DEPLOY_ROOT ACTION ROLLBACK_VERSION
 readonly COMPOSE_FILE="$DEPLOY_ROOT/docker-compose.split.yml"
 
 fail() { echo "frontend deploy refused: $*" >&2; exit 1; }
+source "$(dirname "${BASH_SOURCE[0]}")/lib/wait-for-health.sh"
 compose() { docker compose --project-directory "$DEPLOY_ROOT" --file "$COMPOSE_FILE" "$@"; }
 prepare_forward_image() {
   git -C "$SOURCE_ROOT" ls-files -z apps/client docker-compose.split.yml versions.env \
@@ -84,24 +85,7 @@ else
   activate_forward_image
 fi
 
-# Docker only reports "healthy" after a successful probe, so this window must
-# comfortably exceed the image health-check cadence (start period plus a few
-# intervals). A container that exits or restarts is reported immediately with
-# its logs instead of being waited out.
-for _ in $(seq 1 90); do
-  state="$(docker inspect craftcontrol-frontend --format '{{.State.Status}}' 2>/dev/null || true)"
-  health="$(docker inspect craftcontrol-frontend --format '{{.State.Health.Status}}' 2>/dev/null || true)"
-  [[ "$health" == "healthy" ]] && break
-  if [[ "$state" != "running" && "$state" != "created" ]]; then
-    docker logs --tail 50 craftcontrol-frontend >&2 || true
-    fail "frontend stopped while starting (state=$state)"
-  fi
-  sleep 2
-done
-if [[ "$(docker inspect craftcontrol-frontend --format '{{.State.Health.Status}}')" != "healthy" ]]; then
-  docker logs --tail 50 craftcontrol-frontend >&2 || true
-  fail "frontend did not become healthy"
-fi
+wait_for_container_health craftcontrol-frontend "frontend"
 [[ "$(docker inspect craftcontrol-backend --format '{{.Id}}')" == "$backend_id" ]] \
   || fail "backend was recreated during frontend deployment"
 [[ -z "$(docker inspect craftcontrol-frontend --format '{{range .Mounts}}{{println .Destination}}{{end}}' | awk '$0 == "/data"')" ]] \

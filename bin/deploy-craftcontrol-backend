@@ -27,6 +27,7 @@ readonly DATABASE_FILE="$DEPLOY_ROOT/data/manager.db"
 readonly BEDROCK_ROOT="$(realpath "$DEPLOY_ROOT/../minecraft-bedrock")"
 
 fail() { echo "backend deploy refused: $*" >&2; exit 1; }
+source "$(dirname "${BASH_SOURCE[0]}")/lib/wait-for-health.sh"
 compose() { docker compose --project-directory "$DEPLOY_ROOT" --file "$COMPOSE_FILE" "$@"; }
 mount_source() {
   local destination="$1"
@@ -127,24 +128,7 @@ else
   activate_forward_image
 fi
 
-# Docker only reports "healthy" after a successful probe, so this window must
-# comfortably exceed the image health-check cadence (start period plus a few
-# intervals). A container that exits or restarts is reported immediately with
-# its logs instead of being waited out.
-for _ in $(seq 1 90); do
-  state="$(docker inspect craftcontrol-backend --format '{{.State.Status}}' 2>/dev/null || true)"
-  health="$(docker inspect craftcontrol-backend --format '{{.State.Health.Status}}' 2>/dev/null || true)"
-  [[ "$health" == "healthy" ]] && break
-  if [[ "$state" != "running" && "$state" != "created" ]]; then
-    docker logs --tail 50 craftcontrol-backend >&2 || true
-    fail "backend stopped while starting (state=$state)"
-  fi
-  sleep 2
-done
-if [[ "$(docker inspect craftcontrol-backend --format '{{.State.Health.Status}}')" != "healthy" ]]; then
-  docker logs --tail 50 craftcontrol-backend >&2 || true
-  fail "backend did not become healthy"
-fi
+wait_for_container_health craftcontrol-backend "backend"
 [[ "$(docker inspect craftcontrol-frontend --format '{{.Id}}')" == "$frontend_id" ]] \
   || fail "frontend was recreated during backend deployment"
 validate_mounts

@@ -1,15 +1,10 @@
 from pathlib import Path
-import os
 import re
 import shutil
 import subprocess
 
 
 ROOT = Path(__file__).resolve().parents[4]
-BASH = shutil.which("bash")
-
-if BASH is None:
-    raise RuntimeError("bash is required to test the review publisher")
 
 
 def test_component_deploy_canaries_use_the_production_port_default() -> None:
@@ -372,36 +367,62 @@ def test_deploy_mount_guards_use_a_portable_separator() -> None:
                 assert result.stdout == expected_output
 
 
-def test_reviewer_publishers_support_thread_replies_without_creating_a_review() -> None:
-    publisher = (ROOT / ".github" / "scripts" / "agent-workflows" / "publish-review.sh").read_text()
-    for name, reviewer in (
-        ("publish-cody-review.yml", "cody"),
-        ("publish-claudio-review.yml", "claudio"),
-    ):
+def test_publisher_stubs_stay_thin_and_pin_the_release_tag() -> None:
+    """Publication behavior lives in dgaramos/dr-agents, not here.
+
+    The scripts these workflows used to invoke were removed when this
+    repository migrated to the reusable definition (dr-agents#260, T08).
+    Their behavioral coverage moved to the catalog, where the scripts live:
+    dr-agents tests/test_publish_review.sh. What stays this repository's
+    responsibility is the shape of its own stubs, which is what this asserts.
+    """
+    ref = "workflows-v1"
+    workflows = sorted((ROOT / ".github" / "workflows").glob("publish-*.yml"))
+    assert len(workflows) == 12, [w.name for w in workflows]
+
+    for path in workflows:
+        workflow = path.read_text()
+        mode = re.search(
+            r"uses: dgaramos/dr-agents/\.github/workflows/reusable-publish-([a-z-]+)\.yml@(\S+)",
+            workflow,
+        )
+        assert mode, f"{path.name} does not call the central publisher definition"
+        assert mode.group(2) == ref, f"{path.name} pins @{mode.group(2)}, expected @{ref}"
+
+        # A stub carries no publication logic of its own.
+        assert ".github/scripts" not in workflow, f"{path.name} still references a vendored script"
+        assert "actions/checkout" not in workflow, f"{path.name} is a stub and must not check out"
+        assert "secrets: inherit" not in workflow, f"{path.name} must declare its secret by name"
+
+        # The App key crosses the boundary by name only.
+        agent = "claudio" if "claudio" in path.name else "cody"
+        assert f"secrets.{agent.upper()}_DR_PRIVATE_KEY" in workflow
+        assert f"vars.{agent.upper()}_DR_CLIENT_ID" in workflow
+
+        # The catalog is checked out at the very ref the stub calls, so the
+        # workflow and the scripts it runs come from one commit. Only the
+        # self-contained issue publisher needs no catalog checkout.
+        if mode.group(1) == "issue":
+            assert "catalog_ref:" not in workflow, f"{path.name} needs no catalog_ref"
+        else:
+            assert f"catalog_ref: {ref}" in workflow, f"{path.name} must pass catalog_ref: {ref}"
+
+
+def test_review_publishers_keep_their_thread_reply_dispatch_surface() -> None:
+    """The dispatch inputs are this repository's contract with its agents."""
+    for name in ("publish-cody-review.yml", "publish-claudio-review.yml"):
         workflow = (ROOT / ".github" / "workflows" / name).read_text()
-        assert "inline_comments_json:" in workflow
-        assert "reviewed_head_sha:" in workflow
-        assert "replies_json:" in workflow
-        assert "resolve_thread_ids_json:" in workflow
-        assert "bash .github/scripts/agent-workflows/publish-review.sh" in workflow
-        assert "permission-pull-requests: write" in workflow
-        assert f"{reviewer}-dr[bot]" in workflow
-        assert f"PUBLISHER_APP_SLUG: ${{{{ steps.{reviewer}-token.outputs.app-slug }}}}" in workflow
-
-    assert "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/comments" in publisher
-    assert "reply target mismatch" in publisher
-    assert "resolveReviewThread" in publisher
-    assert "reviewThreads(first: 100, after: $after)" in publisher
-    assert "pageInfo { hasNextPage endCursor }" in publisher
-    assert 'args+=(-f after="$cursor")' in publisher
-    assert "resolution target mismatch" in publisher
-    assert "Publication report:" in publisher
-    assert "PR head changed since review" in publisher
-    assert "unexpected authenticated app" in publisher
-    assert "PUBLISHER_APP_SLUG" in publisher
+        for field in (
+            "inline_comments_json",
+            "reviewed_head_sha",
+            "replies_json",
+            "resolve_thread_ids_json",
+        ):
+            assert f"{field}:" in workflow, f"{name} lost the {field} input"
 
 
-def test_app_publishers_allow_issues_without_project_metadata_and_verify_it_when_supplied() -> None:
+def test_issue_and_metadata_publishers_keep_their_project_dispatch_surface() -> None:
+    """Project fields are dispatched through pr-metadata, never through issue."""
     for reviewer in ("cody", "claudio"):
         issue_workflow = (
             ROOT / ".github" / "workflows" / f"publish-{reviewer}-issue.yml"
@@ -409,114 +430,6 @@ def test_app_publishers_allow_issues_without_project_metadata_and_verify_it_when
         metadata_workflow = (
             ROOT / ".github" / "workflows" / f"publish-{reviewer}-pr-metadata.yml"
         ).read_text()
-
-        # Project fields are managed via the pr-metadata workflow, not the issue workflow.
         for field in ("project_owner", "project_number", "project_status"):
             assert f"{field}:" in metadata_workflow
-        assert f"{reviewer}-dr[bot]" in issue_workflow
-        assert "author validation failed" in issue_workflow
-        assert "permission-organization-projects" not in issue_workflow
-        assert "permission-organization-projects: write" in metadata_workflow
-
-
-def test_reviewer_publisher_rejects_unexpected_app_before_mutation(tmp_path: Path) -> None:
-    fake_gh = tmp_path / "gh"
-    fake_gh.write_text('#!/usr/bin/env bash\necho unexpected-gh-call >&2; exit 99\n')
-    fake_gh.chmod(0o755)
-    env = os.environ | {
-        "PATH": f"{tmp_path}:{os.environ['PATH']}",
-        "GH_TOKEN": "test",
-        "GITHUB_REPOSITORY": "owner/repo",
-        "PR_NUMBER": "1",
-        "REVIEW_EVENT": "COMMENT",
-        "REVIEWED_HEAD_SHA": "a" * 40,
-        "EXPECTED_AUTHOR": "cody-dr[bot]",
-        "PUBLISHER_APP_SLUG": "wrong-app",
-        "REVIEW_BODY": "summary",
-    }
-    result = subprocess.run([BASH, ".github/scripts/agent-workflows/publish-review.sh"], env=env, capture_output=True, text=True, cwd=ROOT)
-    assert result.returncode != 0
-    assert "unexpected authenticated app" in result.stderr
-
-
-def test_reviewer_publisher_rejects_changed_head_before_mutation(tmp_path: Path) -> None:
-    fake_gh = tmp_path / "gh"
-    fake_gh.write_text('#!/usr/bin/env bash\nif [[ "$1" == "api" && "$3" == "--jq" ]]; then echo bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb; exit 0; fi\necho unexpected-gh-call >&2; exit 99\n')
-    fake_gh.chmod(0o755)
-    env = os.environ | {
-        "PATH": f"{tmp_path}:{os.environ['PATH']}",
-        "GH_TOKEN": "test",
-        "GITHUB_REPOSITORY": "owner/repo",
-        "PR_NUMBER": "1",
-        "REVIEW_EVENT": "COMMENT",
-        "REVIEWED_HEAD_SHA": "a" * 40,
-        "EXPECTED_AUTHOR": "cody-dr[bot]",
-        "PUBLISHER_APP_SLUG": "cody-dr",
-        "REVIEW_BODY": "summary",
-    }
-    result = subprocess.run([BASH, ".github/scripts/agent-workflows/publish-review.sh"], env=env, capture_output=True, text=True, cwd=ROOT)
-    assert result.returncode != 0
-    assert "PR head changed since review" in result.stderr
-
-
-def test_reviewer_publisher_paginates_thread_validation_before_resolving(tmp_path: Path) -> None:
-    fake_gh = tmp_path / "gh"
-    call_log = tmp_path / "calls"
-    fake_gh.write_text(
-        "#!/usr/bin/env bash\n"
-        "set -euo pipefail\n"
-        "printf '%s\\n' \"$*\" >> \"${FAKE_GH_CALL_LOG:?}\"\n"
-        "if [[ \"$1 $2\" == 'api repos/owner/repo/pulls/1' ]]; then echo aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa; exit 0; fi\n"
-        "if [[ \"$*\" == *'resolveReviewThread'* ]]; then echo true; exit 0; fi\n"
-        "if [[ \"$1 $2 $3\" == 'api graphql -f' && \"$*\" == *'after=cursor-one'* ]]; then\n"
-        "  echo '{\"data\":{\"repository\":{\"pullRequest\":{\"reviewThreads\":{\"nodes\":[{\"id\":\"thread-two\"}],\"pageInfo\":{\"hasNextPage\":false,\"endCursor\":null}}}}}}'\n"
-        "  exit 0\n"
-        "fi\n"
-        "if [[ \"$1 $2 $3\" == 'api graphql -f' ]]; then\n"
-        "  echo '{\"data\":{\"repository\":{\"pullRequest\":{\"reviewThreads\":{\"nodes\":[{\"id\":\"thread-one\"}],\"pageInfo\":{\"hasNextPage\":true,\"endCursor\":\"cursor-one\"}}}}}}'\n"
-        "  exit 0\n"
-        "fi\n"
-        "echo unexpected-gh-call >&2; exit 99\n"
-    )
-    fake_gh.chmod(0o755)
-    env = os.environ | {
-        "PATH": f"{tmp_path}:{os.environ['PATH']}",
-        "FAKE_GH_CALL_LOG": str(call_log),
-        "GH_TOKEN": "test",
-        "GITHUB_REPOSITORY": "owner/repo",
-        "PR_NUMBER": "1",
-        "REVIEW_EVENT": "COMMENT",
-        "REVIEWED_HEAD_SHA": "a" * 40,
-        "EXPECTED_AUTHOR": "cody-dr[bot]",
-        "PUBLISHER_APP_SLUG": "cody-dr",
-        "RESOLVE_THREAD_IDS_JSON": '["thread-two"]',
-    }
-    result = subprocess.run([BASH, ".github/scripts/agent-workflows/publish-review.sh"], env=env, capture_output=True, text=True, cwd=ROOT)
-    assert result.returncode == 0, result.stderr
-    assert "after=cursor-one" in call_log.read_text()
-    assert "resolveReviewThread" in call_log.read_text()
-
-
-def test_reviewer_publisher_rejects_thread_after_all_pages(tmp_path: Path) -> None:
-    fake_gh = tmp_path / "gh"
-    fake_gh.write_text(
-        "#!/usr/bin/env bash\n"
-        "if [[ \"$1 $2\" == 'api repos/owner/repo/pulls/1' ]]; then echo aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa; exit 0; fi\n"
-        "if [[ \"$1 $2 $3\" == 'api graphql -f' ]]; then echo '{\"data\":{\"repository\":{\"pullRequest\":{\"reviewThreads\":{\"nodes\":[],\"pageInfo\":{\"hasNextPage\":false,\"endCursor\":null}}}}}}'; exit 0; fi\n"
-        "echo unexpected-gh-call >&2; exit 99\n"
-    )
-    fake_gh.chmod(0o755)
-    env = os.environ | {
-        "PATH": f"{tmp_path}:{os.environ['PATH']}",
-        "GH_TOKEN": "test",
-        "GITHUB_REPOSITORY": "owner/repo",
-        "PR_NUMBER": "1",
-        "REVIEW_EVENT": "COMMENT",
-        "REVIEWED_HEAD_SHA": "a" * 40,
-        "EXPECTED_AUTHOR": "cody-dr[bot]",
-        "PUBLISHER_APP_SLUG": "cody-dr",
-        "RESOLVE_THREAD_IDS_JSON": '["missing-thread"]',
-    }
-    result = subprocess.run([BASH, ".github/scripts/agent-workflows/publish-review.sh"], env=env, capture_output=True, text=True, cwd=ROOT)
-    assert result.returncode != 0
-    assert "resolution target mismatch" in result.stderr
+            assert f"{field}:" not in issue_workflow

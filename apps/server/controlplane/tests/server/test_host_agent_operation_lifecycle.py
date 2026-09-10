@@ -44,6 +44,25 @@ def _contains_host_internal(text: str) -> bool:
     return any(internal in text for internal in _HOST_INTERNALS)
 
 
+def _string_content(value: object) -> str:
+    """Join the string content of *value*, skipping numbers.
+
+    A leaked host internal always arrives as text: a port in a URL, a message,
+    a field the agent echoed back. Numbers cannot leak one, but they can
+    coincide with one — an epoch timestamp spends about a day carrying the
+    digits of the fake port — so they are not scanned.
+    """
+    if isinstance(value, str):
+        return value
+    if isinstance(value, dict):
+        return " ".join(
+            _string_content(item) for pair in value.items() for item in pair
+        )
+    if isinstance(value, (list, tuple, set)):
+        return " ".join(_string_content(item) for item in value)
+    return ""
+
+
 def _make_http_client(responses: list[tuple[int, dict[str, Any]] | Exception]) -> MagicMock:
     """Return a fake _HttpClient that yields responses or raises exceptions in sequence."""
     mock = MagicMock()
@@ -279,10 +298,10 @@ class TestAgentFiveXxResponse:
             assert not _contains_host_internal(stage.error or ""), (
                 f"Stage {stage.stage} error exposes host internals: {stage.error!r}"
             )
-            assert not _contains_host_internal(str(stage.result or {})), (
+            assert not _contains_host_internal(_string_content(stage.result)), (
                 f"Stage {stage.stage} result exposes host internals: {stage.result!r}"
             )
-            assert not _contains_host_internal(str(stage.evidence or {})), (
+            assert not _contains_host_internal(_string_content(stage.evidence)), (
                 f"Stage {stage.stage} evidence exposes host internals: {stage.evidence!r}"
             )
 

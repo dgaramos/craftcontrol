@@ -19,11 +19,6 @@
   --sand: #f4c95d;
   --water: #82c8ed;
   --pixel-shadow: 0 4px 0 #070907, 0 8px 18px #0009;
-  /* Panel checker stripes. Themed here so component overrides that drop the
-     texture (background-image: none) keep working in every palette. */
-  --surface-raised: #202923;
-  --panel-stripe-v: #ffffff04;
-  --panel-stripe-h: #00000008;
   /* Mobile shell tokens — Phase 1 */
   --color-active-nav: #f4c95d;
   --color-inactive-nav: #46534a;
@@ -32,9 +27,159 @@
   /* Typography — matches the design handoff (Oxanium display + Geist body). */
   --font-display: Oxanium, ui-sans-serif, system-ui, sans-serif;
   --font-body: Geist, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --surface-inset: #0e1410;
   --surface-border-top: #4d5850;
   --surface-border-left: #3a433e;
+
+  /* ══ Design token vocabulary ══════════════════════════════════════════════
+     Three layers, documented in docs/design-system.md. The layer markers below
+     are machine-readable: tests/contracts/design-token-contracts.test.js reads
+     them to enforce the naming rules.
+
+     Authoring rule: a color that differs between themes must be a token.
+     light.css re-tints tokens; it never re-declares a selector. Call sites
+     consume tier 2 (and tier 3 where a component owns the decision) and never
+     reference a primitive directly.
+
+     Every token above this comment is the pre-token palette, still referenced
+     by call sites. issues 611-614 migrate those call sites onto the vocabulary
+     below and retire them. Nothing below is referenced yet, by design: this
+     step lands the vocabulary with zero rendered change. */
+
+  /* token-layer: primitives */
+  /* Tier 1 — the raw ramps. Named by Minecraft material and step; a higher
+     step is darker. Values are the palette already in use, observed across
+     app.css / analytics.css / players.css / auth.css and light.css. Steps with
+     no observed value are interpolated and are settled by issues 611-614 when call
+     sites bind to them. Primitives are never referenced by a call site. */
+  --stone-950: #070a08;
+  --stone-900: #0c120f;
+  --stone-850: #0e1410;
+  --stone-800: #101511;
+  --stone-700: #121813;
+  --stone-600: #202923;
+  --stone-500: #263029;
+  --stone-400: #303a32;
+  --stone-300: #46534a;
+  --stone-200: #a8b4ac;
+  --stone-100: #f5f4ec;
+
+  --grass-700: #285d22;
+  --grass-600: #317827;
+  --grass-500: #63bd3f;
+  --grass-400: #71dc4e;
+  --grass-300: #91e25d;
+  --grass-200: #d8ffbd;
+
+  --copper-700: #874722;
+  --copper-600: #6d4932;
+  --copper-500: #a66038;
+  --copper-400: #b6653e;
+  --copper-300: #f0a06f;
+  --copper-200: #ffd0b0;
+
+  --sand-700: #805b0e;
+  --sand-600: #a67c17;
+  --sand-500: #d09a23;
+  --sand-400: #f4c95d;
+  --sand-300: #ffe08f;
+  --sand-200: #fff3c9;
+
+  --water-700: #21647f;
+  --water-600: #2f83a6;
+  --water-500: #4f9fc9;
+  --water-400: #78a8ce;
+  --water-300: #82c8ed;
+  --water-200: #c3e6f8;
+
+  --redstone-700: #5b1d19;
+  --redstone-600: #8d3931;
+  --redstone-500: #ba352d;
+  --redstone-400: #d43b2f;
+  --redstone-300: #f06a5d;
+  --redstone-200: #ffb0a8;
+
+  /* The purple that respawn and dimension events have been using anonymously
+     (analytics.css: #d1b4ff, #e29cff). Naming it is the point of this step. */
+  --amethyst-600: #7a4fb5;
+  --amethyst-300: #d1b4ff;
+  --amethyst-200: #e29cff;
+
+  /* token-layer: semantic */
+  /* Tier 2 — the vocabulary authors write. A name says what the token DOES,
+     never what it looks like or which theme it belongs to. No literal may
+     appear here: this tier renames primitives, it does not introduce color. */
+
+  /* Surfaces */
+  --surface-sunken: var(--stone-950);
+  --surface-inset: var(--stone-850);
+  --surface-base: var(--stone-900);
+  --surface-raised: var(--stone-600);
+  --surface-overlay: var(--stone-800);
+  --surface-hover: var(--stone-500);
+
+  /* Elevation. The pixel bevel is structural, not decorative: issue 613 settles the
+     ambient softness when it binds these to call sites. */
+  --edge-highlight: var(--stone-400);
+  --edge-shadow: var(--stone-950);
+  --shadow-pixel: 0 4px 0 var(--stone-950), 0 8px 18px var(--stone-950);
+  --shadow-pressed: 0 1px 0 var(--stone-950);
+  --shadow-overlay: 0 2px 16px var(--stone-950);
+
+  /* Borders */
+  --border-base: var(--stone-950);
+  --border-subtle: var(--stone-700);
+  --border-strong: var(--stone-300);
+  --border-focus: var(--water-300);
+  --border-interactive: var(--stone-400);
+
+  /* Content */
+  --text-primary: var(--stone-100);
+  --text-secondary: var(--stone-200);
+  --text-tertiary: var(--stone-300);
+  --text-on-accent: var(--stone-950);
+  --text-placeholder: var(--stone-300);
+
+  /* Semantic accents. Invariants held from docs/design-system.md: gold is
+     selection, green is healthy/save, red is error. */
+  --success-fg: var(--grass-300);
+  --success-bg: var(--grass-700);
+  --success-border: var(--grass-500);
+  --danger-fg: var(--redstone-300);
+  --danger-bg: var(--redstone-700);
+  --danger-border: var(--redstone-400);
+  --warning-fg: var(--sand-400);
+  --warning-bg: var(--sand-700);
+  --warning-border: var(--sand-500);
+  --info-fg: var(--water-300);
+  --info-bg: var(--water-700);
+  --info-border: var(--water-500);
+  --selected-fg: var(--sand-400);
+  --selected-bg: var(--sand-700);
+  --selected-border: var(--sand-400);
+  --neutral-fg: var(--stone-200);
+  --neutral-bg: var(--stone-700);
+  --neutral-border: var(--stone-300);
+
+  /* States */
+  --state-hover-tint: var(--stone-100);
+  --state-active-tint: var(--stone-950);
+  --state-disabled-fg: var(--stone-300);
+  --state-disabled-surface: var(--stone-700);
+  --state-focus-ring: var(--water-300);
+  --state-selected-fg: var(--sand-400);
+  --state-selected-surface: var(--stone-600);
+
+  /* token-layer: component */
+  /* Tier 3 — only where a component owns the decision and no semantic alias
+     expresses it. Follows the pattern proven in issue 608. */
+
+  /* Panel checker stripes. Themed here so component overrides that drop the
+     texture (background-image: none) keep working in every palette. */
+  --panel-stripe-v: #ffffff04;
+  --panel-stripe-h: #00000008;
+
+  /* token-layer: end */
+
   font-family: var(--font-body);
   color-scheme: dark;
 }
@@ -306,6 +451,9 @@ main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-
 }
 
 .hero { margin: 12px 0 0; padding: 28px 13px 13px; overflow: hidden; }
+/* region: sprites — sprite artwork keeps its own palette in both themes
+   by existing decision, so these literals are exempt from the token budget.
+   See docs/design-system.md and light.css. */
 .grass-edge {
   position: absolute;
   height: 15px;
@@ -318,6 +466,7 @@ main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-
   box-shadow: 0 5px 0 -2px var(--copper);
 }
 .grass-edge::after { content: ""; position: absolute; inset: auto 0 -5px; height: 5px; background: repeating-linear-gradient(90deg, #9d5737 0 12px, #71402c 12px 19px); }
+/* endregion: sprites */
 .home-hero-content { display: grid; gap: 11px; }
 .home-hero-row { display: flex; align-items: center; gap: 12px; }
 .overview-item { min-width: 0; padding: 9px 11px; border: 2px solid #080a08; border-top-color: #2a3a2e; background: #0e1410e8; }
@@ -325,6 +474,7 @@ main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-
 .server-overview > div:last-child { min-width: 0; overflow: hidden; }
 .server-overview h2 { margin-top: 2px; font-family: var(--font-display); font-size: 21px; font-weight: 800; line-height: 1.05; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 #hero-instance-name { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* region: sprites — own palette in both themes; exempt from the budget. */
 .shield {
   width: 46px;
   height: 46px;
@@ -339,8 +489,11 @@ main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-
   box-shadow: inset 3px 3px 0 #9ee26a, 4px 5px 0 #080a08;
 }
 .shield .cc-icon { width: 28px; height: 28px; }
+/* endregion: sprites */
 .hero.offline h2 { color: var(--danger); }
+/* region: sprites — own palette in both themes; exempt from the budget. */
 .hero.offline .shield { background: linear-gradient(135deg, #8d3931, #5b1d19); box-shadow: inset 3px 3px 0 #d56359, 4px 5px 0 #080a08; }
+/* endregion: sprites */
 
 .players-card { position: relative; display: block; flex: 0 0 auto; min-width: 0; min-height: 0; padding: 7px 10px; text-align: center; text-shadow: none; }
 .players-card:hover { border-top-color: var(--grass-light); border-left-color: var(--grass-light); background: #172018; }
@@ -733,8 +886,10 @@ dialog.drawer::backdrop { background: rgba(0, 0, 0, .7); }
   .hero { padding: 28px 10px 10px; }
   .home-hero-row { gap: 9px; }
   .server-overview { gap: 10px; }
+  /* region: sprites — own palette in both themes; exempt from the budget. */
   .shield { width: 42px; height: 42px; }
   .shield .cc-icon { width: 26px; height: 26px; }
+  /* endregion: sprites */
   .players-card { padding: 7px 8px; }
   .world-summary > div { padding: 8px 7px; }
   .home-dashboard { gap: 6px; }
@@ -1115,8 +1270,10 @@ dialog.drawer::backdrop { background: rgba(0, 0, 0, .7); }
 .server-status-summary small, .server-status-summary strong { display: block; }
 .server-status-summary strong { margin-top: 3px; overflow: hidden; color: var(--grass-light); font-family: var(--font-display); font-size: 16px; font-weight: 800; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap; }
 .server-status-card.offline .server-status-summary strong { color: #ff9389; }
+/* region: sprites — own palette in both themes; exempt from the budget. */
 .server-status-shield { display: grid; place-items: center; width: 43px; height: 43px; flex: 0 0 auto; color: #d8ffbd; background: linear-gradient(#63bd3f, #347d2b); border: 4px solid #14260e; box-shadow: inset 2px 2px #a9e976, 3px 3px #090c09; }
 .server-status-shield .cc-icon { width: 29px; height: 29px; }
+/* endregion: sprites */
 .server-status-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 13px; }
 .server-status-row button { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 38px; padding: 7px 5px; border-radius: 0; font-family: var(--font-display); font-size: 11px; font-weight: 800; }
 .server-status-row button .cc-icon { width: 16px; height: 16px; color: var(--grass-light); }

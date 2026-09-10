@@ -74,6 +74,83 @@ and grass strip in their original contexts; adapt texture contrast to the light
 palette and preserve the dark design's flat form, analytics, and auth surfaces.
 The System choice uses a half-sun/half-moon sprite beside its label.
 
+## Design tokens
+
+The palette lives in `apps/client/static/app.css :root` as three layers. The
+layer boundaries are marked by `/* token-layer: … */` comments, which
+`apps/client/tests/contracts/design-token-contracts.test.js` reads to enforce
+the rules below.
+
+### The authoring rule
+
+**A color that differs between themes must be a token. `light.css` re-tints
+tokens and never re-declares a selector.**
+
+This is the whole reason the layers exist. Re-tinting a token costs no
+specificity — `:root { --x: … }` does not compete with a selector. Re-declaring
+a selector does compete, and because `light.css` loads last it has to escalate
+(`:root :is(…)`, 0-2-1) to win. That escalation then runs over legitimate
+component overrides at 0-1-0, which is how the light theme once covered the
+whole Players screen with the panel checkerboard.
+
+### Tier 1 — primitives
+
+The raw ramps: `--stone-{950..100}`, `--grass/copper/sand/water/redstone-{700..200}`,
+`--amethyst-{600,300,200}`. A higher step is darker.
+
+Primitives are named by **Minecraft material and numeric step** — `stone`,
+`grass`, `copper`, `sand`, `water`, `redstone`, `amethyst`. These are material
+names, not color names: the ramp is the product's material identity, and it is
+the one place where a literal value may be written.
+
+**Call sites never reference a primitive directly.** A call site bound to a raw
+ramp step loses the seam that lets `light.css` re-tint it, which defeats the
+layering. Consume tier 2, or tier 3 where a component owns the decision.
+
+### Tier 2 — semantic aliases
+
+The vocabulary authors actually write, in six families: surfaces, elevation,
+borders, content, semantic accents (an `-fg` / `-bg` / `-border` triplet for
+each of success, danger, warning, info, selected, neutral), and states.
+
+A tier-2 name says **what the token does**, never what it looks like or which
+theme it belongs to. No `--green-700`, no `--dark-bg`, no `--light-surface`:
+`--success-fg` keeps its meaning after the light theme re-tints it, while a
+name carrying an appearance becomes a lie the moment the theme changes. The
+rule is enforced per hyphen segment, so `--edge-highlight` is fine and
+`--edge-light` is not.
+
+This tier contains no literal values. It renames primitives; it does not
+introduce color. A literal here would be a fourth, undocumented palette.
+
+### Tier 3 — component tokens
+
+Only where a component owns the decision and no semantic alias expresses it —
+`--panel-stripe-v` / `--panel-stripe-h` are the pattern. Literals are permitted
+here, and the same no-appearance naming rule applies.
+
+### Sprite exclusion
+
+`.shield`, `.server-status-shield`, `.grass-edge` and the SVG sprites keep their
+own palette in both themes. Each such rule sits inside a named region:
+
+```css
+/* region: sprites — own palette in both themes; exempt from the budget. */
+…
+/* endregion: sprites */
+```
+
+The contract test allowlists **by region location**, not by enumerating hex
+values, so a sprite tweak does not require editing the test.
+
+### The literal-hex budget
+
+`design-token-contracts.test.js` pins two decreasing-only ceilings over
+`app.css`, `analytics.css`, `players.css` and `auth.css`: the whole-file count,
+and the count outside sprite regions. The second is the one that measures
+tokenization progress. Both may be lowered as call sites migrate; neither may
+ever be raised, because a raise means an untokenized color was added.
+
 ## Icon families
 
 - `apps/client/static/craftcontrol-ui.svg` contains navigation, actions, states, and metric icons.

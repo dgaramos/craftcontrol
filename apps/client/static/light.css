@@ -64,7 +64,7 @@ body {
 
 /* Cards and their recessed fields. */
 :root :is(.overview-item:not(.server-overview), .world-summary > div,
-  .home-mode-card, .player-overview span, .player-detail-stats span, .player-stats span,
+  .player-overview span, .player-detail-stats span, .player-stats span,
   .player-management-card, .profile-facts span, .telemetry-grid span,
   .permission-choice, .panel-account-status, .session-item, .health-stat,
   .capability-row, .analytics-summary span, .analytics-event-details div,
@@ -74,6 +74,8 @@ body {
   .change-values, .capability-panel li, .telemetry-metrics li) {
   background: var(--surface-inset); border-color: #bdc9b2; box-shadow: inset 1px 1px #fff;
 }
+/* Raised in the dark palette, not recessed like the surfaces above. */
+:root .home-mode-card { background: linear-gradient(#fbfcf5, #e7ecdd); border-color: #bdc9b2; }
 :root :is(.loading-players, .no-player-results, .player-history,
   .player-history-grid > *, .analytics-empty, .analytics-loading,
   .analytics-event, .player-favorites button, .combat-profiles button,
@@ -128,17 +130,22 @@ body {
 :root :is(.home-shortcut.rules, .server-rules-card) { background: linear-gradient(#e4efd7, #d5e4c4); border-color: #8dad70; }
 :root :is(.home-shortcut.rules small, .server-rules-card-text > span small) { color: var(--grass-light); }
 :root :is(.home-shortcut small b, .server-rules-card-text b, .time-group-label b) { background: #e3f0d5; border-color: #8eaf72; }
+:root :is(.game-role-badge, .game-scope) { color: var(--sand); background: #f5ebcd; border-color: #c3a665; }
+/* These carry a two-stop gradient in the dark palette; keep the depth here. */
 :root :is(.home-shortcut.server, .section-feature, .weather-options .weather-thunder,
-  .indicator-bar--changes, .indicator-bar--stalled, .podium-place.rank-1,
-  .game-role-badge, .game-scope) { color: var(--sand); background: #f5ebcd; border-color: #c3a665; }
+  .indicator-bar--changes, .indicator-bar--stalled, .podium-place.rank-1) {
+  color: var(--sand); background: linear-gradient(#faf1d8, #eee0ba); border-color: #c3a665;
+}
 :root :is(.home-shortcut.server small, .server-restart-label, .field .field-warning,
   .toggle-value.unknown, .indicator-bar--changes small, .indicator-bar--stalled small,
   .rankings-hero h2, .podium-place b, .record-cards b, .ranking-categories button span,
   .leaderboard-panel li > b, .trends-summary b, .period-ranking li > b,
   .period-ranking li strong, .trends-hero h2) { color: var(--sand); }
-:root :is(.weather-options .weather-rain, .indicator-bar--operation, .telemetry-profile,
-  .release-version-grid article, .analytics-source.structured,
+:root :is(.telemetry-profile, .release-version-grid article, .analytics-source.structured,
   .panel-role-badge.has-access, .panel-scope) { color: var(--water); background: #e1eef0; border-color: #94b7c0; }
+:root :is(.weather-options .weather-rain, .indicator-bar--operation) {
+  color: var(--water); background: linear-gradient(#e8f4f6, #d3e7ea); border-color: #94b7c0;
+}
 :root :is(.indicator-bar--operation small, .pack-status-version, .release-version-grid strong,
   .release-tags span, .audit-action-code, .telemetry-profile > small,
   .blocks-summary article b, .block-leaderboard li > b, .block-player-ranking li > b,
@@ -157,7 +164,8 @@ body {
   .combat-summary b, .combat-breakdown li > b, .combat-breakdown li strong,
   .pvp-panel li span, .pvp-panel li b, .combat-profiles button span b) { color: var(--danger); }
 :root .telemetry-pack-error { color: var(--danger) !important; }
-:root :is(.death-history dl div, .death-entry-icon, .tone-death .analytics-event-icon) { color: var(--danger); background: #efdad1; border-color: #c8887b; box-shadow: none; }
+:root :is(.death-history dl div, .tone-death .analytics-event-icon) { color: var(--danger); background: #efdad1; border-color: #c8887b; box-shadow: none; }
+:root .death-entry-icon { color: var(--danger); background: linear-gradient(135deg, #f4e2da, #e7c8bd); border-color: #c8887b; box-shadow: none; }
 :root .death-entry-header { border-color: #dcc0b5; }
 :root :is(.capability-panel li.supported span, .telemetry-metrics li.supported > span) { color: var(--grass-light); }
 :root .audit-outcome--success { color: var(--grass-light); background: #e1eed5; border-color: #a1b98b; }
@@ -197,7 +205,10 @@ body {
 :root :is(.danger-zone h3, .time-danger p, .cap-unsupported .cap-mark) { color: var(--danger); }
 :root :is(.combat-empty-note, .exploration-note, .trends-note) { background: var(--surface-inset); }
 :root .time-screen output { color: var(--muted); }
-:root :is(.quick-actions .day, .quick-actions .night, .quick-actions .weather) { color: var(--text); background: var(--surface-inset); }
+/* Dark gives each shortcut its own hue; a single flat grey loses that. */
+:root .quick-actions .day { color: #4a3308; background: linear-gradient(#f6e3ac, #e7cd84); border-top-color: #fdf3d2; }
+:root .quick-actions .night { color: #1d3049; background: linear-gradient(#d8e3f2, #bccde4); border-top-color: #eef3fa; }
+:root .quick-actions .weather { color: #12414f; background: linear-gradient(#d6ecf6, #b9dcec); border-top-color: #edf7fb; }
 :root dialog.drawer--changes { border-top-color: #af8124; }
 :root dialog.drawer--operation { border-top-color: var(--water); }
 

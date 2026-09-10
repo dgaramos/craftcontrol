@@ -195,6 +195,15 @@ body {
 :root .exports-screen .export-actions button[disabled] { color: var(--muted); background: var(--stone-dark); box-shadow: none; }
 
 :root .server-panel { background: none; border: 0; box-shadow: none; }
+/* Surfaces that carried a dark hex with no light counterpart. */
+:root :is(.language-picker > button, .language-picker [role="option"]) { background: var(--surface-inset); }
+:root .language-picker [role="listbox"] { background: var(--stone); border-color: #9aab8f; }
+:root :is(.language-picker [role="option"]:hover,
+  .language-picker [role="option"][aria-selected="true"]) { background: #e2ead7; border-color: #8dad70; }
+:root .players-card:hover { background: #e9efdf; }
+:root .ranking-podium { background-color: #f6efdc; }
+:root .event-history .timeline-list::before { background: #c2cdb6; }
+
 :root .telemetry-grid { background: #c9d2bf; border-color: #c9d2bf; }
 :root .analytics-event.tone-join { border-left-color: var(--grass); }
 :root .analytics-event.tone-leave { border-left-color: var(--water); }

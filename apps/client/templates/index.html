@@ -9,10 +9,12 @@
     <link rel="icon" href="/static/craftcontrol-mark.svg" type="image/svg+xml">
     <link rel="manifest" href="/static/site.webmanifest">
     <link rel="stylesheet" href="/static/fonts.css?v=1">
-    <link rel="stylesheet" href="/static/app.css?v=61">
+    <link rel="stylesheet" href="/static/app.css?v=63">
     <link rel="stylesheet" href="/static/players.css?v=30">
     <link rel="stylesheet" href="/static/analytics.css?v=16">
     <link rel="stylesheet" href="/static/auth.css?v=8">
+    <link id="light-theme" rel="stylesheet" href="/static/light.css?v=5" media="(prefers-color-scheme: light)">
+    <script src="/static/theme-init.js?v=1"></script>
   </head>
   <body>
     <div id="auth-overlay" hidden></div>
@@ -213,6 +215,15 @@
           <button class="btn" data-locale="es" type="button"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=9#ui-flag-es"></use></svg> ES</button>
         </div>
       </div>
+      <div class="profile-sheet-section">
+        <div id="theme-label" class="profile-sheet-section-label" data-i18n="themeLabel">Aparência</div>
+        <div class="choice-group" role="group" aria-labelledby="theme-label">
+          <button type="button" data-theme-choice="system" aria-pressed="true"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=10#ui-theme-system"></use></svg><span data-i18n="themeSystem">Sistema</span></button>
+          <button type="button" data-theme-choice="light" aria-pressed="false"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=10#ui-sun"></use></svg><span data-i18n="themeLight">Claro</span></button>
+          <button type="button" data-theme-choice="dark" aria-pressed="false"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=10#ui-moon"></use></svg><span data-i18n="themeDark">Escuro</span></button>
+        </div>
+        <small class="theme-help" data-i18n="themeHelp">Preferência salva neste navegador.</small>
+      </div>
       <div class="profile-sheet-actions">
         <button class="btn secondary" id="manage-sessions-btn" type="button"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=9#ui-sessions"></use></svg><span data-i18n="profileSessions">Gerenciar sessões</span></button>
         <button class="btn secondary" id="change-password-btn" type="button"><svg class="cc-icon" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/craftcontrol-ui.svg?v=9#ui-password"></use></svg><span data-i18n="profileChangePassword">Alterar senha</span></button>
@@ -221,6 +232,6 @@
     </div>
   </div>
 
-  <script type="module" src="/static/app.js?v=102"></script>
+  <script type="module" src="/static/app.js?v=103"></script>
   </body>
 </html>

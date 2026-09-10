@@ -50,6 +50,8 @@ The six primary areas are task-oriented:
 | Rules | Gameplay, interface, mobs, drops, commands, fire, TNT, and regeneration |
 | Server | CraftControl Telemetry Pack, network, performance, backups, and container lifecycle |
 
+The profile includes a browser-local appearance preference; see [Color themes](docs/design-system.md#color-themes).
+
 Navigation is encoded in the URL, so refreshing a browser preserves the active area. Persistent setting changes enter a review drawer; lightning-marked gamerules apply immediately.
 
 Restart-required changes are tracked as server operations. A failed operation is

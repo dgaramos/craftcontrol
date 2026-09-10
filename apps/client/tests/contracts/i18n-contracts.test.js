@@ -83,7 +83,7 @@ describe("i18n contracts — SVG sprite usage in game-terms.js", () => {
 
 describe("i18n contracts — ES locale wired up in i18n index", () => {
   test('i18n/index.js imports es.js', () => {
-    expect(i18nIndex).toContain('from "./es.js?v=18"');
+    expect(i18nIndex).toContain('from "./es.js?v=19"');
   });
 });
 

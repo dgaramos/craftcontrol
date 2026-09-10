@@ -57,6 +57,23 @@ block, and every inset field surface uses `--surface-inset` rather than a local
 hex value. Headings, eyebrows, and helper copy are localized through `i18n`; no screen may
 hard-code a language string.
 
+## Color themes
+
+The interface follows the system color scheme by default. The profile sheet
+allows System, Light, or Dark; the choice is local to the browser, stored under
+`craftcontrol-theme`, and never requires a backend write. With storage blocked,
+a choice still works for the current page. The blocking `theme-init.js` applies
+saved preferences before first paint; `core/theme.js` binds the profile controls.
+
+`light.css` is the light palette and component color overrides. Its stylesheet
+link uses `prefers-color-scheme` in System mode, so OS changes apply immediately
+without JavaScript listeners. Preserve layout and original sprite colors across
+themes, with gold for selection, green for healthy/save, and red for errors.
+Keep the 32px background grid, 18px panel checkerboard, raised button gradients,
+and grass strip in their original contexts; adapt texture contrast to the light
+palette and preserve the dark design's flat form, analytics, and auth surfaces.
+The System choice uses a half-sun/half-moon sprite beside its label.
+
 ## Icon families
 
 - `apps/client/static/craftcontrol-ui.svg` contains navigation, actions, states, and metric icons.

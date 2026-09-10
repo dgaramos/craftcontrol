@@ -1,5 +1,6 @@
 export const en = {
     generalPlayerRules: "General rules", playerSettingsTitle: "Settings for every player", playerSettingsHelp: "Server-wide limits and rules. Instant changes are marked with a lightning bolt.",
+    themeLabel: "Appearance", themeSystem: "System", themeLight: "Light", themeDark: "Dark", themeHelp: "Preference saved in this browser.",
     language: "Language",
     brandKicker: "BEDROCK CONTROL CENTER",
     refresh: "Refresh", refreshAriaLabel: "Refresh", profileAriaLabel: "Profile", worldState: "WORLD STATE", quickActions: "Quick actions",

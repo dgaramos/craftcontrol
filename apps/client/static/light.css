@@ -1,0 +1,307 @@
+/* Loaded after the component styles. The link's media query follows the OS;
+   the profile preference can enable or disable this palette explicitly. */
+:root {
+  color-scheme: light;
+  --void: #c4cabb;
+  --bg: #cbd3c3;
+  --stone: #fffef7;
+  --stone-dark: #e1e6d9;
+  --stone-light: #b5c1ac;
+  --line: #7b8b70;
+  --text: #202b24;
+  --muted: #485644;
+  --grass: #3c812d;
+  --grass-light: #326b25;
+  --grass-dark: #285d22;
+  --copper: #a66038;
+  --copper-light: #874722;
+  --emerald: #286a29;
+  --redstone: #ba352d;
+  --danger: #ac3028;
+  --sand: #805b0e;
+  --water: #21647f;
+  --color-active-nav: #805b0e;
+  --color-inactive-nav: #596854;
+  --surface-inset: #edf0e5;
+  --surface-border-top: #ffffff;
+  --surface-border-left: #d7dfcd;
+  --pixel-shadow: 0 4px 0 #b1bca6, 0 8px 18px #33442b14;
+  /* Tinted stripes: the dark palette's white highlight is invisible on stone. */
+  --surface-raised: var(--stone);
+  --panel-stripe-v: #4a5f3a12;
+  --panel-stripe-h: #4a5f3a1c;
+}
+
+body {
+  background-image: linear-gradient(90deg, #42573212 1px, transparent 1px),
+    linear-gradient(#42573212 1px, transparent 1px),
+    radial-gradient(circle at 50% -10%, #c4d0b7 0, transparent 36rem);
+}
+/* Dark text needs no black embossed shadow. Sprites retain their own palette. */
+:root :is(h1, h2, h3, button, summary, .group-title) { text-shadow: none; }
+:root :is(button, input, select, dialog, .block-panel, .card, .settings-accordion,
+  .home-mode-card, .server-status-card, .server-nav-list, .player-roster-row,
+  .player-data-workspace) { border-color: var(--line); }
+:root :is(button, .block-panel, .card, .settings-accordion, .home-mode-card,
+  .server-status-card, .server-nav-list, .player-roster-row, .player-data-workspace) {
+  border-top-color: var(--surface-border-top);
+  border-left-color: var(--surface-border-left);
+}
+:root button, :root .segmented > .segment { background-image: linear-gradient(#fafbf4, #e0e6d6); box-shadow: 0 3px 0 #afbaa4; }
+:root button:hover { filter: brightness(.97); }
+:root button:active { box-shadow: 0 1px 0 #afbaa4; }
+:root :is(button, input, select):focus-visible,
+:root .switch input:focus-visible + span { outline: 3px solid var(--water); outline-offset: 3px; }
+:root :is(input, select) { color: var(--text); background: var(--surface-inset); }
+:root :is(.topbar, .bottom-nav) { background: #f7f9f0f5; border-color: #b5c1ac; box-shadow: 0 2px 16px #33442b18; }
+:root :is(.topbar-mark, .status-pill, .block-logo) { background: #e4ebdb; border-color: #afbea2; }
+:root :is(.topbar-profile, .profile-sheet-avatar) { background: linear-gradient(#e4efd6, #cdddbb); color: var(--grass-light); border-color: #98b37e; }
+:root .topbar-notif-dot { background: #d09a23; border-color: #f7f9f0; }
+:root .bottom-nav-tab { background: transparent; box-shadow: none; border-color: transparent; }
+:root .bottom-nav-tab.active { color: var(--sand); border-top-color: #b2821b; background: linear-gradient(to top, #f4c95d30, transparent); }
+:root .bottom-nav-tab.active .cc-icon { filter: none; }
+:root .bottom-nav-tab:not(.active):hover { color: var(--grass-light); background: #e2ead7; }
+
+/* Cards and their recessed fields. */
+:root :is(.overview-item:not(.server-overview), .world-summary > div,
+  .player-overview span, .player-detail-stats span, .player-stats span,
+  .player-management-card, .profile-facts span, .telemetry-grid span,
+  .permission-choice, .panel-account-status, .session-item, .health-stat,
+  .capability-row, .analytics-summary span, .analytics-event-details div,
+  .record-cards article, .blocks-summary article, .blocks-summary p,
+  .combat-summary article, .exploration-summary article, .trends-summary article,
+  .dimension-cards article, .podium-place, .calendar-grid article,
+  .change-values, .capability-panel li, .telemetry-metrics li) {
+  background: var(--surface-inset); border-color: #bdc9b2; box-shadow: inset 1px 1px #fff;
+}
+/* Raised in the dark palette, not recessed like the surfaces above. */
+:root .home-mode-card { background: linear-gradient(#fbfcf5, #e7ecdd); border-color: #bdc9b2; }
+:root :is(.loading-players, .no-player-results, .player-history,
+  .player-history-grid > *, .analytics-empty, .analytics-loading,
+  .analytics-event, .player-favorites button, .combat-profiles button,
+  .explorer-profiles button, .time-advanced > summary, .time-advanced-body,
+  .server-nav-item, .ore-grid button, .health-version, .health-badge.health-waiting,
+  .read-only-badge, .panel-role-badge, .analytics-source) {
+  color: var(--text); background: var(--stone); border-color: #bdc9b2; box-shadow: none;
+}
+:root :is(.field, .server-nav-item, .player-data-drawer, .player-record-drawer,
+  .player-data-ranking li, .player-history-grid li, .player-history li,
+  .cycle-row, .drawer-header, .changes-list, .profile-sheet-user,
+  .profile-sheet-section, .audit-table td, .audit-table tr,
+  .player-detail-panels, .player-panel-card, .player-detail-hero-attrs,
+  .leaderboard-panel li, .block-leaderboard li, .block-player-ranking li,
+  .combat-breakdown li, .pvp-panel li, .exploration-ranking li,
+  .journey-panel li, .period-ranking li) { border-color: #c9d2bf; box-shadow: none; }
+:root .field.live-field { box-shadow: inset 4px 0 var(--grass); }
+:root .server-nav-item:hover { background: var(--surface-inset); }
+:root :is(.field-copy p, .world-summary small.world-ticks, .profile-sheet-role,
+  .weather-duration-row > span, .cycle-row small, .time-advanced > summary,
+  .drawer-header p, .change-key, .op-stage-time, .player-data-heading p,
+  .player-data-heading > small, .player-data-drawer-copy small,
+  .player-records-heading p, .home-mode-heading small, .home-mode-heading small .cc-icon,
+  .server-nav-item-arrow, .player-roster-arrow, .player-detail-identity .player-data-link,
+  .home-shortcut > b, .activity-scroll-end, .calendar-grid span, .calendar-grid small,
+  .heatmap-grid > b, .heatmap-grid > strong, .section-feature small,
+  .server-rules-card-text > small, .blocks-summary p small,
+  .combat-summary small, .combat-empty-note small, .combat-zero,
+  .combat-profiles button small, .exploration-summary small, .exploration-note span,
+  .exploration-note small, .dimension-cards article em, .exploration-zero,
+  .explorer-profiles button small, .journey-panel li > span,
+  .trends-note, .trends-note small, .trends-summary small, .trends-zero) { color: var(--muted); }
+
+/* Selection stays gold; live actions stay green and destruction stays red. */
+:root :is(.choice-group > button.active, .player-filters > button.active,
+  .segmented > .segment.active, .ranking-metric-picker > button.active,
+  .combat-metric-picker > button.active, .exploration-metric-picker > button.active,
+  .period-metric-picker > button.active, .period-switch > button.active,
+  .home-game-modes button.active, .profile-sheet-locale-row .btn[aria-selected="true"],
+  .home-time-action, .drawer-actions .apply-restart) {
+  color: #3d2b08; background: linear-gradient(#f8dc87, #e5ba4d);
+  border-color: #b08a32; border-top-color: #fff1bd; border-left-color: #f8dc87;
+}
+:root :is(.analytics-view-switch > button.active, .ranking-categories > button.active,
+  .blocks-mode > button.active, .ore-grid > button.active) {
+  color: var(--sand); background: #fff2cf; border-color: #af8124;
+}
+:root :is(.primary, .switch input:checked + span) { color: #173713; background: linear-gradient(#bce39d, #9bcb78); border-color: #6f9b53; }
+:root .switch span { background: #d7decd; border-color: #8f9e83; box-shadow: inset 1px 1px #bac6ae; }
+:root .switch span::before { background: #78866c; border-color: #57664d; }
+:root :is(.danger, .profile-sheet-actions .btn.danger) { color: #fff; background: linear-gradient(#ad4037, #8c2c25); border-color: #76271f; border-top-color: #d7756a; }
+:root :is(.home-shortcut.rules, .server-rules-card) { background: linear-gradient(#e4efd7, #d5e4c4); border-color: #8dad70; }
+:root :is(.home-shortcut.rules small, .server-rules-card-text > span small) { color: var(--grass-light); }
+:root :is(.home-shortcut small b, .server-rules-card-text b, .time-group-label b) { background: #e3f0d5; border-color: #8eaf72; }
+:root :is(.game-role-badge, .game-scope) { color: var(--sand); background: #f5ebcd; border-color: #c3a665; }
+/* These carry a two-stop gradient in the dark palette; keep the depth here. */
+:root :is(.home-shortcut.server, .section-feature, .weather-options .weather-thunder,
+  .indicator-bar--changes, .indicator-bar--stalled, .podium-place.rank-1) {
+  color: var(--sand); background: linear-gradient(#faf1d8, #eee0ba); border-color: #c3a665;
+}
+:root :is(.home-shortcut.server small, .server-restart-label, .field .field-warning,
+  .toggle-value.unknown, .indicator-bar--changes small, .indicator-bar--stalled small,
+  .podium-place b, .record-cards b, .ranking-categories button span,
+  .leaderboard-panel li > b, .trends-summary b, .period-ranking li > b,
+  .period-ranking li strong) { color: var(--sand); }
+:root :is(.telemetry-profile, .release-version-grid article, .analytics-source.structured,
+  .panel-role-badge.has-access, .panel-scope) { color: var(--water); background: #e1eef0; border-color: #94b7c0; }
+:root :is(.weather-options .weather-rain, .indicator-bar--operation) {
+  color: var(--water); background: linear-gradient(#e8f4f6, #d3e7ea); border-color: #94b7c0;
+}
+:root :is(.indicator-bar--operation small, .pack-status-version, .release-version-grid strong,
+  .release-tags span, .audit-action-code, .telemetry-profile > small,
+  .blocks-summary article b, .block-leaderboard li > b, .block-player-ranking li > b,
+  .block-leaderboard li strong, .block-player-ranking li strong, .player-favorites button b,
+  .exploration-summary b, .exploration-ranking li > b, .exploration-ranking li strong,
+  .dimension-cards article b, .explorer-profiles button span b,
+  .op-evidence-details[open] > summary, .op-changes[open] > summary) { color: var(--water); }
+:root :is(.death-source, .telemetry-badge) { color: var(--water) !important; }
+:root :is(.death-history, .player-history-grid .death-history, .health-error,
+  .analytics-event.tone-death, .analytics-detail-button, .analytics-death-dialog .analytics-event-details div,
+  .op-error, .telemetry-pack-error, .audit-outcome--failure) { color: var(--danger); background: #f7e5df; border-color: #c8887b; }
+:root :is(.auth-error, .death-history h4, .death-entry-header b, .analytics-death-dialog h2,
+  .analytics-death-meta > span, .analytics-summary .death b, .activity-scroll-sentinel p,
+  .server-status-card.offline .server-status-summary strong, .op-stage-failed,
+  .capability-panel li.unavailable, .telemetry-metrics li.unavailable,
+  .combat-summary b, .combat-breakdown li > b, .combat-breakdown li strong,
+  .pvp-panel li span, .pvp-panel li b, .combat-profiles button span b) { color: var(--danger); }
+:root .telemetry-pack-error { color: var(--danger) !important; }
+:root :is(.death-history dl div, .tone-death .analytics-event-icon) { color: var(--danger); background: #efdad1; border-color: #c8887b; box-shadow: none; }
+:root .death-entry-icon { color: var(--danger); background: linear-gradient(135deg, #f4e2da, #e7c8bd); border-color: #c8887b; box-shadow: none; }
+:root .death-entry-header { border-color: #dcc0b5; }
+:root :is(.capability-panel li.supported span, .telemetry-metrics li.supported > span) { color: var(--grass-light); }
+:root .audit-outcome--success { color: var(--grass-light); background: #e1eed5; border-color: #a1b98b; }
+:root .calendar-grid article.level-1 { background: #e2edcf; }
+:root .calendar-grid article.level-2 { background: #d0e4b4; }
+:root .calendar-grid article.level-3 { background: #bed69e; }
+:root .calendar-grid article.level-4 { background: #a8c787; }
+:root :is(.heatmap-grid i, .heatmap-legend i) { border-color: #a6b496; }
+
+/* Dialogs, login and the profile sheet use the same light stone. */
+:root :is(dialog.drawer, .bottom-sheet-panel) { background: var(--stone); border-top-color: #a5b496; box-shadow: 0 -8px 30px #33442b26; }
+:root :is(.drawer-handle, .bottom-sheet-handle) { background: #a5b496; }
+:root #auth-overlay { background: #eef0e7f5; }
+:root :is(.auth-card .auth-switch .auth-route-action, .auth-card .password-toggle,
+  .profile-sheet-locale-row .btn, .profile-sheet-actions .btn.secondary) {
+  color: var(--grass-light); background: linear-gradient(#f6f9ee, #e0e8d4); border-color: #a8b79a; box-shadow: 0 2px 0 #b1bca6;
+}
+:root .auth-card .auth-switch .auth-route-action:hover { color: var(--grass-dark); background: #d9e7c9; }
+:root :is(.profile-sheet-locale-row .btn, .profile-sheet-actions .btn.secondary) { color: var(--text); }
+:root .profile-sheet-locale-row .btn[aria-selected="true"] { color: #3d2b08; background: linear-gradient(#f8dc87, #e5ba4d); }
+:root :is(.drawer-close, .remove-change, .analytics-player-link,
+  .player-detail-identity .player-data-link) { background: none; box-shadow: none; }
+:root .remove-change { color: var(--danger); opacity: .8; }
+:root .release-tags span { background: #e1eef0; border-color: #94b7c0; }
+:root .access-code code { background: var(--surface-inset); color: var(--grass-dark); }
+:root .operation-drawer .operation-progress-card { background: none; box-shadow: none; border: 0; }
+:root .exports-screen .export-actions button[disabled] { color: var(--muted); background: var(--stone-dark); box-shadow: none; }
+
+:root .server-panel { background: none; border: 0; box-shadow: none; }
+/* Accents and edges that assumed a dark ground: pale hues that vanish on
+   stone, black drop shadows and the rings around status dots. */
+:root .settings-accordion summary b { color: var(--muted); background: var(--surface-inset); border-color: #bdc9b2; }
+:root .interactions-summary article span { color: var(--sand); }
+:root .op-stage-divergent { color: var(--copper-light); }
+:root .server-rules-icon { color: #8a6a1e; }
+:root :is(.world-weather[data-weather="clear-night"] .world-value strong,
+  .world-weather[data-weather="clear-night"] .world-value .cc-icon) { color: #2c4d70; }
+:root .ore-gem { color: #17697e; text-shadow: none; }
+:root .ore-iron { color: #7a6647; }
+:root .ore-gold { color: #8a6a06; }
+:root .ore-copper { color: #9c4d21; }
+:root .ore-coal { color: #4b524d; }
+:root .ore-redstone { color: var(--redstone); }
+:root .ore-lapis { color: #2a53a8; }
+:root .ore-emerald { color: #1c7a3f; }
+:root .ore-quartz { color: #7d6a55; }
+:root .ore-ancient_debris { color: #6d3e30; }
+:root .status-dot { box-shadow: 0 0 0 2px #c4d3bd, 0 0 6px var(--grass); }
+:root .session-status-dot { box-shadow: 0 0 0 2px #cfd8c6; }
+:root .timeline-node { border-color: #8f9e83; box-shadow: 0 0 0 2px #c2cdb6; }
+:root .command-row input { border-color: #8f9e83; border-bottom-color: #bdc9b2; border-right-color: #bdc9b2; }
+:root :is(.command-row button, .analytics-hero button, .rankings-hero button,
+  .blocks-hero button, .combat-hero button, .exploration-hero button,
+  .trends-hero button, .health-hero button) { box-shadow: 0 2px 0 #afbaa4; }
+
+/* Surfaces that carried a dark hex with no light counterpart. */
+:root :is(.language-picker > button, .language-picker [role="option"]) { background: var(--surface-inset); }
+:root .language-picker [role="listbox"] { background: var(--stone); border-color: #9aab8f; }
+:root :is(.language-picker [role="option"]:hover,
+  .language-picker [role="option"][aria-selected="true"]) { background: #e2ead7; border-color: #8dad70; }
+:root .players-card:hover { background: #e9efdf; }
+:root .ranking-podium { background-color: #f6efdc; }
+:root .event-history .timeline-list::before { background: #c2cdb6; }
+
+:root .telemetry-grid { background: #c9d2bf; border-color: #c9d2bf; }
+:root .analytics-event.tone-join { border-left-color: var(--grass); }
+:root .analytics-event.tone-leave { border-left-color: var(--water); }
+:root .analytics-event.tone-death { border-left-color: var(--danger); }
+:root .analytics-event.tone-permission { border-left-color: var(--copper); }
+:root .analytics-event.tone-respawn { border-left-color: #8061aa; }
+:root .analytics-event.tone-dimension { border-left-color: #9453aa; }
+:root :is(.danger-zone h3, .time-danger p, .cap-unsupported .cap-mark) { color: var(--danger); }
+:root :is(.combat-empty-note, .exploration-note, .trends-note) { background: var(--surface-inset); }
+:root .time-screen output { color: var(--muted); }
+/* Dark gives each shortcut its own hue; a single flat grey loses that. */
+:root .quick-actions .day { color: #4a3308; background: linear-gradient(#f6e3ac, #e7cd84); border-top-color: #fdf3d2; }
+:root .quick-actions .night { color: #1d3049; background: linear-gradient(#d8e3f2, #bccde4); border-top-color: #eef3fa; }
+:root .quick-actions .weather { color: #12414f; background: linear-gradient(#d6ecf6, #b9dcec); border-top-color: #edf7fb; }
+:root dialog.drawer--changes { border-top-color: #af8124; }
+:root dialog.drawer--operation { border-top-color: var(--water); }
+
+/* Interactive boundaries must remain visible on light stone. Match the field
+   selectors' specificity so dark component borders cannot win the cascade. */
+:root :is(.field, .auth-card, .account-card) input:not([type=checkbox]),
+:root :is(.field, .panel-role-field, .panel-access-actions) select,
+:root .analytics-filters :is(input, select), :root .audit-filters input,
+:root .player-toolbar input, :root .gamemode-select, :root .weather-duration-row input {
+  color: var(--text); background: var(--surface-inset);
+  border-color: var(--line); border-top-color: #697b5f; border-left-color: #697b5f;
+  box-shadow: inset 0 1px 2px #33442b12;
+}
+:root input::placeholder { color: #56634f; opacity: 1; }
+:root .player-roster-row {
+  border-color: var(--line); border-top-color: #acb9a1;
+  border-left-color: #acb9a1; box-shadow: 0 3px 0 #98a68c;
+}
+:root .player-roster-row:hover { border-color: var(--grass-dark); }
+:root .player-roster-row .player-roster-open {
+  background: none; box-shadow: none; text-shadow: none;
+}
+:root .player-avatar {
+  color: #fffef7; background: #345a3d; border-color: #24462c; opacity: 1;
+}
+:root .player-roster-row.is-offline .player-avatar {
+  color: #fffef7; background: #54604e; border-color: #394632; opacity: 1;
+}
+:root .switch span { border-color: #687a5b; background: #dce3d3; }
+:root .switch span::before { background: #657559; border-color: #425237; }
+:root .switch input:checked + span { background: #d0e7bb; border-color: #477032; }
+:root .switch input:checked + span::before {
+  background: #326b25; border-color: #234c1a; box-shadow: inset 1px 1px #75a357;
+}
+
+/* Neutral buttons need a complete outline: a white top edge disappears inside
+   a light card. Reserve the bright edge for the panel itself. */
+:root :is(.choice-group > button, .player-filters > button, .segmented > .segment,
+  .ranking-metric-picker > button, .combat-metric-picker > button,
+  .exploration-metric-picker > button, .period-metric-picker > button,
+  .period-switch > button, .home-game-modes button, .analytics-view-switch > button,
+  .ranking-categories > button, .blocks-mode > button, .ore-grid > button,
+  .time-presets button, .weather-options button, .query-buttons button,
+  .secondary, .topbar-btn, .panel-back, .player-back,
+  .profile-sheet-locale-row .btn):not(.active):not([aria-selected="true"]) {
+  color: #30402a;
+  background: linear-gradient(#fffef7, #e6ebdc);
+  border-color: #637359;
+  border-top-color: #829276;
+  border-left-color: #829276;
+  box-shadow: inset 0 1px 0 #fff, 0 3px 0 #7c8c71;
+  text-shadow: none;
+}
+:root :is(.choice-group > button, .player-filters > button, .segmented > .segment,
+  .secondary, .topbar-btn, .panel-back, .player-back):not(.active):hover {
+  background: #dbe5ce;
+  border-color: #405a32;
+  filter: none;
+}
+
+

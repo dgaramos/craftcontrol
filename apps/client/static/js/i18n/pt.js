@@ -1,5 +1,6 @@
 export const pt = {
     generalPlayerRules: "Regras gerais", playerSettingsTitle: "Configurações para todos os jogadores", playerSettingsHelp: "Limites e regras do servidor. Alterações instantâneas são identificadas pelo raio.",
+    themeLabel: "Aparência", themeSystem: "Sistema", themeLight: "Claro", themeDark: "Escuro", themeHelp: "Preferência salva neste navegador.",
     language: "Idioma",
     brandKicker: "CENTRAL BEDROCK",
     refresh: "Atualizar", refreshAriaLabel: "Atualizar estado", profileAriaLabel: "Perfil", worldState: "ESTADO DO MUNDO", quickActions: "Ações rápidas",

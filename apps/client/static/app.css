@@ -19,6 +19,11 @@
   --sand: #f4c95d;
   --water: #82c8ed;
   --pixel-shadow: 0 4px 0 #070907, 0 8px 18px #0009;
+  /* Panel checker stripes. Themed here so component overrides that drop the
+     texture (background-image: none) keep working in every palette. */
+  --surface-raised: #202923;
+  --panel-stripe-v: #ffffff04;
+  --panel-stripe-h: #00000008;
   /* Mobile shell tokens — Phase 1 */
   --color-active-nav: #f4c95d;
   --color-inactive-nav: #46534a;
@@ -294,8 +299,8 @@ main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-
   border-radius: 4px;
   background-color: var(--stone);
   background-image:
-    linear-gradient(90deg, #ffffff04 50%, transparent 50%),
-    linear-gradient(#00000008 50%, transparent 50%);
+    linear-gradient(90deg, var(--panel-stripe-v) 50%, transparent 50%),
+    linear-gradient(var(--panel-stripe-h) 50%, transparent 50%);
   background-size: 18px 18px;
   box-shadow: var(--pixel-shadow);
 }
@@ -1103,7 +1108,7 @@ dialog.drawer::backdrop { background: rgba(0, 0, 0, .7); }
 }
 .server-panel-header { padding: 14px 2px 0; }
 .server-panel-header h2 { margin: 4px 0 0; font-family: var(--font-display); font-size: 20px; font-weight: 800; line-height: 1; }
-.server-status-card { padding: 14px; border: 4px solid #080a08; border-top-color: #4d5850; border-left-color: #3a433e; background: #202923; box-shadow: var(--pixel-shadow); }
+.server-status-card { padding: 14px; border: 4px solid #080a08; border-top-color: #4d5850; border-left-color: #3a433e; background: var(--surface-raised); box-shadow: var(--pixel-shadow); }
 .server-status-card.offline { border-top-color: #6a403d; }
 .server-status-summary { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .server-status-summary > span:last-child { min-width: 0; }
@@ -1137,3 +1142,8 @@ dialog.drawer::backdrop { background: rgba(0, 0, 0, .7); }
 .server-nav-item strong { margin-top: 2px; font-family: var(--font-display); font-size: 14px; font-weight: 700; line-height: 1; }
 .server-nav-item-arrow { margin-left: auto; color: #46534a; font-family: var(--font-display); font-size: 20px; font-weight: 400; line-height: 1; text-shadow: none; transition: color .12s; }
 .server-nav-item:hover .server-nav-item-arrow, .server-rules-card:hover .server-nav-item-arrow { color: var(--grass-light); }
+
+.theme-help { color: var(--muted); font-size: 11px; }
+
+[data-theme-choice] { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; }
+[data-theme-choice] > .cc-icon { width: 18px; height: 18px; margin: 0; filter: none; }

@@ -50,6 +50,8 @@ As seis áreas principais são orientadas por tarefa:
 | Regras | Jogabilidade, interface, mobs, drops, comandos, fogo, TNT e regeneração |
 | Servidor | CraftControl Telemetry Pack, rede, desempenho, backups e ciclo de vida do contêiner |
 
+O perfil inclui uma preferência de aparência local ao navegador; veja [Temas de cor](docs/design-system.md#color-themes).
+
 A navegação é codificada na URL; recarregar o navegador preserva a área ativa. Mudanças persistentes de configuração entram em uma gaveta de revisão; gamerules marcadas com raio são aplicadas imediatamente.
 
 ## Arquitetura

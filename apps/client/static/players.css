@@ -106,8 +106,8 @@
 .player-roster-row {
   background-color: var(--stone);
   background-image:
-    linear-gradient(90deg, #ffffff04 50%, transparent 50%),
-    linear-gradient(#00000008 50%, transparent 50%);
+    linear-gradient(90deg, var(--panel-stripe-v) 50%, transparent 50%),
+    linear-gradient(var(--panel-stripe-h) 50%, transparent 50%);
   background-size: 18px 18px;
   border: 3px solid #080a08;
   border-top-color: #454c46;
@@ -216,8 +216,8 @@
   display: grid;
   background-color: var(--stone);
   background-image:
-    linear-gradient(90deg, #ffffff04 50%, transparent 50%),
-    linear-gradient(#00000008 50%, transparent 50%);
+    linear-gradient(90deg, var(--panel-stripe-v) 50%, transparent 50%),
+    linear-gradient(var(--panel-stripe-h) 50%, transparent 50%);
   background-size: 18px 18px;
   border: 4px solid #080a08;
   border-top-color: #454c46;

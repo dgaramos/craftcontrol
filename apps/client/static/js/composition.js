@@ -1,3 +1,4 @@
+import { createThemePreference } from "./core/theme.js?v=1";
 import { api } from "./api.js?v=7";
 import { connectEventStream } from "./events.js";
 import { requireSession, showSessions, showPasswordChange } from "./auth.js?v=8";
@@ -21,11 +22,17 @@ import { createAuditFeature } from "./features/audit/index.js?v=2";
 import { createExportsFeature } from "./features/exports/index.js?v=1";
 import { downloadFile } from "./core/download.js?v=1";
 import { createHomeFeature } from "./features/home/index.js?v=7";
-import { createI18n } from "./i18n/index.js?v=20";
+import { createI18n } from "./i18n/index.js?v=21";
 import { createGameTerms } from "./i18n/game-terms.js?v=7";
 
 export function startApplication() {
   const content = $("#content");
+  createThemePreference({
+    root: document.documentElement,
+    stylesheet: document.getElementById("light-theme"),
+    buttons: document.querySelectorAll("[data-theme-choice]"),
+    storage: () => window.localStorage,
+  });
 
   if ("scrollRestoration" in window.history) window.history.scrollRestoration = "manual";
   window.addEventListener("pageshow", () => requestAnimationFrame(() => window.scrollTo(0, 0)));

@@ -19,6 +19,57 @@ const COMPONENT_SHEETS = ["app.css", "analytics.css", "players.css", "auth.css"]
 const SPRITE_REGION_OPEN = "/* region: sprites";
 const SPRITE_REGION_CLOSE = "/* endregion: sprites */";
 
+/* Exemption by location only works while the locations are themselves fixed.
+   `stripSpriteRegions` obeys any marker in any component stylesheet, so a new
+   marker — in app.css around an ordinary rule, or anywhere in a sheet that has
+   no sprites at all — would silently widen the budget's blind spot. This
+   allowlist pins how many regions each sheet may open and which sprite classes
+   they may wrap; extending it is a deliberate edit, reviewed like any other. */
+const SPRITE_REGION_ALLOWLIST = {
+  "app.css": { regions: 5, sprites: ["grass-edge", "shield", "server-status-shield"] },
+  "analytics.css": { regions: 0, sprites: [] },
+  "players.css": { regions: 0, sprites: [] },
+  "auth.css": { regions: 0, sprites: [] },
+};
+
+/** Counts opening markers, not matched pairs: an unterminated marker is still
+    an attempt to exempt code and must be visible to the allowlist. */
+function countSpriteRegions(css) {
+  return css.split(SPRITE_REGION_OPEN).length - 1;
+}
+
+/** The bodies of every closed sprite region, in source order. */
+function spriteRegionBodies(css) {
+  const bodies = [];
+  let cursor = 0;
+  for (;;) {
+    const open = css.indexOf(SPRITE_REGION_OPEN, cursor);
+    if (open === -1) break;
+    const close = css.indexOf(SPRITE_REGION_CLOSE, open);
+    if (close === -1) break;
+    const afterOpenComment = css.indexOf("*/", open);
+    bodies.push(css.slice(afterOpenComment + 2, close));
+    cursor = close + SPRITE_REGION_CLOSE.length;
+  }
+  return bodies;
+}
+
+/** Every comma-separated selector of every rule in a region body. */
+function regionSelectors(body) {
+  const withoutComments = body.replace(/\/\*[\s\S]*?\*\//g, " ");
+  return [...withoutComments.matchAll(/([^{}]+)\{[^{}]*\}/g)]
+    .flatMap((match) => match[1].split(","))
+    .map((selector) => selector.trim())
+    .filter(Boolean);
+}
+
+/** Selectors a region wraps that do not belong to any allowlisted sprite. */
+function unexpectedSpriteSelectors(body, sprites) {
+  return regionSelectors(body).filter(
+    (selector) => !sprites.some((sprite) => new RegExp(`\\.${sprite}\\b`).test(selector)),
+  );
+}
+
 /** Mirrors `grep -oiE '#[0-9a-f]{3,8}\b'`, the command that produced the
     grandfathered baseline recorded in issue #610. */
 function hexLiterals(css) {
@@ -124,6 +175,45 @@ describe("design token contracts — sprite region helper", () => {
   });
 });
 
+describe("design token contracts — sprite region allowlist helper", () => {
+  test("counts an unterminated marker, so a half-open region cannot hide", () => {
+    expect(countSpriteRegions("/* region: sprites */ .a{color:#111111}")).toBe(1);
+    expect(countSpriteRegions(".a{color:#111111}")).toBe(0);
+  });
+
+  test("reads the body of each closed region without its opening comment", () => {
+    const css = [
+      ".before{color:#111111}",
+      "/* region: sprites — note */ .shield{color:#222222} /* endregion: sprites */",
+      "/* region: sprites */ .grass-edge{color:#333333} /* endregion: sprites */",
+    ].join("\n");
+    expect(spriteRegionBodies(css).map((body) => body.trim())).toEqual([
+      ".shield{color:#222222}",
+      ".grass-edge{color:#333333}",
+    ]);
+  });
+
+  test("lists every comma-separated selector a region wraps", () => {
+    const body = "/* c */ .shield, .shield .cc-icon { color:#111111 } .grass-edge::after{ top:0 }";
+    expect(regionSelectors(body)).toEqual([".shield", ".shield .cc-icon", ".grass-edge::after"]);
+  });
+
+  test("accepts descendant and pseudo forms of an allowlisted sprite", () => {
+    const body = ".shield .cc-icon{color:#111111} .hero.offline .shield{color:#222222} .grass-edge::after{top:0}";
+    expect(unexpectedSpriteSelectors(body, ["grass-edge", "shield"])).toEqual([]);
+  });
+
+  test("reports a region wrapped around a selector that is not an allowlisted sprite", () => {
+    const body = ".shield{color:#111111} .players-card{color:#222222}";
+    expect(unexpectedSpriteSelectors(body, ["grass-edge", "shield"])).toEqual([".players-card"]);
+  });
+
+  test("does not let a sprite name match a longer class that merely ends with it", () => {
+    const body = ".server-status-shield{color:#111111}";
+    expect(unexpectedSpriteSelectors(body, ["shield"])).toEqual([".server-status-shield"]);
+  });
+});
+
 describe("design token contracts — vocabulary exclusion helper", () => {
   test("drops the literals that define the token vocabulary", () => {
     const css = [
@@ -210,6 +300,24 @@ describe("design token contracts — named sprite regions", () => {
     const closed = css.split(SPRITE_REGION_CLOSE).length - 1;
     expect(opened).toBeGreaterThan(0);
     expect(opened).toBe(closed);
+  });
+
+  /* The two assertions above prove the known sprites ARE exempt. These prove
+     that ONLY they are: a new marker anywhere in the component sheets fails
+     until the allowlist above is widened on purpose. */
+  test.each(COMPONENT_SHEETS)("%s opens exactly the allowlisted number of sprite regions", (name) => {
+    expect(countSpriteRegions(sheet(name))).toBe(SPRITE_REGION_ALLOWLIST[name].regions);
+  });
+
+  test.each(COMPONENT_SHEETS)("every sprite region in %s wraps only allowlisted sprites", (name) => {
+    const { sprites } = SPRITE_REGION_ALLOWLIST[name];
+    for (const body of spriteRegionBodies(sheet(name))) {
+      expect(unexpectedSpriteSelectors(body, sprites)).toEqual([]);
+    }
+  });
+
+  test("the allowlist covers every stylesheet the budget reads", () => {
+    expect(Object.keys(SPRITE_REGION_ALLOWLIST).sort()).toEqual([...COMPONENT_SHEETS].sort());
   });
 });
 

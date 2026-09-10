@@ -102,7 +102,7 @@ body {
   .server-nav-item-arrow, .player-roster-arrow, .player-detail-identity .player-data-link,
   .home-shortcut > b, .activity-scroll-end, .calendar-grid span, .calendar-grid small,
   .heatmap-grid > b, .heatmap-grid > strong, .section-feature small,
-  .server-rules-card-text > small, .rankings-hero p, .blocks-summary p small,
+  .server-rules-card-text > small, .blocks-summary p small,
   .combat-summary small, .combat-empty-note small, .combat-zero,
   .combat-profiles button small, .exploration-summary small, .exploration-note span,
   .exploration-note small, .dimension-cards article em, .exploration-zero,
@@ -138,9 +138,9 @@ body {
 }
 :root :is(.home-shortcut.server small, .server-restart-label, .field .field-warning,
   .toggle-value.unknown, .indicator-bar--changes small, .indicator-bar--stalled small,
-  .rankings-hero h2, .podium-place b, .record-cards b, .ranking-categories button span,
+  .podium-place b, .record-cards b, .ranking-categories button span,
   .leaderboard-panel li > b, .trends-summary b, .period-ranking li > b,
-  .period-ranking li strong, .trends-hero h2) { color: var(--sand); }
+  .period-ranking li strong) { color: var(--sand); }
 :root :is(.telemetry-profile, .release-version-grid article, .analytics-source.structured,
   .panel-role-badge.has-access, .panel-scope) { color: var(--water); background: #e1eef0; border-color: #94b7c0; }
 :root :is(.weather-options .weather-rain, .indicator-bar--operation) {

@@ -3,8 +3,6 @@
 Fixture: PR #254 (feat(observability): add local telemetry diagnostics).
 
 These tests enforce:
-- The Claudio DR publish workflow uses COMMENT as the default event (never
-  APPROVE or REQUEST_CHANGES by default).
 - The project profile explicitly restricts review events and forbids embedding
   findings in the review body when an inline diff location is available.
 - A capability-protected GET endpoint requires a 403 test for non-owner roles;
@@ -20,7 +18,6 @@ import re
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import pytest
 from flask import Blueprint, Flask, jsonify
 
 from src.auth.http import require
@@ -28,50 +25,19 @@ from conftest import make_auth_mock, wire_auth
 
 ROOT = Path(__file__).resolve().parents[4]
 PROFILE = ROOT / ".dr-agents" / "craftcontrol" / "PROFILE.md"
-CLAUDIO_WORKFLOW = ROOT / ".github" / "workflows" / "publish-claudio-review.yml"
-CODY_WORKFLOW = ROOT / ".github" / "workflows" / "publish-cody-review.yml"
 
 
 # ---------------------------------------------------------------------------
-# Review workflow constraints (profile and publisher)
+# Review policy this project declares for itself
+#
+# The publisher workflows are thin stubs installed from the dr-agents catalog
+# (dr-agents#260), so their event input is catalog content rather than a
+# decision this repository makes; asserting on it here tested someone else's
+# file and could not fail for anything changed in this repository. That
+# COMMENT-only guarantee is enforced where the content lives. What stays here
+# is what this project declares in its own PROFILE.md, which no catalog check
+# validates.
 # ---------------------------------------------------------------------------
-
-class TestPublishWorkflowEvent:
-    """Reviewer publishers must allow COMMENT only; approvals remain human decisions."""
-
-    @pytest.mark.parametrize("workflow", [CODY_WORKFLOW, CLAUDIO_WORKFLOW])
-    def test_default_event_is_comment(self, workflow: Path) -> None:
-        text = workflow.read_text()
-        # Match: event: {... default: COMMENT ...} on the same line
-        match = re.search(r"event:\s*\{[^}]*default:\s*(\w+)", text)
-        assert match is not None, "Could not locate event input in publish-claudio-review.yml"
-        default_value = match.group(1)
-        assert default_value == "COMMENT", (
-            f"{workflow.name} must default to COMMENT. "
-            f"Current default is '{default_value}'. "
-            "APPROVE and REQUEST_CHANGES are human decisions."
-        )
-
-    @pytest.mark.parametrize("workflow", [CODY_WORKFLOW, CLAUDIO_WORKFLOW])
-    def test_options_list_contains_only_comment(self, workflow: Path) -> None:
-        text = workflow.read_text()
-        # Anchor to the event input line to avoid matching unrelated options lists.
-        # The workflow uses inline YAML: event: {... options: [COMMENT]}
-        event_block = re.search(
-            r"\bevent:\s*\{[^}]*options:\s*\[([^\]]+)\]",
-            text,
-        )
-        assert event_block is not None, (
-            "Could not locate the 'event' input options list in publish-claudio-review.yml. "
-            "Expected: event: {... options: [COMMENT] ...}"
-        )
-        options = [o.strip() for o in event_block.group(1).split(",")]
-        assert options == ["COMMENT"], (
-            f"{workflow.name} must list exactly [COMMENT] as the only "
-            "allowed event. APPROVE and REQUEST_CHANGES are human decisions and "
-            f"must not appear as selectable options. Current options: {options}."
-        )
-
 
 class TestProfileReviewEventRules:
     """The project profile must explicitly forbid APPROVE and REQUEST_CHANGES

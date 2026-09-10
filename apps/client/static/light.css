@@ -195,6 +195,32 @@ body {
 :root .exports-screen .export-actions button[disabled] { color: var(--muted); background: var(--stone-dark); box-shadow: none; }
 
 :root .server-panel { background: none; border: 0; box-shadow: none; }
+/* Accents and edges that assumed a dark ground: pale hues that vanish on
+   stone, black drop shadows and the rings around status dots. */
+:root .settings-accordion summary b { color: var(--muted); background: var(--surface-inset); border-color: #bdc9b2; }
+:root .interactions-summary article span { color: var(--sand); }
+:root .op-stage-divergent { color: var(--copper-light); }
+:root .server-rules-icon { color: #8a6a1e; }
+:root :is(.world-weather[data-weather="clear-night"] .world-value strong,
+  .world-weather[data-weather="clear-night"] .world-value .cc-icon) { color: #2c4d70; }
+:root .ore-gem { color: #17697e; text-shadow: none; }
+:root .ore-iron { color: #7a6647; }
+:root .ore-gold { color: #8a6a06; }
+:root .ore-copper { color: #9c4d21; }
+:root .ore-coal { color: #4b524d; }
+:root .ore-redstone { color: var(--redstone); }
+:root .ore-lapis { color: #2a53a8; }
+:root .ore-emerald { color: #1c7a3f; }
+:root .ore-quartz { color: #7d6a55; }
+:root .ore-ancient_debris { color: #6d3e30; }
+:root .status-dot { box-shadow: 0 0 0 2px #c4d3bd, 0 0 6px var(--grass); }
+:root .session-status-dot { box-shadow: 0 0 0 2px #cfd8c6; }
+:root .timeline-node { border-color: #8f9e83; box-shadow: 0 0 0 2px #c2cdb6; }
+:root .command-row input { border-color: #8f9e83; border-bottom-color: #bdc9b2; border-right-color: #bdc9b2; }
+:root :is(.command-row button, .analytics-hero button, .rankings-hero button,
+  .blocks-hero button, .combat-hero button, .exploration-hero button,
+  .trends-hero button, .health-hero button) { box-shadow: 0 2px 0 #afbaa4; }
+
 /* Surfaces that carried a dark hex with no light counterpart. */
 :root :is(.language-picker > button, .language-picker [role="option"]) { background: var(--surface-inset); }
 :root .language-picker [role="listbox"] { background: var(--stone); border-color: #9aab8f; }

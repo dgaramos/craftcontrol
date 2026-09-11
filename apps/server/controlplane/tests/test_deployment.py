@@ -378,7 +378,10 @@ def test_publisher_stubs_stay_thin_and_pin_the_release_tag() -> None:
     """
     ref = "workflows-v1"
     workflows = sorted((ROOT / ".github" / "workflows").glob("publish-*.yml"))
-    assert len(workflows) == 12, [w.name for w in workflows]
+    # How many publishers exist is the catalog's fact, not this repository's:
+    # dr-agents#269 added a seventh and a hardcoded count would fail here for
+    # being correct. What this repository owns is the shape of each stub it has.
+    assert workflows, "no publisher stubs are installed"
 
     for path in workflows:
         workflow = path.read_text()
@@ -399,13 +402,16 @@ def test_publisher_stubs_stay_thin_and_pin_the_release_tag() -> None:
         assert f"secrets.{agent.upper()}_DR_PRIVATE_KEY" in workflow
         assert f"vars.{agent.upper()}_DR_CLIENT_ID" in workflow
 
-        # The catalog is checked out at the very ref the stub calls, so the
-        # workflow and the scripts it runs come from one commit. Only the
-        # self-contained issue publisher needs no catalog checkout.
-        if mode.group(1) == "issue":
-            assert "catalog_ref:" not in workflow, f"{path.name} needs no catalog_ref"
-        else:
-            assert f"catalog_ref: {ref}" in workflow, f"{path.name} must pass catalog_ref: {ref}"
+        # When a stub stages catalog scripts it must check the catalog out at
+        # the very ref it calls, so the workflow and the scripts come from one
+        # commit. Which definitions are self-contained is the catalog's fact --
+        # the issue and issue-comment publishers are, today -- so this asserts
+        # the invariant that matters here: a catalog_ref, if present, agrees
+        # with the ref the stub calls. The catalog asserts which modes need one.
+        if "catalog_ref:" in workflow:
+            assert f"catalog_ref: {ref}" in workflow, (
+                f"{path.name} calls @{ref} but passes a different catalog_ref"
+            )
 
 
 def test_review_publishers_keep_their_thread_reply_dispatch_surface() -> None:

@@ -149,16 +149,24 @@ This profile never triggers an automatic review.
 
 ## Publisher dispatch contract
 
+Every mode marked available below is backed by a workflow file present in
+`.github/workflows/` right now; the table is a path-for-path record of what is
+installed, not a list of intended capability.
+
 | Reviewer | Mode | Availability |
 | --- | --- | --- |
 | Cody DR | review | available |
 | Cody DR | create-issue | available |
+| Cody DR | issue-comment | available |
+| Cody DR | create-pr | available |
 | Cody DR | apply-pr-metadata (App-safe fields) | available |
 | Cody DR | personal Project metadata | explicit personal fallback required |
 | Cody DR | reply | available |
 | Cody DR | resolve-thread | available |
 | Claudio DR | review | available |
 | Claudio DR | create-issue | available |
+| Claudio DR | issue-comment | available |
+| Claudio DR | create-pr | available |
 | Claudio DR | apply-pr-metadata (App-safe fields) | available |
 | Claudio DR | personal Project metadata | explicit personal fallback required |
 | Claudio DR | reply | available |
@@ -181,6 +189,24 @@ Dispatch `publish-cody-pr-metadata.yml` or `publish-claudio-pr-metadata.yml`
 with `pr_number`, `base_branch`, and any of `labels_json`, `assignees_json`,
 `milestone_number`, and the three project fields `project_owner`,
 `project_number`, `project_status`.
+
+Dispatch `publish-cody-issue-comment.yml` or `publish-claudio-issue-comment.yml`
+with `issue_number` and `body`. The target may be an issue or a pull request.
+
+Dispatch `publish-cody-pr.yml` or `publish-claudio-pr.yml` with `title`, `body`,
+`head_branch`, and `base_branch`. The head branch must already be pushed.
+
+Dispatch `publish-cody-reply.yml` or `publish-claudio-reply.yml` with
+`pr_number`, `thread_id`, and `body` to reply into a single existing thread, and
+`publish-cody-resolve.yml` or `publish-claudio-resolve.yml` with `pr_number` and
+`thread_id` to resolve one. Prefer the review publisher's `replies_json` and
+`resolve_thread_ids_json` manifests when replying or resolving as part of a
+review pass.
+
+Every publication behavior lives in the central `dgaramos/dr-agents` catalog;
+the workflow files here are thin dispatch stubs that exist only because
+`workflow_dispatch` requires the workflow on the default branch. Fix publisher
+behavior in the catalog, never by editing a stub in this repository.
 
 After any App publication, verify the author is `cody-dr[bot]` or
 `claudio-dr[bot]`. A failed App verification is a failed publication, not a

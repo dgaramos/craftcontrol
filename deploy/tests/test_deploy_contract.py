@@ -5,6 +5,10 @@ Python package. They live in deploy/tests/ to reflect that ownership.
 """
 from __future__ import annotations
 
+import os
+import re
+import subprocess
+from glob import glob
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -72,3 +76,67 @@ def test_homelab_deploy_script_is_versioned_in_repository() -> None:
     assert "deploy-craftcontrol-release --check" in text
     assert "deploy-craftcontrol-release" in text
     assert script.stat().st_mode & 0o111, "deploy script must be executable"
+
+
+def _tracked_symlinks() -> list[Path]:
+    """Every symlink tracked in git, identified by its 120000 mode."""
+    listing = subprocess.run(
+        ["git", "ls-files", "-s"],
+        cwd=ROOT, capture_output=True, text=True, check=True,
+    ).stdout
+    return [
+        ROOT / line.split("\t", maxsplit=1)[1]
+        for line in listing.splitlines()
+        if line.startswith("120000 ")
+    ]
+
+
+def _compose_referenced_dockerfiles() -> list[str]:
+    paths: list[str] = []
+    for compose in sorted(ROOT.glob("docker-compose*.yml")):
+        for line in compose.read_text().splitlines():
+            stripped = line.strip()
+            if stripped.startswith("dockerfile:"):
+                paths.append(stripped.split(":", maxsplit=1)[1].strip())
+    return paths
+
+
+def test_no_tracked_symlink_dangles() -> None:
+    """A tracked symlink must resolve. Valid links stay valid; only dead ones fail.
+
+    Two orphaned links once made a repository unusable as a composite-action
+    source (dgaramos/dr-agents#261), so a dead tracked link is a defect.
+    """
+    dangling = [
+        link.relative_to(ROOT).as_posix()
+        for link in _tracked_symlinks()
+        if not (link.parent / os.readlink(link)).exists()
+    ]
+    assert not dangling, f"tracked symlinks resolve to nothing: {dangling}"
+
+
+def test_repository_root_declares_no_backend_dockerfile() -> None:
+    """The canonical backend image is apps/server/controlplane/Dockerfile.
+
+    A second recipe at the root is built by no compose file and drifts silently.
+    """
+    assert not (ROOT / "Dockerfile").exists()
+    assert "apps/server/controlplane/Dockerfile" in _compose_referenced_dockerfiles()
+
+
+def test_every_compose_referenced_dockerfile_copies_only_existing_paths() -> None:
+    """Guards the defect class directly: a COPY source that is not in the context
+    fails `docker build`, and no CI job that installs dependencies by hand notices."""
+    missing: dict[str, list[str]] = {}
+    for relative in _compose_referenced_dockerfiles():
+        dockerfile = ROOT / relative
+        assert dockerfile.is_file(), f"compose references a missing {relative}"
+        for line in dockerfile.read_text().splitlines():
+            match = re.match(r"COPY\s+(?!--)(.+)$", line.strip())
+            if not match:
+                continue
+            sources = match.group(1).split()[:-1]
+            absent = [src for src in sources if not glob(str(ROOT / src))]
+            if absent:
+                missing.setdefault(relative, []).extend(absent)
+    assert not missing, f"Dockerfile COPY sources absent from the build context: {missing}"

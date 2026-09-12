@@ -327,8 +327,8 @@ Requirements: Python 3.12+, dependencies from `requirements.txt`.
 If this package is ever extracted:
 
 1. Copy `apps/server/controlplane/` as the package root.
-2. Copy `apps/server/tests/` as the test root.
-3. Copy `apps/server/requirements.txt` and `apps/server/Dockerfile`.
+2. Copy `apps/server/controlplane/tests/` as the test root.
+3. Copy `apps/server/controlplane/requirements.txt` and `apps/server/controlplane/Dockerfile`.
 4. The `apps/client/` frontend and host-agent remain separate packages.
 5. Update `frontend_root()` in `__init__.py` — the monorepo path branch can be removed.
 6. All import paths (`from src.*`) are already stable and require no changes.

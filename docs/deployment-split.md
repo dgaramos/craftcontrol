@@ -144,7 +144,7 @@ and caching, retains a long read timeout, and passes reconnect headers. Docker's
 embedded DNS is resolved dynamically so recreating only the backend does not
 leave the frontend pinned to an obsolete container address.
 
-`apps/server/Dockerfile` contains the CraftControl Server Flask application,
+`apps/server/controlplane/Dockerfile` contains the CraftControl Server Flask application,
 OpenAPI contracts, CraftControl Telemetry Pack, and operations CLI, but no
 CraftControl Client files. In
 `docker-compose.split.yml`, only this service receives SQLite, Bedrock, backup,

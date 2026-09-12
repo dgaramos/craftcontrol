@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from glob import glob
 from pathlib import Path
 
@@ -7,17 +8,63 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[4]
 
 
-def test_reviewer_profile_declares_publishing_contract() -> None:
-    profile = (ROOT / ".dr-agents" / "craftcontrol" / "PROFILE.md").read_text()
-    for manifest in ("replies_json", "resolve_thread_ids_json", "inline_comments_json"):
-        assert manifest in profile
-    for expected in (
-        "Cody DR | reply | available", "Cody DR | resolve-thread | available",
-        "a personal GitHub account may publish only as a disclosed fallback when the requested App operation is unconfigured or unavailable before dispatch",
-        "Without explicit user authorization, return publication-ready",
-        "publish-cody-review.yml", "publish-claudio-review.yml",
-    ):
-        assert expected in profile
+PROFILE = ROOT / ".dr-agents" / "craftcontrol" / "PROFILE.md"
+WORKFLOWS_DIR = ROOT / ".github" / "workflows"
+
+# A publisher stub filename is exactly ``publish-<lowercase-token>.yml``. The
+# pattern is strict on purpose: a file that looks like a stub but does not match
+# this shape -- a name containing a space, for instance -- is not a name any
+# profile could declare, so it belongs to neither direction and is neither
+# counted nor reported. The anchor also excludes ``reusable-publish-*.yml``,
+# which stubs call and which are never dispatched as publishers themselves.
+_STUB_NAME = re.compile(r"^publish-[a-z0-9-]+\.yml$")
+
+# Candidates are matched with a leading run of name characters so a token inside
+# ``reusable-publish-review.yml`` yields the full name and is then rejected by
+# the anchored filter, instead of matching the ``publish-review.yml`` substring
+# and counting as a declaration.
+_CANDIDATE = re.compile(r"[a-z0-9-]*publish-[a-z0-9-]+\.yml")
+
+
+def _declared_publishers() -> set[str]:
+    return {n for n in _CANDIDATE.findall(PROFILE.read_text()) if _STUB_NAME.fullmatch(n)}
+
+
+def _installed_publishers() -> set[str]:
+    return {
+        path.name
+        for path in WORKFLOWS_DIR.iterdir()
+        if path.is_file() and _STUB_NAME.fullmatch(path.name)
+    }
+
+
+def test_publisher_dispatch_sets_are_not_empty() -> None:
+    """Guard against a silently-matching-nothing parser passing both directions."""
+    assert PROFILE.is_file(), f"missing reviewer profile: {PROFILE}"
+    assert WORKFLOWS_DIR.is_dir(), f"missing workflows directory: {WORKFLOWS_DIR}"
+    assert _declared_publishers(), "no publisher workflows declared in the profile"
+    assert _installed_publishers(), f"no publisher workflows installed in {WORKFLOWS_DIR}"
+
+
+def test_every_declared_publisher_is_installed() -> None:
+    """Forward direction: the profile may not name a publisher that is absent."""
+    missing = sorted(_declared_publishers() - _installed_publishers())
+    assert not missing, (
+        "declared in profile but not installed in .github/workflows/: " + ", ".join(missing)
+    )
+
+
+def test_every_installed_publisher_is_declared() -> None:
+    """Reverse direction: an installed publisher may not go undeclared.
+
+    This is the direction that matters. A forward-only check -- such as the
+    fixed-subset assertion this replaced -- stays green through exactly the
+    drift it exists to catch.
+    """
+    undeclared = sorted(_installed_publishers() - _declared_publishers())
+    assert not undeclared, (
+        "installed in .github/workflows/ but not declared in profile: " + ", ".join(undeclared)
+    )
 
 
 def test_local_reviewer_profile_is_referenced_by_project_entry_points() -> None:

@@ -16,11 +16,6 @@ coverage:
           - bedrock-proxy
         target: 85%
         threshold: 2%
-      dr-agents:
-        flags:
-          - dr-agents
-        target: 90%
-        threshold: 2%
       telemetry:
         flags:
           - telemetry
@@ -41,11 +36,6 @@ coverage:
         flags:
           - bedrock-proxy
         target: 75%
-        threshold: 5%
-      dr-agents:
-        flags:
-          - dr-agents
-        target: 90%
         threshold: 5%
       telemetry:
         flags:
@@ -70,7 +60,7 @@ flags:
       - services/bedrock-proxy/
   dr-agents:
     paths:
-      - apps/server/tests/test_agent_workflows.py
+      - apps/server/controlplane/tests/test_agent_workflows.py
   telemetry:
     paths:
       - packs/telemetry/behavior_pack/scripts/

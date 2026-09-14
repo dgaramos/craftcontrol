@@ -256,9 +256,12 @@ describe("design token contracts — vocabulary exclusion helper", () => {
 
    Both are ceilings. Lower them as call sites migrate. Never raise either one —
    a raise means an untokenized color was added, which is the exact regression
-   this contract exists to catch. */
-const WHOLE_FILE_BUDGET = { occurrences: 750, unique: 405 };
-const OUTSIDE_SPRITES_BUDGET = { occurrences: 728, unique: 386 };
+   this contract exists to catch.
+
+   #611 bound the neutral ramp (surfaces, borders, drop shadows, tertiary text)
+   and lowered both ceilings to the counts measured after that migration. */
+const WHOLE_FILE_BUDGET = { occurrences: 558, unique: 362 };
+const OUTSIDE_SPRITES_BUDGET = { occurrences: 536, unique: 342 };
 
 describe("design token contracts — literal hex budget", () => {
   test("whole-file literal hex occurrences do not exceed the #610 baseline", () => {
@@ -432,9 +435,221 @@ describe("design token contracts — documentation", () => {
   });
 });
 
+/* ── The light override budget ──────────────────────────────────────────────
+   Every `:root`-prefixed rule in light.css is a selector re-declared at 0-2-1
+   to beat a component rule. The authoring rule says light.css re-tints tokens
+   instead, so this count only goes down as call sites migrate. Mirrors
+   `grep -oE '^:root[^{]*\{' light.css | wc -l`, the command that produced the
+   baseline of 100 recorded in issue #611 (the bare `:root {` re-tint block is
+   included in that count, exactly as the grep counts it). */
+function lightOverrideRules(css) {
+  return css.match(/^:root[^{\n]*\{/gm) ?? [];
+}
+
+const LIGHT_OVERRIDE_RULE_BUDGET = 94;
+
+describe("design token contracts — light override budget", () => {
+  test("counts a `:root`-prefixed rule per line start, as the baseline grep did", () => {
+    const css = [":root { --x: #fff; }", ":root .a { color: red; }", ".b { color: blue; }", ":root :is(.c,", "  .d) { color: green; }"].join("\n");
+    // The multi-line selector is not counted: the baseline grep is line-based.
+    expect(lightOverrideRules(css)).toHaveLength(2);
+  });
+
+  test("light.css override rules do not exceed the budget", () => {
+    expect(lightOverrideRules(sheet("light.css")).length).toBeLessThanOrEqual(LIGHT_OVERRIDE_RULE_BUDGET);
+  });
+
+  test("the budget is strictly below the #611 baseline of 100", () => {
+    expect(LIGHT_OVERRIDE_RULE_BUDGET).toBeLessThan(100);
+  });
+});
+
+/* ── The canonical bug ──────────────────────────────────────────────────────
+   The Players screen puts its heading, search and filters straight on the page
+   background: `.players-screen` drops the panel checkerboard. The light theme
+   once painted it back by re-declaring `.block-panel` at 0-2-1. Both halves of
+   the fix are pinned: the component keeps the declaration, and light.css never
+   names the selector. */
+function declarationsOf(css, selector) {
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = css.match(new RegExp(`^${escaped}\\s*\\{([^}]*)\\}`, "m"));
+  return match ? match[1] : null;
+}
+
+describe("design token contracts — players screen checkerboard", () => {
+  test("players.css keeps `background-image: none` on .players-screen", () => {
+    expect(declarationsOf(sheet("players.css"), ".players-screen")).toMatch(/background-image:\s*none/);
+  });
+
+  test("light.css never re-declares .players-screen, so nothing can override it", () => {
+    expect(sheet("light.css")).not.toMatch(/\.players-screen\b/);
+  });
+
+  test("the declaration reader returns null for an absent selector", () => {
+    expect(declarationsOf(".a { color: red }", ".players-screen")).toBeNull();
+  });
+});
+
+/* ── Contrast guards ────────────────────────────────────────────────────────
+   Every hand-tuned near-black was tuned against one background. Collapsing
+   them onto a ramp moves those pairs, so the ratio that used to be an accident
+   of manual tuning becomes a guarded property here: the semantic tokens are
+   resolved through the vocabulary (dark) and through the light.css re-tints
+   (light), and the WCAG ratio of each content/surface pair is pinned to a
+   floor. Lower a floor only with a design decision behind it. */
+function customProperties(css) {
+  const root = css.match(/:root\s*\{([\s\S]*?)\n\}/);
+  const map = {};
+  if (!root) return map;
+  for (const [, name, value] of root[1].matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/gi)) {
+    map[name] = value.trim();
+  }
+  return map;
+}
+
+function resolveToken(name, ...scopes) {
+  let value = name;
+  for (let depth = 0; depth < 16; depth += 1) {
+    const ref = value.match(/^var\((--[a-z0-9-]+)\)$/i) ?? (value.startsWith("--") ? [value, value] : null);
+    if (!ref) return value;
+    const next = scopes.map((scope) => scope[ref[1]]).filter((found) => found !== undefined).pop();
+    if (next === undefined) throw new Error(`unresolved token ${ref[1]}`);
+    value = next;
+  }
+  throw new Error(`token cycle at ${name}`);
+}
+
+function hexToRgb(hex) {
+  const digits = hex.replace(/^#/, "");
+  if (![3, 6].includes(digits.length)) throw new Error(`opaque hex required, got ${hex}`);
+  const full = digits.length === 3 ? [...digits].map((d) => d + d).join("") : digits;
+  return [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16));
+}
+
+function relativeLuminance(hex) {
+  const [r, g, b] = hexToRgb(hex).map((channel) => {
+    const c = channel / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function contrastRatio(a, b) {
+  const [hi, lo] = [relativeLuminance(a), relativeLuminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+/* Floors are the ratio measured on the tree this contract landed on, rounded
+   down to one decimal. Each pair is a real call-site combination. */
+const CONTRAST_FLOORS = {
+  dark: [
+    ["--text-primary", "--surface-sunken", 18.0],
+    ["--text-primary", "--surface-base", 17.1],
+    ["--text-primary", "--surface-inset", 16.9],
+    ["--text-primary", "--surface-overlay", 16.7],
+    ["--text-primary", "--neutral-bg", 14.8],
+    ["--text-primary", "--surface-raised", 13.5],
+    ["--text-primary", "--surface-hover", 12.3],
+    ["--text-secondary", "--surface-sunken", 9.2],
+    ["--text-secondary", "--surface-base", 8.8],
+    ["--text-secondary", "--surface-inset", 8.6],
+    ["--text-secondary", "--surface-overlay", 8.6],
+    ["--text-secondary", "--neutral-bg", 7.6],
+    ["--text-secondary", "--surface-raised", 6.9],
+    ["--text-secondary", "--surface-hover", 6.3],
+    ["--text-tertiary", "--surface-raised", 1.8],
+    ["--border-strong", "--surface-inset", 2.3],
+    ["--border-interactive", "--surface-overlay", 1.5],
+    ["--border-base", "--surface-raised", 1.3],
+  ],
+  light: [
+    ["--text-primary", "--surface-raised", 14.5],
+    ["--text-primary", "--surface-inset", 12.7],
+    ["--text-primary", "--surface-overlay", 12.7],
+    ["--text-primary", "--surface-hover", 12.4],
+    ["--text-primary", "--neutral-bg", 11.5],
+    ["--text-primary", "--surface-base", 9.5],
+    ["--text-primary", "--surface-sunken", 8.7],
+    ["--text-secondary", "--surface-raised", 7.7],
+    ["--text-secondary", "--surface-inset", 6.7],
+    ["--text-secondary", "--surface-overlay", 6.7],
+    ["--text-secondary", "--surface-hover", 6.6],
+    ["--text-secondary", "--neutral-bg", 6.1],
+    ["--text-secondary", "--surface-base", 5.0],
+    ["--text-secondary", "--surface-sunken", 4.6],
+    ["--text-tertiary", "--surface-raised", 7.7],
+    ["--border-base", "--surface-raised", 3.6],
+    ["--border-strong", "--surface-inset", 1.6],
+    ["--border-interactive", "--surface-overlay", 1.4],
+  ],
+};
+
+function themeScopes(theme) {
+  const dark = customProperties(sheet("app.css"));
+  return theme === "dark" ? [dark] : [dark, customProperties(sheet("light.css"))];
+}
+
+describe("design token contracts — contrast helpers", () => {
+  test("black on white is the maximum ratio and three-digit hex expands", () => {
+    expect(contrastRatio("#000", "#ffffff")).toBeCloseTo(21, 5);
+    expect(contrastRatio("#fff", "#000")).toBeCloseTo(21, 5);
+  });
+
+  test("identical colors have a ratio of one", () => {
+    expect(contrastRatio("#202923", "#202923")).toBe(1);
+  });
+
+  test("an alpha hex cannot be measured and is rejected instead of misread", () => {
+    expect(() => contrastRatio("#0e1410e8", "#ffffff")).toThrow(/opaque hex/);
+  });
+
+  test("resolves a token through a chain of aliases and lets a later scope re-tint it", () => {
+    const base = { "--stone-900": "#0c120f", "--surface-base": "var(--stone-900)", "--panel": "var(--surface-base)" };
+    expect(resolveToken("--panel", base)).toBe("#0c120f");
+    expect(resolveToken("--panel", base, { "--surface-base": "#cbd3c3" })).toBe("#cbd3c3");
+  });
+
+  test("an unresolved or cyclic token is an error, never a silent literal", () => {
+    expect(() => resolveToken("--missing", {})).toThrow(/unresolved/);
+    expect(() => resolveToken("--a", { "--a": "var(--b)", "--b": "var(--a)" })).toThrow(/cycle/);
+  });
+
+  test("a synthetic re-tint that flattens a pair fails the floor", () => {
+    const dark = { "--text-primary": "#f5f4ec", "--surface-base": "#0c120f" };
+    const flat = { "--surface-base": "#f0f0f0" };
+    const ratio = contrastRatio(resolveToken("--text-primary", dark, flat), resolveToken("--surface-base", dark, flat));
+    expect(ratio).toBeLessThan(CONTRAST_FLOORS.light[0][2]);
+    expect(ratio).toBeLessThan(2);
+  });
+});
+
+describe("design token contracts — contrast floors", () => {
+  for (const theme of ["dark", "light"]) {
+    test.each(CONTRAST_FLOORS[theme])(`${theme}: %s on %s keeps at least %s:1`, (fg, bg, floor) => {
+      const scopes = themeScopes(theme);
+      expect(contrastRatio(resolveToken(fg, ...scopes), resolveToken(bg, ...scopes))).toBeGreaterThanOrEqual(floor);
+    });
+  }
+
+  test("light.css re-tints every surface the floors depend on", () => {
+    const light = customProperties(sheet("light.css"));
+    for (const token of ["--surface-base", "--surface-inset", "--surface-overlay", "--surface-raised",
+      "--surface-hover", "--neutral-bg", "--border-base", "--border-strong",
+      "--text-primary", "--text-secondary", "--text-tertiary"]) {
+      expect(light[token]).toBeDefined();
+    }
+  });
+});
+
 describe("design token contracts — cache busting", () => {
-  test("index.html references app.css?v=64", () => {
+  test.each([
+    ["app.css", 65],
+    ["players.css", 31],
+    ["analytics.css", 17],
+    ["auth.css", 9],
+    ["light.css", 6],
+  ])("index.html references %s?v=%s", (name, version) => {
     const template = readFileSync(join(FRONTEND, "templates", "index.html"), "utf8");
-    expect(template).toContain("/static/app.css?v=64");
+    expect(template).toContain(`/static/${name}?v=${version}`);
   });
 });

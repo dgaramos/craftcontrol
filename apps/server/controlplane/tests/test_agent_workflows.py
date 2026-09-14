@@ -67,6 +67,46 @@ def test_every_installed_publisher_is_declared() -> None:
     )
 
 
+# The dr-agents catalog's ``core/`` tree was vendored into sibling consumers at
+# the catalog's own path and drifted there with nothing to install, verify, or
+# run it (dr-agents#304). This repository never received the copy, which is
+# exactly the case a guard is easiest to get wrong: it must be proven red by
+# mutation, not born green. Only the repository root is inspected -- the nested
+# ``core/`` packages under ``apps/`` are ordinary source directories.
+
+
+def _vendored_catalog_files(root: Path = ROOT) -> list[str]:
+    vendored = root / "core"
+    if not vendored.exists():
+        return []
+    return sorted(str(p.relative_to(root)) for p in vendored.rglob("*") if p.is_file())
+
+
+def test_no_catalog_core_tree_is_vendored() -> None:
+    found = _vendored_catalog_files()
+    assert not found, (
+        "catalog core/ files vendored into this repository (nothing installs, "
+        "verifies, or runs them): " + ", ".join(found)
+    )
+
+
+def test_vendored_guard_names_every_file_and_ignores_nested_core(tmp_path: Path) -> None:
+    """The guard is only worth having if a vendored file turns it red by name."""
+    assert _vendored_catalog_files(tmp_path) == []
+    nested = tmp_path / "apps" / "x" / "core" / "issue-workflow" / "scripts"
+    nested.mkdir(parents=True)
+    (nested / "apply-pr-metadata.sh").touch()
+    assert _vendored_catalog_files(tmp_path) == [], "a nested core/ is not vendoring"
+    vendored = tmp_path / "core" / "issue-workflow" / "scripts"
+    vendored.mkdir(parents=True)
+    (vendored / "apply-pr-metadata.sh").touch()
+    (tmp_path / "core" / "other.sh").touch()
+    assert _vendored_catalog_files(tmp_path) == [
+        "core/issue-workflow/scripts/apply-pr-metadata.sh",
+        "core/other.sh",
+    ]
+
+
 def test_local_reviewer_profile_is_referenced_by_project_entry_points() -> None:
     profile = ROOT / ".dr-agents/craftcontrol/PROFILE.md"
     assert profile.is_file()

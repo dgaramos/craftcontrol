@@ -259,9 +259,11 @@ describe("design token contracts — vocabulary exclusion helper", () => {
    this contract exists to catch.
 
    #611 bound the neutral ramp (surfaces, borders, drop shadows, tertiary text)
-   and lowered both ceilings to the counts measured after that migration. */
-const WHOLE_FILE_BUDGET = { occurrences: 558, unique: 362 };
-const OUTSIDE_SPRITES_BUDGET = { occurrences: 536, unique: 342 };
+   and lowered both ceilings to the counts measured after that migration.
+   #612 bound the semantic accents (success, danger, warning, info, selected,
+   neutral as fg/bg/border triplets) and lowered both ceilings again. */
+const WHOLE_FILE_BUDGET = { occurrences: 516, unique: 341 };
+const OUTSIDE_SPRITES_BUDGET = { occurrences: 494, unique: 321 };
 
 describe("design token contracts — literal hex budget", () => {
   test("whole-file literal hex occurrences do not exceed the #610 baseline", () => {
@@ -446,7 +448,7 @@ function lightOverrideRules(css) {
   return css.match(/^:root[^{\n]*\{/gm) ?? [];
 }
 
-const LIGHT_OVERRIDE_RULE_BUDGET = 94;
+const LIGHT_OVERRIDE_RULE_BUDGET = 88;
 
 describe("design token contracts — light override budget", () => {
   test("counts a `:root`-prefixed rule per line start, as the baseline grep did", () => {
@@ -641,13 +643,138 @@ describe("design token contracts — contrast floors", () => {
   });
 });
 
+/* ── The important-free light sheet ─────────────────────────────────────────
+   An `!important` in light.css is the last rung of the specificity ladder the
+   authoring rule forbids: it exists only because a component rule reached for
+   `!important` first. #612 expressed both cases as token re-tints. */
+describe("design token contracts — light.css carries no !important", () => {
+  test("light.css contains zero !important declarations", () => {
+    expect(sheet("light.css").match(/!important/g) ?? []).toHaveLength(0);
+  });
+
+  test("the accent call sites that forced them no longer use !important either", () => {
+    for (const selector of [".death-source", ".telemetry-badge", ".telemetry-pack-error"]) {
+      const rules = [...(sheet("players.css") + sheet("app.css")).matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+        .filter(([, sel]) => sel.includes(selector));
+      expect(rules.length).toBeGreaterThan(0);
+      for (const [, , body] of rules) expect(body).not.toContain("!important");
+    }
+  });
+});
+
+/* ── The green ramp ordering ────────────────────────────────────────────────
+   `--grass-light` promises to be lighter than `--grass`. The dark palette kept
+   that promise and the light palette once inverted it (#326b25 under #3c812d),
+   so any component leaning on the name was leaning on luck. */
+describe("design token contracts — green ramp ordering", () => {
+  test.each(["dark", "light"])("%s: --grass-light is lighter than --grass", (theme) => {
+    const scopes = themeScopes(theme);
+    expect(relativeLuminance(resolveToken("--grass-light", ...scopes)))
+      .toBeGreaterThan(relativeLuminance(resolveToken("--grass", ...scopes)));
+  });
+
+  test("primitive green steps stay ordered: a higher step is darker", () => {
+    const dark = customProperties(sheet("app.css"));
+    const steps = Object.keys(dark).filter((name) => /^--grass-\d{3}$/.test(name))
+      .map((name) => [Number(name.slice(8)), relativeLuminance(dark[name])])
+      .sort((a, b) => a[0] - b[0]);
+    for (let i = 1; i < steps.length; i += 1) expect(steps[i][1]).toBeLessThan(steps[i - 1][1]);
+  });
+});
+
+/* ── Accent triplet contrast ────────────────────────────────────────────────
+   A `-fg` is declared together with the `-bg` it sits on so that no accent
+   can be re-tinted for one theme without its partner. The pair is pinned to
+   WCAG AA (4.5:1) in both themes, and light.css must re-tint all three roles
+   or the light value of one role would silently inherit the dark value. */
+const ACCENT_FAMILIES = ["success", "danger", "warning", "info", "selected", "neutral"];
+const WCAG_AA = 4.5;
+
+describe("design token contracts — accent triplet contrast", () => {
+  for (const theme of ["dark", "light"]) {
+    test.each(ACCENT_FAMILIES)(`${theme}: the %s fg/bg pair reaches WCAG AA`, (family) => {
+      const scopes = themeScopes(theme);
+      const ratio = contrastRatio(resolveToken(`--${family}-fg`, ...scopes), resolveToken(`--${family}-bg`, ...scopes));
+      expect(ratio).toBeGreaterThanOrEqual(WCAG_AA);
+    });
+  }
+
+  test("light.css re-tints every role of every accent family", () => {
+    const light = customProperties(sheet("light.css"));
+    for (const family of ACCENT_FAMILIES) {
+      for (const role of ["fg", "bg", "border"]) expect(light[`--${family}-${role}`]).toBeDefined();
+    }
+  });
+
+  test("a synthetic re-tint that pales a foreground onto its surface fails AA", () => {
+    const dark = { "--danger-fg": "#ffd2cf", "--danger-bg": "#1a0e0e" };
+    const flat = { "--danger-bg": "#ffb0a8" };
+    expect(contrastRatio(resolveToken("--danger-fg", dark, flat), resolveToken("--danger-bg", dark, flat))).toBeLessThan(WCAG_AA);
+  });
+});
+
+/* ── Accent call-site floors ────────────────────────────────────────────────
+   Every accent pair measured on the tree before #612, in both themes, rounded
+   down to one decimal. These are the ratios the migration was not allowed to
+   regress; the token each site now consumes must keep at least that ratio.
+   The historical light-theme worst case, `.server-rules-icon` at 3.78:1, is a
+   component literal that stays out of this migration, so it is unchanged. */
+const ACCENT_CALL_SITE_FLOORS = {
+  dark: [
+    ["h2 on the page", "--success-fg", "--surface-base", 11.9],
+    ["success text on a card", "--success-fg", "--surface-raised", 9.4],
+    ["status.online (was --emerald)", "--success-fg", "--surface-raised", 8.5],
+    ["player-management small (was --emerald)", "--success-fg", "--surface-sunken", 11.4],
+    ["capability supported", "--success-fg", "--neutral-bg", 9.3],
+    ["audit outcome success", "--success-fg", "--success-bg", 7.1],
+    ["green pill label", "--success-fg", "--success-bg", 5.8],
+    ["telemetry pack error", "--danger-fg", "--danger-bg", 12.3],
+    ["death entry header", "--danger-fg", "--danger-bg", 13.6],
+    ["death history heading", "--danger-fg", "--danger-bg", 8.4],
+    ["health error", "--danger-fg", "--danger-bg", 10.3],
+    ["audit outcome failure", "--danger-fg", "--danger-bg", 7.1],
+    ["info text on a card (was --water)", "--info-fg", "--surface-raised", 8.1],
+    ["death source", "--info-fg", "--danger-bg", 11.7],
+    ["telemetry profile", "--info-fg", "--info-bg", 11.3],
+    ["structured analytics source", "--info-fg", "--info-bg", 10.1],
+    ["gold value on a card (was --sand)", "--selected-fg", "--surface-raised", 9.5],
+    ["gold value on a field", "--selected-fg", "--surface-inset", 11.8],
+    ["warning text on a card (was --sand)", "--warning-fg", "--surface-raised", 9.5],
+    ["muted text on a drawer", "--neutral-fg", "--neutral-bg", 7.6],
+  ],
+  light: [
+    ["h2 on the page", "--success-fg", "--surface-base", 4.1],
+    ["success text on a card", "--success-fg", "--surface-raised", 6.5],
+    ["player-management small (was --emerald)", "--success-fg", "--surface-inset", 5.7],
+    ["audit outcome success", "--success-fg", "--success-bg", 5.3],
+    ["green pill label", "--success-fg", "--success-bg", 5.4],
+    ["danger text on a card", "--danger-fg", "--surface-raised", 6.4],
+    ["telemetry pack error", "--danger-fg", "--danger-bg", 5.3],
+    ["info text on a card", "--info-fg", "--surface-raised", 6.5],
+    ["telemetry profile", "--info-fg", "--info-bg", 5.5],
+    ["gold value on a card", "--selected-fg", "--surface-raised", 6.0],
+    ["gold value on a field", "--selected-fg", "--surface-inset", 5.3],
+    ["warning text on a card", "--warning-fg", "--surface-raised", 6.0],
+    ["muted text on a drawer", "--neutral-fg", "--neutral-bg", 6.1],
+  ],
+};
+
+describe("design token contracts — accent call-site floors", () => {
+  for (const theme of ["dark", "light"]) {
+    test.each(ACCENT_CALL_SITE_FLOORS[theme])(`${theme}: %s — %s on %s keeps at least %s:1`, (_, fg, bg, floor) => {
+      const scopes = themeScopes(theme);
+      expect(contrastRatio(resolveToken(fg, ...scopes), resolveToken(bg, ...scopes))).toBeGreaterThanOrEqual(floor);
+    });
+  }
+});
+
 describe("design token contracts — cache busting", () => {
   test.each([
-    ["app.css", 65],
-    ["players.css", 31],
-    ["analytics.css", 17],
-    ["auth.css", 9],
-    ["light.css", 6],
+    ["app.css", 66],
+    ["players.css", 32],
+    ["analytics.css", 18],
+    ["auth.css", 10],
+    ["light.css", 7],
   ])("index.html references %s?v=%s", (name, version) => {
     const template = readFileSync(join(FRONTEND, "templates", "index.html"), "utf8");
     expect(template).toContain(`/static/${name}?v=${version}`);

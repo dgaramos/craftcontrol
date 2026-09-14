@@ -11,7 +11,9 @@
   --text: #202b24;
   --muted: #485644;
   --grass: #3c812d;
-  --grass-light: #326b25;
+  /* Lighter than --grass, as the name promises and as app.css orders them.
+     No call site consumes it any more: green text is --success-fg. */
+  --grass-light: #4d9a3c;
   --grass-dark: #285d22;
   --copper: #a66038;
   --copper-light: #874722;
@@ -46,6 +48,26 @@
   --text-primary: var(--text);
   --text-secondary: var(--muted);
   --text-tertiary: var(--muted);
+  /* Accent triplets. Each -fg is the light text already tuned for the -bg it
+     sits on; re-tinting one role without its partners is what this layer
+     exists to prevent. */
+  --success-fg: #286a29;
+  --success-bg: #e1eed5;
+  --success-border: #a1b98b;
+  --danger-fg: var(--danger);
+  --danger-bg: #f7e5df;
+  --danger-border: #c8887b;
+  --warning-fg: var(--sand);
+  --warning-bg: #f5ebcd;
+  --warning-border: #c3a665;
+  --info-fg: var(--water);
+  --info-bg: #e1eef0;
+  --info-border: #94b7c0;
+  --selected-fg: var(--sand);
+  --selected-bg: #fff2cf;
+  --selected-border: #af8124;
+  --neutral-fg: var(--muted);
+  --neutral-border: var(--stone-light);
 }
 
 body {
@@ -71,12 +93,12 @@ body {
 :root :is(input, select) { color: var(--text); background: var(--surface-inset); }
 :root :is(.topbar, .bottom-nav) { background: #f7f9f0f5; border-color: #b5c1ac; box-shadow: 0 2px 16px #33442b18; }
 :root :is(.topbar-mark, .status-pill, .block-logo) { background: #e4ebdb; border-color: #afbea2; }
-:root :is(.topbar-profile, .profile-sheet-avatar) { background: linear-gradient(#e4efd6, #cdddbb); color: var(--grass-light); border-color: #98b37e; }
+:root :is(.topbar-profile, .profile-sheet-avatar) { background: linear-gradient(#e4efd6, #cdddbb); color: var(--success-fg); border-color: #98b37e; }
 :root .topbar-notif-dot { background: #d09a23; border-color: #f7f9f0; }
 :root .bottom-nav-tab { background: transparent; box-shadow: none; border-color: transparent; }
 :root .bottom-nav-tab.active { color: var(--sand); border-top-color: #b2821b; background: linear-gradient(to top, #f4c95d30, transparent); }
 :root .bottom-nav-tab.active .cc-icon { filter: none; }
-:root .bottom-nav-tab:not(.active):hover { color: var(--grass-light); background: #e2ead7; }
+:root .bottom-nav-tab:not(.active):hover { color: var(--success-fg); background: #e2ead7; }
 
 /* Cards and their recessed fields. */
 :root :is(.overview-item:not(.server-overview), .world-summary > div,
@@ -142,8 +164,6 @@ body {
 :root :is(.primary, .switch input:checked + span) { color: #173713; background: linear-gradient(#bce39d, #9bcb78); border-color: #6f9b53; }
 :root :is(.danger, .profile-sheet-actions .btn.danger) { color: #fff; background: linear-gradient(#ad4037, #8c2c25); border-color: #76271f; border-top-color: #d7756a; }
 :root :is(.home-shortcut.rules, .server-rules-card) { background: linear-gradient(#e4efd7, #d5e4c4); border-color: #8dad70; }
-:root :is(.home-shortcut.rules small, .server-rules-card-text > span small) { color: var(--grass-light); }
-:root :is(.home-shortcut small b, .server-rules-card-text b, .time-group-label b) { background: #e3f0d5; border-color: #8eaf72; }
 :root :is(.game-role-badge, .game-scope) { color: var(--sand); background: #f5ebcd; border-color: #c3a665; }
 /* These carry a two-stop gradient in the dark palette; keep the depth here. */
 :root :is(.home-shortcut.server, .section-feature, .weather-options .weather-thunder,
@@ -167,10 +187,7 @@ body {
   .exploration-summary b, .exploration-ranking li > b, .exploration-ranking li strong,
   .dimension-cards article b, .explorer-profiles button span b,
   .op-evidence-details[open] > summary, .op-changes[open] > summary) { color: var(--water); }
-:root :is(.death-source, .telemetry-badge) { color: var(--water) !important; }
-:root :is(.death-history, .player-history-grid .death-history, .health-error,
-  .analytics-event.tone-death, .analytics-detail-button, .analytics-death-dialog .analytics-event-details div,
-  .op-error, .telemetry-pack-error, .audit-outcome--failure) { color: var(--danger); background: #f7e5df; border-color: #c8887b; }
+:root :is(.analytics-detail-button, .analytics-death-dialog .analytics-event-details div) { color: var(--danger); background: #f7e5df; border-color: #c8887b; }
 :root :is(.auth-error, .death-history h4, .death-entry-header b, .analytics-death-dialog h2,
   .analytics-death-meta > span, .analytics-summary .death b, .activity-scroll-sentinel p,
   .server-status-card.offline .server-status-summary strong, .op-stage-failed,
@@ -178,12 +195,9 @@ body {
   .combat-summary b, .combat-breakdown li > b, .combat-breakdown li strong,
   .pvp-panel li span, .pvp-panel li b, .combat-profiles button span b,
   .danger-zone h3, .time-danger p, .cap-unsupported .cap-mark) { color: var(--danger); }
-:root .telemetry-pack-error { color: var(--danger) !important; }
 :root :is(.death-history dl div, .tone-death .analytics-event-icon) { color: var(--danger); background: #efdad1; border-color: #c8887b; box-shadow: none; }
 :root .death-entry-icon { color: var(--danger); background: linear-gradient(135deg, #f4e2da, #e7c8bd); border-color: #c8887b; box-shadow: none; }
 :root .death-entry-header { border-color: #dcc0b5; }
-:root :is(.capability-panel li.supported span, .telemetry-metrics li.supported > span) { color: var(--grass-light); }
-:root .audit-outcome--success { color: var(--grass-light); background: #e1eed5; border-color: #a1b98b; }
 :root .calendar-grid article.level-1 { background: #e2edcf; }
 :root .calendar-grid article.level-2 { background: #d0e4b4; }
 :root .calendar-grid article.level-3 { background: #bed69e; }
@@ -196,7 +210,7 @@ body {
 :root #auth-overlay { background: #eef0e7f5; }
 :root :is(.auth-card .auth-switch .auth-route-action, .auth-card .password-toggle,
   .profile-sheet-locale-row .btn, .profile-sheet-actions .btn.secondary) {
-  color: var(--grass-light); background: linear-gradient(#f6f9ee, #e0e8d4); border-color: #a8b79a; box-shadow: 0 2px 0 #b1bca6;
+  color: var(--success-fg); background: linear-gradient(#f6f9ee, #e0e8d4); border-color: #a8b79a; box-shadow: 0 2px 0 #b1bca6;
 }
 :root .auth-card .auth-switch .auth-route-action:hover { color: var(--grass-dark); background: #d9e7c9; }
 :root :is(.profile-sheet-locale-row .btn, .profile-sheet-actions .btn.secondary) { color: var(--text); }
@@ -242,7 +256,6 @@ body {
 :root .players-card:hover { background: #e9efdf; }
 :root .ranking-podium { background-color: #f6efdc; }
 
-:root .analytics-event.tone-join { border-left-color: var(--grass); }
 :root .analytics-event.tone-leave { border-left-color: var(--water); }
 :root .analytics-event.tone-death { border-left-color: var(--danger); }
 :root .analytics-event.tone-permission { border-left-color: var(--copper); }

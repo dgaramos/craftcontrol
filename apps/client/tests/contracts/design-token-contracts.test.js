@@ -261,9 +261,20 @@ describe("design token contracts — vocabulary exclusion helper", () => {
    #611 bound the neutral ramp (surfaces, borders, drop shadows, tertiary text)
    and lowered both ceilings to the counts measured after that migration.
    #612 bound the semantic accents (success, danger, warning, info, selected,
-   neutral as fg/bg/border triplets) and lowered both ceilings again. */
-const WHOLE_FILE_BUDGET = { occurrences: 516, unique: 341 };
-const OUTSIDE_SPRITES_BUDGET = { occurrences: 494, unique: 321 };
+   neutral as fg/bg/border triplets) and lowered both ceilings again.
+   #613 bound the elevation and border system (bevel edges, inset highlights,
+   drops, ambient ink, neutral hairlines) and lowered them once more. */
+const WHOLE_FILE_BUDGET = { occurrences: 449, unique: 314 };
+const OUTSIDE_SPRITES_BUDGET = { occurrences: 427, unique: 294 };
+
+/* The counts #612 left behind. #613 must land strictly below every one of
+   them; pinning the predecessor here is what makes "strictly below" a test
+   rather than a reviewer's memory. */
+const PRECEDING_STEP_BUDGET = {
+  wholeFile: { occurrences: 516, unique: 341 },
+  outsideSprites: { occurrences: 494, unique: 321 },
+  lightOverrideRules: 88,
+};
 
 describe("design token contracts — literal hex budget", () => {
   test("whole-file literal hex occurrences do not exceed the #610 baseline", () => {
@@ -282,6 +293,13 @@ describe("design token contracts — literal hex budget", () => {
 
   test("unique literal hex values outside sprite regions do not exceed the budget", () => {
     expect(countAcross(stripSpriteRegions).unique).toBeLessThanOrEqual(OUTSIDE_SPRITES_BUDGET.unique);
+  });
+
+  test("both ceilings sit strictly below the counts the preceding step left", () => {
+    expect(WHOLE_FILE_BUDGET.occurrences).toBeLessThan(PRECEDING_STEP_BUDGET.wholeFile.occurrences);
+    expect(WHOLE_FILE_BUDGET.unique).toBeLessThan(PRECEDING_STEP_BUDGET.wholeFile.unique);
+    expect(OUTSIDE_SPRITES_BUDGET.occurrences).toBeLessThan(PRECEDING_STEP_BUDGET.outsideSprites.occurrences);
+    expect(OUTSIDE_SPRITES_BUDGET.unique).toBeLessThan(PRECEDING_STEP_BUDGET.outsideSprites.unique);
   });
 
   test("the sprite regions actually exempt something, so the budgets differ", () => {
@@ -386,7 +404,8 @@ describe("design token contracts — three-layer vocabulary", () => {
     const semantic = declaredTokens(tokenLayer("semantic")).join(" ");
     for (const family of [
       "--surface-base", "--surface-raised", "--surface-overlay",
-      "--edge-highlight", "--edge-shadow", "--shadow-pixel",
+      "--edge-highlight", "--edge-highlight-soft", "--edge-shadow",
+      "--shadow-pixel", "--shadow-pressed", "--shadow-overlay",
       "--border-base", "--border-focus",
       "--text-primary", "--text-secondary", "--text-on-accent",
       "--success-fg", "--danger-fg", "--warning-fg", "--info-fg", "--selected-fg", "--neutral-fg",
@@ -448,7 +467,7 @@ function lightOverrideRules(css) {
   return css.match(/^:root[^{\n]*\{/gm) ?? [];
 }
 
-const LIGHT_OVERRIDE_RULE_BUDGET = 88;
+const LIGHT_OVERRIDE_RULE_BUDGET = 85;
 
 describe("design token contracts — light override budget", () => {
   test("counts a `:root`-prefixed rule per line start, as the baseline grep did", () => {
@@ -463,6 +482,10 @@ describe("design token contracts — light override budget", () => {
 
   test("the budget is strictly below the #611 baseline of 100", () => {
     expect(LIGHT_OVERRIDE_RULE_BUDGET).toBeLessThan(100);
+  });
+
+  test("the budget is strictly below the count the preceding step left", () => {
+    expect(LIGHT_OVERRIDE_RULE_BUDGET).toBeLessThan(PRECEDING_STEP_BUDGET.lightOverrideRules);
   });
 });
 
@@ -768,13 +791,140 @@ describe("design token contracts — accent call-site floors", () => {
   }
 });
 
+/* ── Elevation and borders ──────────────────────────────────────────────────
+   The bevel is structural: a raised surface carries a bright top edge, a
+   softer left edge, a hard drop and an inset highlight, and light.css once
+   re-stated every one of them by selector (#bdc9b2, #afbaa4, #c9d2bf,
+   #8f9e83 and their neighbours). #613 binds the call sites to the elevation
+   and border aliases so the light form is a re-tint. These guards pin the
+   three halves of that: the drift literals stay out of light.css selectors,
+   the legacy names have no consumer, and every edge pair keeps the ratio it
+   measured before the migration. */
+const LIGHT_DRIFT_LITERALS = ["#bdc9b2", "#afbaa4", "#c9d2bf", "#8f9e83"];
+const ELEVATION_TOKENS = [
+  "--edge-highlight", "--edge-highlight-soft", "--edge-shadow",
+  "--shadow-pixel", "--shadow-pressed", "--shadow-overlay", "--shadow-ambient",
+];
+const LEGACY_ELEVATION_NAMES = ["--pixel-shadow", "--surface-border-top", "--surface-border-left"];
+
+/** light.css with its leading `:root { … }` re-tint block removed: what is
+    left is every selector rule, where a literal is a re-stated component. */
+function withoutRootBlock(css) {
+  return css.replace(/:root\s*\{[\s\S]*?\n\}/, "");
+}
+
+function componentLevelLiterals(css, literals) {
+  const lower = withoutRootBlock(css).toLowerCase();
+  return literals.filter((hex) => lower.includes(hex.toLowerCase()));
+}
+
+function consumers(token) {
+  return COMPONENT_SHEETS.filter((name) => sheet(name).includes(`var(${token})`));
+}
+
+describe("design token contracts — elevation helpers", () => {
+  test("strips only the leading :root block, so a hex inside it is not a component literal", () => {
+    const css = ":root {\n  --edge-shadow: #afbaa4;\n}\n:root button { box-shadow: 0 3px 0 var(--edge-shadow); }";
+    expect(componentLevelLiterals(css, LIGHT_DRIFT_LITERALS)).toEqual([]);
+  });
+
+  test("reports a drift literal written in a selector rule", () => {
+    const css = ":root {\n  --edge-shadow: #afbaa4;\n}\n:root button { box-shadow: 0 3px 0 #AFBAA4; }";
+    expect(componentLevelLiterals(css, LIGHT_DRIFT_LITERALS)).toEqual(["#afbaa4"]);
+  });
+
+  test("a sheet with no :root block is inspected whole", () => {
+    expect(componentLevelLiterals(".a { border-color: #c9d2bf }", LIGHT_DRIFT_LITERALS)).toEqual(["#c9d2bf"]);
+  });
+});
+
+describe("design token contracts — elevation and border tokens", () => {
+  test("light.css carries none of the drift literals at component level", () => {
+    expect(componentLevelLiterals(sheet("light.css"), LIGHT_DRIFT_LITERALS)).toEqual([]);
+  });
+
+  test("light.css re-tints every elevation token", () => {
+    const light = customProperties(sheet("light.css"));
+    for (const token of ELEVATION_TOKENS) expect(light[token]).toBeDefined();
+  });
+
+  test.each(LEGACY_ELEVATION_NAMES)("no component stylesheet consumes %s", (token) => {
+    expect(consumers(token)).toEqual([]);
+  });
+
+  test("the legacy elevation names resolve to the tokens that replaced them, in both themes", () => {
+    for (const theme of ["dark", "light"]) {
+      const scopes = themeScopes(theme);
+      expect(resolveToken("--pixel-shadow", ...scopes)).toBe(resolveToken("--shadow-pixel", ...scopes));
+      expect(resolveToken("--surface-border-top", ...scopes)).toBe(resolveToken("--edge-highlight", ...scopes));
+      expect(resolveToken("--surface-border-left", ...scopes)).toBe(resolveToken("--edge-highlight-soft", ...scopes));
+    }
+  });
+
+  test("the raised bevel is consumed through tokens, not bevel literals, in app.css", () => {
+    // The panel bevel greys #454c46 / #3b423c were the most repeated
+    // elevation literals; after #613 they exist only as ramp steps, if at all.
+    const css = stripVocabulary(stripSpriteRegions(sheet("app.css") + sheet("players.css")));
+    expect(hexLiterals(css).map((hex) => hex.toLowerCase())).not.toContain("#454c46");
+    expect(hexLiterals(css).map((hex) => hex.toLowerCase())).not.toContain("#3b423c");
+  });
+});
+
+/* Floors are the ratios of the literals each site carried before #613,
+   measured on the surface the site sits on and rounded down to one decimal.
+   Binding a site to a token may raise its ratio, never lower it. */
+const ELEVATION_FLOORS = {
+  dark: [
+    ["panel top edge (was #454c46)", "--edge-highlight", "--surface-raised", 1.6],
+    ["panel left edge (was #3b423c)", "--edge-highlight-soft", "--surface-raised", 1.4],
+    ["event inset bevel (was #303a32)", "--edge-highlight-soft", "--surface-overlay", 1.5],
+    ["health-stat inset bevel (was #2a312c)", "--edge-highlight-soft", "--surface-inset", 1.4],
+    ["management-card inset bevel (was #343a35)", "--edge-highlight-soft", "--surface-sunken", 1.7],
+    ["topbar hairline (was #3a4a3e)", "--border-strong", "--surface-overlay", 1.9],
+    ["status-pill outline (was #2a3a2e)", "--border-interactive", "--surface-overlay", 1.5],
+    ["overview-item top (was #2a3a2e)", "--border-interactive", "--surface-inset", 1.4],
+    ["timeline halo (was #344038)", "--edge-highlight-soft", "--surface-raised", 1.3],
+  ],
+  light: [
+    ["panel top edge (was #ffffff)", "--edge-highlight", "--surface-raised", 1.0],
+    ["panel left edge (was #d7dfcd)", "--edge-highlight-soft", "--surface-raised", 1.3],
+    ["card inset bevel (was #d7dfcd)", "--edge-highlight-soft", "--surface-inset", 1.1],
+    ["button drop (was #afbaa4)", "--edge-shadow", "--surface-base", 1.3],
+    ["topbar hairline (was #b5c1ac)", "--border-strong", "--surface-overlay", 1.6],
+    ["card outline (was #bdc9b2)", "--border-interactive", "--surface-inset", 1.4],
+    ["list divider (was #c9d2bf)", "--border-subtle", "--surface-raised", 1.5],
+    ["timeline node (was #8f9e83)", "--border-base", "--surface-inset", 2.4],
+    ["command input (was #8f9e83)", "--border-base", "--surface-inset", 2.4],
+  ],
+};
+
+describe("design token contracts — elevation floors", () => {
+  for (const theme of ["dark", "light"]) {
+    test.each(ELEVATION_FLOORS[theme])(`${theme}: %s — %s on %s keeps at least %s:1`, (_, fg, bg, floor) => {
+      const scopes = themeScopes(theme);
+      expect(contrastRatio(resolveToken(fg, ...scopes), resolveToken(bg, ...scopes))).toBeGreaterThanOrEqual(floor);
+    });
+  }
+});
+
+describe("design token contracts — elevation documentation", () => {
+  const doc = () =>
+    readFileSync(join(REPO, "docs", "design-system.md"), "utf8").toLowerCase().replace(/\s+/g, " ");
+
+  test("the design system names the elevation tokens a call site may consume", () => {
+    for (const token of ["--edge-highlight-soft", "--shadow-pressed", "--shadow-ambient"]) {
+      expect(doc()).toContain(token);
+    }
+  });
+});
+
 describe("design token contracts — cache busting", () => {
   test.each([
-    ["app.css", 66],
-    ["players.css", 32],
-    ["analytics.css", 18],
-    ["auth.css", 10],
-    ["light.css", 7],
+    ["app.css", 67],
+    ["players.css", 33],
+    ["analytics.css", 19],
+    ["auth.css", 11],
+    ["light.css", 8],
   ])("index.html references %s?v=%s", (name, version) => {
     const template = readFileSync(join(FRONTEND, "templates", "index.html"), "utf8");
     expect(template).toContain(`/static/${name}?v=${version}`);

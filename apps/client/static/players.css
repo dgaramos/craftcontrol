@@ -24,7 +24,7 @@
 .loading-players { padding: 18px; color: var(--muted); text-align: center; background: var(--surface-sunken); border: 3px solid var(--border-base); }
 .player-overview { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-bottom: 10px; }
 .player-overview span { display: grid; align-content: center; }
-.player-overview span { min-width: 0; padding: 9px 4px; color: var(--copper-light); font-family: var(--font-display); font-size: 9px; font-weight: 800; letter-spacing: .16em; text-align: center; text-transform: uppercase; background: #0e1410e8; border: 2px solid var(--border-base); border-top-color: #3b473f; box-shadow: inset 1px 1px 0 #303b33; }
+.player-overview span { min-width: 0; padding: 9px 4px; color: var(--copper-light); font-family: var(--font-display); font-size: 9px; font-weight: 800; letter-spacing: .16em; text-align: center; text-transform: uppercase; background: #0e1410e8; border: 2px solid var(--border-base); border-top-color: var(--edge-highlight-soft); box-shadow: inset 1px 1px 0 var(--edge-highlight-soft); }
 .player-overview b { display: block; overflow: hidden; margin-bottom: 4px; color: var(--text); font-family: var(--font-display); font-size: 16px; font-weight: 800; letter-spacing: 0; text-overflow: ellipsis; text-transform: none; }
 .player-toolbar { margin-bottom: 11px; }
 .player-toolbar input { width: 100%; min-height: 44px; padding: 9px 12px; color: var(--text); font-size: 13px; background: var(--surface-inset); border: 3px solid var(--border-base); border-bottom-color: var(--border-strong); border-right-color: var(--border-strong); border-radius: 0; }
@@ -32,7 +32,7 @@
 .player-filters { grid-template-columns: repeat(4, 1fr); margin-top: 6px; }
 .no-player-results { margin: 0; padding: 18px; color: var(--muted); text-align: center; background: var(--surface-sunken); }
 .player-management-list { display: grid; gap: 6px; }
-.player-management-card { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 11px; padding: 11px; background: var(--surface-sunken); border: 3px solid var(--border-base); box-shadow: inset 2px 2px 0 #343a35; }
+.player-management-card { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 11px; padding: 11px; background: var(--surface-sunken); border: 3px solid var(--border-base); box-shadow: inset 2px 2px 0 var(--edge-highlight-soft); }
 .player-avatar { width: 40px; height: 40px; display: grid; place-items: center; color: #1a3a28; font-family: var(--font-display); font-size: 17px; font-weight: 800; background: #2a5a40; border: 2px solid #3a7a50; box-shadow: none; }
 .player-management-card strong, .player-management-card small { display: block; }
 .player-management-card small { margin-top: 4px; color: var(--success-fg); font-size: .68rem; }
@@ -87,7 +87,7 @@
 
 @media (max-width: 520px) {
   .player-management-card { grid-template-columns: auto 1fr; }
-  .player-role { grid-column: 1 / -1; justify-content: space-between; padding-top: 9px; border-top: 2px solid #222822; }
+  .player-role { grid-column: 1 / -1; justify-content: space-between; padding-top: 9px; border-top: 2px solid var(--border-interactive); }
   .profile-facts { grid-template-columns: 1fr; }
   .death-history dl { grid-template-columns: 1fr; }
   .death-entry-header { grid-template-columns: 44px minmax(0, 1fr); align-items: start; }
@@ -110,9 +110,9 @@
     linear-gradient(var(--panel-stripe-h) 50%, transparent 50%);
   background-size: 18px 18px;
   border: 3px solid var(--border-base);
-  border-top-color: #454c46;
-  border-left-color: #3b423c;
-  box-shadow: 0 3px 0 #080907;
+  border-top-color: var(--edge-highlight);
+  border-left-color: var(--edge-highlight-soft);
+  box-shadow: 0 3px 0 var(--edge-shadow);
 }
 .player-roster-row:hover { border-top-color: var(--success-fg); border-left-color: var(--success-fg); }
 .player-roster-open { width: 100%; display: grid; grid-template-columns: auto minmax(130px, 1fr) minmax(180px, auto) auto auto; align-items: center; gap: 10px; padding: 10px 12px; color: var(--text); text-align: left; background: transparent; border: 0; border-radius: 0; box-shadow: none; text-shadow: none; min-height: 0; }
@@ -141,7 +141,7 @@
 .player-detail-hero { position: relative; padding: 22px 13px 0; display: grid; gap: 0; overflow: hidden; }
 .player-detail-identity { display: flex; align-items: flex-start; gap: 12px; padding-bottom: 13px; }
 .player-detail-identity-copy { flex: 1; min-width: 0; }
-.player-detail-identity .player-data-link { margin-left: auto; margin-top: 4px; padding: 0 0 1px; min-height: 0; flex: 0 0 auto; white-space: nowrap; color: var(--text-tertiary); font-family: var(--font-display); font-size: 10px; font-weight: 700; background: none; border: 0; border-bottom: 1px solid #2a3a2e; border-radius: 0; box-shadow: none; text-shadow: none; }
+.player-detail-identity .player-data-link { margin-left: auto; margin-top: 4px; padding: 0 0 1px; min-height: 0; flex: 0 0 auto; white-space: nowrap; color: var(--text-tertiary); font-family: var(--font-display); font-size: 10px; font-weight: 700; background: none; border: 0; border-bottom: 1px solid var(--border-interactive); border-radius: 0; box-shadow: none; text-shadow: none; }
 .player-detail-identity .player-data-link:hover { color: var(--success-fg); border-bottom-color: var(--success-fg); filter: none; }
 .player-detail-identity .player-data-link:active { transform: none; box-shadow: none; }
 .player-avatar.large { width: 52px; height: 52px; font-size: 22px; }
@@ -161,7 +161,7 @@
 .player-panel-body .switch span::before { width: 11px; height: 11px; left: 1px; top: 1px; border: 0; }
 .player-panel-body .switch input:checked + span::before { box-shadow: none; transform: translateX(17px); }
 .player-detail-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
-.player-detail-stats span { min-width: 0; padding: 9px 11px; background: #0e1410e8; border: 2px solid var(--border-base); border-top-color: #3b473f; box-shadow: inset 1px 1px 0 #303b33; }
+.player-detail-stats span { min-width: 0; padding: 9px 11px; background: #0e1410e8; border: 2px solid var(--border-base); border-top-color: var(--edge-highlight-soft); box-shadow: inset 1px 1px 0 var(--edge-highlight-soft); }
 .player-detail-stats small, .player-detail-stats b { display: block; }
 .player-detail-stats small { color: var(--copper-light); font-family: var(--font-display); font-size: 9px; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; }
 .player-detail-stats b { overflow: hidden; margin-top: 3px; color: var(--text); font-family: var(--font-display); font-size: 16px; font-weight: 800; text-overflow: ellipsis; }
@@ -220,9 +220,9 @@
     linear-gradient(var(--panel-stripe-h) 50%, transparent 50%);
   background-size: 18px 18px;
   border: 4px solid var(--border-base);
-  border-top-color: #454c46;
-  border-left-color: #3b423c;
-  box-shadow: var(--pixel-shadow);
+  border-top-color: var(--edge-highlight);
+  border-left-color: var(--edge-highlight-soft);
+  box-shadow: var(--shadow-pixel);
 }
 .player-data-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 12px 13px 8px; background: none; border: 0; box-shadow: none; }
 .player-data-heading h3 { margin: 2px 0 0; color: var(--text); font-family: var(--font-display); font-size: 14px; font-weight: 700; }
@@ -272,7 +272,7 @@
 .session-state strong, .session-state small { display: block; }
 .session-state strong { color: var(--text); font-size: .76rem; }
 .session-state small { margin-top: 4px; color: var(--muted); font-size: .62rem; }
-.session-status-dot { flex: 0 0 auto; width: 9px; height: 9px; background: #69736c; box-shadow: 0 0 0 2px #293029; }
+.session-status-dot { flex: 0 0 auto; width: 9px; height: 9px; background: #69736c; box-shadow: 0 0 0 2px var(--border-interactive); }
 .session-item.is-active .session-status-dot { background: var(--success-fg); box-shadow: 0 0 0 2px #245c31; }
 .session-item.is-inferred .session-status-dot { background: var(--warning-fg); box-shadow: 0 0 0 2px #705b2b; }
 .session-duration { min-width: 82px; text-align: right; }
@@ -287,7 +287,7 @@
 .event-history .timeline-list { position: relative; }
 .event-history .timeline-list::before { position: absolute; top: 18px; bottom: 18px; left: 6px; width: 2px; content: ""; background: var(--border-interactive); }
 .event-history .timeline-item { position: relative; display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 54px; padding: 10px 0; }
-.timeline-node { z-index: 1; width: 10px; height: 10px; background: var(--success-fg); border: 2px solid var(--border-base); box-shadow: 0 0 0 2px #344038; }
+.timeline-node { z-index: 1; width: 10px; height: 10px; background: var(--success-fg); border: 2px solid var(--border-base); box-shadow: 0 0 0 2px var(--edge-highlight-soft); }
 .timeline-action { min-width: 0; }
 .timeline-action strong, .timeline-action small { display: block; }
 .timeline-action strong { color: var(--text); font-size: .78rem; }

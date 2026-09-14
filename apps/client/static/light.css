@@ -25,17 +25,23 @@
   --color-active-nav: #805b0e;
   --color-inactive-nav: #596854;
   --surface-inset: #edf0e5;
-  --surface-border-top: #ffffff;
-  --surface-border-left: #d7dfcd;
-  --pixel-shadow: 0 4px 0 #b1bca6, 0 8px 18px #33442b14;
   /* Tinted stripes: the dark palette's white highlight is invisible on stone. */
   --surface-raised: var(--stone);
   --panel-stripe-v: #4a5f3a12;
   --panel-stripe-h: #4a5f3a1c;
   /* Semantic re-tints. A token re-tinted here needs no selector below: the
      component sheets consume these names, so the light value lands wherever
-     the dark value did. Elevation (--edge-*, --shadow-*) is left alone until
-     the elevation step settles its light form. */
+     the dark value did. */
+  /* Elevation. Light stone is lit from above: the top edge is white, the left
+     edge and inset bevel a pale stone, and drops are a darker stone instead
+     of black. The ambient ink is a translucent moss. */
+  --edge-highlight: #ffffff;
+  --edge-highlight-soft: #d7dfcd;
+  --edge-shadow: #afbaa4;
+  --shadow-pixel: 0 4px 0 #b1bca6, 0 8px 18px var(--shadow-ambient);
+  --shadow-pressed: 0 1px 0 var(--edge-shadow);
+  --shadow-overlay: 0 2px 16px var(--shadow-ambient);
+  --shadow-ambient: #33442b18;
   --surface-sunken: var(--void);
   --surface-base: var(--bg);
   --surface-overlay: var(--surface-inset);
@@ -77,21 +83,16 @@ body {
 }
 /* Dark text needs no black embossed shadow. Sprites retain their own palette. */
 :root :is(h1, h2, h3, button, summary, .group-title) { text-shadow: none; }
-:root :is(button, .block-panel, .card, .settings-accordion, .home-mode-card,
-  .server-status-card, .server-nav-list, .player-roster-row, .player-data-workspace) {
-  border-top-color: var(--surface-border-top);
-  border-left-color: var(--surface-border-left);
-}
-/* The dialog frame is one flat line in the light palette; its dark bevel is
-   an elevation literal that the elevation step will tokenize. */
+/* The dialog frame is one flat line in the light palette by design: the
+   bevel tokens would otherwise light its top and left edges. */
 :root dialog { border-top-color: var(--line); border-left-color: var(--line); }
-:root button, :root .segmented > .segment { background-image: linear-gradient(#fafbf4, #e0e6d6); box-shadow: 0 3px 0 #afbaa4; }
+/* Light buttons sit lower than dark ones: a 3px drop instead of 4px. */
+:root button, :root .segmented > .segment { background-image: linear-gradient(#fafbf4, #e0e6d6); box-shadow: 0 3px 0 var(--edge-shadow); }
 :root button:hover { filter: brightness(.97); }
-:root button:active { box-shadow: 0 1px 0 #afbaa4; }
 :root :is(button, input, select):focus-visible,
 :root .switch input:focus-visible + span { outline: 3px solid var(--water); outline-offset: 3px; }
 :root :is(input, select) { color: var(--text); background: var(--surface-inset); }
-:root :is(.topbar, .bottom-nav) { background: #f7f9f0f5; border-color: #b5c1ac; box-shadow: 0 2px 16px #33442b18; }
+:root :is(.topbar, .bottom-nav) { background: #f7f9f0f5; box-shadow: var(--shadow-overlay); }
 :root :is(.topbar-mark, .status-pill, .block-logo) { background: #e4ebdb; border-color: #afbea2; }
 :root :is(.topbar-profile, .profile-sheet-avatar) { background: linear-gradient(#e4efd6, #cdddbb); color: var(--success-fg); border-color: #98b37e; }
 :root .topbar-notif-dot { background: #d09a23; border-color: #f7f9f0; }
@@ -110,17 +111,17 @@ body {
   .combat-summary article, .exploration-summary article, .trends-summary article,
   .dimension-cards article, .podium-place, .calendar-grid article,
   .change-values, .capability-panel li, .telemetry-metrics li) {
-  background: var(--surface-inset); border-color: #bdc9b2; box-shadow: inset 1px 1px #fff;
+  background: var(--surface-inset); border-color: var(--border-interactive); box-shadow: inset 1px 1px #fff;
 }
 /* Raised in the dark palette, not recessed like the surfaces above. */
-:root .home-mode-card { background: linear-gradient(#fbfcf5, #e7ecdd); border-color: #bdc9b2; }
+:root .home-mode-card { background: linear-gradient(#fbfcf5, #e7ecdd); border-color: var(--border-interactive); }
 :root :is(.loading-players, .no-player-results, .player-history,
   .player-history-grid > *, .analytics-empty, .analytics-loading,
   .analytics-event, .player-favorites button, .combat-profiles button,
   .explorer-profiles button, .time-advanced > summary, .time-advanced-body,
   .server-nav-item, .ore-grid button, .health-version, .health-badge.health-waiting,
   .read-only-badge, .panel-role-badge, .analytics-source) {
-  color: var(--text); background: var(--stone); border-color: #bdc9b2; box-shadow: none;
+  color: var(--text); background: var(--stone); border-color: var(--border-interactive); box-shadow: none;
 }
 :root :is(.field, .server-nav-item, .player-data-drawer, .player-record-drawer,
   .player-data-ranking li, .player-history-grid li, .player-history li,
@@ -129,7 +130,7 @@ body {
   .player-detail-panels, .player-panel-card, .player-detail-hero-attrs,
   .leaderboard-panel li, .block-leaderboard li, .block-player-ranking li,
   .combat-breakdown li, .pvp-panel li, .exploration-ranking li,
-  .journey-panel li, .period-ranking li) { border-color: #c9d2bf; box-shadow: none; }
+  .journey-panel li, .period-ranking li) { border-color: var(--border-subtle); box-shadow: none; }
 :root .field.live-field { box-shadow: inset 4px 0 var(--grass); }
 :root .server-nav-item:hover { background: var(--surface-inset); }
 :root :is(.field-copy p, .world-summary small.world-ticks, .profile-sheet-role,
@@ -225,7 +226,7 @@ body {
 :root .server-panel { background: none; border: 0; box-shadow: none; }
 /* Accents and edges that assumed a dark ground: pale hues that vanish on
    stone, black drop shadows and the rings around status dots. */
-:root .settings-accordion summary b { color: var(--muted); background: var(--surface-inset); border-color: #bdc9b2; }
+:root .settings-accordion summary b { color: var(--muted); background: var(--surface-inset); border-color: var(--border-interactive); }
 :root .interactions-summary article span { color: var(--sand); }
 :root .op-stage-divergent { color: var(--copper-light); }
 :root .server-rules-icon { color: #8a6a1e; }
@@ -243,11 +244,9 @@ body {
 :root .ore-ancient_debris { color: #6d3e30; }
 :root .status-dot { box-shadow: 0 0 0 2px #c4d3bd, 0 0 6px var(--grass); }
 :root .session-status-dot { box-shadow: 0 0 0 2px #cfd8c6; }
-:root .timeline-node { border-color: #8f9e83; box-shadow: 0 0 0 2px #c2cdb6; }
-:root .command-row input { border-color: #8f9e83; border-bottom-color: #bdc9b2; border-right-color: #bdc9b2; }
 :root :is(.command-row button, .analytics-hero button, .rankings-hero button,
   .blocks-hero button, .combat-hero button, .exploration-hero button,
-  .trends-hero button, .health-hero button) { box-shadow: 0 2px 0 #afbaa4; }
+  .trends-hero button, .health-hero button) { box-shadow: 0 2px 0 var(--edge-shadow); }
 
 /* Surfaces that carried a dark hex with no light counterpart. */
 :root .language-picker [role="listbox"] { background: var(--stone); border-color: #9aab8f; }

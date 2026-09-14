@@ -151,6 +151,26 @@ and the count outside sprite regions. The second is the one that measures
 tokenization progress. Both may be lowered as call sites migrate; neither may
 ever be raised, because a raise means an untokenized color was added.
 
+The same test pins two more guarded properties. The number of `:root`-prefixed
+override rules in `light.css` is a decreasing-only ceiling, so a light-theme
+fix must re-tint a token rather than add a selector. And the WCAG contrast of
+each content/surface alias pair — `--text-primary` and `--text-secondary` on
+every `--surface-*`, plus the border-on-surface pairs — is pinned to a floor in
+both themes; a ramp step may move only while every floor still holds.
+
+### The neutral ramp
+
+Dark neutrals are consumed through the surface, border and content aliases,
+never as literals: `--surface-sunken` for the recessed lists and code blocks,
+`--surface-base` for the page-level cards, `--surface-inset` for fields,
+`--surface-overlay` for chips and badges, `--neutral-bg` for drawer and
+summary surfaces, `--surface-raised` for panels, `--surface-hover` for hover
+fills; `--border-base` for the near-black frame, `--border-subtle`,
+`--border-interactive` and `--border-strong` for the progressively lighter
+edges; `--text-tertiary` for arrows and de-emphasised captions. The drop shadow
+under a control is `--edge-shadow`; the inset bevels and top/left highlights
+are elevation and keep their literals until that step lands.
+
 ## Icon families
 
 - `apps/client/static/craftcontrol-ui.svg` contains navigation, actions, states, and metric icons.

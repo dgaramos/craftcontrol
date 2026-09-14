@@ -30,6 +30,22 @@
   --surface-raised: var(--stone);
   --panel-stripe-v: #4a5f3a12;
   --panel-stripe-h: #4a5f3a1c;
+  /* Semantic re-tints. A token re-tinted here needs no selector below: the
+     component sheets consume these names, so the light value lands wherever
+     the dark value did. Elevation (--edge-*, --shadow-*) is left alone until
+     the elevation step settles its light form. */
+  --surface-sunken: var(--void);
+  --surface-base: var(--bg);
+  --surface-overlay: var(--surface-inset);
+  --surface-hover: #e9efdf;
+  --neutral-bg: var(--stone-dark);
+  --border-base: var(--line);
+  --border-subtle: #c9d2bf;
+  --border-interactive: #bdc9b2;
+  --border-strong: var(--stone-light);
+  --text-primary: var(--text);
+  --text-secondary: var(--muted);
+  --text-tertiary: var(--muted);
 }
 
 body {
@@ -39,14 +55,14 @@ body {
 }
 /* Dark text needs no black embossed shadow. Sprites retain their own palette. */
 :root :is(h1, h2, h3, button, summary, .group-title) { text-shadow: none; }
-:root :is(button, input, select, dialog, .block-panel, .card, .settings-accordion,
-  .home-mode-card, .server-status-card, .server-nav-list, .player-roster-row,
-  .player-data-workspace) { border-color: var(--line); }
 :root :is(button, .block-panel, .card, .settings-accordion, .home-mode-card,
   .server-status-card, .server-nav-list, .player-roster-row, .player-data-workspace) {
   border-top-color: var(--surface-border-top);
   border-left-color: var(--surface-border-left);
 }
+/* The dialog frame is one flat line in the light palette; its dark bevel is
+   an elevation literal that the elevation step will tokenize. */
+:root dialog { border-top-color: var(--line); border-left-color: var(--line); }
 :root button, :root .segmented > .segment { background-image: linear-gradient(#fafbf4, #e0e6d6); box-shadow: 0 3px 0 #afbaa4; }
 :root button:hover { filter: brightness(.97); }
 :root button:active { box-shadow: 0 1px 0 #afbaa4; }
@@ -124,8 +140,6 @@ body {
   color: var(--sand); background: #fff2cf; border-color: #af8124;
 }
 :root :is(.primary, .switch input:checked + span) { color: #173713; background: linear-gradient(#bce39d, #9bcb78); border-color: #6f9b53; }
-:root .switch span { background: #d7decd; border-color: #8f9e83; box-shadow: inset 1px 1px #bac6ae; }
-:root .switch span::before { background: #78866c; border-color: #57664d; }
 :root :is(.danger, .profile-sheet-actions .btn.danger) { color: #fff; background: linear-gradient(#ad4037, #8c2c25); border-color: #76271f; border-top-color: #d7756a; }
 :root :is(.home-shortcut.rules, .server-rules-card) { background: linear-gradient(#e4efd7, #d5e4c4); border-color: #8dad70; }
 :root :is(.home-shortcut.rules small, .server-rules-card-text > span small) { color: var(--grass-light); }
@@ -142,7 +156,7 @@ body {
   .leaderboard-panel li > b, .trends-summary b, .period-ranking li > b,
   .period-ranking li strong) { color: var(--sand); }
 :root :is(.telemetry-profile, .release-version-grid article, .analytics-source.structured,
-  .panel-role-badge.has-access, .panel-scope) { color: var(--water); background: #e1eef0; border-color: #94b7c0; }
+  .panel-role-badge.has-access, .panel-scope, .release-tags span) { color: var(--water); background: #e1eef0; border-color: #94b7c0; }
 :root :is(.weather-options .weather-rain, .indicator-bar--operation) {
   color: var(--water); background: linear-gradient(#e8f4f6, #d3e7ea); border-color: #94b7c0;
 }
@@ -162,7 +176,8 @@ body {
   .server-status-card.offline .server-status-summary strong, .op-stage-failed,
   .capability-panel li.unavailable, .telemetry-metrics li.unavailable,
   .combat-summary b, .combat-breakdown li > b, .combat-breakdown li strong,
-  .pvp-panel li span, .pvp-panel li b, .combat-profiles button span b) { color: var(--danger); }
+  .pvp-panel li span, .pvp-panel li b, .combat-profiles button span b,
+  .danger-zone h3, .time-danger p, .cap-unsupported .cap-mark) { color: var(--danger); }
 :root .telemetry-pack-error { color: var(--danger) !important; }
 :root :is(.death-history dl div, .tone-death .analytics-event-icon) { color: var(--danger); background: #efdad1; border-color: #c8887b; box-shadow: none; }
 :root .death-entry-icon { color: var(--danger); background: linear-gradient(135deg, #f4e2da, #e7c8bd); border-color: #c8887b; box-shadow: none; }
@@ -189,7 +204,6 @@ body {
 :root :is(.drawer-close, .remove-change, .analytics-player-link,
   .player-detail-identity .player-data-link) { background: none; box-shadow: none; }
 :root .remove-change { color: var(--danger); opacity: .8; }
-:root .release-tags span { background: #e1eef0; border-color: #94b7c0; }
 :root .access-code code { background: var(--surface-inset); color: var(--grass-dark); }
 :root .operation-drawer .operation-progress-card { background: none; box-shadow: none; border: 0; }
 :root .exports-screen .export-actions button[disabled] { color: var(--muted); background: var(--stone-dark); box-shadow: none; }
@@ -222,22 +236,18 @@ body {
   .trends-hero button, .health-hero button) { box-shadow: 0 2px 0 #afbaa4; }
 
 /* Surfaces that carried a dark hex with no light counterpart. */
-:root :is(.language-picker > button, .language-picker [role="option"]) { background: var(--surface-inset); }
 :root .language-picker [role="listbox"] { background: var(--stone); border-color: #9aab8f; }
 :root :is(.language-picker [role="option"]:hover,
   .language-picker [role="option"][aria-selected="true"]) { background: #e2ead7; border-color: #8dad70; }
 :root .players-card:hover { background: #e9efdf; }
 :root .ranking-podium { background-color: #f6efdc; }
-:root .event-history .timeline-list::before { background: #c2cdb6; }
 
-:root .telemetry-grid { background: #c9d2bf; border-color: #c9d2bf; }
 :root .analytics-event.tone-join { border-left-color: var(--grass); }
 :root .analytics-event.tone-leave { border-left-color: var(--water); }
 :root .analytics-event.tone-death { border-left-color: var(--danger); }
 :root .analytics-event.tone-permission { border-left-color: var(--copper); }
 :root .analytics-event.tone-respawn { border-left-color: #8061aa; }
 :root .analytics-event.tone-dimension { border-left-color: #9453aa; }
-:root :is(.danger-zone h3, .time-danger p, .cap-unsupported .cap-mark) { color: var(--danger); }
 :root :is(.combat-empty-note, .exploration-note, .trends-note) { background: var(--surface-inset); }
 :root .time-screen output { color: var(--muted); }
 /* Dark gives each shortcut its own hue; a single flat grey loses that. */
@@ -272,7 +282,7 @@ body {
 :root .player-roster-row.is-offline .player-avatar {
   color: #fffef7; background: #54604e; border-color: #394632; opacity: 1;
 }
-:root .switch span { border-color: #687a5b; background: #dce3d3; }
+:root .switch span { border-color: #687a5b; background: #dce3d3; box-shadow: inset 1px 1px #bac6ae; }
 :root .switch span::before { background: #657559; border-color: #425237; }
 :root .switch input:checked + span { background: #d0e7bb; border-color: #477032; }
 :root .switch input:checked + span::before {

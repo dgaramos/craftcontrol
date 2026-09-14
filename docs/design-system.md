@@ -171,6 +171,33 @@ edges; `--text-tertiary` for arrows and de-emphasised captions. The drop shadow
 under a control is `--edge-shadow`; the inset bevels and top/left highlights
 are elevation and keep their literals until that step lands.
 
+### The accent triplets
+
+Each semantic accent — success, danger, warning, info, selected, neutral — is
+a `-fg` / `-bg` / `-border` triplet, and the three are declared together:
+`-fg` is the text measured on `-bg`, `-border` frames that surface. A theme
+re-tints all three or none, which is what makes "a light accent disappears in
+the light theme" structurally impossible: the design never holds one value
+where it needs two. The contract test pins every `-fg` on `-bg` pair to WCAG
+AA (4.5:1) in both themes and requires `light.css` to re-tint every role.
+
+The pair is text on its own accent surface: `--danger-fg` is the pale error
+copy inside an error panel (`.op-error`, `.telemetry-pack-error`, the death
+history), `--info-fg` the caption inside the telemetry profile, `--success-fg`
+the label of a green pill and, because green text on a neutral card was the
+same value, every green heading and value. Accent text on a *neutral* surface
+that has a different hue — the coral `--danger` offline heading, the ore
+palette, the health badges — is a different pair and keeps its own token or
+literal until a component token names it.
+
+The accent `-bg` and lightest steps of each ramp were settled by measuring the
+surfaces the call sites already used, so binding a pair never lowered a ratio;
+`design-token-contracts.test.js` records each migrated site's pre-migration
+ratio as a floor. `--grass-light` is lighter than `--grass` in both themes, as
+the name promises, and no call site consumes it any more. `light.css`
+contains no `!important`: the two it once needed were symptoms of component
+rules that reached for `!important` first, and both are now token re-tints.
+
 ## Icon families
 
 - `apps/client/static/craftcontrol-ui.svg` contains navigation, actions, states, and metric icons.

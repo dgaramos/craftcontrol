@@ -263,17 +263,20 @@ describe("design token contracts — vocabulary exclusion helper", () => {
    #612 bound the semantic accents (success, danger, warning, info, selected,
    neutral as fg/bg/border triplets) and lowered both ceilings again.
    #613 bound the elevation and border system (bevel edges, inset highlights,
-   drops, ambient ink, neutral hairlines) and lowered them once more. */
-const WHOLE_FILE_BUDGET = { occurrences: 449, unique: 314 };
-const OUTSIDE_SPRITES_BUDGET = { occurrences: 427, unique: 294 };
+   drops, ambient ink, neutral hairlines) and lowered them once more.
+   #614 bound the component-owned colors (the density scale and the podium),
+   deleted the dead time-shortcut rules, and lowered them to the final
+   counts. */
+const WHOLE_FILE_BUDGET = { occurrences: 426, unique: 292 };
+const OUTSIDE_SPRITES_BUDGET = { occurrences: 404, unique: 272 };
 
-/* The counts #612 left behind. #613 must land strictly below every one of
+/* The counts #613 left behind. #614 must land strictly below every one of
    them; pinning the predecessor here is what makes "strictly below" a test
    rather than a reviewer's memory. */
 const PRECEDING_STEP_BUDGET = {
-  wholeFile: { occurrences: 516, unique: 341 },
-  outsideSprites: { occurrences: 494, unique: 321 },
-  lightOverrideRules: 88,
+  wholeFile: { occurrences: 449, unique: 314 },
+  outsideSprites: { occurrences: 427, unique: 294 },
+  lightOverrideRules: 85,
 };
 
 describe("design token contracts — literal hex budget", () => {
@@ -467,7 +470,7 @@ function lightOverrideRules(css) {
   return css.match(/^:root[^{\n]*\{/gm) ?? [];
 }
 
-const LIGHT_OVERRIDE_RULE_BUDGET = 85;
+const LIGHT_OVERRIDE_RULE_BUDGET = 76;
 
 describe("design token contracts — light override budget", () => {
   test("counts a `:root`-prefixed rule per line start, as the baseline grep did", () => {
@@ -918,13 +921,253 @@ describe("design token contracts — elevation documentation", () => {
   });
 });
 
+/* ── Component tokens: the density scale ────────────────────────────────────
+   The calendar and the heatmap encode data density in four green steps. That
+   is a sequential dataviz scale, not decoration, so #614 names it once as
+   ordered tokens shared by the calendar cells, the heatmap grid and the
+   heatmap legend, and guards the property that makes it a scale: each step
+   is distinguishable from its neighbour. Level 0 is the empty cell; steps
+   1-4 are the scale. The two dark consumers once carried different greens
+   (calendar #23331e-#62a343, heatmap #2d4725-#74bd4e); the shared scale is
+   the calendar's, so every text-on-cell ratio it measured is preserved. */
+const DENSITY_STEPS = [0, 1, 2, 3, 4];
+const DENSITY_CONSUMERS = [".calendar-grid article", ".heatmap-grid i", ".heatmap-legend i"];
+/* Light steps cannot move darker without regressing the dark-text floors
+   below, so the threshold is per theme. Level 0 → 1 is pinned separately: the
+   empty cell is a neutral surface, not a step of the scale. */
+const DENSITY_ADJACENT_THRESHOLD = { dark: 1.5, light: 1.1 };
+const DENSITY_EMPTY_TO_FIRST_FLOOR = { dark: 1.4, light: 1.04 };
+
+/** The declarations of every rule whose selector list contains `selector`
+    followed by `.level-N`, keyed by N. */
+function levelRules(css, selector) {
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const found = {};
+  for (const [, selectors, body] of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const match = selectors.match(new RegExp(`${escaped}\\.level-(\\d)`));
+    if (match) found[Number(match[1])] = body;
+  }
+  return found;
+}
+
+/** The step a level rule binds to, or null when it does not consume the scale. */
+function boundDensityStep(body) {
+  const match = body.match(/background:\s*var\(--density-(\d)\)/);
+  return match ? Number(match[1]) : null;
+}
+
+describe("design token contracts — density scale helpers", () => {
+  test("reads the level rules of one consumer and the step each binds", () => {
+    const css = ".calendar-grid article.level-1 { background: var(--density-1); }.calendar-grid article.level-2 { background: #31542a; }";
+    const rules = levelRules(css, ".calendar-grid article");
+    expect(Object.keys(rules)).toEqual(["1", "2"]);
+    expect(boundDensityStep(rules[1])).toBe(1);
+    expect(boundDensityStep(rules[2])).toBeNull();
+  });
+
+  test("reports a level rule bound to the wrong step of the scale", () => {
+    const rules = levelRules(".heatmap-grid i.level-3 { background: var(--density-2); }", ".heatmap-grid i");
+    expect(boundDensityStep(rules[3])).not.toBe(3);
+  });
+
+  test("a synthetic flat ramp fails the adjacent-step threshold", () => {
+    expect(contrastRatio("#31542a", "#325429")).toBeLessThan(DENSITY_ADJACENT_THRESHOLD.light);
+  });
+});
+
+describe("design token contracts — density scale", () => {
+  test("app.css declares the ordered density tokens in the component layer", () => {
+    const component = declaredTokens(tokenLayer("component"));
+    for (const step of DENSITY_STEPS) expect(component).toContain(`--density-${step}`);
+    expect(component).toContain("--density-border");
+  });
+
+  test("light.css re-tints every step of the scale and its cell border", () => {
+    const light = customProperties(sheet("light.css"));
+    for (const step of DENSITY_STEPS) expect(light[`--density-${step}`]).toBeDefined();
+    expect(light["--density-border"]).toBeDefined();
+  });
+
+  test.each(DENSITY_CONSUMERS)("%s levels 1-4 bind to the matching density step", (consumer) => {
+    const rules = levelRules(sheet("analytics.css"), consumer);
+    for (const step of [1, 2, 3, 4]) {
+      expect(rules[step]).toBeDefined();
+      expect(boundDensityStep(rules[step])).toBe(step);
+      expect(hexLiterals(rules[step])).toEqual([]);
+    }
+  });
+
+  test("the empty cell of both consumers is the scale's level 0", () => {
+    const css = sheet("analytics.css");
+    expect(declarationsOf(css, ".calendar-grid article")).toMatch(/background:\s*var\(--density-0\)/);
+    const heatmap = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].find(([, sel]) => sel.includes(".heatmap-grid i,"));
+    expect(heatmap[2]).toMatch(/background:\s*var\(--density-0\)/);
+    expect(heatmap[2]).toMatch(/border:[^;]*var\(--density-border\)/);
+  });
+
+  test("light.css owns no level rule and no heatmap border override any more", () => {
+    expect(sheet("light.css")).not.toMatch(/\.level-\d/);
+    expect(sheet("light.css")).not.toMatch(/\.heatmap-(grid|legend)\s+i\b/);
+    expect(sheet("light.css")).not.toMatch(/\.calendar-grid article\b/);
+  });
+
+  for (const theme of ["dark", "light"]) {
+    test(`${theme}: adjacent steps 1-4 keep at least ${DENSITY_ADJACENT_THRESHOLD[theme]}:1`, () => {
+      const scopes = themeScopes(theme);
+      for (let step = 1; step < 4; step += 1) {
+        const ratio = contrastRatio(resolveToken(`--density-${step}`, ...scopes), resolveToken(`--density-${step + 1}`, ...scopes));
+        expect(ratio).toBeGreaterThanOrEqual(DENSITY_ADJACENT_THRESHOLD[theme]);
+      }
+    });
+
+    test(`${theme}: the empty cell keeps at least ${DENSITY_EMPTY_TO_FIRST_FLOOR[theme]}:1 against level 1`, () => {
+      const scopes = themeScopes(theme);
+      expect(contrastRatio(resolveToken("--density-0", ...scopes), resolveToken("--density-1", ...scopes)))
+        .toBeGreaterThanOrEqual(DENSITY_EMPTY_TO_FIRST_FLOOR[theme]);
+    });
+
+    test(`${theme}: the scale is monotonic in luminance from level 0 to level 4`, () => {
+      const scopes = themeScopes(theme);
+      const lum = DENSITY_STEPS.map((step) => relativeLuminance(resolveToken(`--density-${step}`, ...scopes)));
+      const direction = Math.sign(lum[4] - lum[0]);
+      expect(direction).not.toBe(0);
+      for (let i = 1; i < lum.length; i += 1) expect(Math.sign(lum[i] - lum[i - 1])).toBe(direction);
+    });
+  }
+});
+
+/* Text-on-cell floors: the calendar prints its day label and value on every
+   step, so the ratio each step measured before #614 is a floor. Dark rows
+   are --text-primary on the calendar greens; light rows add --text-secondary,
+   the muted caption the light theme paints on the cells. */
+const DENSITY_TEXT_FLOORS = {
+  dark: [
+    ["--text-primary", "--density-1", 12.1], ["--text-primary", "--density-2", 7.8],
+    ["--text-primary", "--density-3", 4.7], ["--text-primary", "--density-4", 2.7],
+  ],
+  light: [
+    ["--text-primary", "--density-1", 12.0], ["--text-primary", "--density-2", 10.7],
+    ["--text-primary", "--density-3", 9.2], ["--text-primary", "--density-4", 7.8],
+    ["--text-secondary", "--density-1", 6.4], ["--text-secondary", "--density-2", 5.7],
+    ["--text-secondary", "--density-3", 4.9], ["--text-secondary", "--density-4", 4.1],
+  ],
+};
+
+describe("design token contracts — density text floors", () => {
+  for (const theme of ["dark", "light"]) {
+    test.each(DENSITY_TEXT_FLOORS[theme])(`${theme}: %s on %s keeps at least %s:1`, (fg, bg, floor) => {
+      const scopes = themeScopes(theme);
+      expect(contrastRatio(resolveToken(fg, ...scopes), resolveToken(bg, ...scopes))).toBeGreaterThanOrEqual(floor);
+    });
+  }
+});
+
+/* ── Component tokens: the podium ───────────────────────────────────────────
+   The ranking podium owns its hues; no semantic alias says "champion". #614
+   names them as component tokens so light.css re-tints instead of
+   re-declaring the selectors. The floors are the ratios the literals measured
+   before the migration. The time-shortcut rules (`.quick-actions .day`,
+   `.night`, `.weather`) the issue also named were dead CSS — no template or
+   script in the repository or its history ever emitted `quick-actions` — so
+   they were deleted rather than tokenized. */
+const PODIUM_TOKENS = [
+  "--podium-bg", "--podium-place-bg", "--podium-place-border", "--podium-champion-bg-start", "--podium-champion-bg-end",
+  "--podium-champion-border", "--podium-champion-fg", "--podium-label-fg",
+];
+const PODIUM_SELECTORS = [".ranking-podium", ".podium-place", ".podium-place.rank-1", ".podium-place b"];
+
+const COMPONENT_HUE_FLOORS = {
+  dark: [
+    ["podium label on the champion top (was #ffe083 on #4b3e1b)", "--podium-label-fg", "--podium-champion-bg-start", 8.1],
+    ["podium label on the champion base (was #ffe083 on #18160e)", "--podium-label-fg", "--podium-champion-bg-end", 14.0],
+    ["champion frame on the podium (was #c89c37 on #241d12)", "--podium-champion-border", "--podium-bg", 6.5],
+    ["place frame on the podium (was #4b4431 on #241d12)", "--podium-place-border", "--podium-bg", 1.7],
+  ],
+  light: [
+    ["podium label on the champion top (was --sand on #faf1d8)", "--podium-label-fg", "--podium-champion-bg-start", 5.4],
+    ["podium label on the champion base (was --sand on #eee0ba)", "--podium-label-fg", "--podium-champion-bg-end", 4.5],
+  ],
+};
+
+function ruleBodies(css, selector) {
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(`(^|[,\\s])${escaped}(?=\\s*(,|$))`);
+  return [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].filter(([, sel]) => pattern.test(sel)).map(([, , body]) => body);
+}
+
+describe("design token contracts — component hue helpers", () => {
+  test("finds a selector whether it stands alone or in a list, never a longer one", () => {
+    const css = ".podium-place { color: #111111 } .podium-place.rank-1, .x { color: #222222 } .podium-places { color: #333333 }";
+    expect(ruleBodies(css, ".podium-place").map((b) => b.trim())).toEqual(["color: #111111"]);
+    expect(ruleBodies(css, ".podium-place.rank-1").map((b) => b.trim())).toEqual(["color: #222222"]);
+  });
+});
+
+describe("design token contracts — podium tokens", () => {
+  test("app.css declares the podium tokens in the component layer", () => {
+    const component = declaredTokens(tokenLayer("component"));
+    for (const token of PODIUM_TOKENS) expect(component).toContain(token);
+  });
+
+  test("light.css re-tints every podium token", () => {
+    const light = customProperties(sheet("light.css"));
+    for (const token of PODIUM_TOKENS) expect(light[token]).toBeDefined();
+  });
+
+  test("light.css leaves the podium places to analytics.css, so the champion gradient wins", () => {
+    // A `.podium-place` entry in the light cards group sits at 0-2-1 and would
+    // beat the 0-2-0 champion rule; the place surface is a token instead.
+    expect(sheet("light.css")).not.toMatch(/\.podium-place\b/);
+  });
+
+  test.each(PODIUM_SELECTORS)("%s carries no literal hex in analytics.css", (selector) => {
+    const bodies = ruleBodies(sheet("analytics.css"), selector);
+    expect(bodies.length).toBeGreaterThan(0);
+    for (const body of bodies) expect(hexLiterals(body)).toEqual([]);
+  });
+
+  test("light.css names none of the podium selectors it once re-declared", () => {
+    const light = sheet("light.css");
+    for (const selector of [".ranking-podium", ".podium-place"]) {
+      expect(light).not.toContain(selector);
+    }
+  });
+
+  test.each([...COMPONENT_SHEETS, "light.css"])("%s keeps no dead .quick-actions rule", (name) => {
+    expect(sheet(name)).not.toContain(".quick-actions");
+  });
+
+  for (const theme of ["dark", "light"]) {
+    test.each(COMPONENT_HUE_FLOORS[theme])(`${theme}: %s — %s on %s keeps at least %s:1`, (_, fg, bg, floor) => {
+      const scopes = themeScopes(theme);
+      expect(contrastRatio(resolveToken(fg, ...scopes), resolveToken(bg, ...scopes))).toBeGreaterThanOrEqual(floor);
+    });
+  }
+});
+
+describe("design token contracts — density scale documentation", () => {
+  const doc = () =>
+    readFileSync(join(REPO, "docs", "design-system.md"), "utf8").toLowerCase().replace(/\s+/g, " ");
+
+  test("the design system records the density scale as a sequential dataviz scale", () => {
+    expect(doc()).toContain("sequential");
+    expect(doc()).toContain("--density-");
+    expect(doc()).toContain("adjacent step");
+  });
+
+  test("the design system states the adjacent-step thresholds the test enforces", () => {
+    expect(doc()).toContain(`${DENSITY_ADJACENT_THRESHOLD.dark}:1`);
+    expect(doc()).toContain(`${DENSITY_ADJACENT_THRESHOLD.light}:1`);
+  });
+});
+
 describe("design token contracts — cache busting", () => {
   test.each([
-    ["app.css", 67],
+    ["app.css", 68],
     ["players.css", 33],
-    ["analytics.css", 19],
+    ["analytics.css", 20],
     ["auth.css", 11],
-    ["light.css", 8],
+    ["light.css", 9],
   ])("index.html references %s?v=%s", (name, version) => {
     const template = readFileSync(join(FRONTEND, "templates", "index.html"), "utf8");
     expect(template).toContain(`/static/${name}?v=${version}`);

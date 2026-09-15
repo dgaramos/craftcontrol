@@ -46,8 +46,8 @@
      and content now resolve through the aliases below. Issue 612 bound the
      semantic accents as fg/bg/border triplets. Issue 613 bound the elevation
      and border system: --pixel-shadow and --surface-border-top/left survive
-     only as aliases of the tokens that replaced them. Component tokens follow
-     in 614. */
+     only as aliases of the tokens that replaced them. Issue 614 added the
+     component tokens: the density scale and the podium. */
 
   /* token-layer: primitives */
   /* Tier 1 — the raw ramps. Named by Minecraft material and step; a higher
@@ -211,6 +211,29 @@
   /* Ambient shadow tint. The soft drops under the topbar, bottom nav, drawer
      and logo keep their own blur and offset; only the ink is shared. */
   --shadow-ambient: #0009;
+
+  /* The density scale. The activity calendar, the heatmap grid and the
+     heatmap legend encode data density in the same four ordered steps: a
+     sequential dataviz scale, guarded for adjacent-step contrast by
+     design-token-contracts.test.js. Level 0 is the empty cell. The steps are
+     the calendar's greens, so every text-on-cell ratio it measured holds. */
+  --density-0: var(--surface-sunken);
+  --density-1: #23331e;
+  --density-2: #31542a;
+  --density-3: #497737;
+  --density-4: #62a343;
+  --density-border: var(--border-interactive);
+
+  /* The ranking podium: a sand ground, the champion's raised gradient and
+     frame, and the gold value label every place prints. */
+  --podium-bg: #241d12;
+  --podium-place-bg: var(--surface-base);
+  --podium-place-border: #4b4431;
+  --podium-champion-bg-start: #4b3e1b;
+  --podium-champion-bg-end: #18160e;
+  --podium-champion-border: #c89c37;
+  --podium-champion-fg: var(--text-primary);
+  --podium-label-fg: var(--sand-300);
 
   /* token-layer: end */
 
@@ -558,13 +581,6 @@ main { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-
 .world-weather[data-weather="clear-night"] .world-value strong, .world-weather[data-weather="clear-night"] .world-value .cc-icon { color: #a8c8e8; }
 
 .quick-section { margin-top: 16px; }
-.quick-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
-.quick-actions button { min-width: 0; padding: 9px 4px; }
-.quick-actions button span { display: block; margin-bottom: 4px; font-size: 1.7rem; }
-.quick-actions button b { display: block; font-size: .82rem; }
-.quick-actions .day { background: linear-gradient(#ae7a1e, #805711); border-top-color: #efc04b; }
-.quick-actions .night { background: linear-gradient(#233e68, #142744); border-top-color: #5479aa; }
-.quick-actions .weather { background: linear-gradient(#3278a5, #235376); border-top-color: #6db9e7; }
 .home-dashboard { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; margin: 10px 0 12px; }
 .home-time-action { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 6px; min-height: 72px; padding: 10px; text-align: left; color: #1a1000; text-shadow: 1px 1px 0 #f0e090; background: linear-gradient(#f0c040, #b88018); border-color: var(--border-base); border-top-color: #ffe080; border-left-color: #d4a030; box-shadow: 0 4px 0 var(--edge-shadow); }
 .home-time-action:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--edge-shadow); }

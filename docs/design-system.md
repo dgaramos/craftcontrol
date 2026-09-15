@@ -150,6 +150,27 @@ buttons sit on a 3px drop instead of 4px.
 Only where a component owns the decision and no semantic alias expresses it —
 `--panel-stripe-v` / `--panel-stripe-h` and `--shadow-ambient` are the pattern.
 Literals are permitted here, and the same no-appearance naming rule applies.
+The podium is the other owner: `--podium-bg` is its sand ground,
+`--podium-place-bg` and `--podium-place-border` are each place, the champion's raised gradient is
+`--podium-champion-bg-start` / `--podium-champion-bg-end` inside
+`--podium-champion-border` with `--podium-champion-fg`, and `--podium-label-fg`
+is the gold value every place prints. `light.css` re-tints the set; it declares
+no podium selector.
+
+#### The density scale (analytics)
+
+The activity calendar, the heatmap grid and the heatmap legend encode data
+density, and they encode it with one ordered token set: `--density-0` is the
+empty cell and `--density-1` through `--density-4` are the steps, with
+`--density-border` as the cell outline. This is a sequential dataviz scale,
+not four unrelated greens: a level must read as one step away from its
+neighbour, so the contract test pins the contrast between each adjacent step
+to at least 1.5:1 in the dark theme and 1.1:1 in the light theme, requires the
+scale to be monotonic in luminance from level 0 to level 4, and keeps every
+text-on-cell ratio the calendar measured before the scale was shared. The
+steps are the calendar's greens; the light theme runs the scale downward from
+the inset field surface. Consume the steps by number and never re-declare a
+`.level-N` rule in `light.css`.
 
 ### Sprite exclusion
 

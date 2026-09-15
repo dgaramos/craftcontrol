@@ -74,6 +74,22 @@
   --selected-border: #af8124;
   --neutral-fg: var(--muted);
   --neutral-border: var(--stone-light);
+  /* Component tokens. The density scale runs from the inset field surface
+     down to a mid grass; the podium sits on pale sand with a gold champion. */
+  --density-0: var(--surface-inset);
+  --density-1: #e2edcf;
+  --density-2: #d0e4b4;
+  --density-3: #bed69e;
+  --density-4: #a8c787;
+  --density-border: #a6b496;
+  --podium-bg: #f6efdc;
+  --podium-place-bg: var(--surface-inset);
+  --podium-place-border: var(--border-interactive);
+  --podium-champion-bg-start: #faf1d8;
+  --podium-champion-bg-end: #eee0ba;
+  --podium-champion-border: #c3a665;
+  --podium-champion-fg: var(--sand);
+  --podium-label-fg: var(--sand);
 }
 
 body {
@@ -109,7 +125,7 @@ body {
   .capability-row, .analytics-summary span, .analytics-event-details div,
   .record-cards article, .blocks-summary article, .blocks-summary p,
   .combat-summary article, .exploration-summary article, .trends-summary article,
-  .dimension-cards article, .podium-place, .calendar-grid article,
+  .dimension-cards article,
   .change-values, .capability-panel li, .telemetry-metrics li) {
   background: var(--surface-inset); border-color: var(--border-interactive); box-shadow: inset 1px 1px #fff;
 }
@@ -168,12 +184,12 @@ body {
 :root :is(.game-role-badge, .game-scope) { color: var(--sand); background: #f5ebcd; border-color: #c3a665; }
 /* These carry a two-stop gradient in the dark palette; keep the depth here. */
 :root :is(.home-shortcut.server, .section-feature, .weather-options .weather-thunder,
-  .indicator-bar--changes, .indicator-bar--stalled, .podium-place.rank-1) {
+  .indicator-bar--changes, .indicator-bar--stalled) {
   color: var(--sand); background: linear-gradient(#faf1d8, #eee0ba); border-color: #c3a665;
 }
 :root :is(.home-shortcut.server small, .server-restart-label, .field .field-warning,
   .toggle-value.unknown, .indicator-bar--changes small, .indicator-bar--stalled small,
-  .podium-place b, .record-cards b, .ranking-categories button span,
+  .record-cards b, .ranking-categories button span,
   .leaderboard-panel li > b, .trends-summary b, .period-ranking li > b,
   .period-ranking li strong) { color: var(--sand); }
 :root :is(.telemetry-profile, .release-version-grid article, .analytics-source.structured,
@@ -199,11 +215,6 @@ body {
 :root :is(.death-history dl div, .tone-death .analytics-event-icon) { color: var(--danger); background: #efdad1; border-color: #c8887b; box-shadow: none; }
 :root .death-entry-icon { color: var(--danger); background: linear-gradient(135deg, #f4e2da, #e7c8bd); border-color: #c8887b; box-shadow: none; }
 :root .death-entry-header { border-color: #dcc0b5; }
-:root .calendar-grid article.level-1 { background: #e2edcf; }
-:root .calendar-grid article.level-2 { background: #d0e4b4; }
-:root .calendar-grid article.level-3 { background: #bed69e; }
-:root .calendar-grid article.level-4 { background: #a8c787; }
-:root :is(.heatmap-grid i, .heatmap-legend i) { border-color: #a6b496; }
 
 /* Dialogs, login and the profile sheet use the same light stone. */
 :root :is(dialog.drawer, .bottom-sheet-panel) { background: var(--stone); border-top-color: #a5b496; box-shadow: 0 -8px 30px #33442b26; }
@@ -253,7 +264,6 @@ body {
 :root :is(.language-picker [role="option"]:hover,
   .language-picker [role="option"][aria-selected="true"]) { background: #e2ead7; border-color: #8dad70; }
 :root .players-card:hover { background: #e9efdf; }
-:root .ranking-podium { background-color: #f6efdc; }
 
 :root .analytics-event.tone-leave { border-left-color: var(--water); }
 :root .analytics-event.tone-death { border-left-color: var(--danger); }
@@ -262,10 +272,6 @@ body {
 :root .analytics-event.tone-dimension { border-left-color: #9453aa; }
 :root :is(.combat-empty-note, .exploration-note, .trends-note) { background: var(--surface-inset); }
 :root .time-screen output { color: var(--muted); }
-/* Dark gives each shortcut its own hue; a single flat grey loses that. */
-:root .quick-actions .day { color: #4a3308; background: linear-gradient(#f6e3ac, #e7cd84); border-top-color: #fdf3d2; }
-:root .quick-actions .night { color: #1d3049; background: linear-gradient(#d8e3f2, #bccde4); border-top-color: #eef3fa; }
-:root .quick-actions .weather { color: #12414f; background: linear-gradient(#d6ecf6, #b9dcec); border-top-color: #edf7fb; }
 :root dialog.drawer--changes { border-top-color: #af8124; }
 :root dialog.drawer--operation { border-top-color: var(--water); }
 

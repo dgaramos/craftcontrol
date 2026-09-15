@@ -123,11 +123,33 @@ rule is enforced per hyphen segment, so `--edge-highlight` is fine and
 This tier contains no literal values. It renames primitives; it does not
 introduce color. A literal here would be a fourth, undocumented palette.
 
+#### Elevation and borders
+
+The pixel bevel is structural, so its parts are named. A raised surface
+declares `border-top-color: var(--edge-highlight)` and
+`border-left-color: var(--edge-highlight-soft)` over a `--border-base` frame,
+and sits on `--shadow-pixel` (panels), `0 Npx 0 var(--edge-shadow)` (buttons
+and small cards) or `--shadow-pressed` (a pressed button). A recessed surface
+carries the soft highlight as an inset bevel: `inset 2px 2px 0
+var(--edge-highlight-soft)`. Floating bars use `--shadow-overlay`; a drop whose
+blur and offset belong to the site keeps its geometry and tints the ink with
+`--shadow-ambient`. Neutral hairlines and outlines are `--border-strong`,
+`--border-interactive` or `--border-subtle`, chosen by the ratio they measured
+on the surface they sit on. `--pixel-shadow`, `--surface-border-top` and
+`--surface-border-left` survive only as aliases of these tokens; write the
+token, not the alias.
+
+`light.css` re-tints the whole family (a white top edge, pale stone for the
+soft edge and inset bevel, a darker stone drop, translucent moss ambient ink).
+The two light selector overrides that remain in this area are deliberate
+design differences, not re-statements: the dialog frame is one flat line, and
+buttons sit on a 3px drop instead of 4px.
+
 ### Tier 3 — component tokens
 
 Only where a component owns the decision and no semantic alias expresses it —
-`--panel-stripe-v` / `--panel-stripe-h` are the pattern. Literals are permitted
-here, and the same no-appearance naming rule applies.
+`--panel-stripe-v` / `--panel-stripe-h` and `--shadow-ambient` are the pattern.
+Literals are permitted here, and the same no-appearance naming rule applies.
 
 ### Sprite exclusion
 

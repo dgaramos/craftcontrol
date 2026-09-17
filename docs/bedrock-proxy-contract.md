@@ -71,6 +71,18 @@ of any Docker network.
 | `BEDROCK_PROXY_TOKEN_FILE` | `/run/secrets/bedrock_proxy_token` | Path to the shared-secret file, read at startup. |
 | `BEDROCK_PROXY_BIND` | `0.0.0.0:7890` | Address the agent listens on (agent side). Restrict access to the Docker bridge subnet via a host firewall rule. |
 | `BEDROCK_PROXY_SECRET_FILE` | `/etc/craftcontrol/bedrock-proxy-token` | Path to the token file on the host (agent side). |
+| `BEDROCK_PROXY_COMPOSE_PROJECT` | `minecraft-bedrock` | Docker Compose project name on the host. |
+| `BEDROCK_PROXY_COMPOSE_FILE` | `/opt/craftcontrol/docker-compose.yml` | Path to the host Compose file. |
+| `BEDROCK_PROXY_COMPOSE_SERVICE` | `minecraft-server` | Compose service name for Bedrock. |
+| `BEDROCK_PROXY_BEDROCK_DATA` | `/opt/craftcontrol/data/bedrock` | Bedrock data directory on the host. |
+| `BEDROCK_PROXY_BEDROCK_CONTAINER` | `minecraft-server` | Docker container name used for log-based readiness. |
+| `BEDROCK_PROXY_DB` | `/var/lib/craftcontrol/bedrock-proxy.db` | SQLite operation-state database on the host. |
+| `BEDROCK_PROXY_WORKERS` | `1` | Queue worker count; keep at one to prevent concurrent restarts. |
+| `BEDROCK_PROXY_QUEUE_SIZE` | `8` | Maximum queued operations before the agent returns `503`. |
+
+The host agent accepts the corresponding `HOST_AGENT_*` variables for one
+release only. Each legacy value produces a startup deprecation warning, and a
+`BEDROCK_PROXY_*` value takes precedence when both are present.
 
 ---
 

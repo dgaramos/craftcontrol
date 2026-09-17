@@ -174,14 +174,14 @@ class TestSQLitePersistence:
         s1._conn.close()
         s2._conn.close()
 
-    def test_host_agent_db_env_var(self, tmp_path: Path, monkeypatch) -> None:
-        """HOST_AGENT_DB is wired through _load_config."""
+    def test_bedrock_proxy_db_env_var(self, tmp_path: Path, monkeypatch) -> None:
+        """BEDROCK_PROXY_DB is wired through _load_config."""
         # Import agent from the agent directory
         import importlib
         import sys
 
         db_path = str(tmp_path / "env-test.db")
-        monkeypatch.setenv("HOST_AGENT_DB", db_path)
+        monkeypatch.setenv("BEDROCK_PROXY_DB", db_path)
 
         # Reload agent module to pick up env change
         import importlib

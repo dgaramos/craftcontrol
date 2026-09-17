@@ -239,6 +239,25 @@ sudo systemctl daemon-reload
 sudo systemctl restart craftcontrol-bedrock-proxy
 ```
 
+### Migrating from `craftcontrol-host-agent`
+
+Hosts installed before the bedrock-proxy rename should migrate the service and
+its supporting files together during a maintenance window. Stop and disable
+`craftcontrol-host-agent`, rename `/etc/craftcontrol/host-agent.env` to
+`/etc/craftcontrol/bedrock-proxy.env` and
+`/etc/craftcontrol/host-agent-token` to
+`/etc/craftcontrol/bedrock-proxy-token`, and replace `HOST_AGENT_*` entries
+with `BEDROCK_PROXY_*`. Install and enable
+`craftcontrol-bedrock-proxy.service`, then verify it with
+`systemctl status craftcontrol-bedrock-proxy` before deleting the old unit.
+
+If the host uses the automated update bootstrap, replace the old
+`craftcontrol-host-agent-update.service` and `.path` units and their staging
+directory with `craftcontrol-bedrock-proxy-update.service`,
+`craftcontrol-bedrock-proxy-update.path`, and
+`/mnt/storage/docker/craftcontrol-bedrock-proxy-update`. The bootstrap commands
+are maintained in [Automated deployment](automated-deployment.md#bedrock-proxy-update-bootstrap).
+
 ---
 
 ## Step 7 — Grant runtime access to the Bedrock project
@@ -524,7 +543,7 @@ journal for one of these messages:
 |---------|---------|
 | `Cannot read .../server.properties ...; assuming transport=raknet` | `BEDROCK_PROXY_BEDROCK_DATA` (Step 6) does not point at the Bedrock data directory; the agent fell back to the RakNet ping |
 | `Unsupported Bedrock transport '...'` | `transport` holds a value other than `raknet` or `nethernet`; the agent never reports it healthy |
-| `Container ... has no StartedAt timestamp` | The configured container name does not exist or the Docker CLI failed; verify `HOST_AGENT_BEDROCK_CONTAINER` |
+| `Container ... has no StartedAt timestamp` | The configured container name does not exist or the Docker CLI failed; verify `BEDROCK_PROXY_BEDROCK_CONTAINER` |
 | `Cannot read logs for ...` | `docker logs` failed; the agent user must be able to reach the Docker daemon |
 
 ### Known limitation — Prometheus exporter

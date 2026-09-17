@@ -6,24 +6,27 @@ HTTP requests from the CraftControl backend and executes exactly the permitted
 host-level operations defined in docs/bedrock-proxy-contract.md.
 
 Environment variables:
-  HOST_AGENT_BIND          Bind address for the HTTP server. Default: 0.0.0.0:7890
-  HOST_AGENT_SECRET_FILE   Path to the shared-secret token file.
+  BEDROCK_PROXY_BIND          Bind address for the HTTP server. Default: 0.0.0.0:7890
+  BEDROCK_PROXY_SECRET_FILE   Path to the shared-secret token file.
                            Default: /etc/craftcontrol/bedrock-proxy-token
-  HOST_AGENT_COMPOSE_PROJECT  Docker Compose project name. Default: minecraft-bedrock
-  HOST_AGENT_COMPOSE_FILE     Path to the docker-compose.yml file.
+  BEDROCK_PROXY_COMPOSE_PROJECT  Docker Compose project name. Default: minecraft-bedrock
+  BEDROCK_PROXY_COMPOSE_FILE     Path to the docker-compose.yml file.
                               Default: /opt/craftcontrol/docker-compose.yml
-  HOST_AGENT_BEDROCK_DATA     Path to the Bedrock data directory.
+  BEDROCK_PROXY_BEDROCK_DATA     Path to the Bedrock data directory.
                               Default: /opt/craftcontrol/data/bedrock
-  HOST_AGENT_COMPOSE_SERVICE   Docker Compose service name for the Bedrock server.
+  BEDROCK_PROXY_COMPOSE_SERVICE   Docker Compose service name for the Bedrock server.
                                Default: minecraft-server
-  HOST_AGENT_BEDROCK_CONTAINER  Docker container name for the Bedrock server.
+  BEDROCK_PROXY_BEDROCK_CONTAINER  Docker container name for the Bedrock server.
                                 Default: minecraft-server
-  HOST_AGENT_DB            Path to the SQLite database for operation persistence.
+  BEDROCK_PROXY_DB            Path to the SQLite database for operation persistence.
                            Default: /var/lib/craftcontrol/bedrock-proxy.db
-  HOST_AGENT_WORKERS       Number of worker threads in the operation pool.
+  BEDROCK_PROXY_WORKERS       Number of worker threads in the operation pool.
                            Default: 1 (sequential execution, no concurrent restarts).
-  HOST_AGENT_QUEUE_SIZE    Maximum pending operations before rejecting with 503.
+  BEDROCK_PROXY_QUEUE_SIZE    Maximum pending operations before rejecting with 503.
                            Default: 8.
+
+The HOST_AGENT_* forms remain accepted for one release and log a deprecation
+warning. BEDROCK_PROXY_* takes precedence when both are present.
 """
 from __future__ import annotations
 
@@ -105,6 +108,17 @@ BEDROCK_DATA_DEFAULT = "/opt/craftcontrol/data/bedrock"
 BEDROCK_CONTAINER_DEFAULT = "minecraft-server"
 DB_DEFAULT = "/var/lib/craftcontrol/bedrock-proxy.db"
 
+CANONICAL_ENVIRONMENT_VARIABLES = frozenset({
+    "BEDROCK_PROXY_BIND", "BEDROCK_PROXY_SECRET_FILE", "BEDROCK_PROXY_COMPOSE_PROJECT",
+    "BEDROCK_PROXY_COMPOSE_FILE", "BEDROCK_PROXY_COMPOSE_SERVICE",
+    "BEDROCK_PROXY_BEDROCK_DATA", "BEDROCK_PROXY_BEDROCK_CONTAINER",
+    "BEDROCK_PROXY_DB", "BEDROCK_PROXY_WORKERS", "BEDROCK_PROXY_QUEUE_SIZE",
+})
+LEGACY_ENVIRONMENT_VARIABLES = frozenset(
+    variable.replace("BEDROCK_PROXY_", "HOST_AGENT_")
+    for variable in CANONICAL_ENVIRONMENT_VARIABLES
+)
+
 
 def _load_token(path: str) -> str:
     p = Path(path)
@@ -117,18 +131,29 @@ def _load_token(path: str) -> str:
     return token
 
 
+def _environment_value(name: str, default: str) -> str:
+    canonical = f"BEDROCK_PROXY_{name}"
+    legacy = f"HOST_AGENT_{name}"
+    if canonical in os.environ:
+        return os.environ[canonical]
+    if legacy in os.environ:
+        logger.warning("%s is deprecated; use %s", legacy, canonical)
+        return os.environ[legacy]
+    return default
+
+
 def _load_config() -> dict[str, str]:
     return {
-        "bind": os.environ.get("HOST_AGENT_BIND", BIND_DEFAULT),
-        "secret_file": os.environ.get("HOST_AGENT_SECRET_FILE", SECRET_FILE_DEFAULT),
-        "compose_project": os.environ.get("HOST_AGENT_COMPOSE_PROJECT", COMPOSE_PROJECT_DEFAULT),
-        "compose_file": os.environ.get("HOST_AGENT_COMPOSE_FILE", COMPOSE_FILE_DEFAULT),
-        "compose_service": os.environ.get("HOST_AGENT_COMPOSE_SERVICE") or COMPOSE_SERVICE_DEFAULT,
-        "bedrock_data": os.environ.get("HOST_AGENT_BEDROCK_DATA", BEDROCK_DATA_DEFAULT),
-        "bedrock_container": os.environ.get("HOST_AGENT_BEDROCK_CONTAINER", BEDROCK_CONTAINER_DEFAULT),
-        "db": os.environ.get("HOST_AGENT_DB", DB_DEFAULT),
-        "workers": os.environ.get("HOST_AGENT_WORKERS", "1"),
-        "queue_size": os.environ.get("HOST_AGENT_QUEUE_SIZE", "8"),
+        "bind": _environment_value("BIND", BIND_DEFAULT),
+        "secret_file": _environment_value("SECRET_FILE", SECRET_FILE_DEFAULT),
+        "compose_project": _environment_value("COMPOSE_PROJECT", COMPOSE_PROJECT_DEFAULT),
+        "compose_file": _environment_value("COMPOSE_FILE", COMPOSE_FILE_DEFAULT),
+        "compose_service": _environment_value("COMPOSE_SERVICE", COMPOSE_SERVICE_DEFAULT) or COMPOSE_SERVICE_DEFAULT,
+        "bedrock_data": _environment_value("BEDROCK_DATA", BEDROCK_DATA_DEFAULT),
+        "bedrock_container": _environment_value("BEDROCK_CONTAINER", BEDROCK_CONTAINER_DEFAULT),
+        "db": _environment_value("DB", DB_DEFAULT),
+        "workers": _environment_value("WORKERS", "1"),
+        "queue_size": _environment_value("QUEUE_SIZE", "8"),
     }
 
 

@@ -64,19 +64,21 @@ All configuration is via environment variables:
 
 | Variable | Default | Description |
 |---|---|---|
-| `HOST_AGENT_BIND` | `0.0.0.0:7890` | HTTP bind address |
-| `HOST_AGENT_SECRET_FILE` | `/etc/craftcontrol/bedrock-proxy-token` | Shared-secret token file |
-| `HOST_AGENT_COMPOSE_PROJECT` | `minecraft-bedrock` | Docker Compose project name |
-| `HOST_AGENT_COMPOSE_FILE` | `/opt/craftcontrol/docker-compose.yml` | Path to docker-compose.yml |
-| `HOST_AGENT_COMPOSE_SERVICE` | `minecraft-server` | Compose service name for Bedrock |
-| `HOST_AGENT_BEDROCK_CONTAINER` | `minecraft-server` | Docker container name |
-| `HOST_AGENT_BEDROCK_DATA` | `/opt/craftcontrol/data/bedrock` | Bedrock data directory |
-| `HOST_AGENT_DB` | `/var/lib/craftcontrol/bedrock-proxy.db` | SQLite operation persistence |
-| `HOST_AGENT_WORKERS` | `1` | Worker threads (keep at 1 — no concurrent restarts) |
-| `HOST_AGENT_QUEUE_SIZE` | `8` | Max pending operations before 503 |
+| `BEDROCK_PROXY_BIND` | `0.0.0.0:7890` | HTTP bind address |
+| `BEDROCK_PROXY_SECRET_FILE` | `/etc/craftcontrol/bedrock-proxy-token` | Shared-secret token file |
+| `BEDROCK_PROXY_COMPOSE_PROJECT` | `minecraft-bedrock` | Docker Compose project name |
+| `BEDROCK_PROXY_COMPOSE_FILE` | `/opt/craftcontrol/docker-compose.yml` | Path to docker-compose.yml |
+| `BEDROCK_PROXY_COMPOSE_SERVICE` | `minecraft-server` | Compose service name for Bedrock |
+| `BEDROCK_PROXY_BEDROCK_CONTAINER` | `minecraft-server` | Docker container name |
+| `BEDROCK_PROXY_BEDROCK_DATA` | `/opt/craftcontrol/data/bedrock` | Bedrock data directory |
+| `BEDROCK_PROXY_DB` | `/var/lib/craftcontrol/bedrock-proxy.db` | SQLite operation persistence |
+| `BEDROCK_PROXY_WORKERS` | `1` | Worker threads (keep at 1 — no concurrent restarts) |
+| `BEDROCK_PROXY_QUEUE_SIZE` | `8` | Max pending operations before 503 |
 
-The CraftControl Server connects to the host agent by setting `HOST_AGENT_URL`
+The CraftControl Server connects to the host agent by setting `BEDROCK_PROXY_URL`
 in its own environment. The shared secret must match on both sides.
+
+`HOST_AGENT_*` names remain accepted with a startup warning for one release.
 
 ---
 
@@ -126,18 +128,18 @@ The host agent is installed on the Docker host as a systemd service:
 
 ```bash
 # Run on the host, not inside a container
-deploy/host-proxy/bin/install-craftcontrol-bedrock-proxy-runtime
+deploy/bedrock-proxy/bin/install-craftcontrol-bedrock-proxy-runtime
 ```
 
-systemd unit and udev rules live in `deploy/host-proxy/systemd/` and
-`deploy/host-proxy/udev/`. See [docs/bedrock-proxy.md](../../docs/bedrock-proxy.md)
+The systemd unit and udev rules live in `deploy/bedrock-proxy/systemd/` and
+`deploy/bedrock-proxy/udev/`. See [docs/bedrock-proxy.md](../../docs/bedrock-proxy.md)
 for the full installation and configuration walkthrough.
 
 ---
 
 ## Running tests
 
-From `services/host-proxy/`:
+From `services/bedrock-proxy/`:
 
 ```bash
 pytest tests/ -x -q
@@ -156,8 +158,8 @@ check. Integration with a live Docker daemon is not required — `FakeDocker` an
 The host agent is already a standalone Python application with no dependency on
 the `controlplane` package. If extracted:
 
-1. Copy `services/host-proxy/` as the project root.
-2. The `deploy/host-proxy/` scripts reference the installed binary path — update
+1. Copy `services/bedrock-proxy/` as the project root.
+2. The `deploy/bedrock-proxy/` scripts reference the installed binary path — update
    `install-craftcontrol-bedrock-proxy-runtime` if the install location changes.
-3. `HOST_AGENT_SECRET_FILE` and `HOST_AGENT_DB` paths are configurable; no
+3. `BEDROCK_PROXY_SECRET_FILE` and `BEDROCK_PROXY_DB` paths are configurable; no
    hardcoded paths exist inside the Python source.

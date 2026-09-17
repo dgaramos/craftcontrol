@@ -47,7 +47,7 @@ trap - EXIT
 
 if systemctl restart "$SERVICE" && systemctl is-active --quiet "$SERVICE"; then
   rm -rf "$previous"
-  write_result activated "$revision" "host agent is active"
+  write_result activated "$revision" "bedrock-proxy is active"
   exit 0
 fi
 
@@ -56,5 +56,5 @@ rm -rf "$failed"
 mv "$ACTIVE_ROOT" "$failed"
 mv "$previous" "$ACTIVE_ROOT"
 systemctl restart "$SERVICE" || true
-write_result rolled-back "$revision" "host agent activation failed; previous release restored"
+write_result rolled-back "$revision" "bedrock-proxy activation failed; previous release restored"
 exit 1

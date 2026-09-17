@@ -20,12 +20,12 @@ while (( SECONDS < deadline )); do
     mapfile -t result < "$result_file"
     if [[ "${result[1]:-}" == "$revision" ]]; then
       [[ "${result[0]:-}" == activated ]] && exit 0
-      printf 'host agent update %s\n' "${result[2]:-failed}" >&2
+      printf 'bedrock-proxy update %s\n' "${result[2]:-failed}" >&2
       exit 1
     fi
   fi
   sleep 1
 done
 
-echo "timed out waiting for host agent update" >&2
+echo "timed out waiting for bedrock-proxy update" >&2
 exit 1

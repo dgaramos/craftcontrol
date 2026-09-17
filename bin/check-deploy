@@ -12,6 +12,7 @@ bash -n bin/deploy-craftcontrol-release
 bash -n bin/check-split-auth
 bash -n bin/cutover-craftcontrol-split
 bash -n deploy/bedrock-proxy/bin/install-craftcontrol-storage-io-queue
+sh -n deploy/bedrock/bedrock-healthcheck.sh
 mkdir -p test-results
 "$PYTHON" -m pytest deploy/tests/ --junit-xml=test-results/deploy.xml -v
 echo "deploy gate: ok"

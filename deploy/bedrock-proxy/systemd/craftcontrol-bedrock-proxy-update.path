@@ -1,5 +1,5 @@
 [Unit]
-Description=Watch for verified CraftControl Host Agent release requests
+Description=Watch for verified CraftControl Bedrock Proxy release requests
 
 [Path]
 PathChanged=/mnt/storage/docker/craftcontrol-bedrock-proxy-update/request

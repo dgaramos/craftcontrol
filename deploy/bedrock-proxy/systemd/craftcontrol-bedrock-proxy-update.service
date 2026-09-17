@@ -1,5 +1,5 @@
 [Unit]
-Description=Apply a queued CraftControl Host Agent release
+Description=Apply a queued CraftControl Bedrock Proxy release
 After=network.target craftcontrol-bedrock-proxy.service
 
 [Service]

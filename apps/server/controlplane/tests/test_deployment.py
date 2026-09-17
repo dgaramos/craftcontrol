@@ -135,6 +135,8 @@ def test_successful_main_quality_run_triggers_the_guarded_homelab_release() -> N
     assert "/usr/local/bin/craftcontrol-homelab-deploy" in workflow
     assert "craftcontrol-bedrock-proxy-request-update" in workflow
     assert "deploy/bedrock-proxy services/bedrock-proxy" in workflow
+    assert 'revision="$(git rev-parse HEAD)"' in workflow
+    assert '"${{ github.sha }}"' not in workflow
     assert "Gitea-hosted runners never receive Docker or LAN access" in runbook
 
 

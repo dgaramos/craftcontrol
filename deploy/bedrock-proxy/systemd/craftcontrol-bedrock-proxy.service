@@ -1,5 +1,5 @@
 [Unit]
-Description=CraftControl Host Agent
+Description=CraftControl Bedrock Proxy
 Documentation=https://github.com/dgaramos/craftcontrol/blob/main/docs/bedrock-proxy-contract.md
 After=network.target docker.service
 Requires=docker.service

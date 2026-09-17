@@ -76,6 +76,13 @@ class TestReadTransport:
 
         assert read_transport(str(tmp_path), read_text=read_text) == TRANSPORT_RAKNET
 
+    def test_ignores_comments_blank_lines_and_malformed_entries(self, tmp_path: Path) -> None:
+        (tmp_path / "server.properties").write_text(
+            "# transport=nethernet\n\nnot a property\ntransport = NetherNet\n",
+            encoding="utf-8",
+        )
+        assert read_transport(str(tmp_path)) == TRANSPORT_NETHERNET
+
     def test_unknown_transport_is_returned_verbatim(self, tmp_path: Path) -> None:
         _write_properties(tmp_path, "quic")
         assert read_transport(str(tmp_path)) == "quic"
@@ -127,6 +134,20 @@ class TestTransportAwareHealthProbe:
         assert probe.wait("127.0.0.1", 19132, 5) is False
         assert clock.now <= 5
         assert clock.sleeps == [1, 2, 2]
+
+    def test_nethernet_transport_gives_up_when_the_deadline_passes_during_a_log_check(self, tmp_path: Path) -> None:
+        _write_properties(tmp_path, "nethernet")
+        clock = FakeClock()
+
+        class SlowLogReader(FakeLogReader):
+            def logs_since(self, container: str, since: str) -> str:
+                clock.now += 10  # the docker call itself consumed the remaining budget
+                return super().logs_since(container, since)
+
+        reader = SlowLogReader(started_at="2026-09-17T17:29:10Z", logs="[INFO] Starting Server\n")
+        probe, _ = _probe(tmp_path, reader, clock)
+        assert probe.wait("127.0.0.1", 19132, 5) is False
+        assert clock.sleeps == []
 
     def test_nethernet_transport_is_not_ready_without_a_current_boot_reference(self, tmp_path: Path) -> None:
         # Without StartedAt the previous boot's marker cannot be excluded, so the

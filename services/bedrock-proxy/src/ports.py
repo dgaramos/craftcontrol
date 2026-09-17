@@ -39,3 +39,15 @@ class ContainerStatusChecker(Protocol):
 
     def is_running(self, container_name: str) -> bool:  # pragma: no cover
         ...
+
+
+class ContainerLogReader(Protocol):
+    """Read the Bedrock container's current boot timestamp and its log output."""
+
+    def started_at(self, container_name: str) -> str | None:  # pragma: no cover
+        """Return the container's last start timestamp, or None when unknown."""
+        ...
+
+    def logs_since(self, container_name: str, since: str) -> str:  # pragma: no cover
+        """Return log text emitted at or after *since*; raise OSError on failure."""
+        ...

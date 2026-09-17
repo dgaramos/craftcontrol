@@ -36,7 +36,7 @@ The runner Compose project lives at
 short-lived and is used only for initial runner registration; persistent runner
 state and the local deployment agent remain outside this repository.
 
-### Host Agent update bootstrap
+### Bedrock-proxy update bootstrap
 
 The first setup is performed once on the Docker host; it does not expose an
 HTTP endpoint or grant the runner systemd access. Install the two checked-in

@@ -24,7 +24,7 @@ class TestAgentBootstrap:
             ha._load_token(str(secret))
 
     def test_load_config_returns_defaults(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        for var in ["HOST_AGENT_BIND", "HOST_AGENT_SECRET_FILE", "HOST_AGENT_COMPOSE_PROJECT", "HOST_AGENT_COMPOSE_FILE", "HOST_AGENT_BEDROCK_DATA"]:
+        for var in ha.CANONICAL_ENVIRONMENT_VARIABLES | ha.LEGACY_ENVIRONMENT_VARIABLES:
             monkeypatch.delenv(var, raising=False)
         config = ha._load_config()
         assert config["bind"] == ha.BIND_DEFAULT
@@ -33,16 +33,44 @@ class TestAgentBootstrap:
         assert config["compose_file"] == ha.COMPOSE_FILE_DEFAULT
         assert config["bedrock_data"] == ha.BEDROCK_DATA_DEFAULT
 
-    def test_load_config_reads_env_vars(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("HOST_AGENT_BIND", "127.0.0.1:9999")
-        monkeypatch.setenv("HOST_AGENT_COMPOSE_PROJECT", "my-project")
+    def test_load_config_reads_canonical_env_vars(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("BEDROCK_PROXY_BIND", "127.0.0.1:9999")
+        monkeypatch.setenv("BEDROCK_PROXY_COMPOSE_PROJECT", "my-project")
         config = ha._load_config()
         assert config["bind"] == "127.0.0.1:9999"
         assert config["compose_project"] == "my-project"
 
+    def test_load_config_accepts_legacy_env_vars_with_warning(
+        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        monkeypatch.setenv("HOST_AGENT_BIND", "127.0.0.1:9999")
+        assert ha._load_config()["bind"] == "127.0.0.1:9999"
+        assert "HOST_AGENT_BIND is deprecated; use BEDROCK_PROXY_BIND" in caplog.text
+
+    def test_load_config_prefers_canonical_env_vars(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("HOST_AGENT_BIND", "127.0.0.1:9999")
+        monkeypatch.setenv("BEDROCK_PROXY_BIND", "127.0.0.1:7890")
+        assert ha._load_config()["bind"] == "127.0.0.1:7890"
+
     def test_load_config_compose_service_empty_string_uses_default(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("HOST_AGENT_COMPOSE_SERVICE", "")
+        monkeypatch.setenv("BEDROCK_PROXY_COMPOSE_SERVICE", "")
         assert ha._load_config()["compose_service"] == ha.COMPOSE_SERVICE_DEFAULT
+
+    def test_systemd_environment_keys_are_consumed_by_agent(self) -> None:
+        unit = (
+            Path(__file__).parents[4]
+            / "deploy"
+            / "bedrock-proxy"
+            / "systemd"
+            / "craftcontrol-bedrock-proxy.service"
+        )
+        keys = {
+            line.removeprefix("Environment=").split("=", 1)[0]
+            for line in unit.read_text().splitlines()
+            if line.startswith("Environment=")
+        }
+        assert keys
+        assert keys <= ha.CANONICAL_ENVIRONMENT_VARIABLES
 
 
 class TestAgentComposition:

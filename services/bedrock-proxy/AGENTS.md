@@ -13,7 +13,7 @@ before changing the project.
   and never logged or included in error responses.
 - Docker operations go through the Docker SDK (`src/adapters/docker.py`). Filesystem
   writes are atomic (`src/adapters/filesystem.py`). Neither adapter shells out.
-- Keep `HOST_AGENT_WORKERS` at 1. The queue is bounded; reject with 503 rather
+- Keep `BEDROCK_PROXY_WORKERS` at 1. The queue is bounded; reject with 503 rather
   than growing unbounded.
 - Do not add dependencies beyond `requirements.txt` without explicit approval.
 - Never commit the token file, database, or roadmap.

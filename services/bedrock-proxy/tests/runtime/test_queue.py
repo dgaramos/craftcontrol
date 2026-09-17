@@ -4,7 +4,7 @@ Covers:
 - Sequential execution with workers=1
 - 503 rejection when the queue is at capacity
 - GET /v1/health includes queue_depth and worker_count
-- HOST_AGENT_WORKERS / HOST_AGENT_QUEUE_SIZE env var wiring
+- BEDROCK_PROXY_WORKERS / BEDROCK_PROXY_QUEUE_SIZE env var wiring
 """
 from __future__ import annotations
 
@@ -165,8 +165,8 @@ class TestOperationQueueSequential:
 
 class TestEnvVarWiring:
     def test_workers_env_var(self, monkeypatch):
-        monkeypatch.setenv("HOST_AGENT_WORKERS", "3")
-        monkeypatch.setenv("HOST_AGENT_QUEUE_SIZE", "16")
+        monkeypatch.setenv("BEDROCK_PROXY_WORKERS", "3")
+        monkeypatch.setenv("BEDROCK_PROXY_QUEUE_SIZE", "16")
         executor = _make_fake_executor()
         q = OperationQueue(executor)
         assert q.worker_count == 3

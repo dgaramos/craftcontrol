@@ -43,3 +43,33 @@ class TestAgentBootstrap:
     def test_load_config_compose_service_empty_string_uses_default(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("HOST_AGENT_COMPOSE_SERVICE", "")
         assert ha._load_config()["compose_service"] == ha.COMPOSE_SERVICE_DEFAULT
+
+
+class TestAgentComposition:
+    def test_run_wires_the_transport_aware_probe(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        from src.adapters.readiness import TransportAwareHealthProbe
+
+        captured: dict[str, object] = {}
+
+        class FakeServer:
+            def __init__(self, address: tuple[str, int], handler_class: type) -> None:
+                captured["address"] = address
+                captured["handler_class"] = handler_class
+
+            def serve_forever(self) -> None:
+                raise KeyboardInterrupt
+
+        monkeypatch.setattr(ha, "HTTPServer", FakeServer)
+        config = {
+            "compose_project": "mc",
+            "compose_file": "/tmp/dc.yml",
+            "bedrock_data": str(tmp_path),
+            "bedrock_container": "bedrock",
+            "db": ":memory:",
+            "workers": "1",
+            "queue_size": "1",
+        }
+        ha.run(bind="127.0.0.1:0", token="t", config=config)
+        executor = captured["handler_class"].executor
+        assert isinstance(executor._probe, TransportAwareHealthProbe)
+        assert executor._probe.container == "bedrock"

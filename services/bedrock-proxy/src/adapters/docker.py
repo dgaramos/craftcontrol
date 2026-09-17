@@ -6,7 +6,7 @@ import subprocess
 import time
 from typing import TYPE_CHECKING, Any, Callable
 
-from src.ports import ContainerRunner, ContainerStatusChecker, RestartTimeoutError  # noqa: F401
+from src.ports import ContainerLogReader, ContainerRunner, ContainerStatusChecker, RestartTimeoutError  # noqa: F401
 
 logger = logging.getLogger("bedrock-proxy")
 
@@ -75,7 +75,58 @@ class DockerContainerStatus:
         return result.returncode == 0 and result.stdout.strip().lower() == "true"
 
 
+# Upper bounds for each Docker CLI call. A caller's remaining budget
+# (``timeout_seconds``) can only shorten them, never extend them.
+INSPECT_TIMEOUT_SECONDS = 10.0
+LOGS_TIMEOUT_SECONDS = 30.0
+
+
+def _bounded_timeout(limit: float, budget: float | None) -> float:
+    """Return the effective subprocess timeout: *limit* capped by *budget*."""
+    if budget is None:
+        return limit
+    return max(0.0, min(limit, budget))
+
+
+class DockerContainerLogs:
+    """ContainerLogReader adapter backed by ``docker inspect`` and ``docker logs``."""
+
+    def __init__(self, subprocess_run: Callable[..., Any] | None = None) -> None:
+        self._subprocess_run = subprocess_run or subprocess.run
+
+    def started_at(self, container_name: str, *, timeout_seconds: float | None = None) -> str | None:
+        """Return ``.State.StartedAt`` for the container, or None when unavailable."""
+        cmd = ["docker", "inspect", "--format", "{{.State.StartedAt}}", container_name]
+        timeout = _bounded_timeout(INSPECT_TIMEOUT_SECONDS, timeout_seconds)
+        try:
+            result = self._subprocess_run(cmd, capture_output=True, text=True, timeout=timeout, check=False)
+        except (subprocess.TimeoutExpired, OSError):
+            return None
+        if result.returncode != 0:
+            return None
+        value = (result.stdout or "").strip()
+        return value or None
+
+    def logs_since(self, container_name: str, since: str, *, timeout_seconds: float | None = None) -> str:
+        """Return stdout and stderr log text emitted at or after *since*.
+
+        Bedrock writes its console to stdout while the image runner logs to
+        stderr; both streams are merged so readiness markers are never missed.
+        """
+        cmd = ["docker", "logs", "--since", since, container_name]
+        timeout = _bounded_timeout(LOGS_TIMEOUT_SECONDS, timeout_seconds)
+        try:
+            result = self._subprocess_run(cmd, capture_output=True, text=True, timeout=timeout, check=False)
+        except subprocess.TimeoutExpired as exc:
+            raise OSError(f"docker logs timed out: {exc}") from exc
+        if result.returncode != 0:
+            detail = (result.stderr or result.stdout or "").strip()
+            raise OSError(f"docker logs failed (exit {result.returncode}): {detail}")
+        return (result.stdout or "") + (result.stderr or "")
+
+
 if TYPE_CHECKING:  # pragma: no cover
     # Static checks: adapters must satisfy their respective protocols.
     _r: ContainerRunner = DockerComposeRunner.__new__(DockerComposeRunner)
     _s: ContainerStatusChecker = DockerContainerStatus.__new__(DockerContainerStatus)
+    _l: ContainerLogReader = DockerContainerLogs.__new__(DockerContainerLogs)

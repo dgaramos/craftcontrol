@@ -280,8 +280,28 @@ service or use-case changes are required when this adapter is introduced.
 #### Bedrock health probe specification
 
 The health probe runs in the agent's network namespace (the Docker host, outside
-all containers). Bedrock Dedicated Server uses UDP/RakNet; a UDP datagram is
-sent to the target port and a validated `ID_UNCONNECTED_PONG` response (minimum 35 bytes, correct magic) indicates the server is ready.
+all containers). Bedrock Dedicated Server 1.26.50+ selects its network
+transport through the `transport` key of `server.properties`, and the probe
+selects its readiness strategy from that same file on every `HEALTH_WAIT`
+(the file is the configuration authority the agent itself writes in
+`prepare`). A missing key, a missing file, or an unreadable file selects
+`raknet`, which preserves the pre-1.26.50 behaviour.
+
+| `transport` | Readiness strategy |
+|-------------|--------------------|
+| `raknet` (default) | RakNet unconnected ping on `server-port`; a validated `ID_UNCONNECTED_PONG` is the only accepted evidence |
+| `nethernet` | Console-log evidence: the `Server started.` marker emitted by the **current container boot** |
+| any other value | Never healthy. The probe cannot verify an unknown protocol, so `health_reached` stays `false` and the operation ends with `health_probe_timeout` |
+
+Both strategies share the probe cadence below. The backoff never delays a
+probe beyond `health_timeout_seconds` — CraftControl operation status updates
+continue independently.
+
+| Parameter | Value |
+|-----------|-------|
+| Probe cadence | Immediate first probe; failed probes wait 1 s, 2 s, 4 s, 8 s, then at most 10 s between attempts |
+
+**RakNet strategy (`transport=raknet`)**
 
 | Parameter | Value |
 |-----------|-------|
@@ -290,15 +310,27 @@ sent to the target port and a validated `ID_UNCONNECTED_PONG` response (minimum 
 | Protocol | UDP |
 | Datagram | A complete RakNet unconnected ping (33 bytes): `0x01` (packet ID) + 8-byte timestamp (uint64 BE) + 16-byte magic (`00 ff ff 00 fe fe fe fe fd fd fd fd 12 34 56 78`) + 8-byte client GUID (uint64 BE) |
 | Per-attempt read timeout | 2 s |
-| Probe cadence | Immediate first probe; failed probes wait 1 s, 2 s, 4 s, 8 s, then at most 10 s between attempts |
 | Success condition | A UDP response of at least 35 bytes whose first byte is `0x1c` (`ID_UNCONNECTED_PONG`) and whose bytes 17–32 match the RakNet magic sequence |
 | Failure condition | No response, a response that fails the pong validation above, or an OS error within 2 s |
 
-`health_reached` is set to `true` only when the probe succeeds at least once
-within `health_timeout_seconds`. Any implementation must use these exact
-parameters so that `health_reached` values are comparable across adapters.
-The backoff never delays a probe beyond `health_timeout_seconds`, and affects
-only UDP probes — CraftControl operation status updates continue independently.
+**NetherNet strategy (`transport=nethernet`)**
+
+NetherNet does not answer RakNet pings and does not bind `server-port`, so a
+UDP probe would report a running server as unhealthy. The agent instead reads
+the container console through the Docker CLI.
+
+| Parameter | Value |
+|-----------|-------|
+| Boot reference | `docker inspect --format '{{.State.StartedAt}}' <container>` — the current boot's start timestamp |
+| Evidence source | `docker logs --since <StartedAt> <container>` (stdout and stderr) |
+| Call budget | Each Docker CLI call is bounded by the remaining `health_timeout_seconds` (and never exceeds 10 s for `inspect` or 30 s for `logs`), so a slow daemon cannot hold the operation past its deadline |
+| Success condition | The text `Server started.` appears in the logs of the current boot |
+| Failure condition | No boot reference (container missing or not started), a Docker CLI error or timeout, or the marker absent from the current boot. A marker from a previous boot is never accepted |
+
+`health_reached` is set to `true` only when the selected strategy succeeds at
+least once within `health_timeout_seconds`. Any implementation must use these
+exact parameters so that `health_reached` values are comparable across
+adapters.
 
 #### Response — `404 Not Found`
 

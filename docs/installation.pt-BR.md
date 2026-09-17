@@ -147,6 +147,8 @@ curl --max-time 3 http://127.0.0.1:8082/api/health
 
 Verifique `MINECRAFT_CONTAINER` e `MINECRAFT_PROJECT`, depois execute novamente `bin/cutover-craftcontrol-split --check`. Não contorne uma falha de validação de montagem alterando arquivos no diretório do mundo.
 
+Se o contêiner Bedrock permanecer `unhealthy` no Bedrock 1.26.50+ com `transport=nethernet`, a causa é o healthcheck RakNet da imagem; siga a [migração de transporte do Bedrock 1.26.50+](bedrock-proxy.md#bedrock-12650-transport-migration-nethernet) (em inglês), que usa o healthcheck em `deploy/bedrock/`.
+
 ### É necessário backup ou restauração
 
 Use somente comandos de backup coordenado. Não copie manualmente um banco SQLite ou diretório de mundo em uso. Veja [backup e restauração coordenados](backup-and-restore.md).

@@ -12,8 +12,8 @@ on a Docker host running the split deployment topology. Read
 The CraftControl Host Agent runs as a systemd service **outside all containers**. It
 accepts authenticated HTTP requests from the CraftControl Server and executes
 exactly the permitted host-level operations: writing Bedrock configuration
-files, issuing a `docker compose restart`, and polling the Bedrock UDP health
-probe.
+files, issuing a `docker compose restart`, and polling the transport-aware
+Bedrock readiness probe.
 
 When the Host Agent is active, server lifecycle operations (PREPARATION,
 RESTART, HEALTH_WAIT) are delegated to the agent rather than executed directly
@@ -43,7 +43,7 @@ flowchart LR
     end
     backend -- "HTTP :7890\nBearer token" --> agent
     agent -- "docker compose restart" --> docker
-    agent -- "UDP RakNet ping" --> bedrock
+    agent -- "RakNet ping or\nconsole-log readiness" --> bedrock
 ```
 
 ---
@@ -441,9 +441,11 @@ startup. The backend reaches the agent through that address on port 7890.
 
 During `HEALTH_WAIT`, the agent probes Bedrock immediately, then waits 1s, 2s,
 4s, 8s, and at most 10s between later failed probes. This capped exponential
-backoff reduces unnecessary UDP traffic during long world loads; it does not
+backoff reduces unnecessary probe traffic during long world loads; it does not
 slow the operation status shown in CraftControl or extend the configured health
-deadline.
+deadline. The probe itself is transport-aware — see
+[Bedrock 1.26.50+ transport migration](#bedrock-12650-transport-migration-nethernet)
+and the exact parameters in `docs/bedrock-proxy-contract.md`.
 
 ### Lifecycle health deadline
 
@@ -461,6 +463,83 @@ does not block read-only server data in CraftControl. Do not retry an operation
 solely because it is still in `HEALTH_WAIT`; retrying can create competing
 lifecycle requests. Treat a timeout as actionable only after checking the
 operation evidence and the bedrock-proxy journal.
+
+---
+
+## Bedrock 1.26.50+ transport migration (NetherNet)
+
+Bedrock Dedicated Server 1.26.50 introduced the `transport` key in
+`server.properties` (`raknet` or `nethernet`). With `transport=nethernet` the
+server speaks only NetherNet: it does not bind `server-port` (19132) and does
+not answer RakNet unconnected pings. Every RakNet-based readiness check then
+reports a running server as unhealthy:
+
+- the image's default Docker healthcheck (`mc-monitor status-bedrock`) fails
+  with `ping raknet: ... connection refused`, the container stays `unhealthy`,
+  and `bin/deploy-craftcontrol` refuses to complete;
+- the host agent's `HEALTH_WAIT` stage times out with `health_probe_timeout`.
+
+CraftControl handles both sides. The agent selects its readiness strategy from
+`transport` on every operation (RakNet ping for `raknet`, the current boot's
+`Server started.` console marker for `nethernet`, never healthy for any other
+value), so the agent needs no configuration change — only the checked-in
+release under `/opt/craftcontrol/bedrock-proxy`. The container healthcheck
+belongs to the Bedrock Compose project, which this repository does not own, so
+apply the override below once per host.
+
+### Step 1 — Mount the transport-aware healthcheck
+
+`deploy/bedrock/bedrock-healthcheck.sh` keeps the `mc-monitor` RakNet ping for
+`transport=raknet` and, for `transport=nethernet`, verifies that the NetherNet
+discovery socket (UDP 7551) is bound inside the container. Any other transport
+value is reported unhealthy. In the Bedrock Compose project (the sibling
+`minecraft-bedrock/` directory), bind-mount the script read-only and point the
+`healthcheck` at it:
+
+```yaml
+services:
+  minecraft-bedrock:
+    volumes:
+      - ./data:/data
+      - ../craftcontrol/deploy/bedrock/bedrock-healthcheck.sh:/usr/local/bin/bedrock-healthcheck:ro
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/bedrock-healthcheck"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+```
+
+Adjust the relative path when the checkout is not a sibling of the Bedrock
+project. Recreate only the Bedrock service so the new healthcheck is loaded
+(`docker compose up -d minecraft-bedrock` from the Bedrock project), then
+confirm with `docker inspect --format '{{.State.Health.Status}}' minecraft-bedrock`.
+
+### Step 2 — Confirm the agent evidence
+
+After the next lifecycle operation, the operation evidence must show
+`health_reached: true`. If `HEALTH_WAIT` still times out, check the agent
+journal for one of these messages:
+
+| Message | Meaning |
+|---------|---------|
+| `Cannot read .../server.properties ...; assuming transport=raknet` | `BEDROCK_PROXY_BEDROCK_DATA` (Step 6) does not point at the Bedrock data directory; the agent fell back to the RakNet ping |
+| `Unsupported Bedrock transport '...'` | `transport` holds a value other than `raknet` or `nethernet`; the agent never reports it healthy |
+| `Container ... has no StartedAt timestamp` | The configured container name does not exist or the Docker CLI failed; verify `HOST_AGENT_BEDROCK_CONTAINER` |
+| `Cannot read logs for ...` | `docker logs` failed; the agent user must be able to reach the Docker daemon |
+
+### Known limitation — Prometheus exporter
+
+The optional `itzg/mc-monitor export-for-prometheus` exporter queries Bedrock
+over RakNet and cannot read a NetherNet server; its Bedrock metrics stop while
+`transport=nethernet`. CraftControl does not depend on that exporter (the
+panel remains fully usable without Prometheus or Grafana), so the migration
+does not change any dashboard the panel owns.
+
+### Rollback
+
+Set `transport=raknet` in `server.properties` and restart the Bedrock service.
+Both the mounted healthcheck and the agent follow the file and return to the
+RakNet ping automatically; no CraftControl change is needed.
 
 ---
 
@@ -527,4 +606,5 @@ All three checks must pass before considering the deployment healthy.
 | Bedrock reports `server.properties: Permission denied` | Restore ownership to the Bedrock runtime user; do not delete or replace the file, then let the container restart policy recover it |
 | Docker warns that its config is unreadable | Create the agent-owned `DOCKER_CONFIG` directory from Step 7, then restart only the agent |
 | `health_probe_timeout` after a slow restart | The operation is terminal (`done` with outcome `error`); check its evidence and the agent journal first. Recreating the backend only loads a new `BEDROCK_PROXY_HEALTH_TIMEOUT_SECONDS` value — it does not resume the failed operation. If the observed server state still requires it, start a new operation after choosing a value up to 600 seconds. |
+| `health_probe_timeout` on Bedrock 1.26.50+ although the server is up | `transport=nethernet` no longer answers RakNet pings — follow [Bedrock 1.26.50+ transport migration](#bedrock-12650-transport-migration-nethernet) and confirm the agent runs a release that includes the transport-aware probe |
 | Agent does not restart after reboot | `systemctl is-enabled craftcontrol-bedrock-proxy` — run `systemctl enable` if disabled |

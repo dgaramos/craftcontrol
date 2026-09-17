@@ -75,6 +75,10 @@ unrestricted Docker socket access for those steps. Installing the agent is
 optional; the Server falls back to direct Docker Compose access when
 `BEDROCK_PROXY_URL` is not set.
 
+Bedrock 1.26.50+ deployments that set `transport=nethernet` also need the
+transport-aware container healthcheck from `deploy/bedrock/`; see
+[Bedrock 1.26.50+ transport migration](bedrock-proxy.md#bedrock-12650-transport-migration-nethernet).
+
 ### 1. Create the OS user
 
 ```bash
@@ -277,6 +281,10 @@ curl --max-time 3 http://127.0.0.1:8082/api/health
 Verify `MINECRAFT_CONTAINER` and `MINECRAFT_PROJECT` against the existing
 Bedrock deployment, then rerun `bin/cutover-craftcontrol-split --check`. Do not
 work around a mount validation failure by changing files in the world directory.
+
+If the Bedrock container stays `unhealthy` on Bedrock 1.26.50+ with
+`transport=nethernet`, the image's RakNet healthcheck is the cause; follow
+[Bedrock 1.26.50+ transport migration](bedrock-proxy.md#bedrock-12650-transport-migration-nethernet).
 
 ### A backup or restore is needed
 

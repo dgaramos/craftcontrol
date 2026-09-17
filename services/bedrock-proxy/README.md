@@ -20,7 +20,7 @@ The host agent owns exactly three operation stages:
 |---|---|
 | `PREPARATION` | Writes `server.properties` and `.env` atomically on the host filesystem |
 | `RESTART` | Restarts the Bedrock Docker Compose service |
-| `HEALTH_WAIT` | Polls the Bedrock UDP/RakNet probe until the server responds or the deadline passes |
+| `HEALTH_WAIT` | Polls the transport-aware Bedrock readiness probe (RakNet ping for `transport=raknet`, console-log evidence for `transport=nethernet`) until the server is ready or the deadline passes |
 
 Everything else (state management, player tracking, telemetry, auth, backups)
 remains in the CraftControl Server.
@@ -30,12 +30,12 @@ remains in the CraftControl Server.
 ## Layout
 
 ```
-services/host-proxy/
-├── agent.py          # sole entry point — bootstraps HTTPServer and imports from agent.*
+services/bedrock-proxy/
+├── agent.py          # sole entry point — bootstraps HTTPServer and imports from src.*
 ├── requirements.txt  # Python dependencies
 ├── pyproject.toml    # package declaration and entry point
 ├── Dockerfile        # container image for the host agent
-└── proxy/       # named Python package
+└── src/         # named Python package
     ├── ports.py      # Protocol definitions for replaceable boundaries
     ├── auth/
     │   └── auth.py   # shared-secret token loading and verification
@@ -52,7 +52,8 @@ services/host-proxy/
     └── adapters/
         ├── docker.py     # DockerAdapter — Compose restart via Docker SDK
         ├── filesystem.py # FilesystemAdapter — atomic config file writes
-        └── raknet.py     # RakNetAdapter — UDP health probe for Bedrock
+        ├── raknet.py     # RakNet UDP unconnected ping (transport=raknet)
+        └── readiness.py  # TransportAwareHealthProbe — selects the strategy from server.properties
 ```
 
 ---

@@ -65,6 +65,13 @@ from src.adapters.raknet import (  # noqa: F401
     _probe_bedrock,
     _wait_for_health,
 )
+from src.adapters.readiness import (  # noqa: F401
+    SERVER_STARTED_MARKER,
+    TRANSPORT_NETHERNET,
+    TRANSPORT_RAKNET,
+    TransportAwareHealthProbe,
+    read_transport,
+)
 from src.http.router import AgentHandler, build_handler_class  # noqa: F401
 from src.runtime.queue_worker import OperationQueue  # noqa: F401
 from src.http.handler import (  # noqa: F401
@@ -77,7 +84,7 @@ from src.http.handler import (  # noqa: F401
     RESTART_TIMEOUT_MAX,
     RESTART_TIMEOUT_DEFAULT,
 )
-from src.adapters.docker import DockerContainerStatus  # noqa: F401
+from src.adapters.docker import DockerContainerLogs, DockerContainerStatus  # noqa: F401
 
 logging.basicConfig(
     level=logging.INFO,
@@ -130,9 +137,9 @@ def _load_config() -> dict[str, str]:
 # ---------------------------------------------------------------------------
 
 def run(*, bind: str, token: str, config: dict[str, str], subprocess_run: Any = None) -> None:
-    from src.adapters.docker import DockerComposeRunner, DockerContainerStatus
+    from src.adapters.docker import DockerComposeRunner, DockerContainerLogs, DockerContainerStatus
     from src.adapters.filesystem import BedrockFileSystem
-    from src.adapters.raknet import RakNetHealthProbe
+    from src.adapters.readiness import TransportAwareHealthProbe
 
     host, _, port_str = bind.rpartition(":")
     host = host or "0.0.0.0"
@@ -141,10 +148,16 @@ def run(*, bind: str, token: str, config: dict[str, str], subprocess_run: Any = 
     store = OperationStore(db_path=config.get("db"))
     runner = DockerComposeRunner(config, subprocess_run=subprocess_run)
     filesystem = BedrockFileSystem(config["bedrock_data"])
-    probe = RakNetHealthProbe()
+    bedrock_container = config.get("bedrock_container", BEDROCK_CONTAINER_DEFAULT)
+    # Readiness follows the transport declared in server.properties: RakNet
+    # ping for transport=raknet, console-log evidence for transport=nethernet.
+    probe = TransportAwareHealthProbe(
+        config["bedrock_data"],
+        bedrock_container,
+        DockerContainerLogs(subprocess_run=subprocess_run),
+    )
     executor = OperationExecutor(runner, filesystem, probe)
     status_checker = DockerContainerStatus(subprocess_run=subprocess_run)
-    bedrock_container = config.get("bedrock_container", "minecraft-server")
 
     from src.runtime.queue_worker import OperationQueue
     op_queue = OperationQueue(

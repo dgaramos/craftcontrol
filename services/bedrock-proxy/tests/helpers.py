@@ -68,3 +68,32 @@ def make_executor(
     fs = BedrockFileSystem(bedrock_data)
     probe = FakeProbe(probe_result)
     return OperationExecutor(runner, fs, probe)
+
+
+class FakeLogReader:
+    """Fake ContainerLogReader returning scripted boot timestamps and log text.
+
+    *logs* may be a string (returned on every call), a list of strings
+    (returned in order, the last one repeating), or an exception instance
+    (raised on every call).
+    """
+
+    def __init__(self, started_at: str | None, logs: str | list[str] | BaseException) -> None:
+        self._started_at = started_at
+        self._logs = logs
+        self.logs_calls: list[tuple[str, str]] = []
+        self.timeouts: list[float | None] = []
+
+    def started_at(self, container: str, *, timeout_seconds: float | None = None) -> str | None:
+        self.timeouts.append(timeout_seconds)
+        return self._started_at
+
+    def logs_since(self, container: str, since: str, *, timeout_seconds: float | None = None) -> str:
+        self.timeouts.append(timeout_seconds)
+        self.logs_calls.append((container, since))
+        if isinstance(self._logs, BaseException):
+            raise self._logs
+        if isinstance(self._logs, list):
+            index = min(len(self.logs_calls), len(self._logs)) - 1
+            return self._logs[index]
+        return self._logs

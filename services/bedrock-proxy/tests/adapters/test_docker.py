@@ -61,6 +61,23 @@ class TestDockerContainerLogs:
         assert cmd[cmd.index("--since") + 1] == "2026-09-17T17:29:10Z"
         assert cmd[-1] == "bedrock"
 
+    def test_docker_calls_use_their_own_limits_without_a_budget(self) -> None:
+        run = fake_run(stdout="2026-09-17T17:29:10Z\n")
+        logs = DockerContainerLogs(subprocess_run=run)
+        logs.started_at("bedrock")
+        assert run.call_args.kwargs["timeout"] == 10
+        logs.logs_since("bedrock", "2026-09-17T17:29:10Z")
+        assert run.call_args.kwargs["timeout"] == 30
+
+    @pytest.mark.parametrize(("budget", "inspect_timeout", "logs_timeout"), [(4.5, 4.5, 4.5), (15, 10, 15), (60, 10, 30), (-1, 0, 0)])
+    def test_docker_calls_never_exceed_the_caller_budget(self, budget: float, inspect_timeout: float, logs_timeout: float) -> None:
+        run = fake_run(stdout="2026-09-17T17:29:10Z\n")
+        logs = DockerContainerLogs(subprocess_run=run)
+        logs.started_at("bedrock", timeout_seconds=budget)
+        assert run.call_args.kwargs["timeout"] == inspect_timeout
+        logs.logs_since("bedrock", "2026-09-17T17:29:10Z", timeout_seconds=budget)
+        assert run.call_args.kwargs["timeout"] == logs_timeout
+
     def test_logs_since_raises_a_domain_error_on_failure(self) -> None:
         with pytest.raises(OSError, match="docker logs failed"):
             DockerContainerLogs(subprocess_run=fake_run(returncode=1, stderr="daemon down")).logs_since("bedrock", "2026-09-17T17:29:10Z")

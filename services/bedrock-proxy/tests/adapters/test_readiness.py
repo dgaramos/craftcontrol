@@ -140,13 +140,47 @@ class TestTransportAwareHealthProbe:
         clock = FakeClock()
 
         class SlowLogReader(FakeLogReader):
-            def logs_since(self, container: str, since: str) -> str:
+            def logs_since(self, container: str, since: str, *, timeout_seconds: float | None = None) -> str:
                 clock.now += 10  # the docker call itself consumed the remaining budget
-                return super().logs_since(container, since)
+                return super().logs_since(container, since, timeout_seconds=timeout_seconds)
 
         reader = SlowLogReader(started_at="2026-09-17T17:29:10Z", logs="[INFO] Starting Server\n")
         probe, _ = _probe(tmp_path, reader, clock)
         assert probe.wait("127.0.0.1", 19132, 5) is False
+        assert clock.sleeps == []
+
+    def test_nethernet_transport_bounds_every_docker_call_by_the_remaining_budget(self, tmp_path: Path) -> None:
+        # HEALTH_WAIT owns the deadline: each docker call may use at most what is
+        # left, so a slow daemon can never hold the single worker past it.
+        _write_properties(tmp_path, "nethernet")
+        clock = FakeClock()
+
+        class SlowLogReader(FakeLogReader):
+            def started_at(self, container: str, *, timeout_seconds: float | None = None) -> str | None:
+                clock.now += 3  # docker inspect consumed part of the budget
+                return super().started_at(container, timeout_seconds=timeout_seconds)
+
+        reader = SlowLogReader(started_at="2026-09-17T17:29:10Z", logs=["", f"[INFO] {SERVER_STARTED_MARKER}\n"])
+        probe, _ = _probe(tmp_path, reader, clock)
+        assert probe.wait("127.0.0.1", 19132, 20) is True
+        # attempt 1: inspect gets 20s, logs gets 17s; sleep 1s; attempt 2 at t=4:
+        # inspect gets 16s, logs gets 13s.
+        assert reader.timeouts == [20, 17, 16, 13]
+        assert clock.sleeps == [1]
+
+    def test_nethernet_transport_skips_the_log_read_when_inspect_exhausts_the_budget(self, tmp_path: Path) -> None:
+        _write_properties(tmp_path, "nethernet")
+        clock = FakeClock()
+
+        class SlowLogReader(FakeLogReader):
+            def started_at(self, container: str, *, timeout_seconds: float | None = None) -> str | None:
+                clock.now += 10
+                return super().started_at(container, timeout_seconds=timeout_seconds)
+
+        reader = SlowLogReader(started_at="2026-09-17T17:29:10Z", logs=f"[INFO] {SERVER_STARTED_MARKER}\n")
+        probe, _ = _probe(tmp_path, reader, clock)
+        assert probe.wait("127.0.0.1", 19132, 5) is False
+        assert reader.logs_calls == []
         assert clock.sleeps == []
 
     def test_nethernet_transport_is_not_ready_without_a_current_boot_reference(self, tmp_path: Path) -> None:

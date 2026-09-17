@@ -323,6 +323,7 @@ the container console through the Docker CLI.
 |-----------|-------|
 | Boot reference | `docker inspect --format '{{.State.StartedAt}}' <container>` — the current boot's start timestamp |
 | Evidence source | `docker logs --since <StartedAt> <container>` (stdout and stderr) |
+| Call budget | Each Docker CLI call is bounded by the remaining `health_timeout_seconds` (and never exceeds 10 s for `inspect` or 30 s for `logs`), so a slow daemon cannot hold the operation past its deadline |
 | Success condition | The text `Server started.` appears in the logs of the current boot |
 | Failure condition | No boot reference (container missing or not started), a Docker CLI error or timeout, or the marker absent from the current boot. A marker from a previous boot is never accepted |
 

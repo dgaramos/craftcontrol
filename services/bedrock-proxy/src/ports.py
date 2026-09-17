@@ -42,12 +42,21 @@ class ContainerStatusChecker(Protocol):
 
 
 class ContainerLogReader(Protocol):
-    """Read the Bedrock container's current boot timestamp and its log output."""
+    """Read the Bedrock container's current boot timestamp and its log output.
 
-    def started_at(self, container_name: str) -> str | None:  # pragma: no cover
+    ``timeout_seconds`` is the caller's remaining budget: an implementation
+    must not block longer than that (it may use a shorter internal limit).
+    ``None`` means the implementation's own default limit applies.
+    """
+
+    def started_at(
+        self, container_name: str, *, timeout_seconds: float | None = None,
+    ) -> str | None:  # pragma: no cover
         """Return the container's last start timestamp, or None when unknown."""
         ...
 
-    def logs_since(self, container_name: str, since: str) -> str:  # pragma: no cover
+    def logs_since(
+        self, container_name: str, since: str, *, timeout_seconds: float | None = None,
+    ) -> str:  # pragma: no cover
         """Return log text emitted at or after *since*; raise OSError on failure."""
         ...

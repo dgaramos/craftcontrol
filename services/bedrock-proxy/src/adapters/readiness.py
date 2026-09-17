@@ -101,14 +101,15 @@ class TransportAwareHealthProbe:
         return False
 
     def _wait_for_nethernet(self, timeout_seconds: int) -> bool:
-        """Poll the current boot's console log for the started marker."""
+        """Poll the current boot's console log for the started marker.
+
+        The operation deadline is the authority: every Docker call receives the
+        remaining budget so neither a probe nor a sleep can extend it.
+        """
         deadline = self._monotonic() + timeout_seconds
         delay: float = PROBE_INITIAL_INTERVAL_SECONDS
         while True:
-            remaining = deadline - self._monotonic()
-            if remaining <= 0:
-                return False
-            if self._current_boot_started():
+            if self._current_boot_started(deadline):
                 return True
             remaining = deadline - self._monotonic()
             if remaining <= 0:
@@ -116,13 +117,19 @@ class TransportAwareHealthProbe:
             self._sleep(min(delay, remaining))
             delay = _next_probe_delay(delay)
 
-    def _current_boot_started(self) -> bool:
-        since = self._logs.started_at(self.container)
+    def _current_boot_started(self, deadline: float) -> bool:
+        remaining = deadline - self._monotonic()
+        if remaining <= 0:
+            return False
+        since = self._logs.started_at(self.container, timeout_seconds=remaining)
         if not since:
             logger.warning("Container %s has no StartedAt timestamp; cannot scope readiness evidence", self.container)
             return False
+        remaining = deadline - self._monotonic()
+        if remaining <= 0:
+            return False
         try:
-            text = self._logs.logs_since(self.container, since)
+            text = self._logs.logs_since(self.container, since, timeout_seconds=remaining)
         except OSError as exc:
             logger.warning("Cannot read logs for %s: %s", self.container, exc)
             return False

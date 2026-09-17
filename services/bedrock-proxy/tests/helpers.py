@@ -82,11 +82,14 @@ class FakeLogReader:
         self._started_at = started_at
         self._logs = logs
         self.logs_calls: list[tuple[str, str]] = []
+        self.timeouts: list[float | None] = []
 
-    def started_at(self, container: str) -> str | None:
+    def started_at(self, container: str, *, timeout_seconds: float | None = None) -> str | None:
+        self.timeouts.append(timeout_seconds)
         return self._started_at
 
-    def logs_since(self, container: str, since: str) -> str:
+    def logs_since(self, container: str, since: str, *, timeout_seconds: float | None = None) -> str:
+        self.timeouts.append(timeout_seconds)
         self.logs_calls.append((container, since))
         if isinstance(self._logs, BaseException):
             raise self._logs

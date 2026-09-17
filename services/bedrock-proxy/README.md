@@ -30,12 +30,12 @@ remains in the CraftControl Server.
 ## Layout
 
 ```
-services/host-proxy/
-├── agent.py          # sole entry point — bootstraps HTTPServer and imports from agent.*
+services/bedrock-proxy/
+├── agent.py          # sole entry point — bootstraps HTTPServer and imports from src.*
 ├── requirements.txt  # Python dependencies
 ├── pyproject.toml    # package declaration and entry point
 ├── Dockerfile        # container image for the host agent
-└── proxy/       # named Python package
+└── src/         # named Python package
     ├── ports.py      # Protocol definitions for replaceable boundaries
     ├── auth/
     │   └── auth.py   # shared-secret token loading and verification

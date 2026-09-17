@@ -80,7 +80,7 @@ Backend container
         └── craftcontrol-bedrock-proxy (systemd, Docker host)
               ├── PREPARATION — writes configuration files
               ├── RESTART     — docker compose restart minecraft-server
-              └── HEALTH_WAIT — Bedrock UDP health probe
+              └── HEALTH_WAIT — transport-aware Bedrock readiness probe
 ```
 
 The backend still mounts the Docker socket for Bedrock console operations

@@ -29,7 +29,7 @@ The `proxy/` named package organises modules by responsibility:
 | `proxy/runtime/` | `operations.py`, `queue_worker.py` — executor and bounded thread pool |
 | `proxy/store/` | `store.py` — SQLite-backed operation persistence |
 | `proxy/preflight/` | `preflight.py` — startup self-check |
-| `proxy/adapters/` | `docker.py`, `filesystem.py`, `raknet.py` — infrastructure adapters |
+| `proxy/adapters/` | `docker.py`, `filesystem.py`, `raknet.py`, `readiness.py` — infrastructure adapters; `readiness.py` selects the health strategy from `transport` in `server.properties` (see `docs/bedrock-proxy-contract.md`) |
 | `proxy/ports.py` | Protocol definitions for replaceable boundaries (at package root) |
 
 `agent.py` remains the sole file at the service root and imports from `agent.*`.

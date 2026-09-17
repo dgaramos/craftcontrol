@@ -20,7 +20,7 @@ The host agent owns exactly three operation stages:
 |---|---|
 | `PREPARATION` | Writes `server.properties` and `.env` atomically on the host filesystem |
 | `RESTART` | Restarts the Bedrock Docker Compose service |
-| `HEALTH_WAIT` | Polls the Bedrock UDP/RakNet probe until the server responds or the deadline passes |
+| `HEALTH_WAIT` | Polls the transport-aware Bedrock readiness probe (RakNet ping for `transport=raknet`, console-log evidence for `transport=nethernet`) until the server is ready or the deadline passes |
 
 Everything else (state management, player tracking, telemetry, auth, backups)
 remains in the CraftControl Server.
@@ -52,7 +52,8 @@ services/host-proxy/
     └── adapters/
         ├── docker.py     # DockerAdapter — Compose restart via Docker SDK
         ├── filesystem.py # FilesystemAdapter — atomic config file writes
-        └── raknet.py     # RakNetAdapter — UDP health probe for Bedrock
+        ├── raknet.py     # RakNet UDP unconnected ping (transport=raknet)
+        └── readiness.py  # TransportAwareHealthProbe — selects the strategy from server.properties
 ```
 
 ---

@@ -260,6 +260,8 @@ export function startApplication() {
 
   let _tickTimer = null;
   let _localDaytime = NaN;
+  let _worldAnchorDaytime = NaN;
+  let _worldAnchorAt = NaN;
 
   function setWorldCells(field, text) {
     if (typeof document === "undefined") return;
@@ -272,7 +274,7 @@ export function startApplication() {
   }
 
   function _updateTickDisplay() {
-    _localDaytime = (_localDaytime + 2) % 24000;
+    _localDaytime = (_worldAnchorDaytime + Math.max(0, Date.now() - _worldAnchorAt) / 50) % 24000;
     setWorldCells("ticks", Math.round(_localDaytime).toLocaleString(localeTag()));
     {
       const minutes = Math.round(((_localDaytime + 6000) % 24000) / 1000 * 60);
@@ -324,11 +326,14 @@ export function startApplication() {
       const ageTicks = Number.isFinite(observedAt)
         ? Math.max(0, Math.round((Date.now() / 1000 - observedAt) * 20))
         : 0;
-      _localDaytime = (daytime + ageTicks) % 24000;
+      _worldAnchorDaytime = (daytime + ageTicks) % 24000;
+      _worldAnchorAt = Date.now();
       _updateTickDisplay();
       _tickTimer = setInterval(_updateTickDisplay, 100);
     } else {
       _localDaytime = NaN;
+      _worldAnchorDaytime = NaN;
+      _worldAnchorAt = NaN;
       setWorldCells("time", "—");
       setWorldCells("ticks", "");
     }

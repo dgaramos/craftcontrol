@@ -216,6 +216,7 @@ describe("feature contracts — pending changes and operation indicators", () =>
     const composition = readFileSync(join(JS, "composition.js"), "utf8");
     expect(composition).toContain("snapshot.domains?.world?.observed_at");
     expect(composition).toContain("(Date.now() / 1000 - observedAt) * 20");
+    expect(composition).toContain("Math.max(0, Date.now() - _worldAnchorAt) / 50");
   });
 
   /* The rule itself is unit-tested in core/panel-state; this only pins that the

@@ -179,20 +179,18 @@ class ReconciliationService:
         self._refresh_lock.acquire()
         try:
             try:
-                before = self.repository.snapshot(False)
                 world_state, errors = self.world_service.query_world_state()
                 if world_state:
                     self.repository.store("world", world_state, "bedrock-console")
-                    if self._world_changed_materially(before, world_state):
-                        self.broker.publish(
-                            "state.changed",
-                            reason,
-                            {
-                                "domains": ["world"],
-                                "keys": sorted(world_state),
-                                "partial": bool(errors),
-                            },
-                        )
+                    self.broker.publish(
+                        "state.changed",
+                        reason,
+                        {
+                            "domains": ["world"],
+                            "keys": sorted(world_state),
+                            "partial": bool(errors),
+                        },
+                    )
                 self._publish_world_query_errors(reason, errors, world_state)
             except Exception as error:
                 self.broker.publish(
@@ -243,23 +241,6 @@ class ReconciliationService:
                 reason,
                 {"errors": errors, "observed_keys": sorted(observed)},
             )
-
-    def _world_changed_materially(
-        self, before: dict[str, Any], observed: dict[str, str]
-    ) -> bool:
-        previous = before.get("world", {})
-        if any(previous.get(key) != value for key, value in observed.items() if key != "daytime"):
-            return True
-        if "daytime" not in observed or "daytime" not in previous:
-            return "daytime" in observed
-        observed_at = before.get("domains", {}).get("world", {}).get("observed_at")
-        if not observed_at:
-            return True
-        elapsed_ticks = max(0, round((self._time_fn() - float(observed_at)) * 20))
-        expected = (int(previous["daytime"]) + elapsed_ticks) % 24000
-        actual = int(observed["daytime"])
-        distance = abs(actual - expected)
-        return min(distance, 24000 - distance) > 20
 
     def refresh_settings_from_properties(self, reason: str = "operation-failure") -> None:
         """Refresh settings from Bedrock's effective configuration without mutation.

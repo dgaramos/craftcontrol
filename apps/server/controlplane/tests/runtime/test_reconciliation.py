@@ -708,7 +708,7 @@ def test_targeted_world_refresh_records_partial_failure(tmp_path: Path) -> None:
     }
 
 
-def test_targeted_world_refresh_skips_sse_for_projected_clock_only(tmp_path: Path) -> None:
+def test_targeted_world_refresh_reanchors_projected_clock_on_every_observation(tmp_path: Path) -> None:
     rec, repo = _make_reconciliation_with_world(tmp_path)
     rec.refresh_world("first")
     first_event_count = len([
@@ -721,4 +721,4 @@ def test_targeted_world_refresh_skips_sse_for_projected_clock_only(tmp_path: Pat
         event for event in repo.events_after(0, 100) if event["topic"] == "state.changed"
     ]
     assert first_event_count == 1
-    assert len(changed_events) == 1
+    assert len(changed_events) == 2

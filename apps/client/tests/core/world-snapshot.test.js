@@ -32,4 +32,22 @@ describe("world snapshot composition", () => {
     expect(projection.weatherUnobserved).toBe(true);
     expect(controller.refreshWorldCells().weatherUnobserved).toBe(true);
   });
+
+  test("does not reanchor retained daytime when a partial observation omitted it", () => {
+    let now = 1_000_000;
+    const controller = createWorldSnapshotController({ clock: createWorldClock(() => now) });
+    controller.showWorld(
+      { world: { daytime: 1000, weather: "clear" }, domains: { world: { observed_at: 1000 } } },
+      { partial: false, keys: ["daytime", "weather"] },
+    );
+    now += 45_000;
+
+    const projection = controller.showWorld(
+      { world: { daytime: 1000, weather: "rain" }, domains: { world: { observed_at: 1045 } } },
+      { partial: true, keys: ["weather"] },
+    );
+
+    expect(projection.daytime).toBe(1900);
+    expect(projection.world.weather).toBe("rain");
+  });
 });

@@ -261,6 +261,7 @@ export function startApplication() {
 
   let _tickTimer = null;
   let _localDaytime = NaN;
+  let _worldObservation = null;
   const worldClock = createWorldClock();
 
   function setWorldCells(field, text) {
@@ -313,10 +314,25 @@ export function startApplication() {
       setWorldCells("ticks", "");
     }
     setWorldIcons("weather", worldPresentation({ weather, daytime: _localDaytime }).weatherIcon);
+    renderWorldObservation();
     _applyWeatherAccent();
   }
 
-  function showWorld(snapshot) {
+  function renderWorldObservation() {
+    const weatherUnobserved = _worldObservation?.partial === true
+      && Array.isArray(_worldObservation.keys)
+      && !_worldObservation.keys.includes("weather");
+    document.querySelectorAll("[data-world-observation]").forEach((node) => {
+      node.hidden = !weatherUnobserved;
+      node.textContent = weatherUnobserved ? t("worldPartialObservation") : "";
+    });
+    document.querySelectorAll('[data-world-cell="weather"]').forEach((node) => {
+      node.dataset.observation = weatherUnobserved ? "partial" : "complete";
+    });
+  }
+
+  function showWorld(snapshot, observation = undefined) {
+    if (observation !== undefined) _worldObservation = observation;
     state.world = snapshot.world || {};
     setWorldCells("day", state.world.day ?? "—");
     const daytime = Number(state.world.daytime);
@@ -334,6 +350,7 @@ export function startApplication() {
     }
     const weather = state.world.weather;
     setWorldCells("weather", weather ? t(weather) : "—");
+    renderWorldObservation();
     setWorldIcons("weather", worldPresentation({ weather, daytime: _localDaytime }).weatherIcon);
     _applyWeatherAccent();
   }
@@ -365,12 +382,12 @@ export function startApplication() {
     refreshIndicatorBars();
   }
 
-  async function loadState() {
+  async function loadState(event = null) {
     const snapshot = await api("/api/state");
     state.batch(() => {
       state.config = snapshot.settings || {};
       state.gamerules = snapshot.gamerules || {};
-      showWorld(snapshot);
+      showWorld(snapshot, event?.payload);
       state.domains = snapshot.domains || {};
       showPlayers(snapshot);
     });
@@ -382,7 +399,7 @@ export function startApplication() {
       state.schema = schema;
       state.config = snapshot.settings || {};
       state.gamerules = snapshot.gamerules || {};
-      showWorld(snapshot);
+      showWorld(snapshot, null);
       state.domains = snapshot.domains || {};
       showPlayers(snapshot);
     });

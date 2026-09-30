@@ -380,10 +380,11 @@ export function startApplication() {
 
   async function loadState(event = null) {
     const snapshot = await api("/api/state");
+    const worldObservation = event?.payload?.domains?.includes("world") ? event.payload : undefined;
     state.batch(() => {
       state.config = snapshot.settings || {};
       state.gamerules = snapshot.gamerules || {};
-      showWorld(snapshot, event?.payload);
+      showWorld(snapshot, worldObservation);
       state.domains = snapshot.domains || {};
       showPlayers(snapshot);
     });
@@ -596,5 +597,5 @@ export function startApplication() {
   // backend boot complete. This keeps Home usable during an API reconnect.
   applyLocale();
   startAuthenticatedApplication({ requireSession, state, boot, toast });
-  return { applyLocale, showWorld };
+  return { applyLocale, loadState, showWorld };
 }

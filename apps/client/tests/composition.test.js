@@ -37,4 +37,21 @@ describe("application world composition", () => {
 
     expect(Number(document.querySelector('[data-world="ticks"]').textContent.replace(/\D/g, ""))).toBe(2800);
   });
+
+  test("an unrelated state change preserves the partial-world notice", async () => {
+    jest.spyOn(Date, "now").mockReturnValue(1_000_000);
+    const app = startApplication();
+    const snapshot = {
+      settings: {}, gamerules: {}, players: [], online: 0, max_players: 10,
+      world: { daytime: 1000, day: 4, weather: "clear" },
+      domains: { world: { observed_at: 1000 } },
+    };
+    app.showWorld(snapshot, { domains: ["world"], partial: true, keys: ["daytime", "day"] });
+    expect(document.querySelector("[data-world-observation]").hidden).toBe(false);
+    globalThis.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => snapshot });
+
+    await app.loadState({ topic: "state.changed", payload: { domains: ["settings"] } });
+
+    expect(document.querySelector("[data-world-observation]").hidden).toBe(false);
+  });
 });

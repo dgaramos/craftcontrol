@@ -630,6 +630,38 @@ def test_targeted_world_refresh_persists_confirmed_state_and_publishes(tmp_path:
     )
 
 
+def test_targeted_world_refresh_drains_deferred_full_refresh(tmp_path: Path) -> None:
+    rec, _repo = _make_reconciliation_with_world(tmp_path)
+    world_entered = threading.Event()
+    release_world = threading.Event()
+    full_refresh_finished = threading.Event()
+    original_world_query = rec.world_service.query_world_state
+    original_refresh = rec.refresh
+
+    def slow_world_query():
+        world_entered.set()
+        assert release_world.wait(timeout=3)
+        return original_world_query()
+
+    def tracked_refresh(reason: str = "manual") -> None:
+        original_refresh(reason)
+        if reason == "safety":
+            full_refresh_finished.set()
+
+    rec.world_service.query_world_state = slow_world_query  # type: ignore[method-assign]
+    rec.refresh = tracked_refresh  # type: ignore[method-assign]
+    worker = threading.Thread(target=rec.refresh_world)
+    worker.start()
+    assert world_entered.wait(timeout=3)
+
+    rec.refresh("safety")
+    release_world.set()
+
+    worker.join(timeout=3)
+    assert full_refresh_finished.wait(timeout=3)
+    assert rec._pending_full_reason is None
+
+
 def test_targeted_world_refresh_preserves_last_state_on_failure(tmp_path: Path) -> None:
     from src.server.world import WorldQueryError
 

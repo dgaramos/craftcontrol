@@ -90,9 +90,11 @@ class ReconciliationService:
     # ------------------------------------------------------------------
 
     def refresh(self, reason: str = "manual") -> None:
-        if not self._refresh_lock.acquire(blocking=False):
-            with self._pending_full_lock:
+        with self._pending_full_lock:
+            acquired = self._refresh_lock.acquire(blocking=False)
+            if not acquired:
                 self._pending_full_reason = reason
+        if not acquired:
             self.broker.publish(
                 "state.reconciliation.deferred", reason, {"scope": "full"}
             )
@@ -149,12 +151,7 @@ class ReconciliationService:
                     if elapsed_ms > float(self._reconciliation_diagnostics["duration_ms_max"]):
                         self._reconciliation_diagnostics["duration_ms_max"] = elapsed_ms
                 self._refreshing = False
-                self._refresh_lock.release()
-                with self._pending_full_lock:
-                    deferred_reason = self._pending_full_reason
-                    self._pending_full_reason = None
-                if deferred_reason is not None:
-                    self.refresh_async(deferred_reason)
+                self._release_refresh_lock()
 
         # Called outside the lock so a slow or synchronous callback cannot
         # block concurrent refresh attempts from being skipped.
@@ -171,7 +168,8 @@ class ReconciliationService:
         """Refresh only Bedrock's naturally changing world observations."""
         if self.world_service is None:
             return
-        with self._refresh_lock:
+        self._refresh_lock.acquire()
+        try:
             try:
                 before = self.repository.snapshot(False)
                 world_state, errors = self.world_service.query_world_state()
@@ -184,6 +182,16 @@ class ReconciliationService:
                 self.broker.publish(
                     "state.world.query.failed", reason, {"error": str(error)[:240]}
                 )
+        finally:
+            self._release_refresh_lock()
+
+    def _release_refresh_lock(self) -> None:
+        with self._pending_full_lock:
+            self._refresh_lock.release()
+            deferred_reason = self._pending_full_reason
+            self._pending_full_reason = None
+        if deferred_reason is not None:
+            self.refresh_async(deferred_reason)
 
     def refresh_world_async(self, reason: str = "world-timer") -> None:
         with self._pending_world_lock:

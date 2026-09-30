@@ -11,6 +11,7 @@ class InlineOrDeferredThread:
     """Deterministic thread fake that defers selected named background jobs."""
 
     deferred_names = {"world-refresh"}
+    pending: list["InlineOrDeferredThread"] = []
 
     def __init__(
         self,
@@ -28,14 +29,26 @@ class InlineOrDeferredThread:
         self.daemon = daemon
 
     def start(self) -> None:
-        if self.name not in self.deferred_names:
-            threading.Thread(
-                target=self.target,
-                args=self.args,
-                kwargs=self.kwargs,
-                name=self.name,
-                daemon=self.daemon,
-            ).start()
+        if self.name in self.deferred_names:
+            self.pending.append(self)
+            return
+        threading.Thread(
+            target=self.target,
+            args=self.args,
+            kwargs=self.kwargs,
+            name=self.name,
+            daemon=self.daemon,
+        ).start()
+
+    @classmethod
+    def run_pending(cls, name: str = "world-refresh") -> None:
+        pending = next(thread for thread in cls.pending if thread.name == name)
+        cls.pending.remove(pending)
+        pending.target(*pending.args, **pending.kwargs)
+
+    @classmethod
+    def clear_pending(cls) -> None:
+        cls.pending.clear()
 
 
 class FakeBedrock:

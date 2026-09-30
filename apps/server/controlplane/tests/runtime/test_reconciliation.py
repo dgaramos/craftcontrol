@@ -7,12 +7,29 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 from conftest import make_manager_service
-from fakes import FakeBedrock
+from fakes import FakeBedrock, InlineOrDeferredThread
 
 
 def _reconciliation(tmp_path: Path, bedrock: FakeBedrock | None = None):
     svc = make_manager_service(tmp_path, bedrock)
     return svc, svc._reconciliation
+
+
+def test_deferred_thread_runs_when_flushed() -> None:
+    calls: list[str] = []
+    thread = InlineOrDeferredThread(
+        target=calls.append,
+        args=("observed",),
+        name="world-refresh",
+    )
+
+    thread.start()
+    assert calls == []
+
+    InlineOrDeferredThread.run_pending()
+
+    assert calls == ["observed"]
+    assert InlineOrDeferredThread.pending == []
 
 
 # ---------------------------------------------------------------------------

@@ -109,6 +109,12 @@ def make_manager_service(
 # Fixtures
 # ---------------------------------------------------------------------------
 
+@pytest.fixture(autouse=True)
+def clear_deferred_threads():
+    InlineOrDeferredThread.clear_pending()
+    yield
+    InlineOrDeferredThread.clear_pending()
+
 @pytest.fixture
 def fake_bedrock() -> FakeBedrock:
     return FakeBedrock()

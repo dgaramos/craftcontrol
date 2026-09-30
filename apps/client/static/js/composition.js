@@ -594,5 +594,4 @@ export function startApplication() {
   // backend boot complete. This keeps Home usable during an API reconnect.
   applyLocale();
   startAuthenticatedApplication({ requireSession, state, boot, toast });
-  return { applyLocale, loadState, showWorld };
 }

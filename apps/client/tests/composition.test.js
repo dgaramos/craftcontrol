@@ -2,7 +2,10 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { jest } from "@jest/globals";
-import { startApplication } from "../static/js/composition.js";
+
+async function settle() {
+  for (let turn = 0; turn < 10; turn += 1) await Promise.resolve();
+}
 
 describe("application world composition", () => {
   beforeEach(() => {
@@ -11,8 +14,6 @@ describe("application world composition", () => {
     window.matchMedia = jest.fn(() => ({ matches: false, addEventListener: jest.fn() }));
     window.scrollTo = jest.fn();
     globalThis.requestAnimationFrame = (callback) => callback();
-    globalThis.fetch = jest.fn(() => new Promise(() => {}));
-    globalThis.EventSource = class {};
     HTMLDialogElement.prototype.close = jest.fn();
     HTMLDialogElement.prototype.showModal = jest.fn();
   });
@@ -22,39 +23,60 @@ describe("application world composition", () => {
     jest.restoreAllMocks();
   });
 
-  test("locale refresh preserves the observed-at projection without reanchoring", () => {
+  test("public locale, SSE, and refresh paths never reanchor unobserved daytime", async () => {
+    jest.unstable_mockModule("../static/js/auth.js?v=8", () => ({
+      requireSession: jest.fn().mockResolvedValue({ name: "Owner", role: "owner", capabilities: ["*"] }),
+      showSessions: jest.fn(),
+      showPasswordChange: jest.fn(),
+    }));
+    const { startApplication } = await import("../static/js/composition.js");
     let now = 1_000_000;
     jest.spyOn(Date, "now").mockImplementation(() => now);
-    const app = startApplication();
-    app.showWorld({
-      world: { daytime: 1000, day: 4, weather: "clear" },
-      domains: { world: { observed_at: 955 } },
-    }, { partial: false, keys: ["daytime", "day", "weather"] });
-    expect(Number(document.querySelector('[data-world="ticks"]').textContent.replace(/\D/g, ""))).toBe(1900);
-
-    now += 45_000;
-    app.applyLocale();
-
-    expect(Number(document.querySelector('[data-world="ticks"]').textContent.replace(/\D/g, ""))).toBe(2800);
-  });
-
-  test("an unrelated state change preserves the partial-world notice", async () => {
-    let now = 1_000_000;
-    jest.spyOn(Date, "now").mockImplementation(() => now);
-    const app = startApplication();
     const snapshot = {
       settings: {}, gamerules: {}, players: [], online: 0, max_players: 10,
       world: { daytime: 1000, day: 4, weather: "clear" },
       domains: { world: { observed_at: 955 } },
     };
-    app.showWorld(snapshot, { domains: ["world"], partial: true, keys: ["daytime", "day"] });
-    expect(document.querySelector("[data-world-observation]").hidden).toBe(false);
+    globalThis.fetch = jest.fn(async (url) => {
+      const payloads = {
+        "/api/schema": { settings: {}, gamerules: {} },
+        "/api/state": snapshot,
+        "/api/status": { online: true },
+        "/api/telemetry-pack": {},
+        "/api/operations/latest": { operation: null },
+        "/version.json": { service: "frontend", version: "test" },
+        "/api/refresh": {},
+      };
+      return { ok: true, status: 200, json: async () => payloads[url] || {} };
+    });
+    const streams = [];
+    globalThis.EventSource = class {
+      constructor(url) { this.url = url; this.listeners = {}; streams.push(this); }
+      addEventListener(name, listener) { this.listeners[name] = listener; }
+      emit(name, data) { this.listeners[name]?.({ data: JSON.stringify(data) }); }
+    };
+
+    startApplication();
+    await settle();
+    expect(Number(document.querySelector('[data-world="ticks"]').textContent.replace(/\D/g, ""))).toBe(1900);
+
     now += 45_000;
-    globalThis.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => snapshot });
+    document.querySelector('[data-locale="en"]').click();
+    expect(Number(document.querySelector('[data-world="ticks"]').textContent.replace(/\D/g, ""))).toBe(2800);
 
-    await app.loadState({ topic: "state.changed", payload: { domains: ["settings"] } });
-
+    const stateStream = streams.find((stream) => stream.url === "/api/events");
+    stateStream.emit("state", { topic: "state.changed", payload: { domains: ["world"], partial: true, keys: ["daytime", "day"] } });
+    await jest.advanceTimersByTimeAsync(300);
     expect(document.querySelector("[data-world-observation]").hidden).toBe(false);
+
+    stateStream.emit("state", { topic: "state.changed", payload: { domains: ["settings"], keys: ["SERVER_NAME"] } });
+    await jest.advanceTimersByTimeAsync(300);
+    expect(document.querySelector("[data-world-observation]").hidden).toBe(false);
+    expect(Number(document.querySelector('[data-world="ticks"]').textContent.replace(/\D/g, ""))).toBe(2800);
+
+    document.querySelector("#refresh").click();
+    await settle();
+    await jest.advanceTimersByTimeAsync(1800);
     expect(Number(document.querySelector('[data-world="ticks"]').textContent.replace(/\D/g, ""))).toBe(2800);
   });
 });

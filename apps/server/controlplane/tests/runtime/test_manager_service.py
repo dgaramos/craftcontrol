@@ -10,7 +10,7 @@ from src.server.files import ServerFiles
 from src.runtime import ManagerService
 from conftest import make_manager_service as _make_service
 from factories import telemetry_envelope
-from fakes import FakeBedrock, FakeDocker, FakeRuntime
+from fakes import FakeBedrock, FakeDocker, FakeRuntime, InlineOrDeferredThread
 
 
 # ---------------------------------------------------------------------------
@@ -424,6 +424,14 @@ def test_set_time_at_boundary_is_valid(manager_service: ManagerService, fake_bed
     manager_service.time_action("set", {"value": 24000})
     assert fake_bedrock.commands[-1] == ["time", "set", "24000"]
 
+    InlineOrDeferredThread.run_pending()
+
+    assert manager_service.state()["world"] == {
+        "daytime": "34", "day": "34", "weather": "clear",
+    }
+    assert InlineOrDeferredThread.pending == []
+    assert not manager_service._reconciliation._world_worker_running
+
 
 def test_weather_action_with_duration(manager_service: ManagerService, fake_bedrock: FakeBedrock) -> None:
     manager_service._reconciliation.refresh_world_async = MagicMock()
@@ -436,6 +444,12 @@ def test_weather_action_with_duration(manager_service: ManagerService, fake_bedr
 def test_weather_action_without_duration(manager_service: ManagerService, fake_bedrock: FakeBedrock) -> None:
     manager_service.time_action("weather", {"value": "clear"})
     assert fake_bedrock.commands[-1] == ["weather", "clear"]
+
+    InlineOrDeferredThread.run_pending()
+
+    assert manager_service.state()["world"]["weather"] == "clear"
+    assert InlineOrDeferredThread.pending == []
+    assert not manager_service._reconciliation._world_worker_running
 
 
 def test_weather_duration_out_of_range_raises(manager_service: ManagerService) -> None:

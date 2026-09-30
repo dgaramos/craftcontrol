@@ -128,7 +128,15 @@ class ReconciliationService:
                     world_state, errors = self.world_service.query_world_state()
                     if world_state:
                         self.repository.store("world", world_state, "bedrock-console")
-                        self.broker.publish("state.changed", reason, {"domains": ["world"]})
+                        self.broker.publish(
+                            "state.changed",
+                            reason,
+                            {
+                                "domains": ["world"],
+                                "keys": sorted(world_state),
+                                "partial": bool(errors),
+                            },
+                        )
                     self._publish_world_query_errors(reason, errors, world_state)
                 except Exception as world_error:
                     self.broker.publish("state.world.query.failed", reason, {"error": str(world_error)[:240]})
@@ -176,7 +184,15 @@ class ReconciliationService:
                 if world_state:
                     self.repository.store("world", world_state, "bedrock-console")
                     if self._world_changed_materially(before, world_state):
-                        self.broker.publish("state.changed", reason, {"domains": ["world"]})
+                        self.broker.publish(
+                            "state.changed",
+                            reason,
+                            {
+                                "domains": ["world"],
+                                "keys": sorted(world_state),
+                                "partial": bool(errors),
+                            },
+                        )
                 self._publish_world_query_errors(reason, errors, world_state)
             except Exception as error:
                 self.broker.publish(

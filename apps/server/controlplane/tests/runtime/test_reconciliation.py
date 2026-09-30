@@ -625,7 +625,11 @@ def test_targeted_world_refresh_persists_confirmed_state_and_publishes(tmp_path:
     assert any(
         event["topic"] == "state.changed"
         and event["source"] == "world-timer"
-        and event["payload"] == {"domains": ["world"]}
+        and event["payload"] == {
+            "domains": ["world"],
+            "keys": ["day", "daytime", "weather"],
+            "partial": False,
+        }
         for event in events
     )
 
@@ -692,6 +696,12 @@ def test_targeted_world_refresh_records_partial_failure(tmp_path: Path) -> None:
 
     events = repo.events_after(0, 100)
     failure = next(event for event in events if event["topic"] == "state.world.query.failed")
+    changed = next(event for event in events if event["topic"] == "state.changed")
+    assert changed["payload"] == {
+        "domains": ["world"],
+        "keys": ["day", "daytime"],
+        "partial": True,
+    }
     assert failure["payload"] == {
         "errors": ["unrecognised weather response"],
         "observed_keys": ["day", "daytime"],

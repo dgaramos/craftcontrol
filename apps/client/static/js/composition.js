@@ -320,7 +320,11 @@ export function startApplication() {
     const daytime = Number(state.world.daytime);
     if (_tickTimer) { clearInterval(_tickTimer); _tickTimer = null; }
     if (Number.isFinite(daytime)) {
-      _localDaytime = daytime;
+      const observedAt = Number(snapshot.domains?.world?.observed_at);
+      const ageTicks = Number.isFinite(observedAt)
+        ? Math.max(0, Math.round((Date.now() / 1000 - observedAt) * 20))
+        : 0;
+      _localDaytime = (daytime + ageTicks) % 24000;
       _updateTickDisplay();
       _tickTimer = setInterval(_updateTickDisplay, 100);
     } else {

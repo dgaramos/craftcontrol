@@ -212,6 +212,12 @@ describe("feature contracts — pending changes and operation indicators", () =>
     expect(composition).not.toMatch(/\$\("#world-(time|weather)-icon"\)\.setAttribute/);
   });
 
+  test("the world clock compensates for observation age before projecting", () => {
+    const composition = readFileSync(join(JS, "composition.js"), "utf8");
+    expect(composition).toContain("snapshot.domains?.world?.observed_at");
+    expect(composition).toContain("(Date.now() / 1000 - observedAt) * 20");
+  });
+
   /* The rule itself is unit-tested in core/panel-state; this only pins that the
      composition root defers to it instead of re-deciding inline. */
   test("indicator visibility is decided by the tested rule, not inline", () => {

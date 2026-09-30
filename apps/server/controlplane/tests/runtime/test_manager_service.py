@@ -20,12 +20,12 @@ from fakes import FakeBedrock, FakeDocker, FakeRuntime
 def test_supports_every_named_time_preset(manager_service: ManagerService, fake_bedrock: FakeBedrock) -> None:
     for preset in ManagerService.TIME_PRESETS:
         manager_service.time_action("preset", {"value": preset})
-        assert ["time", "set", preset] in fake_bedrock.commands
+        assert fake_bedrock.commands[-1] == ["time", "set", preset]
 
 
 def test_reset_days_sets_time_to_zero(manager_service: ManagerService, fake_bedrock: FakeBedrock) -> None:
     manager_service.time_action("reset-days", {})
-    assert ["time", "set", "0"] in fake_bedrock.commands
+    assert fake_bedrock.commands[-1] == ["time", "set", "0"]
 
 
 def test_rejects_exact_time_outside_one_day(manager_service: ManagerService) -> None:
@@ -263,7 +263,7 @@ def test_refresh_error_publishes_failed_event_and_reraises(manager_service: Mana
     assert "state.reconciliation.failed" in events
 
 
-def test_concurrent_refresh_is_skipped(manager_service: ManagerService, fake_bedrock: FakeBedrock) -> None:
+def test_concurrent_refresh_is_deferred(manager_service: ManagerService, fake_bedrock: FakeBedrock) -> None:
     entered = threading.Event()
     release = threading.Event()
     original_query = fake_bedrock.query_state
@@ -283,7 +283,14 @@ def test_concurrent_refresh_is_skipped(manager_service: ManagerService, fake_bed
     manager_service.refresh("concurrent")
     release.set()
     t.join(timeout=3)
-    assert call_count == 1
+    deadline = time.time() + 3
+    while call_count < 2 and time.time() < deadline:
+        time.sleep(0.01)
+    assert call_count == 2
+    assert any(
+        event["topic"] == "state.reconciliation.deferred"
+        for event in manager_service.repository.events_after(0, 100)
+    )
 
 
 def test_public_state_hides_known_players_and_bootstrap(manager_service: ManagerService, fake_bedrock: FakeBedrock) -> None:
@@ -415,7 +422,7 @@ def test_add_time_out_of_range_raises(manager_service: ManagerService) -> None:
 
 def test_set_time_at_boundary_is_valid(manager_service: ManagerService, fake_bedrock: FakeBedrock) -> None:
     manager_service.time_action("set", {"value": 24000})
-    assert ["time", "set", "24000"] in fake_bedrock.commands
+    assert fake_bedrock.commands[-1] == ["time", "set", "24000"]
 
 
 def test_weather_action_with_duration(manager_service: ManagerService, fake_bedrock: FakeBedrock) -> None:
@@ -428,7 +435,7 @@ def test_weather_action_with_duration(manager_service: ManagerService, fake_bedr
 
 def test_weather_action_without_duration(manager_service: ManagerService, fake_bedrock: FakeBedrock) -> None:
     manager_service.time_action("weather", {"value": "clear"})
-    assert ["weather", "clear"] in fake_bedrock.commands
+    assert fake_bedrock.commands[-1] == ["weather", "clear"]
 
 
 def test_weather_duration_out_of_range_raises(manager_service: ManagerService) -> None:

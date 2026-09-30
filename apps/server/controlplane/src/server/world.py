@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import re
+import time
+from collections.abc import Callable
 from types import MappingProxyType
 from typing import Any
 
@@ -76,10 +78,17 @@ class WorldService:
                 return state
         return None
 
-    def __init__(self, bedrock: ServerConsole, broker: EventPublisher, state_store: StateStore | None = None) -> None:
+    def __init__(
+        self,
+        bedrock: ServerConsole,
+        broker: EventPublisher,
+        state_store: StateStore | None = None,
+        time_fn: Callable[[], float] = time.time,
+    ) -> None:
         self.bedrock = bedrock
         self.broker = broker
         self.state_store = state_store
+        self._time_fn = time_fn
 
     def _observe_world(self, values: dict[str, str], action: str, domains: list[str] | None = None) -> None:
         """Persist only values confirmed by a console response or mutation."""
@@ -87,7 +96,7 @@ class WorldService:
             self.state_store.store("world", values, "manager")
         self.broker.publish("state.changed", "manager", {"domains": domains or ["world"], "action": action})
 
-    def query_world_state(self) -> dict[str, str]:
+    def query_world_state(self) -> tuple[dict[str, str], list[str]]:
         """Query current time and weather from the Bedrock console.
 
         Partial failures (individual queries) are tolerated — the successfully
@@ -96,12 +105,17 @@ class WorldService:
         """
         result: dict[str, str] = {}
         errors: list[Exception] = []
+        daytime_observed_at: float | None = None
         for query in ("daytime", "day"):
             try:
                 output = self.bedrock.send_and_read(["time", "query", query])
                 value = self._read_time_response(output, query)
                 if value is not None:
                     result[query] = value
+                    if query == "daytime":
+                        daytime_observed_at = self._time_fn()
+                else:
+                    errors.append(RuntimeError(f"unrecognised {query} response"))
             except Exception as exc:
                 errors.append(exc)
         try:
@@ -109,11 +123,16 @@ class WorldService:
             weather = self._read_weather_response(output)
             if weather:
                 result["weather"] = weather
+            else:
+                errors.append(RuntimeError("unrecognised weather response"))
         except Exception as exc:
             errors.append(exc)
         if errors and not result:
             raise WorldQueryError(errors) from errors[0]
-        return result
+        if daytime_observed_at is not None and "daytime" in result:
+            age_ticks = max(0, round((self._time_fn() - daytime_observed_at) * 20))
+            result["daytime"] = str((int(result["daytime"]) + age_ticks) % 24000)
+        return result, [str(error)[:240] for error in errors]
 
     def run_world_action(self, action: str) -> None:
         if action not in self.WORLD_ACTIONS:

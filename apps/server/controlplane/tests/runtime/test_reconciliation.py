@@ -648,3 +648,35 @@ def test_targeted_world_refresh_preserves_last_state_on_failure(tmp_path: Path) 
         and event["source"] == "world-timer"
         for event in events
     )
+
+
+def test_targeted_world_refresh_records_partial_failure(tmp_path: Path) -> None:
+    rec, repo = _make_reconciliation_with_world(tmp_path)
+    rec.world_service.query_world_state = MagicMock(  # type: ignore[method-assign]
+        return_value=({"daytime": "34", "day": "34"}, ["unrecognised weather response"])
+    )
+
+    rec.refresh_world("world-timer")
+
+    events = repo.events_after(0, 100)
+    failure = next(event for event in events if event["topic"] == "state.world.query.failed")
+    assert failure["payload"] == {
+        "errors": ["unrecognised weather response"],
+        "observed_keys": ["day", "daytime"],
+    }
+
+
+def test_targeted_world_refresh_skips_sse_for_projected_clock_only(tmp_path: Path) -> None:
+    rec, repo = _make_reconciliation_with_world(tmp_path)
+    rec.refresh_world("first")
+    first_event_count = len([
+        event for event in repo.events_after(0, 100) if event["topic"] == "state.changed"
+    ])
+
+    rec.refresh_world("world-timer")
+
+    changed_events = [
+        event for event in repo.events_after(0, 100) if event["topic"] == "state.changed"
+    ]
+    assert first_event_count == 1
+    assert len(changed_events) == 1

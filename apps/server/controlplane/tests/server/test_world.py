@@ -69,13 +69,14 @@ def test_query_world_state_returns_daytime_day_and_weather() -> None:
     })
     svc = _make_world(bedrock)
 
-    result = svc.query_world_state()
+    result, errors = svc.query_world_state()
 
     # The telemetry line carries a millisecond epoch and the word "rain"; the
     # values must come from the lines that answer the commands.
     assert result["daytime"] == "6000"
     assert result["day"] == "2403"
     assert result["weather"] == "clear"
+    assert errors == []
 
 
 def test_query_world_state_reads_thunder_from_the_weather_response() -> None:
@@ -86,9 +87,10 @@ def test_query_world_state_reads_thunder_from_the_weather_response() -> None:
     })
     svc = _make_world(bedrock)
 
-    result = svc.query_world_state()
+    result, errors = svc.query_world_state()
 
     assert result["weather"] == "thunder"
+    assert errors == []
 
 
 def test_query_world_state_survives_bedrock_error_on_daytime() -> None:
@@ -101,11 +103,12 @@ def test_query_world_state_survives_bedrock_error_on_daytime() -> None:
     )
     svc = _make_world(bedrock)
 
-    result = svc.query_world_state()
+    result, errors = svc.query_world_state()
 
     assert "daytime" not in result
     assert result["day"] == "2403"
     assert result["weather"] == "clear"
+    assert len(errors) == 1
 
 
 def test_query_world_state_survives_bedrock_error_on_weather() -> None:
@@ -118,10 +121,11 @@ def test_query_world_state_survives_bedrock_error_on_weather() -> None:
     )
     svc = _make_world(bedrock)
 
-    result = svc.query_world_state()
+    result, errors = svc.query_world_state()
 
     assert result["daytime"] == "6000"
     assert "weather" not in result
+    assert len(errors) == 1
 
 
 def test_query_world_state_raises_when_all_queries_fail() -> None:
@@ -140,7 +144,7 @@ def test_query_world_state_raises_when_all_queries_fail() -> None:
     assert len(exc_info.value.causes) == 3
 
 
-def test_query_world_state_returns_empty_on_unrecognised_output() -> None:
+def test_query_world_state_raises_on_entirely_unrecognised_output() -> None:
     bedrock = _FakeBedrock(responses={
         ("time", "query", "daytime"): "no numbers here",
         ("time", "query", "day"): "still nothing",
@@ -148,9 +152,9 @@ def test_query_world_state_returns_empty_on_unrecognised_output() -> None:
     })
     svc = _make_world(bedrock)
 
-    result = svc.query_world_state()
-
-    assert result == {}
+    with pytest.raises(WorldQueryError) as exc_info:
+        svc.query_world_state()
+    assert len(exc_info.value.causes) == 3
 
 
 def test_query_world_state_ignores_numbers_outside_the_response() -> None:
@@ -162,11 +166,12 @@ def test_query_world_state_ignores_numbers_outside_the_response() -> None:
     })
     svc = _make_world(bedrock)
 
-    result = svc.query_world_state()
+    result, errors = svc.query_world_state()
 
     assert result["daytime"] == "6000"
     assert result["day"] == "2403"
     assert result["weather"] == "clear"
+    assert errors == []
 
 
 def test_query_world_state_reports_nothing_when_only_scripting_output_matches() -> None:
@@ -178,7 +183,8 @@ def test_query_world_state_reports_nothing_when_only_scripting_output_matches() 
     })
     svc = _make_world(bedrock)
 
-    assert svc.query_world_state() == {}
+    with pytest.raises(WorldQueryError):
+        svc.query_world_state()
 
 
 # ---------------------------------------------------------------------------

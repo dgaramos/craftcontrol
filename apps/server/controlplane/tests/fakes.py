@@ -2,6 +2,40 @@
 from __future__ import annotations
 
 import json
+import threading
+from collections.abc import Callable
+from typing import Any
+
+
+class InlineOrDeferredThread:
+    """Deterministic thread fake that defers selected named background jobs."""
+
+    deferred_names = {"world-refresh"}
+
+    def __init__(
+        self,
+        *,
+        target: Callable[..., Any],
+        args: tuple[Any, ...] = (),
+        kwargs: dict[str, Any] | None = None,
+        name: str | None = None,
+        daemon: bool | None = None,
+    ) -> None:
+        self.target = target
+        self.args = args
+        self.kwargs = kwargs or {}
+        self.name = name
+        self.daemon = daemon
+
+    def start(self) -> None:
+        if self.name not in self.deferred_names:
+            threading.Thread(
+                target=self.target,
+                args=self.args,
+                kwargs=self.kwargs,
+                name=self.name,
+                daemon=self.daemon,
+            ).start()
 
 
 class FakeBedrock:

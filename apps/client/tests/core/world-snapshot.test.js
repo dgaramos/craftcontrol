@@ -9,7 +9,7 @@ describe("world snapshot composition", () => {
     expect(controller.showWorld({
       world: { daytime: 1000, weather: "clear" },
       domains: { world: { observed_at: 955 } },
-    }).daytime).toBe(1900);
+    }, null).daytime).toBe(1900);
 
     now += 45_000;
     expect(controller.refreshWorldCells().daytime).toBe(2800);
@@ -17,7 +17,7 @@ describe("world snapshot composition", () => {
     expect(controller.showWorld({
       world: { daytime: 5000, weather: "rain" },
       domains: { world: { observed_at: 1045 } },
-    }).daytime).toBe(5000);
+    }, { keys: ["daytime", "weather"] }).daytime).toBe(5000);
   });
 
   test("retains weather while marking an incomplete observation", () => {
@@ -49,5 +49,21 @@ describe("world snapshot composition", () => {
 
     expect(projection.daytime).toBe(1900);
     expect(projection.world.weather).toBe("rain");
+  });
+
+  test("does not reanchor when a snapshot has no world observation evidence", () => {
+    let now = 1_000_000;
+    const controller = createWorldSnapshotController({ clock: createWorldClock(() => now) });
+    controller.showWorld(
+      { world: { daytime: 1000 }, domains: { world: { observed_at: 1000 } } },
+      null,
+    );
+    now += 45_000;
+
+    const projection = controller.showWorld(
+      { world: { daytime: 1000 }, domains: { world: { observed_at: 1045 } } },
+    );
+
+    expect(projection.daytime).toBe(1900);
   });
 });

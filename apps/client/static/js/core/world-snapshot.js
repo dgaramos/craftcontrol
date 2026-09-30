@@ -17,9 +17,10 @@ export function createWorldSnapshotController({ clock }) {
       world = snapshot.world || {};
       if (nextObservation !== undefined) observation = nextObservation;
       const daytime = Number(world.daytime);
-      const observedDaytime = nextObservation == null
-        || !Array.isArray(nextObservation.keys)
-        || nextObservation.keys.includes("daytime");
+      const observedDaytime = nextObservation === null
+        || (nextObservation !== undefined && (
+          !Array.isArray(nextObservation.keys) || nextObservation.keys.includes("daytime")
+        ));
       if (Number.isFinite(daytime) && observedDaytime) {
         clock.anchor(daytime, Number(snapshot.domains?.world?.observed_at));
       } else if (!Number.isFinite(daytime)) {

@@ -5,6 +5,7 @@ import { requireSession, showSessions, showPasswordChange } from "./auth.js?v=8"
 import { state } from "./core/state.js?v=8";
 import { createNavTrail } from "./core/route.js?v=8";
 import { indicatorState, worldPresentation } from "./core/panel-state.js?v=1";
+import { createWorldClock } from "./core/world-clock.js?v=1";
 import { $, escapeHtml } from "./core/dom.js?v=7";
 import { connectInvalidation } from "./core/invalidation.js?v=7";
 import { createNavigation } from "./core/navigation.js?v=11";
@@ -260,8 +261,7 @@ export function startApplication() {
 
   let _tickTimer = null;
   let _localDaytime = NaN;
-  let _worldAnchorDaytime = NaN;
-  let _worldAnchorAt = NaN;
+  const worldClock = createWorldClock();
 
   function setWorldCells(field, text) {
     if (typeof document === "undefined") return;
@@ -274,7 +274,7 @@ export function startApplication() {
   }
 
   function _updateTickDisplay() {
-    _localDaytime = (_worldAnchorDaytime + Math.max(0, Date.now() - _worldAnchorAt) / 50) % 24000;
+    _localDaytime = worldClock.current();
     setWorldCells("ticks", Math.round(_localDaytime).toLocaleString(localeTag()));
     {
       const minutes = Math.round(((_localDaytime + 6000) % 24000) / 1000 * 60);
@@ -323,17 +323,12 @@ export function startApplication() {
     if (_tickTimer) { clearInterval(_tickTimer); _tickTimer = null; }
     if (Number.isFinite(daytime)) {
       const observedAt = Number(snapshot.domains?.world?.observed_at);
-      const ageTicks = Number.isFinite(observedAt)
-        ? Math.max(0, Math.round((Date.now() / 1000 - observedAt) * 20))
-        : 0;
-      _worldAnchorDaytime = (daytime + ageTicks) % 24000;
-      _worldAnchorAt = Date.now();
+      worldClock.anchor(daytime, observedAt);
       _updateTickDisplay();
       _tickTimer = setInterval(_updateTickDisplay, 100);
     } else {
       _localDaytime = NaN;
-      _worldAnchorDaytime = NaN;
-      _worldAnchorAt = NaN;
+      worldClock.clear();
       setWorldCells("time", "—");
       setWorldCells("ticks", "");
     }

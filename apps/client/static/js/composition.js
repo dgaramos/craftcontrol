@@ -326,9 +326,6 @@ export function startApplication() {
       node.hidden = !weatherUnobserved;
       node.textContent = weatherUnobserved ? t("worldPartialObservation") : "";
     });
-    document.querySelectorAll('[data-world-cell="weather"]').forEach((node) => {
-      node.dataset.observation = weatherUnobserved ? "partial" : "complete";
-    });
   }
 
   function showWorld(snapshot, observation = undefined) {

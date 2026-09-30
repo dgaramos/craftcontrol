@@ -135,6 +135,9 @@ class ManagerService:
     def refresh_async(self, reason: str = "manual") -> None:
         self._reconciliation.refresh_async(reason)
 
+    def refresh_world_async(self, reason: str = "manual") -> None:
+        self._reconciliation.refresh_world_async(reason)
+
     def refresh_gamerules_async(self, rules: set[str]) -> None:
         self._reconciliation.refresh_gamerules_async(rules)
 
@@ -182,6 +185,7 @@ class ManagerService:
             self._audit(actor=actor, action="world.action", target=None, result="failure")
             raise
         self._audit(actor=actor, action="world.action", target=action, result="success")
+        self.refresh_world_async(reason="world.action")
 
     def time_action(self, action: str, payload: Any, actor: str | None = None) -> dict[str, Any]:
         try:
@@ -190,6 +194,8 @@ class ManagerService:
             self._audit(actor=actor, action="world.time.action", target=None, result="failure")
             raise
         self._audit(actor=actor, action="world.time.action", target=action, result="success")
+        if action not in {"query", "weather-query"}:
+            self.refresh_world_async(reason="world.time.action")
         return result
 
     # ------------------------------------------------------------------

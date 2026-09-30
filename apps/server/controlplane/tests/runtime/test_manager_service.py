@@ -4,6 +4,7 @@ import time
 from pathlib import Path
 
 import pytest
+from unittest.mock import MagicMock
 
 from src.server.files import ServerFiles
 from src.runtime import ManagerService
@@ -19,12 +20,12 @@ from fakes import FakeBedrock, FakeDocker, FakeRuntime
 def test_supports_every_named_time_preset(manager_service: ManagerService, fake_bedrock: FakeBedrock) -> None:
     for preset in ManagerService.TIME_PRESETS:
         manager_service.time_action("preset", {"value": preset})
-        assert fake_bedrock.commands[-1] == ["time", "set", preset]
+        assert ["time", "set", preset] in fake_bedrock.commands
 
 
 def test_reset_days_sets_time_to_zero(manager_service: ManagerService, fake_bedrock: FakeBedrock) -> None:
     manager_service.time_action("reset-days", {})
-    assert fake_bedrock.commands[-1] == ["time", "set", "0"]
+    assert ["time", "set", "0"] in fake_bedrock.commands
 
 
 def test_rejects_exact_time_outside_one_day(manager_service: ManagerService) -> None:
@@ -384,8 +385,10 @@ def test_set_unknown_gamerule_raises_key_error(manager_service: ManagerService) 
 # ---------------------------------------------------------------------------
 
 def test_run_valid_world_action_sends_command(manager_service: ManagerService, fake_bedrock: FakeBedrock) -> None:
+    manager_service._reconciliation.refresh_world_async = MagicMock()
     manager_service.run_world_action("day")
     assert fake_bedrock.commands[-1] == ["time", "set", "day"]
+    manager_service._reconciliation.refresh_world_async.assert_called_once_with("world.action")
 
 
 def test_run_invalid_world_action_raises_key_error(manager_service: ManagerService) -> None:
@@ -398,9 +401,11 @@ def test_run_invalid_world_action_raises_key_error(manager_service: ManagerServi
 # ---------------------------------------------------------------------------
 
 def test_add_time_valid(manager_service: ManagerService, fake_bedrock: FakeBedrock) -> None:
+    manager_service._reconciliation.refresh_world_async = MagicMock()
     result = manager_service.time_action("add", {"value": 100})
     assert result["action"] == "add"
     assert fake_bedrock.commands[-1] == ["time", "add", "100"]
+    manager_service._reconciliation.refresh_world_async.assert_called_once_with("world.time.action")
 
 
 def test_add_time_out_of_range_raises(manager_service: ManagerService) -> None:
@@ -410,18 +415,20 @@ def test_add_time_out_of_range_raises(manager_service: ManagerService) -> None:
 
 def test_set_time_at_boundary_is_valid(manager_service: ManagerService, fake_bedrock: FakeBedrock) -> None:
     manager_service.time_action("set", {"value": 24000})
-    assert fake_bedrock.commands[-1] == ["time", "set", "24000"]
+    assert ["time", "set", "24000"] in fake_bedrock.commands
 
 
 def test_weather_action_with_duration(manager_service: ManagerService, fake_bedrock: FakeBedrock) -> None:
+    manager_service._reconciliation.refresh_world_async = MagicMock()
     result = manager_service.time_action("weather", {"value": "rain", "duration": "500"})
     assert result["value"] == "rain"
     assert fake_bedrock.commands[-1] == ["weather", "rain", "500"]
+    manager_service._reconciliation.refresh_world_async.assert_called_once_with("world.time.action")
 
 
 def test_weather_action_without_duration(manager_service: ManagerService, fake_bedrock: FakeBedrock) -> None:
     manager_service.time_action("weather", {"value": "clear"})
-    assert fake_bedrock.commands[-1] == ["weather", "clear"]
+    assert ["weather", "clear"] in fake_bedrock.commands
 
 
 def test_weather_duration_out_of_range_raises(manager_service: ManagerService) -> None:
@@ -641,6 +648,7 @@ class _FakeReconciliation:
 
     def __init__(self) -> None:
         self.gamerules_calls: list[set] = []
+        self.world_calls: list[str] = []
 
     def refresh_gamerules_async(self, rules: set) -> None:  # noqa: D401
         self.gamerules_calls.append(rules)
@@ -651,6 +659,9 @@ class _FakeReconciliation:
 
     def refresh_async(self, reason: str = "manual") -> None:  # noqa: D401
         pass
+
+    def refresh_world_async(self, reason: str = "manual") -> None:  # noqa: D401
+        self.world_calls.append(reason)
 
     def request_telemetry_snapshot_async(self, reason: str) -> None:  # noqa: D401
         pass

@@ -157,7 +157,6 @@ class WorldService:
                     raise ValueError("valor fora do intervalo")
                 parts.append(str(ticks))
             self.bedrock.send(parts)
-            self._observe_world({"weather": weather}, action, ["weather", "world"])
             return {"action": action, "value": weather, "duration": duration}
         if action == "weather-query":
             output = self.bedrock.send_and_read(["weather", "query"])

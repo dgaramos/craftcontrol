@@ -157,13 +157,13 @@ describe("feature contracts — pending changes and operation indicators", () =>
     expect(css).toMatch(/^\[hidden\]\s*\{[^}]*display:\s*none\s*!important/m);
   });
 
-  /* T12: the world clock and weather drift with no event to announce them, so
-     Home polls slowly — and only while Home is on screen. */
-  test("home polls every 45s and cancels itself off the Home tab", () => {
+  /* World drift is reconciled by the backend and delivered through SSE. A
+     browser poll would reload an older persisted snapshot and rewind time. */
+  test("world state relies on SSE instead of browser polling", () => {
     const composition = readFileSync(join(JS, "composition.js"), "utf8");
-    expect(composition).toContain("HOME_POLL_MS = 45000");
-    expect(composition).toContain('if (state.tab !== "home") return;');
-    expect(composition).toContain("stopHomePolling");
+    expect(composition).not.toContain("HOME_POLL_MS");
+    expect(composition).not.toContain("startHomePolling");
+    expect(composition).toContain("connectInvalidation");
   });
 
   /* The back affordance must survive an async render: analytics and audit set

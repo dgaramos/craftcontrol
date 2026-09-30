@@ -151,6 +151,26 @@ class ReconciliationService:
     def refresh_async(self, reason: str = "manual") -> None:
         self._thread_factory(target=self.refresh, args=(reason,), name="state-refresh", daemon=True).start()
 
+    def refresh_world(self, reason: str = "world-timer") -> None:
+        """Refresh only Bedrock's naturally changing world observations."""
+        if self.world_service is None:
+            return
+        with self._refresh_lock:
+            try:
+                world_state = self.world_service.query_world_state()
+                if world_state:
+                    self.repository.store("world", world_state, "bedrock-console")
+                    self.broker.publish("state.changed", reason, {"domains": ["world"]})
+            except Exception as error:
+                self.broker.publish(
+                    "state.world.query.failed", reason, {"error": str(error)[:240]}
+                )
+
+    def refresh_world_async(self, reason: str = "world-timer") -> None:
+        self._thread_factory(
+            target=self.refresh_world, args=(reason,), name="world-refresh", daemon=True
+        ).start()
+
     def refresh_settings_from_properties(self, reason: str = "operation-failure") -> None:
         """Refresh settings from Bedrock's effective configuration without mutation.
 

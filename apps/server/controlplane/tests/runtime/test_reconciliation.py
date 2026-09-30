@@ -4,6 +4,7 @@ from __future__ import annotations
 import threading
 import time
 from pathlib import Path
+from unittest.mock import MagicMock
 
 from conftest import make_manager_service
 from fakes import FakeBedrock
@@ -610,3 +611,40 @@ def test_refresh_world_query_error_publishes_event_and_continues(tmp_path: Path)
     rec.refresh("test")  # must not raise
 
     assert "state.world.query.failed" in events
+
+
+def test_targeted_world_refresh_persists_confirmed_state_and_publishes(tmp_path: Path) -> None:
+    rec, repo = _make_reconciliation_with_world(tmp_path)
+
+    rec.refresh_world("world-timer")
+
+    assert repo.snapshot(False)["world"] == {
+        "daytime": "34", "day": "34", "weather": "clear",
+    }
+    events = repo.events_after(0, 100)
+    assert any(
+        event["topic"] == "state.changed"
+        and event["source"] == "world-timer"
+        and event["payload"] == {"domains": ["world"]}
+        for event in events
+    )
+
+
+def test_targeted_world_refresh_preserves_last_state_on_failure(tmp_path: Path) -> None:
+    from src.server.world import WorldQueryError
+
+    rec, repo = _make_reconciliation_with_world(tmp_path)
+    repo.store("world", {"daytime": "1200", "weather": "rain"}, "test")
+    rec.world_service.query_world_state = MagicMock(  # type: ignore[method-assign]
+        side_effect=WorldQueryError([RuntimeError("offline")])
+    )
+
+    rec.refresh_world("world-timer")
+
+    assert repo.snapshot(False)["world"] == {"daytime": "1200", "weather": "rain"}
+    events = repo.events_after(0, 100)
+    assert any(
+        event["topic"] == "state.world.query.failed"
+        and event["source"] == "world-timer"
+        for event in events
+    )

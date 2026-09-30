@@ -361,25 +361,6 @@ export function startApplication() {
     refreshIndicatorBars();
   }
 
-  /* SSE covers changes the server announces, but the world clock and weather
-     drift on their own with no event to carry them. A slow poll keeps the Home
-     cells honest, and only while Home is on screen — every other tab cancels
-     it, so a backgrounded screen costs nothing. */
-  const HOME_POLL_MS = 45000;
-  let _homePollTimer = null;
-
-  function startHomePolling() {
-    stopHomePolling();
-    if (state.tab !== "home") return;
-    _homePollTimer = setInterval(() => { loadState().catch(() => {}); }, HOME_POLL_MS);
-  }
-
-  function stopHomePolling() {
-    if (_homePollTimer) { clearInterval(_homePollTimer); _homePollTimer = null; }
-  }
-
-  state.subscribe("tab", startHomePolling);
-
   async function loadState() {
     const snapshot = await api("/api/state");
     state.batch(() => {
@@ -409,7 +390,6 @@ export function startApplication() {
 
   function connectEvents() {
     connectInvalidation({ connectEventStream, loadState, refreshStatus: () => api("/api/status"), setStatus });
-    startHomePolling();
   }
 
   state.subscribe("tab", () => {

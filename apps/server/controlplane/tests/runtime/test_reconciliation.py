@@ -32,6 +32,23 @@ def test_deferred_thread_runs_when_flushed() -> None:
     assert InlineOrDeferredThread.pending == []
 
 
+def test_world_refresh_async_coalesces_pending_requests(tmp_path: Path) -> None:
+    _svc, rec = _reconciliation(tmp_path)
+    rec.world_service.query_world_state = MagicMock(  # type: ignore[method-assign]
+        return_value=({"daytime": "34", "day": "1", "weather": "clear"}, [])
+    )
+
+    rec.refresh_world_async("first")
+    rec.refresh_world_async("second")
+
+    assert len(InlineOrDeferredThread.pending) == 1
+    InlineOrDeferredThread.run_pending()
+
+    rec.world_service.query_world_state.assert_called_once_with()  # type: ignore[union-attr]
+    assert rec._pending_world_reason is None
+    assert not rec._world_worker_running
+
+
 # ---------------------------------------------------------------------------
 # refresh_gamerules_async — happy path
 # ---------------------------------------------------------------------------

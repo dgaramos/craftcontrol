@@ -6,6 +6,7 @@ import { state } from "./core/state.js?v=8";
 import { createNavTrail } from "./core/route.js?v=8";
 import { indicatorState, worldPresentation } from "./core/panel-state.js?v=1";
 import { createWorldClock } from "./core/world-clock.js?v=1";
+import { createWorldSnapshotController } from "./core/world-snapshot.js?v=1";
 import { $, escapeHtml } from "./core/dom.js?v=7";
 import { connectInvalidation } from "./core/invalidation.js?v=7";
 import { createNavigation } from "./core/navigation.js?v=11";
@@ -261,8 +262,7 @@ export function startApplication() {
 
   let _tickTimer = null;
   let _localDaytime = NaN;
-  let _worldObservation = null;
-  const worldClock = createWorldClock();
+  const worldSnapshot = createWorldSnapshotController({ clock: createWorldClock() });
 
   function setWorldCells(field, text) {
     if (typeof document === "undefined") return;
@@ -275,7 +275,7 @@ export function startApplication() {
   }
 
   function _updateTickDisplay() {
-    _localDaytime = worldClock.current();
+    _localDaytime = worldSnapshot.refreshWorldCells().daytime;
     setWorldCells("ticks", Math.round(_localDaytime).toLocaleString(localeTag()));
     {
       const minutes = Math.round(((_localDaytime + 6000) % 24000) / 1000 * 60);
@@ -304,6 +304,9 @@ export function startApplication() {
      renders its own copy calls this once after mounting; the live clock keeps
      it updated from then on. */
   function refreshWorldCells() {
+    const projection = worldSnapshot.refreshWorldCells();
+    state.world = projection.world;
+    _localDaytime = projection.daytime;
     setWorldCells("day", state.world?.day ?? "—");
     const weather = state.world?.weather;
     setWorldCells("weather", weather ? t(weather) : "—");
@@ -314,14 +317,11 @@ export function startApplication() {
       setWorldCells("ticks", "");
     }
     setWorldIcons("weather", worldPresentation({ weather, daytime: _localDaytime }).weatherIcon);
-    renderWorldObservation();
+    renderWorldObservation(projection.weatherUnobserved);
     _applyWeatherAccent();
   }
 
-  function renderWorldObservation() {
-    const weatherUnobserved = _worldObservation?.partial === true
-      && Array.isArray(_worldObservation.keys)
-      && !_worldObservation.keys.includes("weather");
+  function renderWorldObservation(weatherUnobserved) {
     document.querySelectorAll("[data-world-observation]").forEach((node) => {
       node.hidden = !weatherUnobserved;
       node.textContent = weatherUnobserved ? t("worldPartialObservation") : "";
@@ -332,25 +332,21 @@ export function startApplication() {
   }
 
   function showWorld(snapshot, observation = undefined) {
-    if (observation !== undefined) _worldObservation = observation;
-    state.world = snapshot.world || {};
+    const projection = worldSnapshot.showWorld(snapshot, observation);
+    state.world = projection.world;
     setWorldCells("day", state.world.day ?? "—");
-    const daytime = Number(state.world.daytime);
     if (_tickTimer) { clearInterval(_tickTimer); _tickTimer = null; }
-    if (Number.isFinite(daytime)) {
-      const observedAt = Number(snapshot.domains?.world?.observed_at);
-      worldClock.anchor(daytime, observedAt);
+    if (Number.isFinite(projection.daytime)) {
       _updateTickDisplay();
       _tickTimer = setInterval(_updateTickDisplay, 100);
     } else {
       _localDaytime = NaN;
-      worldClock.clear();
       setWorldCells("time", "—");
       setWorldCells("ticks", "");
     }
     const weather = state.world.weather;
     setWorldCells("weather", weather ? t(weather) : "—");
-    renderWorldObservation();
+    renderWorldObservation(projection.weatherUnobserved);
     setWorldIcons("weather", worldPresentation({ weather, daytime: _localDaytime }).weatherIcon);
     _applyWeatherAccent();
   }

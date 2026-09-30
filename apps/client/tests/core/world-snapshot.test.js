@@ -8,11 +8,11 @@ describe("world snapshot composition", () => {
 
     expect(controller.showWorld({
       world: { daytime: 1000, weather: "clear" },
-      domains: { world: { observed_at: 1000 } },
-    }).daytime).toBe(1000);
+      domains: { world: { observed_at: 955 } },
+    }).daytime).toBe(1900);
 
     now += 45_000;
-    expect(controller.refreshWorldCells().daytime).toBe(1900);
+    expect(controller.refreshWorldCells().daytime).toBe(2800);
 
     expect(controller.showWorld({
       world: { daytime: 5000, weather: "rain" },

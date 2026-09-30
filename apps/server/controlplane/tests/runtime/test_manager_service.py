@@ -21,11 +21,20 @@ def test_supports_every_named_time_preset(manager_service: ManagerService, fake_
     for preset in ManagerService.TIME_PRESETS:
         manager_service.time_action("preset", {"value": preset})
         assert fake_bedrock.commands[-1] == ["time", "set", preset]
+        InlineOrDeferredThread.run_pending()
+        assert InlineOrDeferredThread.pending == []
+        assert not manager_service._reconciliation._world_worker_running
 
 
 def test_reset_days_sets_time_to_zero(manager_service: ManagerService, fake_bedrock: FakeBedrock) -> None:
     manager_service.time_action("reset-days", {})
     assert fake_bedrock.commands[-1] == ["time", "set", "0"]
+    InlineOrDeferredThread.run_pending()
+    assert manager_service.state()["world"] == {
+        "daytime": "34", "day": "34", "weather": "clear",
+    }
+    assert InlineOrDeferredThread.pending == []
+    assert not manager_service._reconciliation._world_worker_running
 
 
 def test_rejects_exact_time_outside_one_day(manager_service: ManagerService) -> None:

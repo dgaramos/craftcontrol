@@ -27,7 +27,7 @@ export const en = {
     duration: "Optional duration in ticks", setWeather: "Apply weather", queryWeather: "Query weather",
     resetDays: "Reset day count", resetDaysHelp: "Sets time to tick 0 and resets the displayed day count.",
     resetDaysConfirm: "Reset the day count and set the clock to tick 0?", timeUpdated: "Time updated",
-    queryUnavailable: "The server did not return a readable value.",
+    queryUnavailable: "The server did not return a readable value.", worldPartialObservation: "Last confirmed weather; this observation was incomplete.",
     onlinePlayers: "Online players", operatorAccess: "Operator", operatorHelp: "Can use administrative commands in the game.",
     noOnlinePlayers: "No players are online right now.", permissionUpdated: "Permission updated",
     gameModeTitle: "Game mode", gameModeHelp: "Set a game mode preference for this player. The preference is persisted and applied immediately when the player is online. Choose \"Use server default\" to clear the override.",

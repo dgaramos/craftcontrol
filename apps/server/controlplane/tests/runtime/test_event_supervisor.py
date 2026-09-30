@@ -51,17 +51,18 @@ def test_ignores_chat_and_unknown_players(parser_runtime) -> None:
 # Init tests
 # ---------------------------------------------------------------------------
 
-def test_start_launches_three_daemon_threads() -> None:
+def test_start_launches_four_daemon_threads() -> None:
     mock_thread = MagicMock()
-    instances = [MagicMock() for _ in range(3)]
+    instances = [MagicMock() for _ in range(4)]
     mock_thread.side_effect = instances
     runtime, _, _ = _make_runtime(thread_factory=mock_thread)
     runtime.start()
-    assert mock_thread.call_count == 3
+    assert mock_thread.call_count == 4
     names = [c.kwargs["name"] for c in mock_thread.call_args_list]
     assert "bedrock-log-stream" in names
     assert "docker-event-stream" in names
     assert "safety-reconciler" in names
+    assert "world-reconciler" in names
     for inst in instances:
         inst.start.assert_called_once()
 
@@ -71,7 +72,7 @@ def test_start_is_idempotent() -> None:
     runtime, _, _ = _make_runtime(thread_factory=mock_thread)
     runtime.start()
     runtime.start()
-    assert mock_thread.call_count == 3
+    assert mock_thread.call_count == 4
 
 
 def test_default_reconcile_seconds() -> None:
@@ -302,6 +303,26 @@ def test_periodic_reconciles_and_stops() -> None:
         "state.reconciliation.requested", "safety-timer", {"scope": "full"}
     )
     service.refresh_async.assert_called_once_with(reason="safety-timer")
+
+
+def test_world_periodic_refreshes_and_stops() -> None:
+    runtime, broker, service = _make_runtime()
+
+    call_count = 0
+
+    def fake_wait(seconds):
+        nonlocal call_count
+        assert seconds == 45
+        call_count += 1
+        return call_count >= 2
+
+    runtime._stop.wait = fake_wait
+    runtime._world_periodic()
+
+    broker.publish.assert_called_once_with(
+        "state.reconciliation.requested", "world-timer", {"scope": "world"}
+    )
+    service.refresh_world_async.assert_called_once_with(reason="world-timer")
 
 
 def test_docker_events_state_changed_published_when_closed() -> None:

@@ -52,10 +52,15 @@ class ReconciliationService:
         self._time_fn: Callable[[], float] = time.time
 
         self._refresh_lock = threading.Lock()
+        self._pending_full_lock = threading.Lock()
+        self._pending_full_reason: str | None = None
         self._refreshing = False
         self._pending_rules: set[str] = set()
         self._pending_rules_lock = threading.Lock()
         self._gamerule_worker_running = False
+        self._pending_world_reason: str | None = None
+        self._pending_world_lock = threading.Lock()
+        self._world_worker_running = False
         self._telemetry_sync_lock = threading.Lock()
         self._telemetry_sync_running = False
         self._telemetry_last_request = 0.0
@@ -85,7 +90,14 @@ class ReconciliationService:
     # ------------------------------------------------------------------
 
     def refresh(self, reason: str = "manual") -> None:
-        if not self._refresh_lock.acquire(blocking=False):
+        with self._pending_full_lock:
+            acquired = self._refresh_lock.acquire(blocking=False)
+            if not acquired:
+                self._pending_full_reason = reason
+        if not acquired:
+            self.broker.publish(
+                "state.reconciliation.deferred", reason, {"scope": "full"}
+            )
             return
         self._refreshing = True
         started = self._time_fn()
@@ -113,10 +125,19 @@ class ReconciliationService:
             self.broker.publish("state.changed", reason, {"domains": ["settings", "gamerules", "players", "server"]})
             if self.world_service is not None:
                 try:
-                    world_state = self.world_service.query_world_state()
+                    world_state, errors = self.world_service.query_world_state()
                     if world_state:
                         self.repository.store("world", world_state, "bedrock-console")
-                        self.broker.publish("state.changed", reason, {"domains": ["world"]})
+                        self.broker.publish(
+                            "state.changed",
+                            reason,
+                            {
+                                "domains": ["world"],
+                                "keys": sorted(world_state),
+                                "partial": bool(errors),
+                            },
+                        )
+                    self._publish_world_query_errors(reason, errors, world_state)
                 except Exception as world_error:
                     self.broker.publish("state.world.query.failed", reason, {"error": str(world_error)[:240]})
             trigger_telemetry = True
@@ -138,7 +159,7 @@ class ReconciliationService:
                     if elapsed_ms > float(self._reconciliation_diagnostics["duration_ms_max"]):
                         self._reconciliation_diagnostics["duration_ms_max"] = elapsed_ms
                 self._refreshing = False
-                self._refresh_lock.release()
+                self._release_refresh_lock()
 
         # Called outside the lock so a slow or synchronous callback cannot
         # block concurrent refresh attempts from being skipped.
@@ -150,6 +171,76 @@ class ReconciliationService:
 
     def refresh_async(self, reason: str = "manual") -> None:
         self._thread_factory(target=self.refresh, args=(reason,), name="state-refresh", daemon=True).start()
+
+    def refresh_world(self, reason: str = "world-timer") -> None:
+        """Refresh only Bedrock's naturally changing world observations."""
+        if self.world_service is None:
+            return
+        self._refresh_lock.acquire()
+        try:
+            try:
+                world_state, errors = self.world_service.query_world_state()
+                if world_state:
+                    self.repository.store("world", world_state, "bedrock-console")
+                    self.broker.publish(
+                        "state.changed",
+                        reason,
+                        {
+                            "domains": ["world"],
+                            "keys": sorted(world_state),
+                            "partial": bool(errors),
+                        },
+                    )
+                self._publish_world_query_errors(reason, errors, world_state)
+            except Exception as error:
+                self.broker.publish(
+                    "state.world.query.failed", reason, {"error": str(error)[:240]}
+                )
+        finally:
+            self._release_refresh_lock()
+
+    def _release_refresh_lock(self) -> None:
+        with self._pending_full_lock:
+            self._refresh_lock.release()
+            deferred_reason = self._pending_full_reason
+            self._pending_full_reason = None
+        if deferred_reason is not None:
+            self.refresh_async(deferred_reason)
+
+    def refresh_world_async(self, reason: str = "world-timer") -> None:
+        with self._pending_world_lock:
+            self._pending_world_reason = reason
+            if self._world_worker_running:
+                return
+            self._world_worker_running = True
+
+        def work() -> None:
+            try:
+                while True:
+                    with self._pending_world_lock:
+                        pending_reason = self._pending_world_reason
+                        self._pending_world_reason = None
+                    if pending_reason is None:
+                        return
+                    self.refresh_world(pending_reason)
+            finally:
+                with self._pending_world_lock:
+                    self._world_worker_running = False
+                    restart = self._pending_world_reason is not None
+                if restart:
+                    self.refresh_world_async(self._pending_world_reason or reason)
+
+        self._thread_factory(target=work, name="world-refresh", daemon=True).start()
+
+    def _publish_world_query_errors(
+        self, reason: str, errors: list[str], observed: dict[str, str]
+    ) -> None:
+        if errors:
+            self.broker.publish(
+                "state.world.query.failed",
+                reason,
+                {"errors": errors, "observed_keys": sorted(observed)},
+            )
 
     def refresh_settings_from_properties(self, reason: str = "operation-failure") -> None:
         """Refresh settings from Bedrock's effective configuration without mutation.

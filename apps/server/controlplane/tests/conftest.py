@@ -40,7 +40,9 @@ from src.operations.repository import SQLiteOperationRepository
 from src.operations.service import ServerOperationService
 from src.telemetry.repository import SQLiteTelemetryRepository
 from src.telemetry.service import TelemetryService
-from fakes import FakeBedrock, FakeConsole, FakeDocker, FakeRuntime  # noqa: E402
+from fakes import (  # noqa: E402
+    FakeBedrock, FakeConsole, FakeDocker, FakeRuntime, InlineOrDeferredThread,
+)
 
 __all__ = ["FakeBedrock", "FakeConsole", "FakeDocker", "FakeRuntime"]
 
@@ -87,6 +89,7 @@ def make_manager_service(
         player_service=player_service,
         telemetry_service=telemetry_service,
         world_service=world_service,
+        thread_factory=InlineOrDeferredThread,
     )
     return ManagerService(
         repo,
@@ -105,6 +108,12 @@ def make_manager_service(
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
+@pytest.fixture(autouse=True)
+def clear_deferred_threads():
+    InlineOrDeferredThread.clear_pending()
+    yield
+    InlineOrDeferredThread.clear_pending()
 
 @pytest.fixture
 def fake_bedrock() -> FakeBedrock:

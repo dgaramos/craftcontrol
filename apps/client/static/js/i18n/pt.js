@@ -27,7 +27,7 @@ export const pt = {
     duration: "Duração opcional em ticks", setWeather: "Aplicar clima", queryWeather: "Consultar clima",
     resetDays: "Zerar contagem de dias", resetDaysHelp: "Define o tempo como tick 0 e reinicia a contagem exibida de dias.",
     resetDaysConfirm: "Zerar a contagem de dias e definir o relógio como tick 0?", timeUpdated: "Tempo atualizado",
-    queryUnavailable: "O servidor não retornou um valor legível.",
+    queryUnavailable: "O servidor não retornou um valor legível.", worldPartialObservation: "Último clima confirmado; esta observação foi incompleta.",
     onlinePlayers: "Jogadores online", operatorAccess: "Operador", operatorHelp: "Pode usar comandos administrativos dentro do jogo.",
     noOnlinePlayers: "Nenhum jogador online no momento.", permissionUpdated: "Permissão atualizada",
     gameModeTitle: "Modo de jogo", gameModeHelp: "Define uma preferência de modo de jogo para este jogador. A preferência é salva e aplicada imediatamente quando o jogador estiver online. Escolha \"Usar padrão do servidor\" para remover a preferência.",

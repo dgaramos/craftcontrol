@@ -4,14 +4,49 @@ from __future__ import annotations
 import threading
 import time
 from pathlib import Path
+from unittest.mock import MagicMock
 
 from conftest import make_manager_service
-from fakes import FakeBedrock
+from fakes import FakeBedrock, InlineOrDeferredThread
 
 
 def _reconciliation(tmp_path: Path, bedrock: FakeBedrock | None = None):
     svc = make_manager_service(tmp_path, bedrock)
     return svc, svc._reconciliation
+
+
+def test_deferred_thread_runs_when_flushed() -> None:
+    calls: list[str] = []
+    thread = InlineOrDeferredThread(
+        target=calls.append,
+        args=("observed",),
+        name="world-refresh",
+    )
+
+    thread.start()
+    assert calls == []
+
+    InlineOrDeferredThread.run_pending()
+
+    assert calls == ["observed"]
+    assert InlineOrDeferredThread.pending == []
+
+
+def test_world_refresh_async_coalesces_pending_requests(tmp_path: Path) -> None:
+    _svc, rec = _reconciliation(tmp_path)
+    rec.world_service.query_world_state = MagicMock(  # type: ignore[method-assign]
+        return_value=({"daytime": "34", "day": "1", "weather": "clear"}, [])
+    )
+
+    rec.refresh_world_async("first")
+    rec.refresh_world_async("second")
+
+    assert len(InlineOrDeferredThread.pending) == 1
+    InlineOrDeferredThread.run_pending()
+
+    rec.world_service.query_world_state.assert_called_once_with()  # type: ignore[union-attr]
+    assert rec._pending_world_reason is None
+    assert not rec._world_worker_running
 
 
 # ---------------------------------------------------------------------------
@@ -610,3 +645,114 @@ def test_refresh_world_query_error_publishes_event_and_continues(tmp_path: Path)
     rec.refresh("test")  # must not raise
 
     assert "state.world.query.failed" in events
+
+
+def test_targeted_world_refresh_persists_confirmed_state_and_publishes(tmp_path: Path) -> None:
+    rec, repo = _make_reconciliation_with_world(tmp_path)
+
+    rec.refresh_world("world-timer")
+
+    assert repo.snapshot(False)["world"] == {
+        "daytime": "34", "day": "34", "weather": "clear",
+    }
+    events = repo.events_after(0, 100)
+    assert any(
+        event["topic"] == "state.changed"
+        and event["source"] == "world-timer"
+        and event["payload"] == {
+            "domains": ["world"],
+            "keys": ["day", "daytime", "weather"],
+            "partial": False,
+        }
+        for event in events
+    )
+
+
+def test_targeted_world_refresh_drains_deferred_full_refresh(tmp_path: Path) -> None:
+    rec, _repo = _make_reconciliation_with_world(tmp_path)
+    world_entered = threading.Event()
+    release_world = threading.Event()
+    full_refresh_finished = threading.Event()
+    original_world_query = rec.world_service.query_world_state
+    original_refresh = rec.refresh
+
+    def slow_world_query():
+        world_entered.set()
+        assert release_world.wait(timeout=3)
+        return original_world_query()
+
+    def tracked_refresh(reason: str = "manual") -> None:
+        original_refresh(reason)
+        if reason == "safety":
+            full_refresh_finished.set()
+
+    rec.world_service.query_world_state = slow_world_query  # type: ignore[method-assign]
+    rec.refresh = tracked_refresh  # type: ignore[method-assign]
+    worker = threading.Thread(target=rec.refresh_world)
+    worker.start()
+    assert world_entered.wait(timeout=3)
+
+    rec.refresh("safety")
+    release_world.set()
+
+    worker.join(timeout=3)
+    assert full_refresh_finished.wait(timeout=3)
+    assert rec._pending_full_reason is None
+
+
+def test_targeted_world_refresh_preserves_last_state_on_failure(tmp_path: Path) -> None:
+    from src.server.world import WorldQueryError
+
+    rec, repo = _make_reconciliation_with_world(tmp_path)
+    repo.store("world", {"daytime": "1200", "weather": "rain"}, "test")
+    rec.world_service.query_world_state = MagicMock(  # type: ignore[method-assign]
+        side_effect=WorldQueryError([RuntimeError("offline")])
+    )
+
+    rec.refresh_world("world-timer")
+
+    assert repo.snapshot(False)["world"] == {"daytime": "1200", "weather": "rain"}
+    events = repo.events_after(0, 100)
+    assert any(
+        event["topic"] == "state.world.query.failed"
+        and event["source"] == "world-timer"
+        for event in events
+    )
+
+
+def test_targeted_world_refresh_records_partial_failure(tmp_path: Path) -> None:
+    rec, repo = _make_reconciliation_with_world(tmp_path)
+    rec.world_service.query_world_state = MagicMock(  # type: ignore[method-assign]
+        return_value=({"daytime": "34", "day": "34"}, ["unrecognised weather response"])
+    )
+
+    rec.refresh_world("world-timer")
+
+    events = repo.events_after(0, 100)
+    failure = next(event for event in events if event["topic"] == "state.world.query.failed")
+    changed = next(event for event in events if event["topic"] == "state.changed")
+    assert changed["payload"] == {
+        "domains": ["world"],
+        "keys": ["day", "daytime"],
+        "partial": True,
+    }
+    assert failure["payload"] == {
+        "errors": ["unrecognised weather response"],
+        "observed_keys": ["day", "daytime"],
+    }
+
+
+def test_targeted_world_refresh_reanchors_projected_clock_on_every_observation(tmp_path: Path) -> None:
+    rec, repo = _make_reconciliation_with_world(tmp_path)
+    rec.refresh_world("first")
+    first_event_count = len([
+        event for event in repo.events_after(0, 100) if event["topic"] == "state.changed"
+    ])
+
+    rec.refresh_world("world-timer")
+
+    changed_events = [
+        event for event in repo.events_after(0, 100) if event["topic"] == "state.changed"
+    ]
+    assert first_event_count == 1
+    assert len(changed_events) == 2

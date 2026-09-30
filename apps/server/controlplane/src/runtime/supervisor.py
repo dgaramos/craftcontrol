@@ -13,6 +13,7 @@ from ..ports import EventPublisher, RuntimeApplication
 
 
 class EventRuntime:
+    WORLD_RECONCILE_SECONDS = 45
     DEATH_PHRASES = (
         "was slain by", "was shot by", "was killed by", "was blown up by", "was fireballed by",
         "drowned", "fell from", "hit the ground", "burned to death", "went up in flames",
@@ -50,6 +51,7 @@ class EventRuntime:
             ("bedrock-log-stream", self._logs),
             ("docker-event-stream", self._docker_events),
             ("safety-reconciler", self._periodic),
+            ("world-reconciler", self._world_periodic),
         ):
             self._thread_factory(target=target, name=name, daemon=True).start()
 
@@ -62,6 +64,7 @@ class EventRuntime:
                 container = client.containers.get(self.container)
                 self.broker.publish("stream.logs.connected", "docker-logs")
                 self._timer_factory(3, lambda: self.service.refresh_async(reason="log-stream-connected")).start()
+                self._timer_factory(4, lambda: self.service.refresh_world_async(reason="log-stream-connected")).start()
                 self._timer_factory(5, lambda: self.service.request_telemetry_snapshot_async("log-stream-connected")).start()
                 for line in self._decoded_log_lines(container.logs(stream=True, follow=True, since=int(time.time()) - 2)):
                     if self._stop.is_set():
@@ -167,3 +170,10 @@ class EventRuntime:
         while not self._stop.wait(self.reconcile_seconds):
             self.broker.publish("state.reconciliation.requested", "safety-timer", {"scope": "full"})
             self.service.refresh_async(reason="safety-timer")
+
+    def _world_periodic(self) -> None:
+        while not self._stop.wait(self.WORLD_RECONCILE_SECONDS):
+            self.broker.publish(
+                "state.reconciliation.requested", "world-timer", {"scope": "world"}
+            )
+            self.service.refresh_world_async(reason="world-timer")

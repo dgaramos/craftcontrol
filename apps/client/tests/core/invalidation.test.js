@@ -42,6 +42,18 @@ describe("connectInvalidation", () => {
     expect(schedule).toHaveBeenCalled();
   });
 
+  test("passes the latest state-change payload to the refresh", async () => {
+    let callback;
+    const schedule = jest.fn((fn) => { callback = fn; return 1; });
+    const { listener, loadState } = makeSetup({ schedule });
+    const event = { topic: "state.changed", payload: { domains: ["world"], keys: ["daytime"], partial: true } };
+
+    listener(event);
+    await callback();
+
+    expect(loadState).toHaveBeenCalledWith(event);
+  });
+
   test("uses default scheduling dependencies and refreshes only state on state.changed", async () => {
     let listener;
     const connectEventStream = jest.fn((callback) => { listener = callback; });

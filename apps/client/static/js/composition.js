@@ -5,6 +5,8 @@ import { requireSession, showSessions, showPasswordChange } from "./auth.js?v=8"
 import { state } from "./core/state.js?v=8";
 import { createNavTrail } from "./core/route.js?v=8";
 import { indicatorState, worldPresentation } from "./core/panel-state.js?v=1";
+import { createWorldClock } from "./core/world-clock.js?v=1";
+import { createWorldSnapshotController } from "./core/world-snapshot.js?v=1";
 import { $, escapeHtml } from "./core/dom.js?v=7";
 import { connectInvalidation } from "./core/invalidation.js?v=7";
 import { createNavigation } from "./core/navigation.js?v=11";
@@ -260,6 +262,7 @@ export function startApplication() {
 
   let _tickTimer = null;
   let _localDaytime = NaN;
+  const worldSnapshot = createWorldSnapshotController({ clock: createWorldClock() });
 
   function setWorldCells(field, text) {
     if (typeof document === "undefined") return;
@@ -272,7 +275,7 @@ export function startApplication() {
   }
 
   function _updateTickDisplay() {
-    _localDaytime = (_localDaytime + 2) % 24000;
+    _localDaytime = worldSnapshot.refreshWorldCells().daytime;
     setWorldCells("ticks", Math.round(_localDaytime).toLocaleString(localeTag()));
     {
       const minutes = Math.round(((_localDaytime + 6000) % 24000) / 1000 * 60);
@@ -301,6 +304,9 @@ export function startApplication() {
      renders its own copy calls this once after mounting; the live clock keeps
      it updated from then on. */
   function refreshWorldCells() {
+    const projection = worldSnapshot.refreshWorldCells();
+    state.world = projection.world;
+    _localDaytime = projection.daytime;
     setWorldCells("day", state.world?.day ?? "—");
     const weather = state.world?.weather;
     setWorldCells("weather", weather ? t(weather) : "—");
@@ -311,16 +317,23 @@ export function startApplication() {
       setWorldCells("ticks", "");
     }
     setWorldIcons("weather", worldPresentation({ weather, daytime: _localDaytime }).weatherIcon);
+    renderWorldObservation(projection.weatherUnobserved);
     _applyWeatherAccent();
   }
 
-  function showWorld(snapshot) {
-    state.world = snapshot.world || {};
+  function renderWorldObservation(weatherUnobserved) {
+    document.querySelectorAll("[data-world-observation]").forEach((node) => {
+      node.hidden = !weatherUnobserved;
+      node.textContent = weatherUnobserved ? t("worldPartialObservation") : "";
+    });
+  }
+
+  function showWorld(snapshot, observation = undefined) {
+    const projection = worldSnapshot.showWorld(snapshot, observation);
+    state.world = projection.world;
     setWorldCells("day", state.world.day ?? "—");
-    const daytime = Number(state.world.daytime);
     if (_tickTimer) { clearInterval(_tickTimer); _tickTimer = null; }
-    if (Number.isFinite(daytime)) {
-      _localDaytime = daytime;
+    if (Number.isFinite(projection.daytime)) {
       _updateTickDisplay();
       _tickTimer = setInterval(_updateTickDisplay, 100);
     } else {
@@ -330,6 +343,7 @@ export function startApplication() {
     }
     const weather = state.world.weather;
     setWorldCells("weather", weather ? t(weather) : "—");
+    renderWorldObservation(projection.weatherUnobserved);
     setWorldIcons("weather", worldPresentation({ weather, daytime: _localDaytime }).weatherIcon);
     _applyWeatherAccent();
   }
@@ -356,36 +370,18 @@ export function startApplication() {
     getSettingsFeature().updateSaveLabel();
     if (state.status) setStatus(state.status);
     showPlayers({ players: state.players, online: state.online, max_players: state.maxPlayers, updated_at: state.updatedAt });
-    showWorld({ world: state.world });
+    refreshWorldCells();
     updateBrand();
     refreshIndicatorBars();
   }
 
-  /* SSE covers changes the server announces, but the world clock and weather
-     drift on their own with no event to carry them. A slow poll keeps the Home
-     cells honest, and only while Home is on screen — every other tab cancels
-     it, so a backgrounded screen costs nothing. */
-  const HOME_POLL_MS = 45000;
-  let _homePollTimer = null;
-
-  function startHomePolling() {
-    stopHomePolling();
-    if (state.tab !== "home") return;
-    _homePollTimer = setInterval(() => { loadState().catch(() => {}); }, HOME_POLL_MS);
-  }
-
-  function stopHomePolling() {
-    if (_homePollTimer) { clearInterval(_homePollTimer); _homePollTimer = null; }
-  }
-
-  state.subscribe("tab", startHomePolling);
-
-  async function loadState() {
+  async function loadState(event = null) {
     const snapshot = await api("/api/state");
+    const worldObservation = event?.payload?.domains?.includes("world") ? event.payload : undefined;
     state.batch(() => {
       state.config = snapshot.settings || {};
       state.gamerules = snapshot.gamerules || {};
-      showWorld(snapshot);
+      showWorld(snapshot, worldObservation);
       state.domains = snapshot.domains || {};
       showPlayers(snapshot);
     });
@@ -397,7 +393,7 @@ export function startApplication() {
       state.schema = schema;
       state.config = snapshot.settings || {};
       state.gamerules = snapshot.gamerules || {};
-      showWorld(snapshot);
+      showWorld(snapshot, null);
       state.domains = snapshot.domains || {};
       showPlayers(snapshot);
     });
@@ -409,7 +405,6 @@ export function startApplication() {
 
   function connectEvents() {
     connectInvalidation({ connectEventStream, loadState, refreshStatus: () => api("/api/status"), setStatus });
-    startHomePolling();
   }
 
   state.subscribe("tab", () => {

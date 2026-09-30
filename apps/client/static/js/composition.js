@@ -365,7 +365,7 @@ export function startApplication() {
     getSettingsFeature().updateSaveLabel();
     if (state.status) setStatus(state.status);
     showPlayers({ players: state.players, online: state.online, max_players: state.maxPlayers, updated_at: state.updatedAt });
-    showWorld({ world: state.world });
+    refreshWorldCells();
     updateBrand();
     refreshIndicatorBars();
   }

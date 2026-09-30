@@ -200,7 +200,9 @@ def test_time_query_persists_confirmed_value_and_publishes_world_change() -> Non
 
     assert result == {"action": "query", "query": "daytime", "value": 6000}
     assert store.writes == [("world", {"daytime": "6000"}, "manager")]
-    assert svc.broker.events == [("state.changed", "manager", {"domains": ["world"], "action": "query"})]  # type: ignore[attr-defined]
+    assert svc.broker.events == [("state.changed", "manager", {
+        "domains": ["world"], "keys": ["daytime"], "action": "query",
+    })]  # type: ignore[attr-defined]
 
 
 def test_weather_query_persists_only_recognized_weather() -> None:
@@ -212,4 +214,6 @@ def test_weather_query_persists_only_recognized_weather() -> None:
 
     assert result["value"] == "rain"
     assert store.writes == [("world", {"weather": "rain"}, "manager")]
-    assert svc.broker.events[-1][2]["domains"] == ["world"]  # type: ignore[attr-defined]
+    assert svc.broker.events[-1][2] == {  # type: ignore[attr-defined]
+        "domains": ["world"], "keys": ["weather"], "action": "weather-query",
+    }

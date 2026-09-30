@@ -94,7 +94,9 @@ class WorldService:
         """Persist only values confirmed by a console response or mutation."""
         if self.state_store is not None:
             self.state_store.store("world", values, "manager")
-        self.broker.publish("state.changed", "manager", {"domains": domains or ["world"], "action": action})
+        self.broker.publish("state.changed", "manager", {
+            "domains": domains or ["world"], "keys": sorted(values), "action": action,
+        })
 
     def query_world_state(self) -> tuple[dict[str, str], list[str]]:
         """Query current time and weather from the Bedrock console.
